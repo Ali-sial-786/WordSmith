@@ -13,6 +13,7 @@ import '../../net/models.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_bar.dart';
 
@@ -25,6 +26,7 @@ Future<ForgedAction> showForgedOverlay(
   required Chapter? nextChapter,
   required List<Pickup> pickups,
   required int bonusWords,
+  List<String> words = const [],
   DailyOutcome? daily,
 }) async {
   final result = await showGeneralDialog<ForgedAction>(
@@ -47,6 +49,7 @@ Future<ForgedAction> showForgedOverlay(
       nextChapter: nextChapter,
       pickups: pickups,
       bonusWords: bonusWords,
+      words: words,
       daily: daily,
     ),
   );
@@ -60,6 +63,7 @@ class _ForgedCard extends StatefulWidget {
     required this.nextChapter,
     required this.pickups,
     required this.bonusWords,
+    this.words = const [],
     this.daily,
   });
 
@@ -70,6 +74,9 @@ class _ForgedCard extends StatefulWidget {
   final Chapter? nextChapter;
   final List<Pickup> pickups;
   final int bonusWords;
+
+  /// The puzzle's words, to look up.
+  final List<String> words;
 
   /// The Daily Commission's streak, when that's what was forged.
   final DailyOutcome? daily;
@@ -215,6 +222,26 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                           style: text.bodyMedium,
                         ),
                       ),
+                    ],
+                  ),
+                ],
+                if (widget.words.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text('Tap a word to see what it means', style: text.labelMedium?.copyWith(color: Palette.steel)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final w in widget.words)
+                        ActionChip(
+                          label: Text(w, style: letterStyle(13)),
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: Palette.ash,
+                          side: BorderSide.none,
+                          onPressed: () => showMeanings(context, [w]),
+                        ),
                     ],
                   ),
                 ],

@@ -43,6 +43,8 @@ dependencies:
   google_sign_in: ^7.2.0
   livekit_client: ^2.13.1
   firebase_messaging: ^17.0.0
+  archive: ^4.5.2
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:

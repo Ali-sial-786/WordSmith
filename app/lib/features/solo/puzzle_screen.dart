@@ -24,6 +24,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/toast_line.dart';
 import '../../ui/widgets/word_preview.dart';
@@ -243,6 +244,16 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     _afterReveal(_game.useChisel(cell), SfxId.hintChisel);
   }
 
+  /// The forged words through [cell], with their meanings.
+  void _showWordsAt(CellPos cell) {
+    final board = _game.board;
+    final words = [
+      for (final s in board.puzzle.slotsAt[cell] ?? const <Slot>[])
+        if (board.isSlotComplete(s)) s.word,
+    ];
+    showMeanings(context, words);
+  }
+
   void _turn() {
     _sfx.play(SfxId.shuffle);
     _game.turn();
@@ -301,6 +312,8 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
         for (final i in _game.board.collectedPickups) _game.board.pickups[i],
       ],
       bonusWords: _game.board.bonusFound.length,
+      words: [for (final s in _game.board.puzzle.slots) s.word]
+        ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
     );
     if (!mounted) return;
     if (game is SoloController && action == ForgedAction.next && next <= campaign.stageCount) {
@@ -380,6 +393,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                             cues: _cues,
                             chiselMode: _chisel,
                             onCellTap: _onChiselCell,
+                            onFilledTap: _showWordsAt,
                           ),
                         ),
                       ),
@@ -615,7 +629,7 @@ class _ScrapSheet extends StatelessWidget {
             style: text.bodyMedium,
           ),
           const SizedBox(height: 16),
-          Text('Found in this puzzle', style: text.titleSmall),
+          Text('Found in this puzzle (tap one to see what it means)', style: text.titleSmall),
           const SizedBox(height: 8),
           if (sorted.isEmpty)
             Text('None yet.', style: text.bodySmall)
@@ -625,10 +639,12 @@ class _ScrapSheet extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final w in sorted)
-                  Chip(
+                  ActionChip(
                     label: Text(w, style: letterStyle(14)),
+                    tooltip: 'What does $w mean?',
                     backgroundColor: Palette.ash,
                     side: BorderSide.none,
+                    onPressed: () => showMeanings(context, [w]),
                   ),
               ],
             ),
