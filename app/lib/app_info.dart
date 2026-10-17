@@ -1,5 +1,5 @@
 /// Shown in Settings; keep in step with `version:` in pubspec.yaml.
-const String appVersion = '0.2.0';
+const String appVersion = '0.3.0';
 
 /// Compares dotted versions ("0.2.0" > "0.1.10"); missing parts count as 0.
 int compareVersions(String a, String b) {
