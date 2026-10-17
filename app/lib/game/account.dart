@@ -21,12 +21,16 @@ final roomClientFactoryProvider = Provider<RoomClient Function(String code)?>((_
 
 /// Today's Daily Commission, once signed in (null otherwise). Invalidated after
 /// forging it.
-final dailyProvider = FutureProvider<DailyInfo?>((ref) async {
-  final ready = ref.watch(accountProvider.select((a) => a.isReady));
-  final api = ref.read(apiClientProvider);
-  if (!ready || api == null) return null;
-  return api.daily();
-});
+final dailyProvider = FutureProvider<DailyInfo?>(
+  (ref) async {
+    final ready = ref.watch(accountProvider.select((a) => a.isReady));
+    final api = ref.read(apiClientProvider);
+    if (!ready || api == null) return null;
+    return api.daily();
+  },
+  // The daily screen has its own "Try again"; no automatic retries.
+  retry: (_, _) => null,
+);
 
 /// Makes a room's video chat for this player (user ID); null without online play.
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
