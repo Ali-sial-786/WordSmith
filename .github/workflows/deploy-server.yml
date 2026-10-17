@@ -1,0 +1,106 @@
+name: Deploy server
+
+# Deploys the Cloudflare Worker (server/) and keeps its D1 database in step:
+# creates the database on the first run, applies migrations and reloads the
+# campaign. Runs on demand (Actions → Deploy server → Run workflow) and when
+# server/ or the campaign changes on the default branch.
+#
+# Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+# (docs/DISTRIBUTION.md §5). Without them it skips.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'server/**'
+      - 'app/assets/campaign/**'
+      - '.github/workflows/deploy-server.yml'
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        working-directory: .
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Cloudflare secrets are not set yet; skipping deploy (docs/DISTRIBUTION.md §5)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.ready == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install and test
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+      - name: Find or create the D1 database
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          find_id() {
+            npx wrangler d1 list --json | node -e '
+              let d = ""; process.stdin.on("data", c => d += c).on("end", () => {
+                const db = JSON.parse(d).find(b => b.name === "wordsmith");
+                console.log(db ? db.uuid : "");
+              });'
+          }
+          id=$(find_id)
+          if [ -z "$id" ]; then
+            npx wrangler d1 create wordsmith
+            id=$(find_id)
+          fi
+          [ -n "$id" ] || { echo "::error::Could not find or create the wordsmith D1 database"; exit 1; }
+          # The repo keeps a placeholder id; fill in the real one for this run.
+          sed -i "s/00000000-0000-0000-0000-000000000000/$id/" wrangler.jsonc
+          echo "D1 database: $id"
+
+      - name: Apply migrations
+        if: steps.secrets.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply wordsmith --remote
+
+      - name: Load the campaign
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm run db:campaign
+          npx wrangler d1 execute wordsmith --remote --file data/campaign.sql --yes
+
+      - name: Deploy the Worker
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npx wrangler deploy 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          if [ -n "$url" ]; then
+            curl -fsS "$url/v1/health"
+            {
+              echo "### Server is live"
+              echo ""
+              echo "URL: $url"
+              echo ""
+              echo "Set the repository **variable** \`API_BASE_URL\` to this URL so friend builds use it."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -100,12 +100,24 @@ once; their progress is safe on the server. Two ways to make it:
 
 Back up the `.jks` file and its password somewhere safe, such as a password manager.
 
-### Later (M2: accounts and online play)
+### For accounts and online play (M2)
 
-| Where | What |
-|---|---|
-| **Firebase console** | **Authentication → Sign-in method**: enable **Google** and **Email/Password**. Add the signing key's **SHA-1 and SHA-256** to the Android app (Project settings), which Google sign-in needs. |
-| **Cloudflare dashboard** (free plan) | Create an account. Make an **API token** with Workers Scripts + D1 edit permissions. Note your **account ID**. Add them as the GitHub secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. |
+**Firebase sign-in** (console → **Build → Authentication**):
+1. **Sign-in method** tab → **Email/Password** → switch on → **Save**.
+2. Add a GitHub **secret** named `FIREBASE_ANDROID_API_KEY` set to the `current_key` value in `google-services.json`. It isn't truly secret, but it stays out of the public repo so GitHub's secret scanning doesn't raise alarms.
+3. *(Later, for "Continue with Google")* enable the **Google** provider and add the release signing key's **SHA-1 and SHA-256** under Project settings → Your apps → Wordsmith.
+
+**Cloudflare (free plan):** this is where the server runs.
+1. Create a free account at **dash.cloudflare.com** (email sign-up).
+2. Open **Workers & Pages** once and pick a **workers.dev subdomain** (e.g. `wordsmith-forge`). The server will live at `https://wordsmith-api.<subdomain>.workers.dev`.
+3. Note your **Account ID**. It's shown on the Workers & Pages overview page, in the right-hand column.
+4. **My Profile → API Tokens → Create Token** → use the template **"Edit Cloudflare Workers"** → under Permissions, **add** "Account · D1 · Edit" → limit it to your account → **Create Token** and copy it (it's shown once).
+5. In GitHub, add the repository **secrets** `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID`.
+6. GitHub → **Actions → Deploy server → Run workflow**. On its first run it creates the database, loads the campaign and deploys. The run's summary shows the **server URL**.
+7. In GitHub → **Settings → Secrets and variables → Actions → Variables**, add the **variable** `API_BASE_URL` = that URL, so friend builds connect to it.
+
+Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
+`flutter build apk --dart-define-from-file=dart_defines.json`.
 
 ## 6. iPhone (not in v1)
 

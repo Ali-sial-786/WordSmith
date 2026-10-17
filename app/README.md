@@ -20,6 +20,17 @@ flutter test
 flutter build apk --debug     # build/app/outputs/flutter-apk/app-debug.apk
 ```
 
+Build settings come from `--dart-define`s. Without them the app is solo-only:
+
+| Define | What it is |
+|---|---|
+| `FIREBASE_API_KEY` | `current_key` from the Firebase project's `google-services.json` |
+| `API_BASE` | Server URL, e.g. `https://wordsmith-api.<subdomain>.workers.dev` |
+
+Put them in the git-ignored `dart_defines.json` and build with
+`flutter build apk --dart-define-from-file=dart_defines.json`. CI passes them
+from repository secrets and variables (see `.github/workflows/release.yml`).
+
 The app ID is `com.wordsmithforge.game`. A web build (`flutter build web`) is
 used only for automated screenshots during development. The product is
 Android-only.

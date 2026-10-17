@@ -6,7 +6,7 @@
 > **Status (2026-10-17):**
 > - **M0:** done.
 > - **M1:** built. The first friend build is waiting on the one-time setup in DISTRIBUTION.md §5 (signing key, Firebase App Distribution).
-> - **M2:** the server half is built and tested. The app half (sign-in, sync, friends) needs the Firebase Android config (`google-services.json`).
+> - **M2:** built and tested on both sides: sign-in, smith names, cloud sync, friends and online status. Going live needs the Cloudflare setup in DISTRIBUTION.md §5.
 > - **M3–M5:** not started.
 
 ---
