@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/auth_service.dart';
@@ -9,7 +10,7 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/metal_button.dart';
 
-/// Email sign-in and sign-up.
+/// Email or Google sign-in and sign-up.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -58,6 +59,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _google() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    try {
+      await ref.read(accountProvider.notifier).signInWithGoogle();
+    } on AuthFailure catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _forgot() async {
     final email = _email.text.trim();
     if (!email.contains('@')) {
@@ -82,6 +98,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (next.phase == AccountPhase.ready && context.canPop()) context.pop();
     });
     final text = Theme.of(context).textTheme;
+    final google = ref.read(accountProvider.notifier).googleAvailable;
     return Scaffold(
       appBar: AppBar(backgroundColor: Colors.transparent),
       extendBodyBehindAppBar: true,
@@ -109,6 +126,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     style: text.bodyMedium?.copyWith(color: Palette.steel),
                   ),
                   const SizedBox(height: 24),
+                  if (google) ...[
+                    _GoogleButton(onPressed: _busy ? null : _google),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider(color: Palette.ash)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'or use email',
+                            style: text.labelMedium?.copyWith(color: Palette.steel),
+                          ),
+                        ),
+                        const Expanded(child: Divider(color: Palette.ash)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
@@ -165,4 +200,41 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ),
     );
   }
+}
+
+/// Google's standard light sign-in button.
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 52,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1F1F1F),
+        disabledBackgroundColor: Colors.white70,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+      ),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset('assets/icons/google_g.svg', width: 20, height: 20),
+          const SizedBox(width: 12),
+          const Flexible(
+            child: Text(
+              'Continue with Google',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

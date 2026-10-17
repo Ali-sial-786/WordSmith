@@ -105,7 +105,11 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 **Firebase sign-in** (console → **Build → Authentication**):
 1. **Sign-in method** tab → **Email/Password** → switch on → **Save**.
 2. Add a GitHub **secret** named `FIREBASE_ANDROID_API_KEY` set to the `current_key` value in `google-services.json`. It isn't truly secret, but it stays out of the public repo so GitHub's secret scanning doesn't raise alarms.
-3. *(Later, for "Continue with Google")* enable the **Google** provider and add the release signing key's **SHA-1 and SHA-256** under Project settings → Your apps → Wordsmith.
+3. **"Continue with Google":** enable the **Google** provider, then add the release signing key's **SHA-1 and SHA-256** under Project settings → Your apps → Wordsmith → **Add fingerprint**. The key made on 2026-10-17 has:
+   - SHA-1 `42:82:86:FC:5C:E2:AF:62:DA:29:2F:D8:DB:F6:B8:13:75:0D:28:6A`
+   - SHA-256 `D3:A2:A8:BC:A9:59:5F:1F:C4:F9:F2:A5:5D:29:F3:43:F2:87:CB:B9:7C:2F:C8:1E:31:9C:1D:DB:BD:92:34:3E`
+
+   The app also needs the project's **web client ID** (in the new `google-services.json`, the `oauth_client` entry with `"client_type": 3`). It's public and lives in `app/lib/net/config.dart`. Only builds signed with a registered key can use Google sign-in.
 
 **Cloudflare (free plan):** this is where the server runs.
 1. Create a free account at **dash.cloudflare.com** (email sign-up).

@@ -56,7 +56,7 @@ Future<AuthService> _startAuth() async {
   if (!AppConfig.hasFirebase) return const DisabledAuthService();
   try {
     await Firebase.initializeApp(options: AppConfig.firebaseOptions);
-    return FirebaseAuthService();
+    return FirebaseAuthService(googleClientId: AppConfig.googleWebClientId);
   } on Object catch (e) {
     debugPrint('Firebase unavailable: $e');
     return const DisabledAuthService();

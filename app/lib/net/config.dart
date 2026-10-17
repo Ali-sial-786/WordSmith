@@ -12,6 +12,10 @@ abstract final class AppConfig {
   /// alarms.
   static const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
 
+  /// The project's web OAuth client ID ("client_type": 3 in
+  /// google-services.json), needed for "Continue with Google". Public.
+  static const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
   static bool get hasFirebase => firebaseApiKey.isNotEmpty;
   static bool get hasServer => apiBase.isNotEmpty;
 

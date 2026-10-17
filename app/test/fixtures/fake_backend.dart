@@ -55,8 +55,29 @@ class FakeAuth implements AuthService {
   @override
   Future<void> resetPassword(String email) async {}
 
+  /// The Google account the picker returns; null means the player backs out.
+  String? googleEmail;
+  bool googleAvailableFlag = true;
+
   @override
-  Future<void> reauthenticate(String password) async {
+  bool get googleAvailable => googleAvailableFlag;
+
+  @override
+  Future<bool> signInWithGoogle() async {
+    final email = googleEmail;
+    if (email == null) return false;
+    _set(AuthUser(uid: 'uid-$email', email: email, usesPassword: false));
+    return true;
+  }
+
+  @override
+  Future<void> reauthenticate({String? password}) async {
+    if (password == null) {
+      if (googleEmail != _user?.email) {
+        throw const AuthFailure('Confirm with Google to continue.', code: 'canceled');
+      }
+      return;
+    }
     if (passwords[_user?.email] != password) {
       throw const AuthFailure('Wrong email or password.', code: 'invalid-credential');
     }

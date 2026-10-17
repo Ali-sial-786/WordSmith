@@ -14,39 +14,43 @@ import 'package:wordsmith/game/providers.dart';
 import '../fixtures/fake_backend.dart';
 import '../fixtures/puzzles.dart';
 
+Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server) async {
+  SharedPreferences.setMockInitialValues({
+    'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+  });
+  final store = await Store.open();
+  final container = ProviderContainer(
+    overrides: [
+      storeProvider.overrideWithValue(store),
+      campaignProvider.overrideWithValue(
+        Campaign.fromJson({
+          'version': 1,
+          'chapters': [
+            {'id': 'tin', 'name': 'Tin', 'first': 1, 'count': 1},
+          ],
+          'puzzles': [tearJson()],
+        }),
+      ),
+      authServiceProvider.overrideWithValue(auth),
+      apiClientProvider.overrideWithValue(server.client(auth)),
+    ],
+  );
+  addTearDown(container.dispose);
+  await tester.binding.setSurfaceSize(const Size(412, 892));
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: WordsmithApp(router: GoRouter(routes: appRouter.configuration.routes)),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('sign up from the Forge Hall, pick a name, and see it at home', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
-    });
-    final store = await Store.open();
     final auth = FakeAuth();
     final server = FakeServer();
-    final container = ProviderContainer(
-      overrides: [
-        storeProvider.overrideWithValue(store),
-        campaignProvider.overrideWithValue(
-          Campaign.fromJson({
-            'version': 1,
-            'chapters': [
-              {'id': 'tin', 'name': 'Tin', 'first': 1, 'count': 1},
-            ],
-            'puzzles': [tearJson()],
-          }),
-        ),
-        authServiceProvider.overrideWithValue(auth),
-        apiClientProvider.overrideWithValue(server.client(auth)),
-      ],
-    );
-    addTearDown(container.dispose);
-    await tester.binding.setSurfaceSize(const Size(412, 892));
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: WordsmithApp(router: GoRouter(routes: appRouter.configuration.routes)),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpApp(tester, auth, server);
 
     expect(find.text('Sign in to keep your progress safe and play with friends.'), findsOneWidget);
     await tester.tap(find.text('Sign in'));
@@ -73,5 +77,27 @@ void main() {
     expect(find.text('Ali_Smith'), findsOneWidget, reason: 'the Forge Hall shows the name');
     expect(find.text('0 online'), findsOneWidget, reason: 'Friends is now available');
     expect(server.username, 'Ali_Smith');
+  });
+
+  testWidgets('Continue with Google goes straight to picking a name', (tester) async {
+    final auth = FakeAuth()..googleEmail = 'sam@gmail.com';
+    final server = FakeServer();
+    await _pumpApp(tester, auth, server);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with Google'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pick a name'), findsOneWidget);
+  });
+
+  testWidgets('builds without Google settings show only email sign-in', (tester) async {
+    final auth = FakeAuth()..googleAvailableFlag = false;
+    await _pumpApp(tester, auth, FakeServer());
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
   });
 }

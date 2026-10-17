@@ -174,6 +174,10 @@ class AccountController extends Notifier<AccountState> {
   Future<void> signIn(String email, String password) => _auth.signIn(email, password);
   Future<void> signUp(String email, String password) => _auth.signUp(email, password);
   Future<void> resetPassword(String email) => _auth.resetPassword(email);
+  bool get googleAvailable => _auth.googleAvailable;
+
+  /// Returns false if the player backed out of Google's account picker.
+  Future<bool> signInWithGoogle() => _auth.signInWithGoogle();
   Future<void> signOut() => _auth.signOut();
 
   /// Picks the username and avatar. Throws [ApiException] (e.g. taken).
@@ -316,9 +320,9 @@ class AccountController extends Notifier<AccountState> {
   // ---- Account deletion ----
 
   /// Deletes the account everywhere and resets this phone. Email accounts
-  /// must confirm their [password] first.
-  Future<void> deleteAccount(String password) async {
-    await _auth.reauthenticate(password);
+  /// confirm their [password] first; Google accounts confirm with Google.
+  Future<void> deleteAccount({String? password}) async {
+    await _auth.reauthenticate(password: password);
     await _api!.deleteMe();
     await _stopHub();
     await _auth.deleteUser();

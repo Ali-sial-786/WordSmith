@@ -109,11 +109,7 @@ class _AccountSection extends ConsumerWidget {
                     dimension: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : IconButton(
-                    tooltip: 'Sync now',
-                    icon: const Icon(Icons.sync),
-                    onPressed: n.sync,
-                  ),
+                : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.sync), onPressed: n.sync),
           ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
           ListTile(
@@ -151,7 +147,10 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
       _error = null;
     });
     try {
-      await ref.read(accountProvider.notifier).deleteAccount(_password.text);
+      final google = !(ref.read(accountProvider).user?.usesPassword ?? true);
+      await ref
+          .read(accountProvider.notifier)
+          .deleteAccount(password: google ? null : _password.text);
       if (mounted) Navigator.of(context).pop();
     } on AuthFailure catch (e) {
       setState(() => _error = e.message);
@@ -163,37 +162,43 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Delete your account?'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Your smith, progress, hints and friends will be deleted on the '
-          'server and on this phone. This can\'t be undone.',
-        ),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _password,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Confirm your password'),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 10),
-          Text(_error!, style: const TextStyle(color: Palette.quenchRed)),
+  Widget build(BuildContext context) {
+    final google = !(ref.watch(accountProvider).user?.usesPassword ?? true);
+    return AlertDialog(
+      title: const Text('Delete your account?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Your smith, progress, hints and friends will be deleted on the '
+            'server and on this phone. This can\'t be undone.',
+          ),
+          const SizedBox(height: 14),
+          if (google)
+            const Text('Google will ask you to confirm your account.')
+          else
+            TextField(
+              controller: _password,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Confirm your password'),
+            ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: Palette.quenchRed)),
+          ],
         ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: const Text('Keep it'),
+        ),
+        TextButton(
+          onPressed: _busy ? null : _delete,
+          child: const Text('Delete', style: TextStyle(color: Palette.quenchRed)),
+        ),
       ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: _busy ? null : () => Navigator.of(context).pop(),
-        child: const Text('Keep it'),
-      ),
-      TextButton(
-        onPressed: _busy ? null : _delete,
-        child: const Text('Delete', style: TextStyle(color: Palette.quenchRed)),
-      ),
-    ],
-  );
+    );
+  }
 }

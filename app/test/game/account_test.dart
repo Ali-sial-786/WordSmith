@@ -161,16 +161,55 @@ void main() {
     await _settle();
 
     await expectLater(
-      c.read(accountProvider.notifier).deleteAccount('wrong'),
+      c.read(accountProvider.notifier).deleteAccount(password: 'wrong'),
       throwsA(isA<AuthFailure>()),
     );
     expect(server.deletedMe, isFalse, reason: 'nothing deleted without the password');
 
-    await c.read(accountProvider.notifier).deleteAccount('secret1');
+    await c.read(accountProvider.notifier).deleteAccount(password: 'secret1');
     expect(server.deletedMe, isTrue);
     expect(auth.deleted, isTrue);
     expect(c.read(accountProvider).phase, AccountPhase.signedOut);
     expect(c.read(profileProvider).userId, isNot('uid-a@b.c'));
     expect(store.loadSyncQueue(), isEmpty);
+  });
+
+  test('Continue with Google signs up a new smith, and backing out does nothing', () async {
+    final (c, auth, server, _) = await _setUp();
+    await _settle();
+
+    expect(await c.read(accountProvider.notifier).signInWithGoogle(), isFalse);
+    await _settle();
+    expect(c.read(accountProvider).phase, AccountPhase.signedOut);
+
+    auth.googleEmail = 'sam@gmail.com';
+    expect(await c.read(accountProvider.notifier).signInWithGoogle(), isTrue);
+    await _settle();
+    expect(c.read(accountProvider).phase, AccountPhase.needsSetup);
+    expect(c.read(accountProvider).user?.usesPassword, isFalse);
+
+    await c.read(accountProvider.notifier).setup('Sam', 'avatar_04');
+    await _settle();
+    expect(c.read(accountProvider).phase, AccountPhase.ready);
+  });
+
+  test('a Google account confirms with Google before it is deleted', () async {
+    final (c, auth, server, _) = await _setUp();
+    server.username = 'Sam';
+    auth.googleEmail = 'sam@gmail.com';
+    await c.read(accountProvider.notifier).signInWithGoogle();
+    await _settle();
+
+    auth.googleEmail = null; // backs out of the picker
+    await expectLater(
+      c.read(accountProvider.notifier).deleteAccount(),
+      throwsA(isA<AuthFailure>()),
+    );
+    expect(server.deletedMe, isFalse);
+
+    auth.googleEmail = 'sam@gmail.com';
+    await c.read(accountProvider.notifier).deleteAccount();
+    expect(server.deletedMe, isTrue);
+    expect(c.read(accountProvider).phase, AccountPhase.signedOut);
   });
 }
