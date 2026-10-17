@@ -57,6 +57,7 @@ class _CrucibleScreenState extends ConsumerState<CrucibleScreen> with WidgetsBin
     _account = ref.read(accountProvider.notifier)..setStatus('solo');
     _run = _newRun();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) HammerStrike.precache(context);
       final store = ref.read(storeProvider);
       if (!mounted || store.seenTip('crucible')) return;
       store.markTip('crucible');
@@ -110,9 +111,7 @@ class _CrucibleScreenState extends ConsumerState<CrucibleScreen> with WidgetsBin
       if (r.stage == CrucibleStage.cleared) _onCleared();
       if (r.stage == CrucibleStage.melted) _onMelted();
       if (r.stage == CrucibleStage.playing && r.number != _shownPuzzle) {
-        _cues
-          ..fillDelay.clear()
-          ..flash.clear();
+        _cues.clear();
         _toast.currentState?.show('Puzzle ${r.number}: the next mold is heating', color: Palette.molten);
       }
       _shown = r.stage;
@@ -152,9 +151,7 @@ class _CrucibleScreenState extends ConsumerState<CrucibleScreen> with WidgetsBin
         _shown = CrucibleStage.playing;
         _shownPuzzle = 1;
         _shownHeat = null;
-        _cues
-          ..fillDelay.clear()
-          ..flash.clear();
+        _cues.clear();
       });
     } else {
       context.canPop() ? context.pop() : context.go('/');
@@ -226,7 +223,12 @@ class _CrucibleScreenState extends ConsumerState<CrucibleScreen> with WidgetsBin
     }
     switch (kind) {
       case HintKind.hammer:
-        _afterReveal(_run.useHammer(), SfxId.hintHammer);
+        final r = _run.useHammer();
+        if (r == null) return;
+        // The hammer swings down; the letter shows as it lands.
+        _cues.strike(r.cells.single, completed: [for (final s in r.completedSlots) s.cells]);
+        _sfx.hammerStrike(hammerImpact);
+        Future.delayed(hammerImpact, () => _haptic(HapticFeedback.heavyImpact));
       case HintKind.chisel:
         setState(() => _chisel = !_chisel);
         if (_chisel) _toast.currentState?.show('Tap a cell to chisel its letter');

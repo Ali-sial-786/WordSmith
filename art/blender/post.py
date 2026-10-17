@@ -7,6 +7,7 @@ writes app/assets/images/ (and the UI kit to app/assets/ui/).
     python3 post.py [tiles] [anvil] [cells] [icon] [bg] [ui]   (default: all)
     python3 post.py bg bg_iron bg_gold                      (only these backgrounds)
 """
+import json
 import os
 import sys
 
@@ -531,7 +532,33 @@ def ui():
                  os.path.join(UI_OUT, f"{name}.png"))
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg, "ui": ui}
+# --------------------------------------------------------------------------
+# 7. the Hammer Strike hint's hammer (hammer_sprite.py)
+# --------------------------------------------------------------------------
+def hammer():
+    """Crops the hammer to its pixels, scales it to 384 px on the long side
+    and prints where its striking face and grip land, for the app's
+    HammerStrike (app/lib/ui/mold/hammer_strike.dart)."""
+    print("hammer")
+    a = load(raw("hammer_strike.png"))
+    with open(raw("hammer_strike.json")) as f:
+        pts = json.load(f)
+    h, w = a.shape[:2]
+    ys, xs = np.nonzero(a[..., 3] > 2 / 255)
+    m = 6
+    x0, x1 = max(0, xs.min() - m), min(w, xs.max() + 1 + m)
+    y0, y1 = max(0, ys.min() - m), min(h, ys.max() + 1 + m)
+    a = a[y0:y1, x0:x1]
+    scale = 384 / max(a.shape[:2])
+    size = (round(a.shape[1] * scale), round(a.shape[0] * scale))
+    save_png(resize(a, size), out("hammer_strike.png"))
+    for k in ("face", "grip"):
+        fx = (pts[k][0] * w - x0) / (x1 - x0)
+        fy = (pts[k][1] * h - y0) / (y1 - y0)
+        print(f"  {k}: Offset({fx:.4f}, {fy:.4f})  (fraction of the sprite, from the top left)")
+
+
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg, "ui": ui, "hammer": hammer}
 
 
 def main():

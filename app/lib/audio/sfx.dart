@@ -26,7 +26,8 @@ enum SfxId {
   masterwork('masterwork'),
   claim('claim'),
   page('page'),
-  melt('melt');
+  melt('melt'),
+  swing('swing');
 
   const SfxId(this.file);
   final String file;
@@ -133,6 +134,13 @@ class Sfx {
   }
 
   void play(SfxId id, {double volume = 1}) => _play(id.file, volume);
+
+  /// The Hammer Strike: a whoosh as the hammer swings, and the clang as it
+  /// lands, [landsIn] from now.
+  void hammerStrike(Duration landsIn) {
+    Future.delayed(landsIn - const Duration(milliseconds: 230), () => play(SfxId.swing, volume: 0.8));
+    Future.delayed(landsIn - const Duration(milliseconds: 10), () => play(SfxId.hintHammer));
+  }
 
   /// Tile-touch tink for the [n]th letter of the current word (1-based);
   /// the pitch rises with each tile.

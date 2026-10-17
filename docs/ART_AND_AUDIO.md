@@ -135,6 +135,7 @@ ratio.
 | Masterwork finished (`masterwork.ogg`) | Triumphant bell-and-anvil flourish ending on a big ringing chord (~3.3 s) | Synthesised, plus a Kenney bell (CC0) |
 | Reward claimed: Work Order, gift, Daily Stoke (`claim.ogg`) | Warm two-note rising bell chime, no coins (~0.8 s) | Synthesised |
 | Lore Book page turn (`page.ogg`) | Parchment page swish with a dry crinkle (~0.4 s) | Kenney RPG Audio `bookFlip2` (CC0) + synthesised layers |
+| Hammer Strike swing (`swing.ogg`) | Short whoosh that swells as the hammer comes down and cuts off on impact (~0.3 s); the clang (`hint_hammer.ogg`) plays as it lands | Synthesised (`art/audio/swing.py`) |
 | Survival: a heated word melts (`melt.ogg`) | Sizzle and steam over a sagging metal groan, bubbling, then drips (~2.4 s) | Synthesised (`art/audio/melt.py`; `python3 melt.py melt.wav`, then encode to Vorbis q4 mono) |
 
 ### Music and ambience

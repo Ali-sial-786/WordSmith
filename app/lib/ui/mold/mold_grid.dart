@@ -7,9 +7,11 @@ import '../../engine/puzzle.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import 'hammer_strike.dart';
 import 'mold_model.dart';
 import 'survival_overlay.dart';
 
+export 'hammer_strike.dart' show HammerStrike, hammerImpact;
 export 'mold_model.dart';
 export 'survival_overlay.dart';
 
@@ -24,10 +26,41 @@ class MoldCues {
   /// Bumped to make cells pulse (e.g. "already forged").
   final Map<CellPos, int> flash = {};
 
-  void stagger(List<CellPos> cells, {Duration step = const Duration(milliseconds: 70)}) {
+  /// Hammer Strikes to play (the latest few), each with its own id.
+  final List<({CellPos cell, int id})> strikes = [];
+  int _strikes = 0;
+
+  /// Cells a hammer has struck: their reveal throws more sparks.
+  final Set<CellPos> struck = {};
+
+  void stagger(
+    List<CellPos> cells, {
+    Duration step = const Duration(milliseconds: 70),
+    Duration start = Duration.zero,
+  }) {
     for (var i = 0; i < cells.length; i++) {
-      fillDelay[cells[i]] = step * i;
+      fillDelay[cells[i]] = start + step * i;
     }
+  }
+
+  /// A Hammer Strike on [cell]: the hammer swings down onto it, and its
+  /// letter (and the words it [completed]) show as it lands.
+  void strike(CellPos cell, {Iterable<List<CellPos>> completed = const []}) {
+    strikes.add((cell: cell, id: ++_strikes));
+    if (strikes.length > 3) strikes.removeAt(0);
+    struck.add(cell);
+    fillDelay[cell] = hammerImpact;
+    for (final cells in completed) {
+      stagger(cells, start: hammerImpact);
+    }
+  }
+
+  /// A new round or puzzle: forget everything.
+  void clear() {
+    fillDelay.clear();
+    flash.clear();
+    strikes.clear();
+    struck.clear();
   }
 
   void pulse(Iterable<CellPos> cells) {
@@ -85,6 +118,15 @@ class MoldGrid extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 for (final pos in mold.cells) Positioned.fromRect(rect: rectOf(pos), child: _cell(pos)),
+                if (!reducedMotion)
+                  for (final st in cues.strikes)
+                    Positioned.fill(
+                      child: HammerStrike(
+                        key: ValueKey(('strike', st.id)),
+                        cell: rectOf(st.cell),
+                        mirror: st.cell.x * 2 >= mold.cols,
+                      ),
+                    ),
                 if (heat != null && melt == null)
                   Positioned.fill(
                     child: HeatOverlay(heat: heat!, rectOf: rectOf),
@@ -113,6 +155,7 @@ class MoldGrid extends StatelessWidget {
       initial: mold.ownerInitial(pos),
       delay: cues.fillDelay[pos] ?? Duration.zero,
       flash: cues.flash[pos] ?? 0,
+      struck: cues.struck.contains(pos),
       pickup: fill == CellFill.filled ? null : mold.pickupAt(pos),
       gilded: fill != CellFill.filled && mold.isGilded(pos),
       highlight: chiselMode && empty,
@@ -135,6 +178,7 @@ class MoldCell extends StatefulWidget {
     this.gilded = false,
     this.initial,
     this.highlight = false,
+    this.struck = false,
     this.onTap,
   });
 
@@ -153,6 +197,9 @@ class MoldCell extends StatefulWidget {
   /// A gilded cell whose blueprint piece is still there.
   final bool gilded;
   final bool highlight;
+
+  /// A hammer struck it: its reveal throws a bigger burst of sparks.
+  final bool struck;
   final VoidCallback? onTap;
 
   @override
@@ -185,20 +232,33 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
     if (widget.pickup != null || widget.highlight || widget.gilded) _pulse.repeat(reverse: true);
   }
 
+  /// Filled or revealed, but still drawn empty until its delay is up (a
+  /// word pouring in letter by letter, or a hammer on its way down).
+  bool _waiting = false;
+  int _changes = 0;
+
   @override
   void didUpdateWidget(MoldCell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.fill == CellFill.filled && oldWidget.fill != CellFill.filled) {
-      _heat.value = 0;
-      Future.delayed(widget.delay, () {
-        if (!mounted) return;
-        _heat.forward(from: 0);
+    final filled = widget.fill == CellFill.filled && oldWidget.fill != CellFill.filled;
+    final revealed = widget.fill == CellFill.revealed && oldWidget.fill == CellFill.empty;
+    if (filled || revealed) {
+      if (filled) _heat.value = 0;
+      final change = ++_changes;
+      void show() {
+        if (!mounted || change != _changes) return;
+        setState(() => _waiting = false);
+        if (filled) _heat.forward(from: 0);
         _pop.forward(from: 0);
-        _burst();
-      });
-    } else if (widget.fill == CellFill.revealed && oldWidget.fill == CellFill.empty) {
-      _pop.forward(from: 0);
-      _burst(small: true);
+        _burst(small: revealed && !widget.struck, big: widget.struck);
+      }
+
+      if (widget.delay > Duration.zero) {
+        _waiting = true;
+        Future.delayed(widget.delay, show);
+      } else {
+        show();
+      }
     }
     if (widget.flash != oldWidget.flash) _pop.forward(from: 0);
     final wantsPulse = widget.pickup != null || widget.highlight || widget.gilded;
@@ -209,12 +269,17 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
     }
   }
 
-  void _burst({bool small = false}) {
+  void _burst({bool small = false, bool big = false}) {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) return;
     final center = box.localToGlobal(box.size.center(Offset.zero));
-    SparkField.of(context)
-        ?.burst(center, count: small ? 8 : 10, speed: box.size.width * (small ? 3 : 4.5), gravity: box.size.width * 14);
+    SparkField.of(context)?.burst(
+      center,
+      // A hammer blow throws more, faster.
+      count: big ? 26 : (small ? 8 : 10),
+      speed: box.size.width * (big ? 6 : (small ? 3 : 4.5)),
+      gravity: box.size.width * 14,
+    );
   }
 
   @override
@@ -252,7 +317,8 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
 
   Widget _buildCell(double s) {
     final radius = BorderRadius.circular(s * 0.16);
-    final filled = widget.fill == CellFill.filled;
+    final fill = _waiting ? CellFill.empty : widget.fill;
+    final filled = fill == CellFill.filled;
     final t = _heat.value;
     final layers = <Widget>[];
     if (!filled || t < 1) {
@@ -391,7 +457,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
         ),
       );
     }
-    if (widget.fill != CellFill.empty) {
+    if (fill != CellFill.empty) {
       final letterColor = filled ? Color.lerp(Palette.darkLetter, widget.metal.letter, t)! : Palette.molten;
       layers.add(
         Text(

@@ -232,9 +232,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final sfx = ref.read(sfxProvider);
     switch (e) {
       case RoundStart():
-        _cues
-          ..fillDelay.clear()
-          ..flash.clear();
+        _cues.clear();
       case RoundEnd(:final completed, :final melted, :final xp):
         // A melt has its own sound.
         if (completed) {

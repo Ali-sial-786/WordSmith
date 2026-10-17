@@ -1,6 +1,7 @@
 // Renders Survival's screens to PNGs with the real fonts, for eyeballing.
 // Not part of the suite: flutter test test_shots/survival_shots_test.dart --update-goldens
 import 'dart:convert';
+import 'dart:math';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ import 'package:wordsmith/features/coop/round_view.dart';
 import 'package:wordsmith/game/coop_session.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/net/room_client.dart';
+import 'package:wordsmith/ui/effects/sparks.dart';
 import 'package:wordsmith/ui/mold/mold_grid.dart';
 import 'package:wordsmith/ui/theme/palette.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
@@ -207,4 +209,40 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/melt_${ms.$1}.png'));
     });
   }
+
+  testWidgets('hammer strike frames', (tester) async {
+    final store = await _store(reducedMotion: false);
+    final puzzle = (await tester.runAsync(Campaign.load))!.puzzle(40);
+    final board = Board(puzzle);
+    final cues = MoldCues();
+    late StateSetter rebuild;
+    await _frame(
+      tester,
+      store,
+      SparkField(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 80, 16, 200),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return MoldGrid(mold: BoardMold(board), metal: MetalStyle.forChapter('steel'), cues: cues);
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.runAsync(() => HammerStrike.precache(tester.element(find.byType(MoldGrid))));
+    final target = board.hammerTarget(Random(2))!;
+    rebuild(() {
+      board.reveal([target]);
+      cues.strike(target);
+    });
+    await tester.pump();
+    var at = 0;
+    for (final ms in [60, 200, 330, 380, 430, 640]) {
+      await tester.pump(Duration(milliseconds: ms - at));
+      at = ms;
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/hammer_$ms.png'));
+    }
+  });
 }

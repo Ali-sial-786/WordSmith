@@ -61,6 +61,9 @@ class _RoundViewState extends ConsumerState<RoundView> {
   void initState() {
     super.initState();
     _sub = _s.effects.listen(_onEffect);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) HammerStrike.precache(context);
+    });
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (mounted) setState(() {});
     });
@@ -116,6 +119,12 @@ class _RoundViewState extends ConsumerState<RoundView> {
           _sfx.play(SfxId.pickup);
           _toast.currentState?.show('Ember found! +1 ${kind.title}', color: Palette.molten);
         }
+      case Revealed(:final by, :final kind, :final cells, :final auto) when kind == 'hammer' && cells.length == 1:
+        // Whoever used it, everyone sees the hammer swing down.
+        widget.cues.strike(cells.single.$1, completed: [for (final (s, _) in auto) _s.mold!.slot(s).cells]);
+        _sfx.hammerStrike(hammerImpact);
+        Future.delayed(hammerImpact, () => _haptic(HapticFeedback.mediumImpact));
+        if (by == _s.me) ref.read(profileProvider.notifier).addHint(HintKind.hammer, -1);
       case Revealed(:final by, :final kind, :final auto):
         _sfx.play(kind == 'sparks' ? SfxId.hintSparks : kind == 'chisel' ? SfxId.hintChisel : SfxId.hintHammer);
         for (final (s, _) in auto) {

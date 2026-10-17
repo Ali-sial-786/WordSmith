@@ -21,6 +21,8 @@ cells.py          cell_empty / cell_metal
 ui_geom.py        UI kit shapes (pure numpy heightfields + material weights), shared with post.py
 ui_kit.py         UI kit: plate / plate_primary / panel / panel_gold / round / round_active / tab
 icon.py           app icon foreground (+ an ID pass for the monochrome icon)
+hammer_sprite.py  hammer_strike (the Hammer Strike hint's hammer, swung by the app; also writes
+                  where its face and grip are, which `post.py hammer` prints for the app)
 scene_hall.py     bg_hall   (Forge Hall, night)
 scene_tin.py      bg_tin    (village smithy at dawn)
 scene_copper.py   bg_copper (riverside workshop with water wheel, golden afternoon)

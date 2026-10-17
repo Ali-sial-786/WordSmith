@@ -100,7 +100,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
           ..addListener(_onGameChanged);
     if (_game.isComplete) _finish();
     _account = ref.read(accountProvider.notifier)..setStatus('solo');
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startTips());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) HammerStrike.precache(context);
+      _startTips();
+    });
   }
 
   /// Explains a gilded cell or an ember the first time a puzzle has one.
@@ -286,13 +289,24 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
     }
     switch (kind) {
       case HintKind.hammer:
-        _afterReveal(_game.useHammer(), SfxId.hintHammer);
+        _strike(_game.useHammer());
       case HintKind.chisel:
         setState(() => _chisel = !_chisel);
         if (_chisel) _toast.currentState?.show('Tap a cell to chisel its letter');
       case HintKind.sparks:
         _afterReveal(_game.useSparks(), SfxId.hintSparks);
     }
+  }
+
+  /// The hammer swings down onto the revealed cell; its letter, and any
+  /// word it completes, show as it lands.
+  void _strike(RevealResult? r) {
+    if (r == null) return;
+    _cues.strike(r.cells.single, completed: [for (final s in r.completedSlots) s.cells]);
+    _sfx.hammerStrike(hammerImpact);
+    Future.delayed(hammerImpact, () => _haptic(HapticFeedback.heavyImpact));
+    _announcePickups(r.collected, gilded: r.gilded);
+    if (_game.isComplete) _finish();
   }
 
   void _onChiselCell(CellPos cell) {
