@@ -6,7 +6,7 @@ import { cellKey, indexMold, slotCells } from "../../src/rules/mold";
 import { totalXpForLevel } from "../../src/rules/progression";
 import { ROOM_CODE_RE } from "../../src/rules/room";
 import { befriend, body, client, setUpClient, type Client } from "./helpers";
-import { connect, openSocket, sleep, type Message, type Socket } from "./sockets";
+import { closeAll, connect, openSocket, sleep, type Message, type Socket } from "./sockets";
 
 type Smith = Client & { username: string };
 
@@ -376,6 +376,8 @@ describe("a co-op round", () => {
     expect((await sb.next({ op: "LOBBY" })).phase).toBe("countdown");
     const second = await roundOf(code);
     expect(second.puzzle.id).not.toBe(target.id);
+    // Don't leave a countdown alarm to go off after the test.
+    expect(await runDurableObjectAlarm(stub(code))).toBe(true);
     sa.ws.close();
     sb.ws.close();
   });
@@ -685,10 +687,9 @@ describe("open rooms in the hub", () => {
     const hf2 = await connect(friend, "/v1/ws/hub");
     expect(await hf2.next({ op: "OPEN_ROOMS" })).toEqual({ op: "OPEN_ROOMS", rooms: [{ ...listing, players: 2 }] });
 
-    sh.send({ op: "START" });
-    await sh.next({ op: "ROUND_START" });
+    await startRound(sh, code, [sf]);
     expect(await hf2.next({ op: "OPEN_ROOMS" })).toEqual({ op: "OPEN_ROOMS", rooms: [] });
     expect((await hs.drain()).filter((m) => m.op === "OPEN_ROOMS")).toEqual([]);
-    for (const s of [hf2, hs, sh, sf]) s.ws.close();
+    await closeAll(hf2, hs, sh, sf);
   });
 });

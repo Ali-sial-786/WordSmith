@@ -73,3 +73,13 @@ export function openSocket(c: Client, path: string): Promise<Response> {
 }
 
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Closes sockets and gives the Durable Objects' close handlers a moment to
+ * finish, so they aren't cut off by the test environment shutting down.
+ */
+export async function closeAll(...sockets: Socket[]): Promise<void> {
+  for (const s of sockets) s.ws.close();
+  await Promise.all(sockets.map((s) => s.closed));
+  await sleep(100);
+}
