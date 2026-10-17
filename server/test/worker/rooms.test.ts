@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { CoopRound } from "../../src/rules/coop-round";
 import { cellKey, indexMold, slotCells } from "../../src/rules/mold";
+import { totalXpForLevel } from "../../src/rules/progression";
 import { ROOM_CODE_RE } from "../../src/rules/room";
 import { befriend, body, client, setUpClient, type Client } from "./helpers";
 import { connect, openSocket, sleep, type Message, type Socket } from "./sockets";
@@ -425,6 +426,72 @@ describe("a co-op round", () => {
     await sleep(50);
     expect((await hints(a.uid)).hammer).toBe(before + 1);
     expect((await roundOf(code)).embers).toEqual([]);
+    sa.ws.close();
+  });
+});
+
+describe("Chisel and Spark Shower", () => {
+  it("reveals the chosen cell, then up to 5 spread out, and hinted letters score nothing", async () => {
+    const a = await setUpClient();
+    // Level 12: Chisel and Spark Shower unlocked, and heat 2.
+    await env.DB.prepare("UPDATE profiles SET xp = ?2, level = 12 WHERE user_id = ?1").bind(a.uid, totalXpForLevel(12)).run();
+    await env.DB.prepare("UPDATE inventory SET count = 1 WHERE user_id = ?1 AND item IN ('chisel', 'sparks')").bind(a.uid).run();
+    const code = await createRoom(a);
+    const sa = await join(a, code);
+    const start = await startRound(sa, code);
+    expect(start.heat).toBe(2);
+    await setEmbers(code, []);
+    const round = await roundOf(code);
+    const index = indexMold(round.puzzle);
+    const [w1, ...others] = round.puzzle.slots;
+
+    sa.send({ op: "SUBMIT", word: w1!.word, seq: 1 });
+    await sa.next({ op: "CLAIMED" });
+    const filled = slotCells(w1!)[0]!;
+    for (const cell of [filled, { x: 9, y: 9 }]) {
+      sa.send({ op: "HINT", kind: "chisel", ...cell });
+      expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "bad_cell" });
+    }
+    expect(await hints(a.uid)).toMatchObject({ chisel: 1, sparks: 1 });
+
+    // Chisel the first cell of a word nobody has, that w1 doesn't cross.
+    const target = others.find((s) => slotCells(s).some((c) => !slotCells(w1!).some((d) => d.x === c.x && d.y === c.y)))!;
+    const cell = slotCells(target).find((c) => !slotCells(w1!).some((d) => d.x === c.x && d.y === c.y))!;
+    sa.send({ op: "HINT", kind: "chisel", x: cell.x, y: cell.y });
+    const chiselled = await sa.next({ op: "REVEAL" });
+    expect(chiselled).toMatchObject({ by: a.uid, kind: "chisel", cells: [{ ...cell, letter: index.cells.get(cellKey(cell.x, cell.y))!.letter }] });
+    expect(await hints(a.uid)).toMatchObject({ chisel: 0, sparks: 1 });
+    sa.send({ op: "HINT", kind: "chisel", x: cell.x, y: cell.y });
+    expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "bad_cell" });
+
+    sa.send({ op: "HINT", kind: "sparks" });
+    const sparks = await sa.next({ op: "REVEAL" });
+    expect(sparks.kind).toBe("sparks");
+    const before = new Set([...slotCells(w1!).map((c) => cellKey(c.x, c.y)), cellKey(cell.x, cell.y)]);
+    const keys = (sparks.cells as { x: number; y: number; letter: string }[]).map((c) => cellKey(c.x, c.y));
+    expect(keys.length).toBe(Math.min(5, index.cells.size - before.size));
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const c of sparks.cells as { x: number; y: number; letter: string }[]) {
+      expect(before.has(cellKey(c.x, c.y))).toBe(false);
+      expect(index.cells.get(cellKey(c.x, c.y))!.letter).toBe(c.letter);
+    }
+    expect(await hints(a.uid)).toMatchObject({ chisel: 0, sparks: 0 });
+
+    // A slot the hints filled completely belongs to nobody.
+    for (const auto of [...chiselled.auto, ...sparks.auto] as { slot: number; word: string }[]) {
+      await sleep(260);
+      sa.send({ op: "SUBMIT", word: auto.word, seq: 100 + auto.slot });
+      expect(await sa.next({ op: "WORD_RESULT", seq: 100 + auto.slot })).toMatchObject({ result: "already", by: null });
+    }
+    // The chiselled word scores 10 for each letter no hint showed.
+    const state = await roundOf(code);
+    if (!state.auto.some((x) => x.slot === target.slot)) {
+      const hinted = slotCells(target).filter((c) => state.revealed.some((r) => r.x === c.x && r.y === c.y)).length;
+      await sleep(260);
+      sa.send({ op: "SUBMIT", word: target.word, seq: 2 });
+      expect(await sa.next({ op: "WORD_RESULT", seq: 2 })).toMatchObject({ result: "claimed", points: 10 * (target.len - hinted) });
+      expect(hinted).toBeGreaterThanOrEqual(1);
+    }
     sa.ws.close();
   });
 });
