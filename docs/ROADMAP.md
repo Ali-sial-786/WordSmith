@@ -7,9 +7,12 @@
 > - **M0:** done.
 > - **M1:** done. Builds are signed with the permanent release key and shared as APKs (GitHub Releases).
 > - **M2:** live. The server runs at https://wordsmith-api.wordsmith-forge.workers.dev and deploys from GitHub Actions.
-> - **M3:** built on both sides (RoomDO, puzzle bank, lobby, shared round, results; contract in shared/room-protocol.md). A live two-player round passed against the real server; waiting on a real-phones test.
-> - **Video chat (extra):** optional LiveKit video bubbles in rooms, built; needs the LiveKit secrets and a two-phone test.
-> - **M4–M5:** not started.
+> - **M3:** live. A two-player round passed against the real server; waiting on a real-phones test.
+> - **M4:** live. Versus app and server are built; a best-of-3 series passed against the real server (podium, XP, stats). Waiting on a real-phones test.
+> - **M5:** mostly done.
+>   - Done: the Daily Commission (live, tested), rank badges, music and match sounds, the level-up flourish after matches, the update banner, multiplayer records on the profile, Join-a-friend, and the 130%-text accessibility pass.
+>   - Still open: chapter art for the remaining metals (in progress), push notifications for invites (needs Firebase Cloud Messaging set up by the owner).
+> - **Video chat (extra):** live. Tokens verified against LiveKit; needs a two-phone test.
 
 ---
 

@@ -110,8 +110,11 @@ game's look.
 | Damascus | 80 | Yellow → White Heat |
 | Starmetal | 90 | White Heat |
 
-Later: a **Daily Commission** (one puzzle a day, the same for everyone, with a
-bonus reward).
+**Daily Commission** (Forge Hall): one puzzle a day, the same for everyone,
+with a streak. The heat follows the weekday (Monday Ember through Saturday
+White Heat, Sunday Cherry Red). The first solve of the day earns 25 XP plus 5
+per streak day beyond the first (up to 55). Hints come from your stock. The
+rules are in `shared/daily.md`.
 
 ---
 

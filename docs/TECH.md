@@ -95,9 +95,11 @@ All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1
 | `POST /friends/request` · `POST /friends/respond` · `DELETE /friends/:id` | Manage friends |
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
+| `POST /rooms/:code/video` | A LiveKit token for the room's optional video chat (§6, "Video chat") |
+| `GET /daily` · `POST /daily/complete` | Today's Daily Commission and its streak (`shared/daily.md`) |
 | `GET /ws/hub` | WebSocket upgrade to HubDO |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO |
-| `GET /leaderboard` | Friends leaderboard (level, VS series wins; co-op best score arrives with M3) |
+| `GET /leaderboard` | Friends leaderboard (level, XP, VS series and rounds won, co-op rounds and MVPs) |
 
 ---
 
