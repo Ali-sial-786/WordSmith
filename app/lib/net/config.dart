@@ -14,7 +14,10 @@ abstract final class AppConfig {
 
   /// The project's web OAuth client ID ("client_type": 3 in
   /// google-services.json), needed for "Continue with Google". Public.
-  static const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+  static const googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue: '920525083065-gslh1nvo2evhb6j0oj8v3m6tkc28ahb7.apps.googleusercontent.com',
+  );
 
   static bool get hasFirebase => firebaseApiKey.isNotEmpty;
   static bool get hasServer => apiBase.isNotEmpty;
