@@ -5,6 +5,7 @@ Plain Python 3 + Pillow + numpy (no bpy). Reads art/blender/_renders/,
 writes app/assets/images/.
 
     python3 post.py [tiles] [anvil] [cells] [icon] [bg]     (default: all)
+    python3 post.py bg bg_iron bg_gold                      (only these backgrounds)
 """
 import os
 import sys
@@ -425,12 +426,22 @@ BG_SETTINGS = {
     "bg_hall": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.85, bottom_dim=0.5)),
     "bg_tin": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.85, bottom_dim=0.55)),
     "bg_copper": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.72, bottom_dim=0.55)),
+    "bg_bronze": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.82, bottom_dim=0.55)),
+    "bg_iron": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.82, bottom_dim=0.55)),
+    "bg_steel": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.82, bottom_dim=0.55)),
+    "bg_silver": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.82, bottom_dim=0.55)),
+    "bg_gold": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.82, bottom_dim=0.55)),
+    "bg_damascus": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.78, bottom_dim=0.55)),
+    "bg_starmetal": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.85, bottom_dim=0.55)),
 }
+BG_NAMES = ("bg_hall", "bg_tin", "bg_copper", "bg_bronze", "bg_iron", "bg_steel", "bg_silver",
+            "bg_gold", "bg_damascus", "bg_starmetal")
 
 
 def bg():
     print("backgrounds")
-    for name in ("bg_hall", "bg_tin", "bg_copper"):
+    want = [a for a in sys.argv[2:] if a.startswith("bg_")] if sys.argv[1:2] == ["bg"] else []
+    for name in want or BG_NAMES:
         if os.path.exists(raw("bg", f"{name}.png")):
             background(name, **BG_SETTINGS.get(name, {}))
         else:
@@ -441,7 +452,7 @@ STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg}
 
 
 def main():
-    want = sys.argv[1:] or list(STEPS)
+    want = [a for a in sys.argv[1:] if a in STEPS] or list(STEPS)
     for k in want:
         STEPS[k]()
 

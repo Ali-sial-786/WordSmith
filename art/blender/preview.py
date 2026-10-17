@@ -163,7 +163,8 @@ def cells():
 def bg():
     """Backgrounds side by side: raw (zones marked) and app-like (dim + blur
     with a mock grid, ring and flame band)."""
-    names = [n for n in ("bg_hall", "bg_tin", "bg_copper")
+    names = [n for n in ("bg_hall", "bg_tin", "bg_copper", "bg_bronze", "bg_iron", "bg_steel",
+                         "bg_silver", "bg_gold", "bg_damascus", "bg_starmetal")
              if os.path.exists(os.path.join(IMG, n + ".webp"))]
     if not names:
         return

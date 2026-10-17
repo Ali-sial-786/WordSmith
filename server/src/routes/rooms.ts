@@ -1,7 +1,7 @@
 /**
  * Rooms (shared/room-protocol.md):
  *
- * - `POST /v1/rooms {mode: "coop"}` → `{code}`; the caller is the host
+ * - `POST /v1/rooms {mode: "coop" | "vs"}` → `{code}`; the caller is the host
  * - `GET /v1/rooms/:code` → `{code, mode, phase, host: {id, username}, players, maxPlayers}`, or 404 `room_not_found`
  * - `GET /v1/ws/room/:code` → WebSocket upgrade to that room's RoomDO
  * - `POST /v1/rooms/:code/video` → `{url, token, room, expiresAt}`: a LiveKit
@@ -43,8 +43,7 @@ function codeParam(c: RequestContext): string {
 export async function postRoom(c: AuthedContext): Promise<Response> {
   const account = await requireSetUp(c);
   const body = await readJsonObject(c.request);
-  if (body.mode === "vs") throw new ApiError(400, "unsupported_mode", "Versus rooms arrive in M4");
-  if (body.mode !== "coop") throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop"}');
+  if (body.mode !== "coop" && body.mode !== "vs") throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop" | "vs"}');
   const mode: RoomMode = body.mode;
 
   const me = identityOf(account);

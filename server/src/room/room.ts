@@ -9,25 +9,40 @@
  * - **Survives hibernation.** Sockets use the Hibernation API, and every
  *   piece of state that matters is in the DO's own SQLite storage (the
  *   synchronous KV API, cached in memory): the room and its players
- *   (`room`), the round with its answers (`round`), the last results
- *   (`results`), results still to be written to D1 (`award`) and the
- *   planned alarm (`alarm`). Only rate limits live in memory.
+ *   (`room`), the round with its answers (`round`), a Versus series
+ *   (`series`) and its last round's results (`standings`), the last
+ *   results (`results`), results still to be written to D1 (`award`) and
+ *   the planned alarm (`alarm`). Only rate limits live in memory.
  * - **One alarm**, always set to the nearest deadline: the end of the
- *   countdown, the end of the round, a dropped player's rejoin time, the
- *   empty-room and idle closes, and retrying a failed results write. Each
- *   event first catches up on any deadline that has passed, so a late
- *   alarm changes nothing.
+ *   countdown, the end of the round, the end of the Versus standings, a
+ *   dropped player's rejoin time, the empty-room and idle closes, and
+ *   retrying a failed results write. Each event first catches up on any
+ *   deadline that has passed, so a late alarm changes nothing.
  * - **Cheap while idle** (docs/TECH.md §12): no timers, `{"op":"PING"}` is
  *   answered by the runtime, and a quiet room hibernates.
  *
  * The game rules are pure functions in src/rules/ (room.ts, mold.ts,
- * coop-round.ts); this class wires them to sockets, storage, alarms and D1.
- * Versus (M4) adds a mode: its round state and rules next to co-op's, with
- * the lobby, seats, host, timers and lifecycle here shared.
+ * coop-round.ts, vs-round.ts); this class wires them to sockets, storage,
+ * alarms and D1. The lobby, seats, host, timers, results writes and the
+ * room's lifecycle are shared; each mode has its own round handling:
+ *
+ * - **Co-op:** `lobby → countdown → round → results`, and AGAIN.
+ * - **Versus:** `lobby → countdown → round → standings → countdown → … →
+ *   results`, a series of rounds on everyone's own copy of the mold. XP
+ *   is written once, at the end of the series.
  */
 
 import { DurableObject } from "cloudflare:workers";
-import { grantHint, pickPuzzle, recordSeen, spendHint, writeCoopRound, type CoopRoundRecord } from "../db/rooms";
+import {
+  grantHint,
+  pickPuzzle,
+  recordSeen,
+  spendHint,
+  writeCoopRound,
+  writeVsSeries,
+  type CoopRoundRecord,
+  type VsSeriesRecord,
+} from "../db/rooms";
 import type { Env } from "../env";
 import { RateLimiter, type RoomListing } from "../hub/protocol";
 import {
@@ -42,15 +57,19 @@ import {
   scoresOf,
   type CoopRound,
   type RoundEndReason,
+  type SlotWord,
 } from "../rules/coop-round";
-import { heatForLevel, type HeatTier } from "../rules/heat";
+import { heatForLevel, vsHeat, type HeatTier } from "../rules/heat";
 import { emberKind, type MpPuzzle } from "../rules/mold";
 import { isHintUnlocked, type HintKind } from "../rules/progression";
 import {
+  COLORS,
   COUNTDOWN_MS,
   EMPTY_CLOSE_MS,
   freeColor,
   IDLE_CLOSE_MS,
+  isJoinablePhase,
+  isPlayingPhase,
   MAX_PLAYERS,
   MIN_PLAYERS,
   OTHER_BURST,
@@ -64,6 +83,29 @@ import {
   type RoomPhase,
   type Seat,
 } from "../rules/room";
+import type { SeriesLength } from "../rules/vs";
+import {
+  activeRacers,
+  applyVsPickup,
+  applyVsSubmit,
+  canRace,
+  DEFAULT_SERIES,
+  endVsRound,
+  markOut,
+  newVsRound,
+  newVsSeries,
+  seriesDecision,
+  stopSeries,
+  vsRoundSnapshot,
+  vsRoundStartFields,
+  vsSeriesResults,
+  type VsNextRound,
+  type VsRound,
+  type VsRoundEndFields,
+  type VsRoundEndReason,
+  type VsSeries,
+  type VsSeriesOutcome,
+} from "../rules/vs-round";
 import { normalizeWord } from "../rules/words";
 import { PROTOCOL_VERSION } from "../version";
 import {
@@ -78,7 +120,9 @@ import {
   type RoomErrorCode,
   type RoomIdentity,
   type RoomSummary,
+  type SeriesEndFields,
   type ServerMessage,
+  type VsXpBody,
   type WordResultKind,
   type XpBody,
 } from "./protocol";
@@ -96,6 +140,8 @@ const ACTIVITY_GRANULARITY_MS = 60_000;
 /** Attempts at writing a round's results to D1, and the wait between them (× attempt). */
 const MAX_AWARD_ATTEMPTS = 5;
 const AWARD_RETRY_MS = 15_000;
+/** Versus: when the next round's puzzle couldn't be read from D1, the standings wait this much longer. */
+const NEXT_ROUND_RETRY_MS = 5_000;
 
 // Storage keys.
 const ROOM = "room";
@@ -103,6 +149,9 @@ const ROUND = "round";
 const RESULTS = "results";
 const AWARD = "award";
 const ALARM = "alarm";
+const SERIES = "series";
+const STANDINGS = "standings";
+const KEYS = [ROOM, ROUND, RESULTS, AWARD, ALARM, SERIES, STANDINGS];
 
 interface Player {
   readonly id: string;
@@ -115,7 +164,10 @@ interface Player {
   joinedAt: number;
   /** While the player has no socket open: when their seat goes. */
   graceUntil: number | null;
-  /** Left during a round (LEAVE, or rejoin time ran out): still listed until the round ends. */
+  /**
+   * Left mid-game (LEAVE, or rejoin time ran out): still listed until the
+   * co-op round or the Versus series ends.
+   */
   left: boolean;
 }
 
@@ -129,24 +181,47 @@ interface Room {
   players: Player[];
   /** Joins so far, for `joinedAt`. */
   joins: number;
-  /** Rounds started. */
+  /** Co-op rounds started. */
   rounds: number;
   lastActivity: number;
   /** When the last socket closed, while none is open. */
   emptySince: number | null;
   /** The open-rooms listing last sent to the hub (JSON), or `null` if not listed. */
   listed: string | null;
+  /** Versus: the series length (CONFIG). */
+  series?: SeriesLength;
 }
 
-/** A finished round whose results haven't reached D1 (or the players) yet. */
-interface PendingAward {
-  readonly record: CoopRoundRecord;
-  readonly usernames: Readonly<Record<string, string>>;
+/** Where a round's clock stands, whatever the mode. */
+interface RoundClock {
+  readonly heat: HeatTier;
+  readonly startsAt: number;
+  readonly endsAt: number;
+}
+
+interface AwardProgress {
   attempts: number;
   retryAt: number;
-  /** ROUND_END has been sent (with XP, or without it after a failed write). */
+  /** The results have been sent (with XP, or without it after a failed write). */
   announced: boolean;
 }
+
+/** A finished co-op round whose results haven't reached D1 (or the players) yet. */
+interface CoopPendingAward extends AwardProgress {
+  /** Absent in awards stored before Versus existed. */
+  readonly kind?: "coop";
+  readonly record: CoopRoundRecord;
+  readonly usernames: Readonly<Record<string, string>>;
+}
+
+/** A finished Versus series whose results haven't reached D1 (or the players) yet. */
+interface VsPendingAward extends AwardProgress {
+  readonly kind: "vs";
+  readonly record: VsSeriesRecord;
+  readonly usernames: Readonly<Record<string, string>>;
+}
+
+type PendingAward = CoopPendingAward | VsPendingAward;
 
 /** What each socket carries through hibernation. */
 interface Attachment {
@@ -186,6 +261,11 @@ function seats(room: Room): Seat[] {
   return room.players.map((p) => ({ id: p.id, joinedAt: p.joinedAt, present: !p.left }));
 }
 
+/** Players holding a seat (not left), in join order. */
+function seated(room: Room): Player[] {
+  return room.players.filter((p) => !p.left).sort((a, b) => a.joinedAt - b.joinedAt);
+}
+
 export class RoomDO extends DurableObject<Env> {
   /** Storage values by key, as last read or written. */
   private readonly cache = new Map<string, unknown>();
@@ -194,7 +274,7 @@ export class RoomDO extends DurableObject<Env> {
   private readonly otherLimits = new WeakMap<WebSocket, RateLimiter>();
   /** Per-player queue of hint-stock writes, so a collected ember is in D1 before the next spend. */
   private readonly stockQueue = new Map<string, Promise<unknown>>();
-  /** A START or AGAIN is waiting on D1 for a puzzle. */
+  /** A round's start (START, AGAIN, or the next Versus round) is waiting on D1 for a puzzle. */
   private starting = false;
   /** A results write in flight. */
   private awarding: Promise<void> | null = null;
@@ -223,8 +303,23 @@ export class RoomDO extends DurableObject<Env> {
     return this.read<Room>(ROOM);
   }
 
-  private round(): CoopRound | null {
+  /** The round's clock, in either mode. */
+  private clock(): RoundClock | null {
+    return this.read<RoundClock>(ROUND);
+  }
+
+  /** The co-op round: only in a co-op room. */
+  private coopRound(): CoopRound | null {
     return this.read<CoopRound>(ROUND);
+  }
+
+  /** The Versus round: only in a Versus room. */
+  private vsRound(): VsRound | null {
+    return this.read<VsRound>(ROUND);
+  }
+
+  private series(): VsSeries | null {
+    return this.read<VsSeries>(SERIES);
   }
 
   // -------------------------------------------------------------------------
@@ -265,6 +360,7 @@ export class RoomDO extends DurableObject<Env> {
       lastActivity: now,
       emptySince: now,
       listed: null,
+      ...(mode === "vs" ? { series: DEFAULT_SERIES } : {}),
     };
     this.write(ROOM, room);
     await this.settle();
@@ -326,10 +422,13 @@ export class RoomDO extends DurableObject<Env> {
     let player = room.players.find((p) => p.id === me.id);
     if (player === undefined) {
       if (room.players.length >= MAX_PLAYERS[room.mode]) return httpError(409, "room_full");
-      if (room.phase === "countdown" || room.phase === "round") return httpError(409, "round_in_progress");
+      if (!isJoinablePhase(room.phase)) return httpError(409, "round_in_progress");
       player = {
         ...me,
-        color: freeColor(room.players.map((p) => p.color))!,
+        color: freeColor(
+          room.players.map((p) => p.color),
+          COLORS[room.mode],
+        )!,
         ready: false,
         joinedAt: room.joins++,
         graceUntil: null,
@@ -337,6 +436,7 @@ export class RoomDO extends DurableObject<Env> {
       };
       room.players.push(player);
     } else {
+      // Versus: a racer who left mid-series comes back to watch; they stay out of it.
       Object.assign(player, { username: me.username, avatar: me.avatar, level: me.level, graceUntil: null, left: false });
     }
     room.hostId = pickHost(room.hostId, seats(room));
@@ -349,7 +449,7 @@ export class RoomDO extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server, [me.id]);
     server.serializeAttachment({ u: me.id } satisfies Attachment);
     send(server, { op: "WELCOME", you: me.id, protocol: PROTOCOL_VERSION, serverNow: now });
-    send(server, this.snapshot(room, now));
+    send(server, this.snapshot(room, now, me.id));
     this.broadcast(this.lobbyMessage(room), server);
 
     await this.schedule();
@@ -445,6 +545,18 @@ export class RoomDO extends DurableObject<Env> {
         }
         return;
 
+      case "CONFIG":
+        // Co-op has no series to configure.
+        if (room.mode !== "vs") return this.error(ws, "bad_message");
+        if (room.phase !== "lobby") return this.error(ws, "wrong_phase");
+        if (room.hostId !== player.id) return this.error(ws, "not_host");
+        if (room.series !== message.series) {
+          room.series = message.series;
+          this.write(ROOM, room);
+          this.broadcast(this.lobbyMessage(room));
+        }
+        return;
+
       case "START":
       case "AGAIN": {
         const from: RoomPhase = message.op === "START" ? "lobby" : "results";
@@ -453,17 +565,21 @@ export class RoomDO extends DurableObject<Env> {
         if (room.phase !== from || (from === "results" && award !== null && !award.announced)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
         if (this.connectedPlayers(room).length < MIN_PLAYERS[room.mode]) return this.error(ws, "not_enough_players");
-        return this.startRound(ws, from);
+        return room.mode === "vs" ? this.startSeries(ws, from) : this.startRound(ws, from);
       }
 
       case "SUBMIT":
+        if (room.mode === "vs") return this.vsSubmit(ws, room, player, message.word, message.seq, now);
         return this.submit(ws, room, player, message.word, message.seq, now);
 
       case "HINT":
+        if (room.mode === "vs") return this.error(ws, "no_hints");
         return this.hint(ws, room, player, message.hint, now);
 
       case "LEAVE":
         this.removePlayer(room, player, now);
+        // Leaving may have decided a Versus series.
+        await this.announceQueued();
         return;
 
       case "EMOTE":
@@ -471,6 +587,36 @@ export class RoomDO extends DurableObject<Env> {
         return;
     }
   }
+
+  /**
+   * LEAVE, or a dropped player's rejoin time ran out. In the lobby or
+   * results their seat goes at once; mid-game they stay listed (not
+   * connected) until the co-op round or Versus series ends, keeping their
+   * points or wins, and XP. The host role moves to whoever joined
+   * earliest. In Versus a racer who goes mid-series is out of it, which
+   * may decide it ({@link racerOut}).
+   */
+  private removePlayer(room: Room, player: Player, now: number): void {
+    const midGame = isPlayingPhase(room.phase);
+    if (midGame) {
+      player.left = true;
+      player.ready = false;
+      player.graceUntil = null;
+    } else {
+      room.players = room.players.filter((p) => p !== player);
+    }
+    room.hostId = pickHost(room.hostId, seats(room));
+    for (const ws of this.socketsOf(player.id)) closeSocket(ws, CLOSE_LEFT, "left");
+    if (this.openSockets().length === 0) room.emptySince ??= now;
+    this.submitLimits.delete(player.id);
+    this.write(ROOM, room);
+    this.broadcast(this.lobbyMessage(room));
+    if (room.mode === "vs" && midGame) this.racerOut(room, player.id, now);
+  }
+
+  // -------------------------------------------------------------------------
+  // Co-op
+  // -------------------------------------------------------------------------
 
   /** START from the lobby, or AGAIN from results: a new puzzle and a countdown. */
   private async startRound(ws: WebSocket, from: RoomPhase): Promise<void> {
@@ -533,14 +679,10 @@ export class RoomDO extends DurableObject<Env> {
     const reply = (result: WordResultKind, extra: { word?: string; by?: string | null; points?: number } = {}) =>
       send(ws, { op: "WORD_RESULT", seq, word: shown, result, ...extra });
 
-    let limiter = this.submitLimits.get(player.id);
-    if (limiter === undefined) {
-      limiter = new SubmitLimiter(now);
-      this.submitLimits.set(player.id, limiter);
-    }
+    const limiter = this.submitLimiter(player.id, now);
     if (!limiter.take(now)) return reply("rate_limited");
     if (room.phase === "results") return reply("too_late");
-    const round = this.round();
+    const round = this.coopRound();
     if (room.phase !== "round" || round === null || !round.playerIds.includes(player.id)) return this.error(ws, "wrong_phase");
 
     const outcome = applySubmit(round, player.id, raw);
@@ -590,7 +732,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private async hint(ws: WebSocket, room: Room, player: Player, target: HintRequest, now: number): Promise<void> {
-    const round = this.round();
+    const round = this.coopRound();
     if (room.phase !== "round" || round === null || !round.playerIds.includes(player.id)) return this.error(ws, "wrong_phase");
     if (!isHintUnlocked(target.kind, player.level)) return this.error(ws, "hint_locked");
     if (hintProblem(round, target) !== null) return this.error(ws, "bad_cell");
@@ -605,7 +747,7 @@ export class RoomDO extends DurableObject<Env> {
 
     // The round may have moved on (or the cell filled) while D1 answered: give it back.
     const fresh = this.room();
-    const current = this.round();
+    const current = this.coopRound();
     if (fresh?.phase !== "round" || current === null || current.matchId !== round.matchId || hintProblem(current, target) !== null) {
       try {
         await this.stock(player.id, () => grantHint(this.env.DB, player.id, target.kind, Date.now()));
@@ -626,25 +768,283 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
-   * LEAVE, or a dropped player's rejoin time ran out. In the lobby or
-   * results their seat goes at once; during a round they stay listed (not
-   * connected) until it ends, keeping their points and XP. The host role
-   * moves to whoever joined earliest.
+   * Ends the co-op round now (no waiting, so nothing more can count):
+   * results phase, players who left are dropped, and the results are
+   * queued for D1. {@link announceResults} writes them and sends ROUND_END.
    */
-  private removePlayer(room: Room, player: Player, now: number): void {
-    if (room.phase === "countdown" || room.phase === "round") {
-      player.left = true;
-      player.ready = false;
-      player.graceUntil = null;
-    } else {
-      room.players = room.players.filter((p) => p !== player);
-    }
+  private finishRound(reason: RoundEndReason, now: number): void {
+    const room = this.room();
+    const round = this.coopRound();
+    if (room === null || round === null || (room.phase !== "round" && room.phase !== "countdown")) return;
+    const results = coopResults(round, reason, now);
+    const usernames = Object.fromEntries(room.players.map((p) => [p.id, p.username]));
+    room.phase = "results";
+    room.players = room.players.filter((p) => !p.left);
     room.hostId = pickHost(room.hostId, seats(room));
-    for (const ws of this.socketsOf(player.id)) closeSocket(ws, CLOSE_LEFT, "left");
-    if (this.openSockets().length === 0) room.emptySince ??= now;
-    this.submitLimits.delete(player.id);
+    const award: CoopPendingAward = {
+      record: {
+        matchId: round.matchId,
+        mode: room.mode,
+        code: room.code,
+        puzzleId: round.puzzle.id,
+        heat: round.heat,
+        round: round.round,
+        startedAt: round.startsAt,
+        endedAt: now,
+        results,
+      },
+      usernames,
+      attempts: 0,
+      // Written straight away by announceResults(); this is only for a write cut off by a restart.
+      retryAt: now + AWARD_RETRY_MS,
+      announced: false,
+    };
+    this.write(AWARD, award);
+    this.write(RESULTS, this.resultsFields(award, {}));
+    this.write(ROOM, room);
+  }
+
+  // -------------------------------------------------------------------------
+  // Versus
+  // -------------------------------------------------------------------------
+
+  /** START from the lobby, or AGAIN from results: a new series of the room's length, and round 1's countdown. */
+  private async startSeries(ws: WebSocket, from: RoomPhase): Promise<void> {
+    if (this.starting) return; // the host double-tapped; the first one is on its way
+    this.starting = true;
+    try {
+      const room = this.room()!;
+      const players = seated(room);
+      const heat = vsHeat(players.map((p) => p.level));
+      let puzzle: MpPuzzle | null = null;
+      try {
+        puzzle = await pickPuzzle(this.env.DB, {
+          heat,
+          size: 1,
+          playerIds: players.map((p) => p.id),
+          seenSince: Date.now() - PUZZLE_REPEAT_WINDOW_MS,
+        });
+      } catch (err) {
+        console.error("room: choosing a puzzle failed", err);
+      }
+
+      // Anything could have happened while D1 answered.
+      const now = Date.now();
+      const fresh = this.room();
+      if (fresh === null || fresh.phase !== from) return;
+      if (puzzle === null) return this.error(ws, "no_puzzle");
+      if (this.connectedPlayers(fresh).length < MIN_PLAYERS.vs) return this.error(ws, "not_enough_players");
+      const racers = seated(fresh).map((p) => p.id);
+      const series = newVsSeries({
+        matchId: crypto.randomUUID(),
+        length: fresh.series ?? DEFAULT_SERIES,
+        heat,
+        racerIds: racers,
+        startedAt: now + COUNTDOWN_MS,
+      });
+      for (const p of fresh.players) p.ready = false;
+      this.write(STANDINGS, null);
+      this.write(RESULTS, null);
+      this.beginVsRound(fresh, series, puzzle, { round: 1, suddenDeath: false, players: racers }, now);
+      await this.schedule();
+
+      try {
+        await recordSeen(this.env.DB, puzzle.id, racers, now);
+      } catch (err) {
+        console.error("room: recording puzzle_seen failed", err);
+      }
+    } finally {
+      this.starting = false;
+    }
+  }
+
+  /** The standings are over: the next round's countdown, once D1 has given a puzzle for it. */
+  private async nextVsRound(now: number): Promise<void> {
+    if (this.starting) return;
+    this.starting = true;
+    try {
+      const series = this.series()!;
+      let puzzle: MpPuzzle | null = null;
+      try {
+        // Everyone still in the series sees the answers at the end, watchers included.
+        puzzle = await pickPuzzle(this.env.DB, {
+          heat: series.heat,
+          size: 1,
+          playerIds: activeRacers(series),
+          seenSince: Date.now() - PUZZLE_REPEAT_WINDOW_MS,
+        });
+      } catch (err) {
+        console.error("room: choosing a puzzle failed", err);
+      }
+
+      const at = Math.max(now, Date.now());
+      const room = this.room();
+      const fresh = this.series();
+      if (room === null || room.phase !== "standings" || fresh === null || fresh.matchId !== series.matchId) return;
+      const decision = seriesDecision(fresh);
+      if (decision.over) {
+        // Players leaving already ends a series at once, so this is only a safety net.
+        this.endSeries(room, fresh, decision, at);
+        await this.announceResults();
+        return;
+      }
+      if (puzzle === null) {
+        fresh.standingsEndsAt = at + NEXT_ROUND_RETRY_MS;
+        this.write(SERIES, fresh);
+        return;
+      }
+      this.beginVsRound(room, fresh, puzzle, decision.next, at);
+      await this.schedule();
+
+      try {
+        await recordSeen(this.env.DB, puzzle.id, activeRacers(fresh), at);
+      } catch (err) {
+        console.error("room: recording puzzle_seen failed", err);
+      }
+    } finally {
+      this.starting = false;
+    }
+  }
+
+  /** A Versus round's countdown: everyone gets ROUND_START, with the same puzzle and letters. */
+  private beginVsRound(room: Room, series: VsSeries, puzzle: MpPuzzle, next: VsNextRound, now: number): void {
+    const round = newVsRound({
+      round: next.round,
+      suddenDeath: next.suddenDeath,
+      heat: series.heat,
+      puzzle,
+      playerIds: next.players,
+      startsAt: now + COUNTDOWN_MS,
+      rand: Math.random,
+    });
+    series.standingsEndsAt = null;
+    room.phase = "countdown";
+    this.write(ROUND, round);
+    this.write(SERIES, series);
+    this.write(ROOM, room);
+    this.broadcast({ op: "ROUND_START", ...vsRoundStartFields(round, series, Date.now()) });
+    this.broadcast(this.lobbyMessage(room));
+  }
+
+  private async vsSubmit(ws: WebSocket, room: Room, player: Player, raw: string, seq: number, now: number): Promise<void> {
+    const shown = normalizeWord(raw) ?? raw.trim().toUpperCase().slice(0, 16);
+    const reply = (result: WordResultKind, extra: { word?: string; slot?: number; auto?: readonly SlotWord[]; pickup?: HintKind } = {}) =>
+      send(ws, { op: "WORD_RESULT", seq, word: shown, result, ...extra });
+
+    const limiter = this.submitLimiter(player.id, now);
+    if (!limiter.take(now)) return reply("rate_limited");
+    if (room.phase === "standings" || room.phase === "results") return reply("too_late");
+    const round = this.vsRound();
+    const series = this.series();
+    if (room.phase !== "round" || round === null || series === null) return this.error(ws, "wrong_phase");
+    if (!round.playerIds.includes(player.id) || !canRace(series, player.id)) return this.error(ws, "not_playing");
+
+    const outcome = applyVsSubmit(round, player.id, raw);
+    switch (outcome.result) {
+      case "invalid":
+        limiter.recordInvalid(now);
+        return reply("invalid");
+      case "already":
+        return reply("already", { word: outcome.word });
+      case "bonus":
+        this.write(ROUND, round);
+        return reply("bonus", { word: outcome.word });
+      case "claimed": {
+        let pickup: HintKind | null = null;
+        if (outcome.ember !== null) {
+          pickup = emberKind(Math.random, player.level);
+          applyVsPickup(round, player.id, outcome.ember, pickup);
+        }
+        this.write(ROUND, round);
+        reply("claimed", { word: outcome.word, slot: outcome.slot, auto: outcome.auto, ...(pickup === null ? {} : { pickup }) });
+        this.broadcast({ op: "PROGRESS", id: player.id, filled: outcome.filled, total: outcome.total });
+        if (outcome.complete) {
+          this.finishVsRound("finished", now);
+          await this.announceQueued();
+        }
+        return;
+      }
+    }
+  }
+
+  /**
+   * Ends the Versus round now (no waiting, so nothing more counts) and
+   * sends ROUND_END: then the standings, or the results if the series is
+   * over (or `stop`: the room is closing). {@link announceResults} then
+   * writes the series and sends SERIES_END.
+   */
+  private finishVsRound(reason: VsRoundEndReason, now: number, stop = false): void {
+    const room = this.room();
+    const round = this.vsRound();
+    const series = this.series();
+    if (room === null || round === null || series === null || room.phase !== "round") return;
+    const end = endVsRound(series, round, reason, now, stop);
+    this.write(STANDINGS, end.fields);
+    this.broadcast({ op: "ROUND_END", ...end.fields });
+    if (end.outcome !== null) return this.endSeries(room, series, end.outcome, now);
+    room.phase = "standings";
+    series.standingsEndsAt = end.fields.standingsEndsAt;
+    this.write(SERIES, series);
     this.write(ROOM, room);
     this.broadcast(this.lobbyMessage(room));
+  }
+
+  /**
+   * A racer left mid-series (LEAVE, or their rejoin time ran out): they're
+   * out. If that decides the series (one racer left, say), it ends now: a
+   * round in play is resolved first; a countdown's round never started, so
+   * it doesn't count.
+   */
+  private racerOut(room: Room, id: string, now: number): void {
+    const series = this.series();
+    if (series === null || !markOut(series, id)) return;
+    this.write(SERIES, series);
+    const decision = seriesDecision(series);
+    if (!decision.over) return;
+    if (room.phase === "round") return this.finishVsRound("timeout", now, true);
+    this.endSeries(room, series, decision, now);
+  }
+
+  /** The room is closing mid-series: it ends here, decided or not. */
+  private stopSeriesNow(room: Room, now: number): void {
+    if (room.phase === "round") return this.finishVsRound("timeout", now, true);
+    const series = this.series();
+    if (series !== null && isPlayingPhase(room.phase)) this.endSeries(room, series, stopSeries(series), now);
+  }
+
+  /**
+   * The series is over: results phase, players who left are dropped (they
+   * stay on the podium and get their XP), and the results are queued for
+   * D1. {@link announceResults} writes them and sends SERIES_END.
+   */
+  private endSeries(room: Room, series: VsSeries, outcome: VsSeriesOutcome, now: number): void {
+    const results = vsSeriesResults(series, outcome);
+    const usernames = Object.fromEntries(room.players.map((p) => [p.id, p.username]));
+    series.standingsEndsAt = null;
+    room.phase = "results";
+    room.players = room.players.filter((p) => !p.left);
+    room.hostId = pickHost(room.hostId, seats(room));
+    const award: VsPendingAward = {
+      kind: "vs",
+      record: {
+        matchId: series.matchId,
+        code: room.code,
+        heat: series.heat,
+        length: series.length,
+        startedAt: series.startedAt,
+        endedAt: now,
+        results,
+      },
+      usernames,
+      attempts: 0,
+      // Written straight away by announceResults(); this is only for a write cut off by a restart.
+      retryAt: now + AWARD_RETRY_MS,
+      announced: false,
+    };
+    this.write(AWARD, award);
+    this.write(RESULTS, this.seriesEndFields(award, {}));
+    this.write(SERIES, series);
+    this.write(ROOM, room);
   }
 
   // -------------------------------------------------------------------------
@@ -660,18 +1060,28 @@ export class RoomDO extends DurableObject<Env> {
       const room = this.room();
       if (room === null) return;
       this.reconcile(room, now);
-      const round = this.round();
+      const clock = this.clock();
 
-      if (room.phase === "countdown" && round !== null && now >= round.startsAt) {
+      if (room.phase === "countdown" && clock !== null && now >= clock.startsAt) {
         room.phase = "round";
         this.write(ROOM, room);
         this.broadcast(this.lobbyMessage(room));
         continue;
       }
-      if (room.phase === "round" && round !== null && now >= round.endsAt) {
-        this.finishRound("timeout", now);
-        await this.announceResults();
-        wroteAward = true;
+      if (room.phase === "round" && clock !== null && now >= clock.endsAt) {
+        if (room.mode === "vs") {
+          this.finishVsRound("timeout", now);
+          if (await this.announceQueued()) wroteAward = true;
+        } else {
+          this.finishRound("timeout", now);
+          await this.announceResults();
+          wroteAward = true;
+        }
+        continue;
+      }
+      const standingsEnd = room.phase === "standings" ? this.series()?.standingsEndsAt : null;
+      if (standingsEnd != null && now >= standingsEnd && !this.starting) {
+        await this.nextVsRound(now);
         continue;
       }
       const expired = room.players.find(
@@ -679,6 +1089,7 @@ export class RoomDO extends DurableObject<Env> {
       );
       if (expired !== undefined) {
         this.removePlayer(room, expired, now);
+        if (await this.announceQueued()) wroteAward = true;
         continue;
       }
       if ((room.emptySince !== null && now >= room.emptySince + EMPTY_CLOSE_MS) || now >= room.lastActivity + IDLE_CLOSE_MS) {
@@ -720,9 +1131,12 @@ export class RoomDO extends DurableObject<Env> {
     const deadlines = [room.lastActivity + IDLE_CLOSE_MS];
     if (room.emptySince !== null) deadlines.push(room.emptySince + EMPTY_CLOSE_MS);
     for (const p of room.players) if (!p.left && p.graceUntil !== null) deadlines.push(p.graceUntil);
-    const round = this.round();
-    if (round !== null && room.phase === "countdown") deadlines.push(round.startsAt);
-    if (round !== null && room.phase === "round") deadlines.push(round.endsAt);
+    const clock = this.clock();
+    if (clock !== null && room.phase === "countdown") deadlines.push(clock.startsAt);
+    if (clock !== null && room.phase === "round") deadlines.push(clock.endsAt);
+    // Not while the next round's puzzle is on its way: its caller reschedules afterwards.
+    const standingsEnd = room.phase === "standings" && !this.starting ? this.series()?.standingsEndsAt : null;
+    if (standingsEnd != null) deadlines.push(standingsEnd);
     // Not while a write is in flight: its own caller reschedules afterwards.
     const award = this.read<PendingAward>(AWARD);
     if (award !== null && this.awarding === null) deadlines.push(award.retryAt);
@@ -745,50 +1159,14 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   // -------------------------------------------------------------------------
-  // Ending rounds and rooms
+  // Results and closing
   // -------------------------------------------------------------------------
 
   /**
-   * Ends the round now (no waiting, so nothing more can count): results
-   * phase, players who left are dropped, and the results are queued for
-   * D1. {@link announceResults} writes them and sends ROUND_END.
-   */
-  private finishRound(reason: RoundEndReason, now: number): void {
-    const room = this.room();
-    const round = this.round();
-    if (room === null || round === null || (room.phase !== "round" && room.phase !== "countdown")) return;
-    const results = coopResults(round, reason, now);
-    const usernames = Object.fromEntries(room.players.map((p) => [p.id, p.username]));
-    room.phase = "results";
-    room.players = room.players.filter((p) => !p.left);
-    room.hostId = pickHost(room.hostId, seats(room));
-    const award: PendingAward = {
-      record: {
-        matchId: round.matchId,
-        mode: room.mode,
-        code: room.code,
-        puzzleId: round.puzzle.id,
-        heat: round.heat,
-        round: round.round,
-        startedAt: round.startsAt,
-        endedAt: now,
-        results,
-      },
-      usernames,
-      attempts: 0,
-      // Written straight away by announceResults(); this is only for a write cut off by a restart.
-      retryAt: now + AWARD_RETRY_MS,
-      announced: false,
-    };
-    this.write(AWARD, award);
-    this.write(RESULTS, this.resultsFields(award, {}));
-    this.write(ROOM, room);
-  }
-
-  /**
-   * Writes the finished round to D1 (XP, stats, rewards, match rows, in one
-   * batch) and sends ROUND_END with everyone's XP. If D1 fails, ROUND_END
-   * goes out without XP and the write is retried by the alarm.
+   * Writes the finished co-op round or Versus series to D1 (XP, stats,
+   * rewards, match rows, in one batch) and sends ROUND_END (co-op) or
+   * SERIES_END (Versus) with everyone's XP. If D1 fails, it goes out
+   * without XP and the write is retried by the alarm.
    */
   private announceResults(): Promise<void> {
     this.awarding ??= this.writeAward().finally(() => {
@@ -797,15 +1175,26 @@ export class RoomDO extends DurableObject<Env> {
     return this.awarding;
   }
 
+  /** Announces results that were just queued and haven't gone out yet. True if there were some. */
+  private async announceQueued(): Promise<boolean> {
+    const award = this.read<PendingAward>(AWARD);
+    if (award === null || award.announced) return false;
+    await this.announceResults();
+    return true;
+  }
+
   private async writeAward(): Promise<void> {
     const award = this.read<PendingAward>(AWARD);
     if (award === null) return;
-    let xp: Record<string, XpBody> | null = null;
+    let coopXp: Record<string, XpBody> | null = null;
+    let vsXp: Record<string, VsXpBody> | null = null;
     try {
-      xp = await writeCoopRound(this.env.DB, award.record, Date.now());
+      if (award.kind === "vs") vsXp = await writeVsSeries(this.env.DB, award.record, Date.now());
+      else coopXp = await writeCoopRound(this.env.DB, award.record, Date.now());
     } catch (err) {
       console.error(`room ${award.record.code}: writing results failed (attempt ${award.attempts + 1})`, err);
     }
+    const xp: Readonly<Record<string, XpBody>> | null = vsXp ?? coopXp;
 
     const now = Date.now();
     const firstTime = !award.announced;
@@ -826,31 +1215,45 @@ export class RoomDO extends DurableObject<Env> {
       }
     }
     if (levelled) this.write(ROOM, room);
-    const body = this.resultsFields(award, xp ?? {});
-    const current = room.phase === "results" && this.round()?.matchId === award.record.matchId;
+
+    let body: ResultsFields | SeriesEndFields;
+    let message: ServerMessage;
+    let current: boolean;
+    if (award.kind === "vs") {
+      const fields = this.seriesEndFields(award, vsXp ?? {});
+      body = fields;
+      message = { op: "SERIES_END", ...fields };
+      current = room.phase === "results" && this.series()?.matchId === award.record.matchId;
+    } else {
+      const fields = this.resultsFields(award, coopXp ?? {});
+      body = fields;
+      message = { op: "ROUND_END", ...fields };
+      current = room.phase === "results" && this.coopRound()?.matchId === award.record.matchId;
+    }
     if (!firstTime || !current) {
-      // A retry: ROUND_END already went out, so just keep the results for
+      // A retry: the results already went out, so just keep them for
       // SNAPSHOTs and show the new levels.
       if (current && xp !== null) this.write(RESULTS, body);
       if (levelled) this.broadcast(this.lobbyMessage(room));
       return;
     }
     this.write(RESULTS, body);
-    this.broadcast({ op: "ROUND_END", ...body });
+    this.broadcast(message);
     this.broadcast(this.lobbyMessage(room));
   }
 
-  /** Closes the room: ends any round, closes every socket, clears storage and the hub listing. */
+  /** Closes the room: ends any round or series, closes every socket, clears storage and the hub listing. */
   private async closeRoom(now: number): Promise<void> {
     const room = this.room();
     if (room === null) return;
-    this.finishRound("timeout", now);
+    if (room.mode === "vs") this.stopSeriesNow(room, now);
+    else this.finishRound("timeout", now);
     if (this.read<PendingAward>(AWARD) !== null) await this.announceResults();
     for (const ws of this.ctx.getWebSockets()) closeSocket(ws, CLOSE_ROOM_CLOSED, "room_closed");
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
     this.cache.clear();
-    for (const key of [ROOM, ROUND, RESULTS, AWARD, ALARM]) this.cache.set(key, null);
+    for (const key of KEYS) this.cache.set(key, null);
     this.submitLimits.clear();
     if (room.listed !== null) await this.tellHub(room.code, null);
   }
@@ -864,7 +1267,7 @@ export class RoomDO extends DurableObject<Env> {
     const host = room.players.find((p) => p.id === room.hostId);
     const players = room.players.filter((p) => !p.left).length;
     const max = MAX_PLAYERS[room.mode];
-    if (host === undefined || players >= max || (room.phase !== "lobby" && room.phase !== "results")) return null;
+    if (host === undefined || players >= max || !isJoinablePhase(room.phase)) return null;
     return { mode: room.mode, hostId: host.id, hostUsername: host.username, players, max };
   }
 
@@ -898,9 +1301,19 @@ export class RoomDO extends DurableObject<Env> {
   // Messages
   // -------------------------------------------------------------------------
 
+  /**
+   * Co-op: the round's heat, else the host's level. Versus: the series'
+   * heat while one is on, else the median level of the seated players.
+   */
   private heatOf(room: Room): HeatTier {
-    const round = this.round();
-    if (round !== null && (room.phase === "countdown" || room.phase === "round")) return round.heat;
+    if (room.mode === "vs") {
+      const series = this.series();
+      if (series !== null && isPlayingPhase(room.phase)) return series.heat;
+      const levels = seated(room).map((p) => p.level);
+      return levels.length === 0 ? heatForLevel(1) : vsHeat(levels);
+    }
+    const clock = this.clock();
+    if (clock !== null && (room.phase === "countdown" || room.phase === "round")) return clock.heat;
     const host = room.players.find((p) => p.id === room.hostId);
     return heatForLevel(host?.level ?? 1);
   }
@@ -924,6 +1337,7 @@ export class RoomDO extends DurableObject<Env> {
           ready: p.ready,
           connected: this.socketsOf(p.id, except).length > 0,
         })),
+      ...(room.mode === "vs" ? { series: room.series ?? DEFAULT_SERIES } : {}),
     };
   }
 
@@ -931,8 +1345,10 @@ export class RoomDO extends DurableObject<Env> {
     return { op: "LOBBY", ...this.lobbyFields(room, except) };
   }
 
-  private snapshot(room: Room, now: number): ServerMessage {
-    const round = this.round();
+  /** SNAPSHOT for `receiver` (Versus shows them their own mold). */
+  private snapshot(room: Room, now: number, receiver: string): ServerMessage {
+    if (room.mode === "vs") return this.vsSnapshot(room, now, receiver);
+    const round = this.coopRound();
     const results = this.read<ResultsFields>(RESULTS);
     return {
       op: "SNAPSHOT",
@@ -942,7 +1358,28 @@ export class RoomDO extends DurableObject<Env> {
     };
   }
 
-  private resultsFields(award: PendingAward, xp: Readonly<Record<string, XpBody>>): ResultsFields {
+  /**
+   * Versus SNAPSHOT: `round` (with `mine` and `progress`) during a
+   * countdown or round, `standings` (the last ROUND_END) during the
+   * standings and results, and `results` (the SERIES_END) during results.
+   */
+  private vsSnapshot(room: Room, now: number, receiver: string): ServerMessage {
+    const round = this.vsRound();
+    const series = this.series();
+    const standings = this.read<VsRoundEndFields>(STANDINGS);
+    const results = this.read<SeriesEndFields>(RESULTS);
+    const live = room.phase === "countdown" || room.phase === "round";
+    const after = room.phase === "standings" || room.phase === "results";
+    return {
+      op: "SNAPSHOT",
+      lobby: this.lobbyFields(room),
+      ...(live && round !== null && series !== null ? { round: vsRoundSnapshot(round, series, receiver, now) } : {}),
+      ...(after && standings !== null ? { standings } : {}),
+      ...(room.phase === "results" && results !== null ? { results } : {}),
+    };
+  }
+
+  private resultsFields(award: CoopPendingAward, xp: Readonly<Record<string, XpBody>>): ResultsFields {
     const { players, ...rest } = award.record.results;
     return {
       ...rest,
@@ -954,6 +1391,18 @@ export class RoomDO extends DurableObject<Env> {
         longest: p.longest,
         bonus: p.bonus,
       })),
+      xp,
+    };
+  }
+
+  private seriesEndFields(award: VsPendingAward, xp: Readonly<Record<string, VsXpBody>>): SeriesEndFields {
+    const { winner, early, forfeit, rounds, players } = award.record.results;
+    return {
+      winner,
+      early,
+      forfeit,
+      rounds,
+      podium: players.map((p) => ({ id: p.id, username: award.usernames[p.id] ?? "", wins: p.wins, place: p.place })),
       xp,
     };
   }
@@ -988,6 +1437,15 @@ export class RoomDO extends DurableObject<Env> {
         // Closing.
       }
     }
+  }
+
+  private submitLimiter(uid: string, now: number): SubmitLimiter {
+    let limiter = this.submitLimits.get(uid);
+    if (limiter === undefined) {
+      limiter = new SubmitLimiter(now);
+      this.submitLimits.set(uid, limiter);
+    }
+    return limiter;
   }
 
   /** The per-socket limit on messages other than SUBMIT; past it they're dropped. */

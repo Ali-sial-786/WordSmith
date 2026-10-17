@@ -75,6 +75,33 @@ AVATARS = [  # avatar_01.svg ... avatar_16.svg
 for _i, _src in enumerate(AVATARS, 1):
     ICONS[f"avatar_{_i:02d}.svg"] = (GI, _src)
 
+# Rank badges (Apprentice -> Legend). Unlike the icons above these keep their colour: each is filled
+# with a vertical metal gradient (light top -> base -> dark bottom), so the app should draw them
+# untinted (SvgPicture.asset without a colorFilter). A badge is one or more game-icons glyphs, each
+# with an SVG transform in the 512x512 icon space ("" = as drawn).
+METALS = {  # light, base (docs/ART_AND_AUDIO.md chapter colours), dark
+    "bronze": ("#E8B27A", "#A97142", "#5E3A1E"),
+    "iron": ("#B4B8BE", "#7A7E84", "#44474C"),
+    "steel": ("#DCEAF6", "#9FB3C4", "#55697C"),
+    "silver": ("#FFFFFF", "#D5D9DF", "#8E949C"),
+    "gold": ("#FFF0B0", "#E1B53B", "#8A6210"),
+    "starmetal": ("#FFFFFF", "#B9A8FF", "#5A46C8"),
+}
+RANKS = {
+    "rank_apprentice.svg": ("bronze", [("delapouite/3d-hammer.svg", "")]),
+    "rank_journeyman.svg": ("iron", [("delapouite/3d-hammer.svg",
+                                      "translate(318 262) rotate(-6) scale(0.74) translate(-256 -256)"),
+                                     ("delapouite/3d-hammer.svg",
+                                      "translate(194 262) rotate(6) scale(-0.74 0.74) translate(-256 -256)")]),
+    "rank_smith.svg": ("steel", [("lorc/anvil.svg", "")]),
+    "rank_master.svg": ("silver", [("lorc/anvil.svg", "translate(256 490) scale(0.8) translate(-256 -443)"),
+                                   ("delapouite/round-star.svg",
+                                    "translate(256 126) scale(0.37) translate(-255.5 -255.5)")]),
+    "rank_grandmaster.svg": ("gold", [("delapouite/jewel-crown.svg", "")]),
+    "rank_legend.svg": ("starmetal", [("lorc/laurel-crown.svg", "")]),
+}
+RANK_FILL = "url(#metal)"
+
 LICENCE_NAMES = {
     "OFL-1.1": "SIL Open Font License 1.1",
     "Apache-2.0": "Apache License 2.0",
@@ -128,8 +155,8 @@ def export_scowl_notice(licences: Path) -> None:
 
 
 # ------------------------------------------------------------------ icons
-def clean_svg(src: Path, credit: str) -> tuple[str, bool]:
-    """Return (single-colour SVG, background_was_removed): every glyph path filled white."""
+def glyph_paths(src: Path) -> tuple[list[str], bool, list[float]]:
+    """(glyph path data, background_was_removed, viewBox) of a game-icons / Material SVG."""
     root = ET.parse(src).getroot()
     vb = [float(v) for v in root.get("viewBox").split()]
     paths = []
@@ -146,6 +173,12 @@ def clean_svg(src: Path, credit: str) -> tuple[str, bool]:
         paths.append(d)
     if not paths:
         raise ValueError(f"{src}: no glyph path left")
+    return paths, removed, vb
+
+
+def clean_svg(src: Path, credit: str) -> tuple[str, bool]:
+    """Return (single-colour SVG, background_was_removed): every glyph path filled white."""
+    paths, removed, vb = glyph_paths(src)
     body = "".join(f'<path fill="{ICON_FILL}" d="{d}"/>' for d in paths)
     if vb[1] != 0 or vb[0] != 0:  # Material Symbols use viewBox "0 -960 960 960"
         body = f'<g transform="translate({0 - vb[0] + 0:g} {0 - vb[1] + 0:g})">{body}</g>'
@@ -153,6 +186,31 @@ def clean_svg(src: Path, credit: str) -> tuple[str, bool]:
     change = ("background removed, " if removed else "") + f"recoloured {ICON_FILL}"
     return (f'<svg xmlns="{SVG_NS}" viewBox="{view}">'
             f"<!-- {credit} Modified for Wordsmith: {change}. -->{body}</svg>\n"), removed
+
+
+def rank_svg(metal: str, layers: list[tuple[str, str]]) -> tuple[str, str]:
+    """(metal-gradient SVG, changes note) for a rank badge built from game-icons glyphs."""
+    P = packs()
+    light, base, dark = METALS[metal]
+    credits, groups = [], []
+    for rel, transform in layers:
+        meta = file_meta(P[GI], rel)
+        c = f'"{meta["title"]}" by {meta["author"]}, {meta["page"]}'
+        if c not in credits:
+            credits.append(c)
+        paths, _, _ = glyph_paths(src_path(GI, rel))
+        body = "".join(f'<path fill="{RANK_FILL}" d="{d}"/>' for d in paths)
+        groups.append(f'<g transform="{transform}">{body}</g>' if transform else body)
+    changes = f"background removed, filled with a metal gradient ({metal})"
+    if len(layers) > 1:
+        changes += (", two copies mirrored and scaled into a crossed pair" if len(credits) == 1
+                    else ", glyphs scaled and combined")
+    note = f"{'; '.join(credits)}; {P[GI]['licence']}. Modified for Wordsmith: {changes}."
+    defs = (f'<defs><linearGradient id="metal" x1="0" y1="40" x2="0" y2="472" gradientUnits="userSpaceOnUse">'
+            f'<stop offset="0" stop-color="{light}"/><stop offset="0.55" stop-color="{base}"/>'
+            f'<stop offset="1" stop-color="{dark}"/></linearGradient></defs>')
+    return (f'<svg xmlns="{SVG_NS}" viewBox="0 0 512 512"><!-- {note.replace("--", "-")} -->'
+            f'{defs}{"".join(groups)}</svg>\n'), changes
 
 
 def export_icons() -> None:
@@ -165,19 +223,27 @@ def export_icons() -> None:
                   f'{meta.get("page", P[pack]["page"])}, {P[pack]["licence"]}.')
         svg, _ = clean_svg(src_path(pack, rel), credit.replace("--", "-"))
         (out / app_name).write_text(svg)
-    print(f"icons: {len(ICONS)} SVGs written to {out.relative_to(ROOT)}")
+    for app_name, (metal, layers) in RANKS.items():
+        (out / app_name).write_text(rank_svg(metal, layers)[0])
+    print(f"icons: {len(ICONS)} SVGs + {len(RANKS)} rank badges written to {out.relative_to(ROOT)}")
     validate_icons(out)
 
 
 def validate_icons(out: Path) -> None:
-    for f in sorted(out.glob("*.svg")):
+    """Check the files this script writes (other SVGs in the folder, e.g. google_g.svg, are left alone)."""
+    for name in [*ICONS, *RANKS]:
+        f = out / name
         root = ET.parse(f).getroot()
         paths = list(root.iter(f"{{{SVG_NS}}}path"))
         fills = {p.get("fill") for p in paths}
+        want = RANK_FILL if name in RANKS else ICON_FILL
         assert root.tag == f"{{{SVG_NS}}}svg" and root.get("viewBox"), f
-        assert paths and fills == {ICON_FILL}, f"{f}: paths={len(paths)} fills={fills}"
+        assert paths and fills == {want}, f"{f}: paths={len(paths)} fills={fills}"
         assert not list(root.iter(f"{{{SVG_NS}}}rect")), f"{f}: has a rect"
-    print(f"icons: {len(list(out.glob('*.svg')))} SVGs validated (XML, >=1 path, single fill {ICON_FILL})")
+        if name in RANKS:
+            assert len(list(root.iter(f"{{{SVG_NS}}}linearGradient"))) == 1, f"{f}: no metal gradient"
+    print(f"icons: {len(ICONS)} SVGs validated (XML, >=1 path, single fill {ICON_FILL}), "
+          f"{len(RANKS)} rank badges (fill {RANK_FILL} + gradient)")
 
 
 # ------------------------------------------------------------------ audio
@@ -204,6 +270,13 @@ def credit_rows() -> list[dict]:
                          source=m["url"], retrieved=p["retrieved"],
                          changes=("Background removed, recoloured " if clean_svg(src_path(pack, rel), "")[1]
                                   else "Recoloured ") + ICON_FILL))
+    for app_name, (metal, layers) in RANKS.items():
+        changes = rank_svg(metal, layers)[1]
+        for rel in dict.fromkeys(rel for rel, _ in layers):
+            p, m = P[GI], file_meta(P[GI], rel)
+            rows.append(dict(file=f"icons/{app_name}", title=m["title"], author=m["author"],
+                             licence=LICENCE_NAMES[p["licence"]], url=m["page"], licence_url=p["licence_url"],
+                             source=m["url"], retrieved=p["retrieved"], changes=changes[0].upper() + changes[1:]))
     # Other outputs (e.g. Blender renders built from CC0 textures) can be credited by adding
     # "used_by": [{"file": "images/x.webp", "changes": "..."}] to their pack in sources.json.
     for p in P.values():
@@ -257,6 +330,8 @@ def write_credits() -> None:
         used_packs.setdefault(pack, set()).add(f"fonts/{app_name}")
     for app_name, (pack, _rel) in ICONS.items():
         used_packs.setdefault(pack, set()).add(f"icons/{app_name}")
+    for app_name in RANKS:
+        used_packs.setdefault(GI, set()).add(f"icons/{app_name}")
     audio = json.loads(AUDIO_MANIFEST.read_text())
     for a in audio.values():
         for s in a["sources"]:
@@ -295,7 +370,8 @@ def write_credits() -> None:
             L.append(f"| `{r['file']}` | {r['title']} | {md_escape(r['author'])} | {r['licence']} | {r['source']} | "
                      f"{FONT_USE[r['file'].split('/')[1]]} |")
     L += ["", "## Icons (`app/assets/icons/`)", "",
-          "All single-colour SVGs (fill `#ffffff`, transparent background) for tinting in the app.", "",
+          "Single-colour SVGs (fill `#ffffff`, transparent background) for tinting in the app; the `rank_*`",
+          "badges instead carry a metal gradient (bronze, iron, steel, silver, gold, starmetal) and are drawn untinted.", "",
           "| File | Icon | Author | Licence | Source page |", "|---|---|---|---|---|"]
     for r in rows:
         if r["file"].startswith("icons/"):

@@ -34,13 +34,24 @@ export function normalizeRoomCode(raw: string): string | null {
 // Modes and timings
 // ---------------------------------------------------------------------------
 
-export type RoomMode = "coop";
-export type RoomPhase = "lobby" | "countdown" | "round" | "results";
+export type RoomMode = "coop" | "vs";
+/** `standings` (the 10 s between Versus rounds) is Versus only. */
+export type RoomPhase = "lobby" | "countdown" | "round" | "standings" | "results";
 
 /** Players a room holds, by mode. */
-export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4 };
-/** Players needed to START, by mode. Solo co-op is allowed (for testing). */
-export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1 };
+export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4, vs: 5 };
+/** Connected players needed to START, by mode. Solo co-op is allowed (for testing). */
+export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1, vs: 2 };
+
+/** Whether newcomers may take a seat in this phase (anyone already seated may always come back). */
+export function isJoinablePhase(phase: RoomPhase): boolean {
+  return phase === "lobby" || phase === "results";
+}
+
+/** Whether a game is under way: a countdown, a round, or (Versus) the standings between rounds. */
+export function isPlayingPhase(phase: RoomPhase): boolean {
+  return !isJoinablePhase(phase);
+}
 
 export const COUNTDOWN_MS = 3_000;
 /** A dropped player keeps their seat and points this long. */
@@ -58,6 +69,8 @@ export const PUZZLE_REPEAT_WINDOW_MS = 60 * 24 * 3600_000;
 
 /** Player colours: copper, gold, verdigris, cobalt. */
 export const PLAYER_COLORS = 4;
+/** Colours by mode: Versus adds titanium (4) for its fifth player. */
+export const COLORS: Readonly<Record<RoomMode, number>> = { coop: PLAYER_COLORS, vs: 5 };
 
 /** The lowest colour nobody in `taken` has, or `null` if all are used. */
 export function freeColor(taken: readonly number[], colors = PLAYER_COLORS): number | null {

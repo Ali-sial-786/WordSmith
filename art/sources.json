@@ -161,6 +161,54 @@
       "retrieved": "2026-10-17"
     },
     {
+      "id": "oga-kings-feast",
+      "title": "Medieval: King's Feast",
+      "author": "RandomMind",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://opengameart.org/content/medieval-kings-feast",
+      "retrieved": "2026-10-17",
+      "files": [
+        {
+          "name": "Loop_Kings_Feast_0.wav",
+          "url": "https://opengameart.org/sites/default/files/Loop_Kings_Feast_0.wav",
+          "sha256": "2a37227a3d454b92168a3a633b8af8dd07af135bffb9094a05d4df1fb203a8e5",
+          "size": 14244516
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
+          "licence_text": true,
+          "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+          "size": 7048
+        }
+      ]
+    },
+    {
+      "id": "oga-minstrel-dance",
+      "title": "Medieval: Minstrel Dance",
+      "author": "RandomMind",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://opengameart.org/content/medieval-minstrel-dance",
+      "retrieved": "2026-10-17",
+      "files": [
+        {
+          "name": "Loop_Minstrel_Dance_0.wav",
+          "url": "https://opengameart.org/sites/default/files/Loop_Minstrel_Dance_0.wav",
+          "sha256": "0b6d0447f4cd8c5023fee0f24b77b0d5a5ff53f9f9da13f0905783d82c84ccee",
+          "size": 19865506
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
+          "licence_text": true,
+          "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+          "size": 7048
+        }
+      ]
+    },
+    {
       "id": "game-icons",
       "title": "Game-icons.net",
       "author": "(per icon)",
@@ -471,6 +519,33 @@
           "licence_text": true,
           "sha256": "fac95252798668fab5ea2cb08338f2ebc6bf894a72b19a15af1ca62f0a6d2e79",
           "size": 1421
+        },
+        {
+          "name": "delapouite/3d-hammer.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/3d-hammer.svg",
+          "author": "Delapouite",
+          "title": "3D hammer",
+          "page": "https://game-icons.net/1x1/delapouite/3d-hammer.html",
+          "sha256": "d484ae75ea8a54d63a6affbd7e7d6a83a05777601f876d079b3b5e31360b8c2d",
+          "size": 636
+        },
+        {
+          "name": "delapouite/jewel-crown.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/jewel-crown.svg",
+          "author": "Delapouite",
+          "title": "Jewel crown",
+          "page": "https://game-icons.net/1x1/delapouite/jewel-crown.html",
+          "sha256": "9cb75464de809a74a79979101526b64fc5e9a1feda3e0b932c5dbdc46fe0168d",
+          "size": 1420
+        },
+        {
+          "name": "lorc/laurel-crown.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/laurel-crown.svg",
+          "author": "Lorc",
+          "title": "Laurel crown",
+          "page": "https://game-icons.net/1x1/lorc/laurel-crown.html",
+          "sha256": "0d8ccbcc7e8e01b1d71ccf7f3561f11e73eda239dbe98adea829464635cc468d",
+          "size": 5751
         },
         {
           "name": "LICENSE-CC-BY-3.0.txt",

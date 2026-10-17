@@ -13,6 +13,8 @@ describe("room parseClientMessage", () => {
     ['{"op":"HINT","kind":"sparks","x":1}', { op: "HINT", hint: { kind: "sparks" } }],
     ['{"op":"HINT","kind":"chisel","x":3,"y":0}', { op: "HINT", hint: { kind: "chisel", x: 3, y: 0 } }],
     ['{"op":"EMOTE","emote":"gg"}', { op: "EMOTE", emote: "gg" }],
+    ['{"op":"CONFIG","series":3}', { op: "CONFIG", series: 3 }],
+    ['{"op":"CONFIG","series":10}', { op: "CONFIG", series: 10 }],
   ])("reads %s", (raw, message) => {
     expect(parseClientMessage(raw)).toEqual({ ok: true, message });
   });
@@ -42,6 +44,10 @@ describe("room parseClientMessage", () => {
     '{"op":"HINT","kind":"chisel","x":"1","y":1}',
     '{"op":"EMOTE","emote":"wave"}',
     '{"op":"EMOTE"}',
+    '{"op":"CONFIG"}',
+    '{"op":"CONFIG","series":4}',
+    '{"op":"CONFIG","series":"5"}',
+    '{"op":"CONFIG","series":5.5}',
   ])("refuses %j", (raw) => {
     expect(parseClientMessage(raw)).toEqual({ ok: false });
   });

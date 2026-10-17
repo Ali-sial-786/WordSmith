@@ -112,8 +112,7 @@ describe("POST /v1/rooms and GET /v1/rooms/:code", () => {
 
   it("refuses bad requests", async () => {
     const a = await setUpClient();
-    expect((await a.post("/v1/rooms", { mode: "vs" })).status).toBe(400);
-    expect(await body(await a.post("/v1/rooms", { mode: "vs" }))).toMatchObject({ error: "unsupported_mode" });
+    expect((await a.post("/v1/rooms", { mode: "solo" })).status).toBe(400);
     expect(await body(await a.post("/v1/rooms", { mode: "solo" }))).toMatchObject({ error: "invalid_mode" });
     expect(await body(await a.post("/v1/rooms", {}))).toMatchObject({ error: "invalid_mode" });
 

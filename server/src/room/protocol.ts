@@ -3,18 +3,21 @@
  * over one `wordsmith.v1` WebSocket per room. Pure, so it's unit-tested in
  * Node.
  *
- * Client → server: READY, START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, and the
- * exact text `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime
- * without waking the room).
+ * Client → server: READY, CONFIG (Versus), START, SUBMIT, HINT, AGAIN,
+ * LEAVE, EMOTE, and the exact text `{"op":"PING"}` (answered
+ * `{"op":"PONG"}` by the runtime without waking the room).
  *
  * Server → client: WELCOME, LOBBY, ROUND_START, WORD_RESULT, CLAIMED, BONUS,
- * REVEAL, ROUND_END, SNAPSHOT, EMOTE, ERROR.
+ * REVEAL, PROGRESS (Versus), ROUND_END, SERIES_END (Versus), SNAPSHOT,
+ * EMOTE, ERROR.
  */
 
 import type { CoopResults, RevealedCell, RoundSnapshot, RoundStartFields, SlotWord } from "../rules/coop-round";
 import type { HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
 import type { RoomMode, RoomPhase } from "../rules/room";
+import { isSeriesLength, type SeriesLength } from "../rules/vs";
+import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields } from "../rules/vs-round";
 
 export { PING, PONG } from "../hub/protocol";
 
@@ -30,6 +33,8 @@ export type HintRequest = { readonly kind: "hammer" | "sparks" } | { readonly ki
 
 export type ClientMessage =
   | { readonly op: "READY"; readonly ready: boolean }
+  /** Versus: the series length, chosen by the host in the lobby. */
+  | { readonly op: "CONFIG"; readonly series: SeriesLength }
   | { readonly op: "START" }
   | { readonly op: "SUBMIT"; readonly word: string; readonly seq: number }
   | { readonly op: "HINT"; readonly hint: HintRequest }
@@ -46,7 +51,11 @@ export type RoomErrorCode =
   | "bad_cell"
   | "wrong_phase"
   /** Not in the contract: the puzzle bank has nothing to offer (it was never seeded). */
-  | "no_puzzle";
+  | "no_puzzle"
+  /** Versus: a SUBMIT from someone watching this round (sudden death, or out of the series). */
+  | "not_playing"
+  /** Versus: HINT isn't allowed. */
+  | "no_hints";
 
 export type ParseResult = { readonly ok: true; readonly message: ClientMessage } | { readonly ok: false };
 
@@ -70,6 +79,8 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
   switch (m.op) {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
+    case "CONFIG":
+      return isSeriesLength(m.series) ? { ok: true, message: { op: "CONFIG", series: m.series } } : BAD;
     case "START":
     case "AGAIN":
     case "LEAVE":
@@ -100,7 +111,7 @@ export interface LobbyPlayer {
   readonly username: string;
   readonly avatar: string;
   readonly level: number;
-  /** 0–3: copper, gold, verdigris, cobalt. Kept while the player is in the room. */
+  /** 0–3: copper, gold, verdigris, cobalt (Versus adds 4, titanium). Kept while the player is in the room. */
   readonly color: number;
   readonly ready: boolean;
   readonly connected: boolean;
@@ -112,8 +123,11 @@ export interface LobbyFields {
   readonly phase: RoomPhase;
   /** `null` only while the room is empty. */
   readonly hostId: string | null;
+  /** Co-op: from the host's level. Versus: from the median level of the seated players, or the series' heat while one is on. */
   readonly heat: HeatTier;
   readonly players: readonly LobbyPlayer[];
+  /** Versus only: the series length (3, 5, 7 or 10). */
+  readonly series?: SeriesLength;
 }
 
 export interface XpBody {
@@ -146,17 +160,49 @@ export interface ResultsFields extends Omit<CoopResults, "players"> {
 
 export type WordResultKind = "claimed" | "bonus" | "already" | "invalid" | "rate_limited" | "too_late";
 
+/** Versus XP: the co-op shape plus the embers collected during the series. */
+export interface VsXpBody extends XpBody {
+  /** Embers collected during the series, granted at its end. */
+  readonly pickups: HintCounts;
+}
+
+export interface PodiumEntry {
+  readonly id: string;
+  readonly username: string;
+  readonly wins: number;
+  /** 1-based; equal wins share a place. */
+  readonly place: number;
+}
+
+/** `SERIES_END` (Versus). */
+export interface SeriesEndFields {
+  readonly winner: string | null;
+  readonly early: boolean;
+  readonly forfeit: boolean;
+  readonly rounds: number;
+  readonly podium: readonly PodiumEntry[];
+  /** `{}` until the results are written to D1. */
+  readonly xp: Readonly<Record<string, VsXpBody>>;
+}
+
 export type ServerMessage =
   | { readonly op: "WELCOME"; readonly you: string; readonly protocol: number; readonly serverNow: number }
   | ({ readonly op: "LOBBY" } & LobbyFields)
-  | ({ readonly op: "ROUND_START" } & RoundStartFields)
+  | ({ readonly op: "ROUND_START" } & (RoundStartFields | VsRoundStartFields))
   | {
       readonly op: "WORD_RESULT";
       readonly seq: number;
       readonly word: string;
       readonly result: WordResultKind;
+      /** Co-op `already`: who has it (`null` if it filled in by itself). */
       readonly by?: string | null;
+      /** Co-op `claimed` and `bonus`. */
       readonly points?: number;
+      /** Versus `claimed`: the slot, and the crossing slots it completed on the sender's mold. */
+      readonly slot?: number;
+      readonly auto?: readonly SlotWord[];
+      /** Versus `claimed`: the ember collected (granted after the series). */
+      readonly pickup?: HintKind;
     }
   | {
       readonly op: "CLAIMED";
@@ -170,13 +216,25 @@ export type ServerMessage =
     }
   | { readonly op: "BONUS"; readonly word: string; readonly by: string; readonly points: number; readonly scores: Readonly<Record<string, number>> }
   | { readonly op: "REVEAL"; readonly by: string; readonly kind: HintKind; readonly cells: readonly RevealedCell[]; readonly auto: readonly SlotWord[] }
-  | ({ readonly op: "ROUND_END" } & ResultsFields)
+  | { readonly op: "PROGRESS"; readonly id: string; readonly filled: number; readonly total: number }
+  | ({ readonly op: "ROUND_END" } & (ResultsFields | VsRoundEndFields))
+  | ({ readonly op: "SERIES_END" } & SeriesEndFields)
   | {
       readonly op: "SNAPSHOT";
       readonly lobby: LobbyFields;
       /** The round during countdown and play, and the finished board during results. */
       readonly round?: RoundSnapshot;
       readonly results?: ResultsFields;
+    }
+  | {
+      readonly op: "SNAPSHOT";
+      readonly lobby: LobbyFields;
+      /** Versus, during countdown and play: the round, the receiver's own mold and everyone's progress. */
+      readonly round?: VsRoundSnapshot;
+      /** Versus, during standings and results: the last ROUND_END. */
+      readonly standings?: VsRoundEndFields;
+      /** Versus, during results: the SERIES_END. */
+      readonly results?: SeriesEndFields;
     }
   | { readonly op: "EMOTE"; readonly from: string; readonly emote: Emote }
   | { readonly op: "ERROR"; readonly code: RoomErrorCode };

@@ -154,7 +154,19 @@ export interface RoundStartFields {
   readonly pickups: readonly Pos[];
 }
 
-export function roundStartFields(r: CoopRound, serverNow: number): RoundStartFields {
+/** What `ROUND_START` is built from: any mode's round (co-op's {@link CoopRound}, or a Versus round). */
+export interface RoundBoard {
+  readonly round: number;
+  readonly heat: HeatTier;
+  readonly puzzle: MpPuzzle;
+  readonly letters: string;
+  readonly startsAt: number;
+  readonly endsAt: number;
+  /** Ember cells still showing. */
+  readonly embers: readonly Pos[];
+}
+
+export function roundStartFields(r: RoundBoard, serverNow: number): RoundStartFields {
   return {
     round: r.round,
     heat: r.heat,

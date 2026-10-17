@@ -1,7 +1,7 @@
 /**
  * D1 queries for rooms: choosing a bank puzzle, remembering who has seen
- * it, spending and granting hints, and writing a finished co-op round
- * (docs/TECH.md §6–§7).
+ * it, spending and granting hints, and writing a finished co-op round or
+ * Versus series (docs/TECH.md §6–§7).
  *
  * Every write that changes a player's hint stock or XP also moves
  * `profiles.updated_at` on, so a solo sync that read the profile before it
@@ -11,9 +11,11 @@
 import { coopAward, type CoopResults } from "../rules/coop-round";
 import type { HeatTier } from "../rules/heat";
 import { parseMpPuzzle, type MpPuzzle } from "../rules/mold";
-import { HINT_KINDS, levelFromTotalXp, noHints, type HintKind } from "../rules/progression";
+import { HINT_KINDS, levelFromTotalXp, noHints, type HintCounts, type HintKind } from "../rules/progression";
 import type { RoomMode } from "../rules/room";
-import type { XpBody } from "../room/protocol";
+import type { SeriesLength } from "../rules/vs";
+import { vsAward, type VsSeriesResults } from "../rules/vs-round";
+import type { VsXpBody, XpBody } from "../room/protocol";
 
 // ---------------------------------------------------------------------------
 // Puzzles
@@ -98,6 +100,145 @@ export async function grantHint(db: D1Database, uid: string, kind: HintKind, now
 }
 
 // ---------------------------------------------------------------------------
+// Writing a finished match (a co-op round, or a Versus series)
+// ---------------------------------------------------------------------------
+
+interface ProfileRow {
+  user_id: string;
+  xp: number;
+  scrap_bin: number;
+  updated_at: number;
+  /** This match's XP if the player already has a `match_players` row for it. */
+  awarded: number | null;
+}
+
+/** Most attempts at players whose profile keeps changing under us. */
+const MAX_ATTEMPTS = 3;
+
+/** The `matches` row. */
+interface MatchRow {
+  readonly matchId: string;
+  readonly mode: RoomMode;
+  readonly code: string;
+  readonly startedAt: number;
+  readonly endedAt: number;
+  /** JSON. */
+  readonly summary: string;
+}
+
+/** One player's share of a match, worked out from their profile as it was read. */
+interface PlayerWrite<B> {
+  /** XP gained (`xp_events.amount`, `match_players.xp`). */
+  readonly xp: number;
+  readonly totalXp: number;
+  readonly level: number;
+  readonly scrapBin: number;
+  /** Hints to add to their stock. */
+  readonly gained: Readonly<HintCounts>;
+  readonly placement: number | null;
+  readonly points: number;
+  readonly roundsWon: number;
+  /** The `SET` list for their `stats` row; it may use `?3`, `?4`, … bound to {@link statsBinds}. */
+  readonly statsSet: string;
+  readonly statsBinds: readonly (string | number)[];
+  /** What the caller gets back for them. */
+  readonly body: B;
+}
+
+/**
+ * Writes a finished match in one D1 batch: the `matches` row, and for each
+ * player their `match_players` row, XP (`xp_events` with the mode as
+ * source, profile and level), stats, Scrap Bin and hints won.
+ *
+ * Safe to repeat: a player who already has a row for this match is skipped
+ * (`earlier` describes them from what's left). Each player's statements
+ * only apply while their profile is still at the version read, so a
+ * concurrent solo sync can't be overwritten; players whose profile changed
+ * are retried. Players with no profile (deleted accounts) are left out.
+ */
+async function writeMatch<B>(
+  db: D1Database,
+  match: MatchRow,
+  playerIds: readonly string[],
+  now: number,
+  plan: (uid: string, profile: { readonly totalXp: number; readonly scrapBin: number }) => PlayerWrite<B>,
+  earlier: (awardedXp: number, totalXp: number) => B,
+): Promise<Record<string, B>> {
+  const out: Record<string, B> = {};
+  let pending = [...playerIds];
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && pending.length > 0; attempt++) {
+    const { results: rows } = await db
+      .prepare(
+        `SELECT p.user_id, p.xp, p.scrap_bin, p.updated_at,
+                (SELECT xp FROM match_players m WHERE m.match_id = ?1 AND m.user_id = p.user_id) AS awarded
+           FROM profiles p WHERE p.user_id IN (SELECT value FROM json_each(?2))`,
+      )
+      .bind(match.matchId, JSON.stringify(pending))
+      .all<ProfileRow>();
+
+    const statements: D1PreparedStatement[] = [
+      db
+        .prepare("INSERT OR IGNORE INTO matches (id, mode, code, started_at, ended_at, summary) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+        .bind(match.matchId, match.mode, match.code, match.startedAt, match.endedAt, match.summary),
+    ];
+    const profileStatement = new Map<string, number>();
+    const bodies = new Map<string, B>();
+
+    for (const row of rows) {
+      const uid = row.user_id;
+      if (row.awarded !== null) {
+        // Written by an earlier attempt; the level-up details are gone, but the XP isn't.
+        out[uid] = earlier(row.awarded, row.xp);
+        continue;
+      }
+      const w = plan(uid, { totalXp: row.xp, scrapBin: row.scrap_bin });
+      const version = row.updated_at;
+      const guard = "EXISTS (SELECT 1 FROM profiles WHERE user_id = ?1 AND updated_at = ?2)";
+      statements.push(
+        db
+          .prepare(`INSERT INTO xp_events (user_id, source, amount, ref, created_at) SELECT ?1, ?3, ?4, ?5, ?6 WHERE ${guard}`)
+          .bind(uid, version, match.mode, w.xp, match.matchId, now),
+        db
+          .prepare(
+            `INSERT INTO inventory (user_id, item, count)
+             SELECT ?1, j.key, j.value FROM json_each(?3) AS j WHERE j.value > 0 AND ${guard}
+             ON CONFLICT (user_id, item) DO UPDATE SET count = count + excluded.count`,
+          )
+          .bind(uid, version, JSON.stringify(Object.fromEntries(HINT_KINDS.map((k) => [k, w.gained[k]])))),
+        db.prepare(`UPDATE stats SET ${w.statsSet} WHERE user_id = ?1 AND ${guard}`).bind(uid, version, ...w.statsBinds),
+        db
+          .prepare(
+            `INSERT INTO match_players (match_id, user_id, placement, points, rounds_won, xp)
+             SELECT ?3, ?1, ?4, ?5, ?6, ?7 WHERE ${guard}
+             ON CONFLICT (match_id, user_id) DO NOTHING`,
+          )
+          .bind(uid, version, match.matchId, w.placement, w.points, w.roundsWon, w.xp),
+      );
+      // Last, because it moves the version the statements above check.
+      profileStatement.set(uid, statements.length);
+      statements.push(
+        db
+          .prepare("UPDATE profiles SET xp = ?3, level = ?4, scrap_bin = ?5, updated_at = ?6 WHERE user_id = ?1 AND updated_at = ?2")
+          .bind(uid, version, w.totalXp, w.level, w.scrapBin, Math.max(now, version + 1)),
+      );
+      bodies.set(uid, w.body);
+    }
+
+    const written = await db.batch(statements);
+    const retry: string[] = [];
+    for (const [uid, index] of profileStatement) {
+      if (written[index]?.meta.changes === 1) out[uid] = bodies.get(uid)!;
+      else retry.push(uid);
+    }
+    pending = retry;
+  }
+  return out;
+}
+
+/** Keeps the longer of the stored longest word and `?n`. */
+const longestWordSet = (n: number) => `longest_word = CASE WHEN length(?${n}) > length(COALESCE(longest_word, '')) THEN ?${n} ELSE longest_word END`;
+
+// ---------------------------------------------------------------------------
 // A finished co-op round
 // ---------------------------------------------------------------------------
 
@@ -114,18 +255,6 @@ export interface CoopRoundRecord {
   readonly results: CoopResults;
 }
 
-interface ProfileRow {
-  user_id: string;
-  xp: number;
-  scrap_bin: number;
-  updated_at: number;
-  /** This match's XP if the player already has a `match_players` row for it. */
-  awarded: number | null;
-}
-
-/** Most attempts at players whose profile keeps changing under us. */
-const MAX_ATTEMPTS = 3;
-
 /** 1-based places by points; equal points share a place. */
 function placements(results: CoopResults): Map<string, number> {
   const sorted = [...results.players].sort((a, b) => b.points - a.points);
@@ -138,19 +267,12 @@ function placements(results: CoopResults): Map<string, number> {
 }
 
 /**
- * Writes a finished round in one D1 batch: the `matches` row, and for each
- * player their `match_players` row, XP (`xp_events`, profile and level),
- * stats, Scrap Bin, and level-up and Scrap Bin hints.
- *
- * Safe to repeat: a player who already has a row for this match is skipped.
- * Each player's statements only apply while their profile is still at the
- * version read, so a concurrent solo sync can't be overwritten; players
- * whose profile changed are retried. Players with no profile (deleted
- * accounts) are left out. Returns each written player's XP.
+ * Writes a finished co-op round (see {@link writeMatch}): stats are
+ * `coop_rounds`, `coop_mvps`, `words_forged` and `longest_word`; hints won
+ * are level-up rewards and Scrap Bin hammers. Returns each written player's XP.
  */
 export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, now: number): Promise<Record<string, XpBody>> {
-  const { results, matchId } = record;
-  const out: Record<string, XpBody> = {};
+  const { results } = record;
   const places = placements(results);
   const summary = JSON.stringify({
     puzzleId: record.puzzleId,
@@ -164,89 +286,102 @@ export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, no
     mvp: results.mvp,
     players: results.players.map(({ id, points, words, longest }) => ({ id, points, words, longest })),
   });
+  const match = { matchId: record.matchId, mode: record.mode, code: record.code, startedAt: record.startedAt, endedAt: record.endedAt, summary };
 
-  let pending = results.players.map((p) => p.id);
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS && pending.length > 0; attempt++) {
-    const { results: rows } = await db
-      .prepare(
-        `SELECT p.user_id, p.xp, p.scrap_bin, p.updated_at,
-                (SELECT xp FROM match_players m WHERE m.match_id = ?1 AND m.user_id = p.user_id) AS awarded
-           FROM profiles p WHERE p.user_id IN (SELECT value FROM json_each(?2))`,
-      )
-      .bind(matchId, JSON.stringify(pending))
-      .all<ProfileRow>();
-
-    const statements: D1PreparedStatement[] = [
-      db
-        .prepare("INSERT OR IGNORE INTO matches (id, mode, code, started_at, ended_at, summary) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
-        .bind(matchId, record.mode, record.code, record.startedAt, record.endedAt, summary),
-    ];
-    const profileStatement = new Map<string, number>();
-    const awards = new Map<string, XpBody>();
-
-    for (const row of rows) {
-      const player = results.players.find((p) => p.id === row.user_id)!;
-      if (row.awarded !== null) {
-        // Written by an earlier attempt; the level-up details are gone, but the XP isn't.
-        out[row.user_id] = { xp: row.awarded, level: levelFromTotalXp(row.xp), levelUps: 0, rewards: noHints(), scrapHammers: 0 };
-        continue;
-      }
-      const award = coopAward(player, results, { totalXp: row.xp, scrapBin: row.scrap_bin });
+  return writeMatch<XpBody>(
+    db,
+    match,
+    results.players.map((p) => p.id),
+    now,
+    (uid, profile) => {
+      const player = results.players.find((p) => p.id === uid)!;
+      const award = coopAward(player, results, profile);
       const gained = { ...award.xp.rewards };
       gained.hammer += award.scrap.hammers;
-      const uid = row.user_id;
-      const version = row.updated_at;
-      const guard = "EXISTS (SELECT 1 FROM profiles WHERE user_id = ?1 AND updated_at = ?2)";
-      statements.push(
-        db
-          .prepare(`INSERT INTO xp_events (user_id, source, amount, ref, created_at) SELECT ?1, 'coop', ?3, ?4, ?5 WHERE ${guard}`)
-          .bind(uid, version, award.amount, matchId, now),
-        db
-          .prepare(
-            `INSERT INTO inventory (user_id, item, count)
-             SELECT ?1, j.key, j.value FROM json_each(?3) AS j WHERE j.value > 0 AND ${guard}
-             ON CONFLICT (user_id, item) DO UPDATE SET count = count + excluded.count`,
-          )
-          .bind(uid, version, JSON.stringify(Object.fromEntries(HINT_KINDS.map((k) => [k, gained[k]])))),
-        db
-          .prepare(
-            `UPDATE stats SET coop_rounds = coop_rounds + 1, coop_mvps = coop_mvps + ?3,
-                    words_forged = words_forged + ?4,
-                    longest_word = CASE WHEN length(?5) > length(COALESCE(longest_word, '')) THEN ?5 ELSE longest_word END
-              WHERE user_id = ?1 AND ${guard}`,
-          )
-          .bind(uid, version, results.mvp === uid ? 1 : 0, player.words, player.longest),
-        db
-          .prepare(
-            `INSERT INTO match_players (match_id, user_id, placement, points, rounds_won, xp)
-             SELECT ?3, ?1, ?4, ?5, 0, ?6 WHERE ${guard}
-             ON CONFLICT (match_id, user_id) DO NOTHING`,
-          )
-          .bind(uid, version, matchId, places.get(uid) ?? null, player.points, award.amount),
-      );
-      // Last, because it moves the version the statements above check.
-      profileStatement.set(uid, statements.length);
-      statements.push(
-        db
-          .prepare("UPDATE profiles SET xp = ?3, level = ?4, scrap_bin = ?5, updated_at = ?6 WHERE user_id = ?1 AND updated_at = ?2")
-          .bind(uid, version, award.xp.totalXp, award.xp.level, award.scrap.bin, Math.max(now, version + 1)),
-      );
-      awards.set(uid, {
+      return {
         xp: award.amount,
+        totalXp: award.xp.totalXp,
         level: award.xp.level,
-        levelUps: award.xp.levelsGained,
-        rewards: award.xp.rewards,
-        scrapHammers: award.scrap.hammers,
-      });
-    }
+        scrapBin: award.scrap.bin,
+        gained,
+        placement: places.get(uid) ?? null,
+        points: player.points,
+        roundsWon: 0,
+        statsSet: `coop_rounds = coop_rounds + 1, coop_mvps = coop_mvps + ?3, words_forged = words_forged + ?4, ${longestWordSet(5)}`,
+        statsBinds: [results.mvp === uid ? 1 : 0, player.words, player.longest],
+        body: { xp: award.amount, level: award.xp.level, levelUps: award.xp.levelsGained, rewards: award.xp.rewards, scrapHammers: award.scrap.hammers },
+      };
+    },
+    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0 }),
+  );
+}
 
-    const written = await db.batch(statements);
-    const retry: string[] = [];
-    for (const [uid, index] of profileStatement) {
-      if (written[index]?.meta.changes === 1) out[uid] = awards.get(uid)!;
-      else retry.push(uid);
-    }
-    pending = retry;
-  }
-  return out;
+// ---------------------------------------------------------------------------
+// A finished Versus series
+// ---------------------------------------------------------------------------
+
+/** Everything needed to write a series' results, kept in the room until written. */
+export interface VsSeriesRecord {
+  readonly matchId: string;
+  readonly code: string;
+  readonly heat: HeatTier;
+  readonly length: SeriesLength;
+  readonly startedAt: number;
+  readonly endedAt: number;
+  readonly results: VsSeriesResults;
+}
+
+/**
+ * Writes a finished series as one match (see {@link writeMatch}), for
+ * everyone who raced in it, including racers who left: `vsSeriesXp`,
+ * level-up rewards, Scrap Bin hammers from the series' bonus words, the
+ * embers collected, and stats `vs_series`, `vs_series_won`,
+ * `vs_rounds_won`, `words_forged` and `longest_word`. `match_players` gets
+ * the podium place and round wins. Returns each written player's XP.
+ */
+export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now: number): Promise<Record<string, VsXpBody>> {
+  const { results } = record;
+  const summary = JSON.stringify({
+    heat: record.heat,
+    series: record.length,
+    rounds: results.rounds,
+    winner: results.winner,
+    early: results.early,
+    forfeit: results.forfeit,
+    players: results.players.map(({ id, wins, place, rounds, words, longest }) => ({ id, wins, place, rounds, words, longest })),
+  });
+  const match = { matchId: record.matchId, mode: "vs" as const, code: record.code, startedAt: record.startedAt, endedAt: record.endedAt, summary };
+
+  return writeMatch<VsXpBody>(
+    db,
+    match,
+    results.players.map((p) => p.id),
+    now,
+    (uid, profile) => {
+      const player = results.players.find((p) => p.id === uid)!;
+      const award = vsAward(player, results.winner, profile);
+      return {
+        xp: award.amount,
+        totalXp: award.xp.totalXp,
+        level: award.xp.level,
+        scrapBin: award.scrap.bin,
+        gained: award.gained,
+        placement: player.place,
+        points: 0,
+        roundsWon: player.wins,
+        statsSet: `vs_series = vs_series + 1, vs_series_won = vs_series_won + ?3, vs_rounds_won = vs_rounds_won + ?4,
+                   words_forged = words_forged + ?5, ${longestWordSet(6)}`,
+        statsBinds: [results.winner === uid ? 1 : 0, player.wins, player.words, player.longest],
+        body: {
+          xp: award.amount,
+          level: award.xp.level,
+          levelUps: award.xp.levelsGained,
+          rewards: award.xp.rewards,
+          scrapHammers: award.scrap.hammers,
+          pickups: { ...player.pickups },
+        },
+      };
+    },
+    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0, pickups: noHints() }),
+  );
 }

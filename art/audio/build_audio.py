@@ -45,6 +45,8 @@ KI = "kenney-impact-sounds"
 KF = "kenney-interface-sounds"
 KR = "kenney-rpg-audio"
 OGA_FIRE = "oga-fireplace-loop"
+OGA_FEAST = "oga-kings-feast"
+OGA_MINSTREL = "oga-minstrel-dance"
 
 
 @dataclass
@@ -261,6 +263,98 @@ def forge_ambience():
     y[at:at + len(b), 0] += b
     y[at:at + len(b), 1] += np.roll(b, 40)  # tiny inter-channel delay = width
     return y
+
+
+# ------------------------------------------------------------------ multiplayer results
+def glide(x: np.ndarray, cents: float, start: float = 0.0) -> np.ndarray:
+    """Bend the pitch smoothly by `cents` (negative = down) from `start` s to the end."""
+    n = len(x)
+    u = np.clip((np.arange(n) / S.SR - start) / max(n / S.SR - start, 1e-6), 0, 1)
+    ratio = 2 ** (cents * (0.5 - 0.5 * np.cos(np.pi * u)) / 1200)
+    pos = np.cumsum(ratio) - ratio[0]
+    pos = pos[pos < n - 1]
+    return np.interp(pos, np.arange(n), x)
+
+
+@recipe("round_win", -13, "Round won: bright 'ta-da' sting, a two-bell pickup into a G major bell chord over an anvil ring",
+        synth=True)
+def round_win():
+    x = S.silence(1.5)
+    x = place(x, level(S.bell(587.33, 0.3, tau=0.22, seed=201, strike=0.2)), 0.0, undb(-5))
+    x = place(x, level(S.bell(783.99, 0.3, tau=0.22, seed=202, strike=0.2)), 0.09, undb(-4))
+    at = 0.19
+    for k, (f, g) in enumerate([(392.00, -9), (493.88, -8), (587.33, -7), (783.99, -4), (987.77, -7)]):
+        x = place(x, level(S.bell(f, 1.3, tau=0.7, seed=203 + k)), at, undb(g))
+    x = place(x, level(S.anvil(783.99 / 2.09, 1.2, decay=0.9, bright=1.2, thump_gain=0.35, seed=209)), at, undb(-6))
+    x = place(x, level(S.sparkles(0.9, 22, seed=210, f_range=(4000, 10000))), at + 0.02, undb(-15))
+    return S.fit(x, 1.5, fade_out=0.45)
+
+
+@recipe("round_lose", -19, "Round lost: gentle 'aw', two soft falling bell notes (G4 to E-flat 4) that sag in pitch",
+        synth=True)
+def round_lose():
+    x = S.silence(1.4)
+    x = place(x, level(S.bell(392.00, 0.6, tau=0.35, seed=221, strike=0.03)), 0.0, undb(-3))
+    low = S.bell(311.13, 1.15, tau=0.6, seed=222, strike=0.03)
+    low = place(low, S.bell(155.56, 1.15, tau=0.5, seed=223, strike=0.0), 0.0, 0.35)
+    x = place(x, level(glide(low, -70, start=0.15)), 0.26, undb(-1))
+    x = place(x, level(S.fft_filter(K(KI, "Audio/impactGeneric_light_001.ogg"), hi=1500, order=2)), 0.26, undb(-16))
+    return S.fit(S.fft_filter(x, hi=3200, order=2), 1.4, fade_out=0.5)
+
+
+@recipe("series_win", -12, "Series won: ~2.8 s bell-and-anvil fanfare (ta-ta-ta-TAA, then a rising run into a big C major chord)",
+        synth=True, release=0.02, max_limit=5)
+def series_win():
+    x = S.silence(2.9)
+    for k, at in enumerate((0.0, 0.12, 0.24)):                    # ta-ta-ta
+        x = place(x, level(S.bell(783.99, 0.25, tau=0.14, seed=231 + k, strike=0.25)), at, undb(-5))
+    for k, (f, g) in enumerate([(523.25, -8), (659.26, -8), (783.99, -6)]):   # TAA
+        x = place(x, level(S.bell(f, 0.9, tau=0.45, seed=235 + k)), 0.38, undb(g))
+    x = place(x, level(S.anvil(1046.5 / 2.09, 0.9, decay=0.7, bright=1.1, thump_gain=0.3, seed=239)), 0.38, undb(-9))
+    for k, (at, f) in enumerate([(0.86, 659.26), (0.98, 783.99), (1.10, 880.00)]):   # rising run
+        x = place(x, level(S.bell(f, 0.4, tau=0.2, seed=241 + k, strike=0.18)), at, undb(-6))
+    big = 1.24
+    for k, (f, g) in enumerate([(523.25, -9), (659.26, -9), (783.99, -8), (1046.50, -4), (1318.51, -9)]):
+        x = place(x, level(S.bell(f, 1.65, tau=1.0, seed=245 + k)), big, undb(g))
+    x = place(x, level(S.anvil(1046.5 / 2.09, 1.6, decay=1.2, bright=1.2, thump_gain=0.6, seed=251)), big, undb(-5))
+    x = place(x, level(K(KI, "Audio/impactBell_heavy_001.ogg")), big, undb(-12))
+    x = place(x, level(S.whoosh(0.9, 800, 5000, seed=252, q=1.0, peak_at=0.3)), big + 0.02, undb(-22))
+    x = place(x, level(S.sparkles(1.3, 40, seed=253, f_range=(4000, 10000))), big + 0.03, undb(-13))
+    return S.fit(x, 2.9, fade_out=0.6)
+
+
+@recipe("rival_finished", -15, "Opponent finished / is close: deep gong-like anvil ring under a quick rising two-bell alert",
+        synth=True, release=0.02)
+def rival_finished():
+    x = S.silence(1.3)
+    x = place(x, level(S.anvil(175, 1.3, decay=1.5, bright=0.7, thump_gain=0.6, seed=261)), 0.0)
+    x = place(x, level(S.resample_pitch(K(KI, "Audio/impactBell_heavy_003.ogg"), 0.75)), 0.0, undb(-7))
+    x = place(x, level(S.bell(880.00, 0.5, tau=0.25, seed=262, strike=0.2)), 0.0, undb(-5))
+    x = place(x, level(S.bell(1318.51, 0.7, tau=0.35, seed=263, strike=0.2)), 0.12, undb(-4))
+    return S.fit(x, 1.3, fade_out=0.4)
+
+
+# ------------------------------------------------------------------ music
+def seamless(x: np.ndarray, xfade: float = 0.015) -> np.ndarray:
+    """Make a loop click-free: fold its last `xfade` s into its first (equal power).
+    The loop gets `xfade` shorter; the end now runs straight into the start."""
+    n = S.n_samples(xfade)
+    u = np.linspace(0, 1, n)[:, None]
+    y = x[: len(x) - n].copy()
+    y[:n] = x[len(x) - n:] * np.cos(0.5 * np.pi * u) + x[:n] * np.sin(0.5 * np.pi * u)
+    return y
+
+
+@recipe("music_hall", -16, "Forge Hall / menus music: calm medieval loop, 'King's Feast' (loop version), ~81 s stereo",
+        channels=2, quality=2, metric="lufs", release=0.3, max_limit=1.5)
+def music_hall():
+    return seamless(K(OGA_FEAST, "Loop_Kings_Feast_0.wav", channels=2))
+
+
+@recipe("music_round", -16, "Multiplayer round music: lively medieval dance loop, 'Minstrel Dance' (loop version), ~56 s stereo",
+        channels=2, quality=2, metric="lufs", release=0.3, max_limit=1.5)
+def music_round():
+    return seamless(K(OGA_MINSTREL, "Loop_Minstrel_Dance_0.wav", channels=2))
 
 
 # ------------------------------------------------------------------ pipeline

@@ -523,5 +523,128 @@
       }
     ],
     "notes": []
+  },
+  "round_win": {
+    "file": "audio/round_win.ogg",
+    "description": "Round won: bright 'ta-da' sting, a two-bell pickup into a G major bell chord over an anvil ring",
+    "duration_s": 1.44,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 14035,
+    "loudness_metric": "max momentary",
+    "target_lufs": -13,
+    "lufs_integrated": -16.4,
+    "lufs_momentary_max": -13.0,
+    "true_peak_dbtp": -1.5,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "round_lose": {
+    "file": "audio/round_lose.ogg",
+    "description": "Round lost: gentle 'aw', two soft falling bell notes (G4 to E-flat 4) that sag in pitch",
+    "duration_s": 1.35,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 7840,
+    "loudness_metric": "max momentary",
+    "target_lufs": -19,
+    "lufs_integrated": -22.2,
+    "lufs_momentary_max": -19.0,
+    "true_peak_dbtp": -6.1,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactGeneric_light_001.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "series_win": {
+    "file": "audio/series_win.ogg",
+    "description": "Series won: ~2.8 s bell-and-anvil fanfare (ta-ta-ta-TAA, then a rising run into a big C major chord)",
+    "duration_s": 2.824,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 25755,
+    "loudness_metric": "max momentary",
+    "target_lufs": -12,
+    "lufs_integrated": -16.8,
+    "lufs_momentary_max": -12.1,
+    "true_peak_dbtp": -1.8,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactBell_heavy_001.ogg"
+      }
+    ],
+    "notes": [
+      "limited 1.7 dB"
+    ]
+  },
+  "rival_finished": {
+    "file": "audio/rival_finished.ogg",
+    "description": "Opponent finished / is close: deep gong-like anvil ring under a quick rising two-bell alert",
+    "duration_s": 1.257,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 9064,
+    "loudness_metric": "max momentary",
+    "target_lufs": -15,
+    "lufs_integrated": -18.5,
+    "lufs_momentary_max": -15.0,
+    "true_peak_dbtp": -3.9,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactBell_heavy_003.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "music_hall": {
+    "file": "audio/music_hall.ogg",
+    "description": "Forge Hall / menus music: calm medieval loop, 'King's Feast' (loop version), ~81 s stereo",
+    "duration_s": 80.735,
+    "channels": 2,
+    "sample_rate": 44100,
+    "bytes": 935874,
+    "loudness_metric": "integrated",
+    "target_lufs": -16,
+    "lufs_integrated": -16.0,
+    "lufs_momentary_max": -10.9,
+    "true_peak_dbtp": -1.9,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "oga-kings-feast",
+        "file": "Loop_Kings_Feast_0.wav"
+      }
+    ],
+    "notes": []
+  },
+  "music_round": {
+    "file": "audio/music_round.ogg",
+    "description": "Multiplayer round music: lively medieval dance loop, 'Minstrel Dance' (loop version), ~56 s stereo",
+    "duration_s": 56.293,
+    "channels": 2,
+    "sample_rate": 44100,
+    "bytes": 612169,
+    "loudness_metric": "integrated",
+    "target_lufs": -16,
+    "lufs_integrated": -16.1,
+    "lufs_momentary_max": -13.2,
+    "true_peak_dbtp": -4.4,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "oga-minstrel-dance",
+        "file": "Loop_Minstrel_Dance_0.wav"
+      }
+    ],
+    "notes": []
   }
 }

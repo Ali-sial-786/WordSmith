@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  COLORS,
   freeColor,
   INVALID_LIMIT,
+  isJoinablePhase,
+  isPlayingPhase,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
   LOCKOUT_MS,
   normalizeRoomCode,
   pickHost,
@@ -51,6 +56,20 @@ describe("seats", () => {
     expect(freeColor([0, 2])).toBe(1);
     expect(freeColor([1, 0, 2])).toBe(3);
     expect(freeColor([0, 1, 2, 3])).toBeNull();
+    // Versus adds titanium for a fifth player.
+    expect(freeColor([0, 1, 2, 3], COLORS.vs)).toBe(4);
+    expect(freeColor([0, 1, 2, 3, 4], COLORS.vs)).toBeNull();
+    expect(COLORS.coop).toBe(4);
+  });
+
+  it("hold 4 in co-op (solo allowed) and 5 in Versus (2 to start)", () => {
+    expect(MAX_PLAYERS).toEqual({ coop: 4, vs: 5 });
+    expect(MIN_PLAYERS).toEqual({ coop: 1, vs: 2 });
+  });
+
+  it("only take newcomers in the lobby and results", () => {
+    expect((["lobby", "countdown", "round", "standings", "results"] as const).map(isJoinablePhase)).toEqual([true, false, false, false, true]);
+    expect((["lobby", "countdown", "round", "standings", "results"] as const).map(isPlayingPhase)).toEqual([false, true, true, true, false]);
   });
 
   it("keep the host while they're present", () => {
