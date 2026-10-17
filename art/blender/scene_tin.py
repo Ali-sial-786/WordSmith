@@ -136,6 +136,8 @@ def horseshoe(name, loc, mat, size=0.11):
 def build(M):
     # shell: floor, side walls, back wall with a door opening --------------
     K.plane("Floor", (0, (BACK + FRONT) / 2, 0), (2 * W_HALF, BACK - FRONT), mat=M["floor"])
+    K.box("FrontWall", (0, FRONT - 0.15, HEIGHT / 2), (2 * W_HALF + 0.6, 0.3, HEIGHT),
+          M["plaster"], bevel=0)      # behind the camera: keeps the sky out
     for sx in (-1, 1):
         K.box(f"SideWall{sx}", (sx * (W_HALF + 0.15), (BACK + FRONT) / 2, HEIGHT / 2),
               (0.3, BACK - FRONT, HEIGHT), M["plaster"], bevel=0)

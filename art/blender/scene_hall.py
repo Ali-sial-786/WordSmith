@@ -58,6 +58,8 @@ def materials():
 def build(M):
     # room shell ----------------------------------------------------------
     K.plane("Floor", (0, (BACK + FRONT) / 2, 0), (2 * W_HALF, BACK - FRONT), mat=M["floor"])
+    K.box("FrontWall", (0, FRONT - 0.15, HEIGHT / 2), (2 * W_HALF + 0.6, 0.3, HEIGHT),
+          M["wall"], bevel=0)      # behind the camera: keeps the sky out
     K.box("BackWall", (0, BACK + 0.15, HEIGHT / 2), (2 * W_HALF + 0.6, 0.3, HEIGHT),
           M["wall"], bevel=0)
     K.box("LeftWall", (-W_HALF - 0.15, (BACK + FRONT) / 2, HEIGHT / 2),
