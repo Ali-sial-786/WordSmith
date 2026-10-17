@@ -1,7 +1,7 @@
-# Invite notifications (shared contract, M5)
+# Push notifications (shared contract, M5)
 
-Room invites reach friends as phone notifications through Firebase Cloud
-Messaging (FCM), even when the app is closed. It's off until the server has
+Room invites, gifts and daily reminders reach friends as phone notifications
+through Firebase Cloud Messaging (FCM), even when the app is closed. It's off until the server has
 an FCM service account; until then everything below quietly does nothing.
 
 ## Registering a phone
@@ -46,6 +46,28 @@ other on the phone.
 Tokens FCM reports as unregistered or invalid (404, or 400
 `INVALID_ARGUMENT` about the token) are deleted. Other failures are logged
 and ignored, so an invite never fails because a notification did.
+
+## Gift notifications
+
+When a friend sends a gift (`POST /v1/friends/:id/gift`,
+`shared/forge-board.md`), the server sends a notification to each of the
+receiver's tokens, after answering the sender. Only a gift that was actually
+recorded is announced (not an `already_sent` one). Failures are handled as
+for invites, and never fail the gift.
+
+```json
+{
+  "message": {
+    "token": "<token>",
+    "notification": { "title": "Ali sent you a gift", "body": "A free Hammer Strike is waiting in the Forge Hall" },
+    "data": { "type": "gift", "from": "<user id>" },
+    "android": { "priority": "normal", "ttl": "86400s", "collapse_key": "gift-<user id>" }
+  }
+}
+```
+
+The app opens the Forge Hall when it's tapped. Gifts from the same friend
+share a `collapse_key`.
 
 ## Server setup
 

@@ -49,11 +49,15 @@ played late, as in the genre's daily-puzzle calendars.
 
 - `GET /v1/daily?date=YYYY-MM-DD` → the same body for that day (without
   `date`, today). Its `completed` is for that day; `streak` and `best` are as
-  usual. A date outside the window → `400 wrong_day`.
+  usual. A date outside the window (before the 1st of last month, or after
+  today) → `400 wrong_day`; a malformed one → `400 invalid_body`.
 - `POST /v1/daily/complete` also accepts any date in the window. A **late**
   completion (any date other than today, apart from yesterday within the
   first hour of today) grants a flat **15 XP**, never touches the streak, and
   otherwise works the same (hints, Scrap Bin, `alreadyDone`, seen puzzles).
+  Dates outside the window → `400 wrong_day`.
+- `POST /v1/daily/complete` also answers `late` (whether that date is a late
+  one) and `total` (completions after it, like the `GET` body's).
 - Every `GET /v1/daily` body also has `total`: all my completions, late ones
   included. The app unlocks one Smith's Lore page per completion.
 - `GET /v1/daily/calendar?month=YYYY-MM` →
@@ -65,7 +69,9 @@ played late, as in the genre's daily-puzzle calendars.
   - `trophies`: `{bronze, silver, gold}`, how many months have earned each
     (a month counts once, at its best trophy).
   - `month` must be this month or last month for the calendar view; any
-    earlier month → `400 wrong_month`. (Trophy counts cover all months.)
+    other month (earlier, or to come) → `400 wrong_month`, a malformed one
+    → `400 invalid_body`. Without `month`, this month. (Trophy counts cover
+    all months.)
 
 ## Storage
 

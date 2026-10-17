@@ -96,7 +96,11 @@ All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
 | `POST /rooms/:code/video` | A LiveKit token for the room's optional video chat (§6, "Video chat") |
-| `GET /daily` · `POST /daily/complete` | Today's Daily Commission and its streak (`shared/daily.md`) |
+| `GET /daily?date=` · `POST /daily/complete` | The Daily Commission for today or a catch-up day (from the 1st of last month), its streak and total (`shared/daily.md`) |
+| `GET /daily/calendar?month=` | This or last month's days done and trophies (`shared/daily.md`) |
+| `GET /me/board` | The Forge Board: Daily Stoke, Work Orders, Weekly Trials and gifts (`shared/forge-board.md`) |
+| `POST /me/stoke/claim` · `POST /me/orders/swap` · `POST /me/orders/claim` · `POST /me/trials/claim` · `POST /me/gifts/claim` | Forge Board claims, each answering `{profile, board, reward}` |
+| `POST /friends/:id/gift` | Today's free Hammer Strike for a friend, with a notification (`shared/push.md`) |
 | `GET /ws/hub` | WebSocket upgrade to HubDO |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO |
 | `GET /leaderboard` | Friends leaderboard (level, XP, VS series and rounds won, co-op rounds and MVPs) |
@@ -245,7 +249,20 @@ match_players(match_id, user_id, placement INT, points INT, rounds_won INT, xp I
 xp_events    (id INTEGER PK, user_id, source TEXT, amount INT, ref TEXT, created_at INT)
 solo_results (user_id, stage INT, completed_at INT, PRIMARY KEY(user_id, stage))  -- dedupes syncs
 pickup_seeds (user_id, seed TEXT, PRIMARY KEY(user_id, seed))  -- install ids used before sign-in (max 5)
+daily_completions (user_id, date TEXT, completed_at INT, xp INT, late INT /*catch-up day: no streak*/, PRIMARY KEY(user_id, date))
+push_tokens  (id INTEGER PK, token TEXT UNIQUE, user_id, registered_at INT)
+work_orders  (user_id, period TEXT /*d:<date> | w:<week>*/, slot TEXT, kind TEXT, target INT, progress INT, letter TEXT, claimed INT,
+              PRIMARY KEY(user_id, period, slot))
+weekly_xp    (user_id, week TEXT /*YYYY-Www*/, xp INT, PRIMARY KEY(user_id, week))  -- kept by a trigger on xp_events
+trial_claims (user_id, week TEXT, claimed_at INT, PRIMARY KEY(user_id, week))
+gifts        (id INTEGER PK, from_user, to_user, sent_date TEXT, sent_at INT, claimed_at INT, UNIQUE(from_user, to_user, sent_date))
 ```
+
+`profiles` also has `stoke_claims` and `stoke_last` (the Daily Stoke) and
+`masterwork_pieces` (blueprint pieces, `shared/masterworks.md`). Every XP
+grant writes an `xp_events` row (`source`: `solo`, `daily`, `coop`, `vs`,
+`board` or `masterwork`), and a trigger adds it to `weekly_xp` for the
+Weekly Trials.
 
 Migrations live in `server/migrations/` and are applied with `wrangler d1 migrations apply`.
 
@@ -254,15 +271,15 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
 ## 8. Solo, offline play and sync
 
 - The campaign's puzzles are **bundled in the app** (`app/assets/campaign/`), so solo play works with no connection.
-- The phone keeps a **local profile cache** and a **sync queue** of results: `{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups, pickupSeed, durationMs, completedAt}`. `pickupSeed` is the id the pickups were seeded with: the account id, or the install id (`install-<hex>`) for puzzles played before sign-in. The server accepts up to 5 install ids per account.
+- The phone keeps a **local profile cache** and a **sync queue** of results: `{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups, gilded, pickupSeed, durationMs, completedAt}`. `pickupSeed` is the id the pickups (and the gilded cell) were seeded with: the account id, or the install id (`install-<hex>`) for puzzles played before sign-in. The server accepts up to 5 install ids per account. `gilded` is `[<cell index>]` when the puzzle's gilded cell was collected, else `[]` (optional; `shared/masterworks.md`).
 - `POST /solo/sync` uploads the queue whenever the app is online. For each entry, the server checks:
   - the stage hasn't already been counted (`solo_results` stops duplicates);
   - the found words match that puzzle's answers;
   - the bonus words are in its bonus set;
   - the time taken is plausible.
 
-  It then grants XP, applies hint use and pickups (the inventory can't go below 0), handles level-ups and their rewards, and returns the updated profile.
-- **Campaign pickups** are worked out the same way on the phone and on the server, from `pickupSeed + ":" + puzzleId` (see `shared/pickups.md`). That decides whether a puzzle has a pickup, which cell it's in, and which type it is. The server can therefore check claimed pickups without them being stored in advance.
+  It then grants XP, applies hint use and pickups (the inventory can't go below 0), counts a blueprint piece for a gilded cell it can reproduce (and grants a finished Masterwork's reward), handles level-ups and their rewards, adds the puzzles to the player's Work Orders, and returns the updated profile.
+- **Campaign pickups** are worked out the same way on the phone and on the server, from `pickupSeed + ":" + puzzleId` (see `shared/pickups.md`). That decides whether a puzzle has a pickup, which cell it's in, and which type it is. The server can therefore check claimed pickups without them being stored in advance. **Gilded cells** work the same way, from `pickupSeed + ":" + puzzleId + ":gilded"`, stepping off the pickup cells (`shared/masterworks.md`).
 - **Server wins conflicts.** For example, if the same account played offline on two phones, the server's numbers are kept after the sync.
 
 ---

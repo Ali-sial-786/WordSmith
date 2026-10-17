@@ -15,9 +15,9 @@ contract.
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
 | `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
-| `src/push/` | Invite notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), and the invite message (`invite.ts`) |
+| `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), and the invite and gift messages (`invite.ts`, `gift.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
-| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql` and `0004_push_tokens.sql` |
+| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql` and `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
 | `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
@@ -28,9 +28,13 @@ contract.
 | `heat.ts` | Heat tier from Smith Level, tier names, co-op and VS timers, and the median level for VS |
 | `progression.ts` | XP curve, levels, ranks, hint unlocks, level-up rewards, XP per mode, and the Scrap Bin |
 | `pickups.ts` | Campaign pickup seeding ([shared/pickups.md](../shared/pickups.md)) |
+| `masterworks.ts` | Gilded cells (seeded like pickups), the twelve Masterworks and when each is finished ([shared/masterworks.md](../shared/masterworks.md)) |
+| `rewards.ts` | Forge Board and Masterwork rewards: locked hint types become Hammer Strikes, and the XP's level-ups |
+| `orders.ts` | Work Orders: the day's three (the same for everyone), the week's two, the swap, rewards, and what an accepted play counts towards |
+| `board.ts` | ISO weeks, the Daily Stoke, Weekly Trials standings and prizes, gift limits, and the `GET /v1/me/board` body ([shared/forge-board.md](../shared/forge-board.md)) |
 | `campaign.ts` | A campaign puzzle's grid words, bonus words and letter cells, for checking syncs |
 | `sync.ts` | Checking and applying offline solo results (see below) |
-| `daily.ts` | The Daily Commission: the day's heat and puzzle pick, which day a completion may be for, streaks, daily XP, and checking and applying a completion (with sync.ts's checks and hint arithmetic) |
+| `daily.ts` | The Daily Commission: the day's heat and puzzle pick, which day a completion may be for (on time, or a late catch-up day), streaks, daily XP, checking and applying a completion (with sync.ts's checks and hint arithmetic), and the calendar's trophies |
 | `coop.ts` | Claim decisions, word points, MVP and stars |
 | `room.ts` | Room codes, colours, the host, room timings (countdown, rejoin, closing) and the SUBMIT rate limit |
 | `mold.ts` | A bank puzzle's slots and cells, which slots filled cells complete, where hints and embers land |
@@ -58,8 +62,16 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `DELETE /me/push-token` | `{token}` → `{ok: true}`: no more notifications to that phone (sign-out, or turned off). Only removes my own token; unknown tokens are fine. `400 invalid_push_token` as above. |
 | `GET /users/:username` | `{id, username, avatar, level, rank, campaignCompleted, stats, friendship}`; `friendship` is `self`, `none`, `friends`, `request_sent` or `request_received`. `404 user_not_found`. |
 | `POST /solo/sync` | `{entries: [...]}` → `{profile, results}`; see below |
-| `GET /daily` | `{date, heat, puzzle, completed, streak, best}`: today's Daily Commission (below) |
-| `POST /daily/complete` | `{date, foundWords, bonusWords?, hintsUsed?, durationMs}` → `{profile, xp, streak, best, alreadyDone}`. `400 wrong_day`, `400 incomplete`, `400 too_fast`, `400 invalid_body`; `409 sync_conflict` (retry). |
+| `GET /daily?date=` | `{date, heat, puzzle, completed, streak, best, total}`: today's Daily Commission, or a catch-up day's (below). `400 wrong_day`, `400 invalid_body`. |
+| `POST /daily/complete` | `{date, foundWords, bonusWords?, hintsUsed?, durationMs}` → `{profile, xp, late, streak, best, total, alreadyDone}`. `400 wrong_day`, `400 incomplete`, `400 too_fast`, `400 invalid_body`; `409 sync_conflict` (retry). |
+| `GET /daily/calendar?month=` | `{month, days, trophy, trophies}` for this month (default) or last. `400 wrong_month`, `400 invalid_body`. |
+| `GET /me/board` | The Forge Board (below) |
+| `POST /me/stoke/claim` | → `{profile, board, reward}`. `409 already_claimed`. |
+| `POST /me/orders/swap` | `{slot: "d0" \| "d1" \| "d2"}` → `{profile, board, reward}`. `400 invalid_slot`, `409 swap_used`, `409 order_done`. |
+| `POST /me/orders/claim` | `{slot}` (`d0`–`d2`, `w0`, `w1`, `chest`) → `{profile, board, reward}`. `400 invalid_slot`, `409 already_claimed`, `409 not_done`. |
+| `POST /me/trials/claim` | → `{profile, board, reward}`. `409 no_prize`, `409 already_claimed`. |
+| `POST /me/gifts/claim` | → `{profile, board, reward}`. `409 nothing_to_claim`. |
+| `POST /friends/:id/gift` | → `{ok: true}`. `400 cannot_gift_self`, `404 not_friends`, `409 already_sent`. |
 | `GET /friends` | `{friends, incoming, outgoing}`, each a list of `{id, username, avatar, level, rank, since}` |
 | `POST /friends/request` | `{username}` → `{status: "pending" \| "accepted", user}`. Asking someone who already asked you accepts. `404 user_not_found`, `400 cannot_friend_self`, `409 already_friends`, `409 too_many_requests`. |
 | `POST /friends/respond` | `{userId, accept}` → `{status: "accepted" \| "declined", user}`. `404 request_not_found`. |
@@ -71,7 +83,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
-Friends, the leaderboard, the hub, rooms, the Daily Commission and push tokens need a set-up account
+Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board and push tokens need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync` and `/users/:username` don't.
 
 ### Profile
@@ -84,6 +96,7 @@ Friends, the leaderboard, the hub, rooms, the Daily Commission and push tokens n
   "scrapBin": 4, "hints": {"hammer": 5, "chisel": 1, "sparks": 0},
   "stats": {"wordsForged": 40, "longestWord": "THREAD", "soloDone": 12, "coopRounds": 0,
             "coopMvps": 0, "vsSeries": 0, "vsSeriesWon": 0, "vsRoundsWon": 0},
+  "masterworks": {"pieces": 7},
   "createdAt": 1792200000000
 }
 ```
@@ -95,7 +108,7 @@ Friends, the leaderboard, the hub, rooms, the Daily Commission and push tokens n
 ### Solo sync
 
 Each entry is what the app queues on finishing a campaign puzzle:
-`{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups: [{cell, kind}], pickupSeed?, durationMs, completedAt}`
+`{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups: [{cell, kind}], gilded?: [cell], pickupSeed?, durationMs, completedAt}`
 (`pickupsCollected` is accepted as another name for `pickups`). At most 100
 entries per request. `results[i]` answers `entries[i]`:
 
@@ -114,6 +127,8 @@ Every result is final, so the app can drop all the entries it sent and take
 - An entry is **rejected** if it's malformed (`invalid_entry`, with `detail`), its stage isn't in the campaign (`unknown_stage`), `puzzleId` isn't that stage's (`puzzle_mismatch`), the stage was already counted (`duplicate`), `completedAt` is more than 10 minutes ahead or before 2026 (`bad_completed_at`), a found word isn't a grid word (`unknown_word`), a bonus word isn't in the bonus list (`unknown_bonus_word`), the cells no found word covers are more than the hints used could have shown (`incomplete`; a Hammer or Chisel shows 1, a Spark Shower 5), or it took under 1 s per found word (`too_fast`).
 - An **accepted** entry gives 10 XP plus 1 per bonus word (up to +5), level-up rewards, and puts its bonus words in the Scrap Bin (each 10 → a Hammer Strike). Hints used are taken off the stock after adding the puzzle's pickups and Scrap Bin hammers, and before level-up rewards. Stock never goes below 0; any overdraw is reported in `hintsClamped`.
 - **Pickups** are checked by recomputing `pickupsFor(seed, puzzleId, cellCount, levelAtStart)`. The seed is `pickupSeed` (the app's install ID from before sign-in) or else the account's uid. A claim on the right cell gets the server's type; other claims are dropped (`pickupsRejected`). An account may use its own uid and up to 5 install IDs (`pickup_seeds` table).
+- **Gilded cells** ([shared/masterworks.md](../shared/masterworks.md)) are checked the same way with `gildedCell(seed, …)`: a right claim is a blueprint piece (`profiles.masterwork_pieces`; the result gets `gilded: [cell]`), a wrong one is ignored. A piece that finishes a Masterwork grants 100 XP, a Chisel and a Spark Shower (locked types as Hammer Strikes) in the same sync: the result gets `masterwork: {id, reward}`, and `xp_events` a `masterwork` row.
+- **Work Orders:** the accepted entries (puzzles, those with no hints, bonus words, typed words) are added to the player's orders for the sync's day and week, in the same batch (`src/db/orders.ts`).
 - `503 campaign_unavailable` means the server's campaign table is empty: keep the queue and retry later. `409 sync_conflict` means the profile kept changing during the sync: retry.
 
 ### Daily Commission
@@ -122,8 +137,20 @@ Every result is final, so the app can drop all the entries it sent and take
 
 - **The day** is the UTC date. Its heat follows the weekday (Mon 1, Tue 2, Wed 3, Thu 4, Fri 5, Sat 6, Sun 3), and its puzzle is candidate `fnv1a32("daily:" + date) % n` among the `n` size-1 bank puzzles at that heat, ordered by id (the nearest heat that has some if that one has none; `503 daily_unavailable` if the bank is empty). `puzzle` is in the campaign format with `id: "daily-<date>"`; `heat` is the puzzle's.
 - **Streaks** come from `daily_completions`: `streak` is the run of days ending today, or yesterday while today isn't done; `best` the longest run.
-- **Completing** is checked like a solo sync entry: `date` must be today, or yesterday during the first hour of today (`wrong_day`); the typed grid words plus the hints used must be able to fill every letter cell (`incomplete`; a slot that filled in by itself needn't be in `foundWords`, and words that aren't grid words are ignored); at least 1 s per word typed (`too_fast`). The first completion of a day grants `25 + 5 × (streak − 1)` XP, capped at 55, with level-up rewards; the puzzle's bonus words among `bonusWords` go to the Scrap Bin (others are ignored); the hints used come off the stock after the Scrap Bin's hammers and before level-up rewards, never below 0. Typed words count as words forged. A repeat answers `alreadyDone: true` and grants nothing.
-- **Written** in one optimistic batch like solo sync: the `daily_completions` row, `xp_events` (`source: "daily"`, `ref`: the date), the profile, hints and stats, and `puzzle_seen` for the bank puzzle, so rooms don't serve it again for 60 days. Deleting the account deletes its completions.
+- **Catch-up days:** any day from the 1st of last month up to today can be fetched (`?date=`) and completed. One that isn't on time (today, or yesterday in the first hour of today) is **late**: a flat 15 XP, `daily_completions.late = 1`, and streaks ignore it. `total` counts every completion. `GET /daily/calendar` lists a month's days done and its trophy (bronze 7+, silver 15+, gold every day) and how many months have earned each.
+- **Completing** is checked like a solo sync entry: `date` must be in that window (`wrong_day`); the typed grid words plus the hints used must be able to fill every letter cell (`incomplete`; a slot that filled in by itself needn't be in `foundWords`, and words that aren't grid words are ignored); at least 1 s per word typed (`too_fast`). The first completion of a day grants `25 + 5 × (streak − 1)` XP, capped at 55, with level-up rewards; the puzzle's bonus words among `bonusWords` go to the Scrap Bin (others are ignored); the hints used come off the stock after the Scrap Bin's hammers and before level-up rewards, never below 0. Typed words count as words forged. A repeat answers `alreadyDone: true` and grants nothing.
+- **Written** in one optimistic batch like solo sync: the `daily_completions` row, `xp_events` (`source: "daily"`, `ref`: the date), the profile, hints and stats, Work Orders progress, and `puzzle_seen` for the bank puzzle, so rooms don't serve it again for 60 days. Deleting the account deletes its completions.
+
+### Forge Board
+
+[shared/forge-board.md](../shared/forge-board.md), with the rules in `src/rules/board.ts`, `orders.ts` and `rewards.ts`, the queries in `src/db/board.ts` and `src/db/orders.ts`:
+
+- **`GET /me/board`** reads everything in one D1 batch and writes nothing: `{date, week, stoke, orders, trials, gifts}`.
+- **Claims** read the account, then the board, decide, and write one optimistic batch like solo sync: the claim's mark (`profiles.stoke_*`, `work_orders.claimed`, the day's `chest` or `swap` row, `trial_claims`, `gifts.claimed_at`), `xp_events` (`source: "board"`), the hints (with locked types as Hammer Strikes) and level-up rewards, and the profile. Every write the marks depend on moves the profile's version, so two claims at once grant once; the loser re-reads and gets the claim's `409`.
+- **Work Orders progress** is written by solo sync, the daily, and the room's co-op and Versus results (`writeMatch` in `src/db/rooms.ts`, from the words each player claimed, which the room keeps in the round and the series), always in the batch that writes the play. A player's rows for the day and week are made then, from the configured orders.
+- **Weekly Trials XP** is `weekly_xp`, which a trigger on `xp_events` keeps in step (migrations/0005), so every XP grant counts at the ISO week it was recorded.
+- **Gifts:** one row per sender, receiver and day; `POST /friends/:id/gift` sends the notification with `ctx.waitUntil` after answering (`src/push/gift.ts`). Rows older than 14 days are dropped as new ones are written.
+- Deleting the account deletes its `work_orders`, `weekly_xp`, `trial_claims` and every gift it sent or received.
 
 ### Hub WebSocket
 
@@ -283,7 +310,7 @@ npx vitest run --project worker   # just the Worker
 The tests run as two Vitest projects:
 
 - **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
-- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` moves the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks across days run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
+- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` and `board.test.ts` move the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks, Work Orders and Weekly Trials across days and weeks run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
 
 ## Changing the schema
 
