@@ -1,7 +1,10 @@
+import 'dart:ui' show AppLifecycleState;
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/profile.dart';
+import 'background_audio.dart';
 
 enum SfxId {
   clang('clang'),
@@ -65,22 +68,42 @@ class _Voice {
 /// Sound effects and the forge ambience loop. Every call is fire-and-forget
 /// and failures are swallowed: a missing sound must never break the game.
 class Sfx {
-  Sfx({required this._enabled, this._settings = const Settings()});
+  /// [newPlayer] and [background] are swapped out in tests.
+  Sfx({
+    required this._enabled,
+    this._settings = const Settings(),
+    this._newPlayer = AudioPlayer.new,
+    this._background = const BackgroundAudio(),
+  }) {
+    if (_enabled) _background.listen(_onInterruption);
+  }
 
   factory Sfx.silent() => Sfx(enabled: false);
 
   static const tinkCount = 8;
 
   final bool _enabled;
+  final AudioPlayer Function() _newPlayer;
+  final BackgroundAudio _background;
   final Map<String, _Voice> _voices = {};
   AudioPlayer? _ambience;
   AudioPlayer? _music;
   String? _track;
   Settings _settings;
 
-  /// The app is off screen (home button, recents, another app): nothing
-  /// plays until it's back.
+  /// The app is off screen (home button, recents, another app, screen off).
+  bool _offScreen = false;
+
+  /// Nothing plays: off screen without background play, or closing.
   bool _away = false;
+
+  /// Off screen, a phone call or another app's audio has taken over.
+  bool _interrupted = false;
+
+  bool get _quiet => _away || _interrupted;
+
+  /// What Android was last told: the music and ambience carry on off screen.
+  bool _keepPlaying = false;
 
   /// Loads every sound in the background; sounds play once loaded.
   Future<void> preload() async {
@@ -110,6 +133,7 @@ class Sfx {
     _settings = settings;
     _ambience?.setVolume(_ambienceVolume).ignore();
     _music?.setVolume(_musicVolume).ignore();
+    _syncBackground();
   }
 
   double get _ambienceVolume => _settings.ambienceVolume * 0.6;
@@ -120,14 +144,15 @@ class Sfx {
   Future<void> music(String? track) async {
     if (!_enabled || track == _track) return;
     _track = track;
+    _syncBackground();
     try {
-      final player = _music ??= AudioPlayer();
+      final player = _music ??= _newPlayer();
       await player.stop();
       if (track == null) return;
       await player.setReleaseMode(ReleaseMode.loop);
       await player.setVolume(_musicVolume);
       await player.setSource(AssetSource('audio/$track.ogg'));
-      if (!_away) await player.resume();
+      if (!_quiet) await player.resume();
     } on Object catch (e) {
       debugPrint('music $track unavailable: $e');
     }
@@ -147,7 +172,7 @@ class Sfx {
   void tink(int n) => _play('tink_${n.clamp(1, tinkCount)}', 0.8);
 
   void _play(String file, double volume) {
-    if (!_enabled || _away || _settings.sfxVolume <= 0) return;
+    if (!_enabled || _quiet || _settings.sfxVolume <= 0) return;
     _voices[file]?.play(volume * _settings.sfxVolume).catchError((Object e) {
       debugPrint('sound $file failed: $e');
     });
@@ -156,24 +181,67 @@ class Sfx {
   Future<void> startAmbience() async {
     if (!_enabled || _ambience != null) return;
     try {
-      final player = AudioPlayer();
+      final player = _newPlayer();
       _ambience = player;
+      _syncBackground();
       await player.setReleaseMode(ReleaseMode.loop);
       await player.setVolume(_ambienceVolume);
       await player.setSource(AssetSource('audio/forge_ambience.ogg'));
-      if (!_away) await player.resume();
+      if (!_quiet) await player.resume();
     } on Object catch (e) {
       debugPrint('ambience unavailable: $e');
     }
   }
 
-  /// Pauses the music and ambience while the app is off screen ([away]),
-  /// and picks them up again when it's back.
-  Future<void> setAway(bool away) async {
-    if (!_enabled || away == _away) return;
-    _away = away;
+  /// Follows the app on and off screen. Off screen, the music and ambience
+  /// carry on if the player keeps playing in the background (MainActivity
+  /// keeps them going, and makes way for calls and other apps' audio), and
+  /// otherwise pause until it's back. [AppLifecycleState.detached] stops
+  /// them for good.
+  Future<void> lifecycle(AppLifecycleState state) async {
+    if (!_enabled) return;
+    switch (state) {
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        if (_offScreen) return;
+        _offScreen = true;
+        if (!_settings.backgroundAudio) await _setQuiet(away: true);
+      case AppLifecycleState.resumed:
+        if (!_offScreen) return;
+        _offScreen = false;
+        await _setQuiet(away: false, interrupted: false);
+      case AppLifecycleState.detached:
+        await shutDown();
+      case AppLifecycleState.inactive:
+        break;
+    }
+  }
+
+  /// Tells Android whether there's music or ambience to keep going off
+  /// screen; nothing to hear needs no service or audio focus.
+  void _syncBackground() {
+    final audible =
+        (_track != null && _settings.musicVolume > 0) || (_ambience != null && _settings.ambienceVolume > 0);
+    final on = _enabled && _settings.backgroundAudio && !_away && audible;
+    if (on == _keepPlaying) return;
+    _keepPlaying = on;
+    _background.keepPlaying(on);
+  }
+
+  // A call or another app took over the audio while off screen, or gave it back.
+  void _onInterruption(bool on) {
+    if (on && !_offScreen) return;
+    _setQuiet(interrupted: on);
+  }
+
+  /// Pauses or resumes the music and ambience as [_away] and [_interrupted]
+  /// change.
+  Future<void> _setQuiet({bool? away, bool? interrupted}) async {
+    final was = _quiet;
+    _away = away ?? _away;
+    _interrupted = interrupted ?? _interrupted;
+    if (_quiet == was) return;
     try {
-      if (away) {
+      if (_quiet) {
         await _music?.pause();
         await _ambience?.pause();
       } else {
@@ -181,13 +249,14 @@ class Sfx {
         await _ambience?.resume();
       }
     } on Object catch (e) {
-      debugPrint('audio ${away ? 'pause' : 'resume'}: $e');
+      debugPrint('audio ${_quiet ? 'pause' : 'resume'}: $e');
     }
   }
 
   /// The app is closing: stop everything for good.
   Future<void> shutDown() async {
     _away = true;
+    _syncBackground();
     for (final p in [_music, _ambience]) {
       try {
         await p?.stop();

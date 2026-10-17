@@ -3,7 +3,13 @@ package com.wordsmithforge.game
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterShellArgs
@@ -15,6 +21,28 @@ class MainActivity : FlutterActivity() {
 
     /** The renderer this launch uses: "vulkan" (Impeller's default) or "opengles". */
     private var backend = "vulkan"
+
+    /** On screen (started, not yet stopped). */
+    private var visible = false
+
+    /** A room's voice chat, as the Dart side reports it. */
+    private var voiceChat = VoiceChat.NONE
+
+    /** The game's music and ambience carry on off screen (the player's setting). */
+    private var keepPlaying = false
+
+    /** Off screen, another app took over the audio: quiet until the game is back. */
+    private var yielded = false
+
+    /** This activity's handler for GameAudioService's audio interruptions. */
+    private var interruptions: ((Boolean, Boolean) -> Unit)? = null
+
+    private enum class VoiceChat { NONE, LISTENING, TALKING }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        openActivities++
+        super.onCreate(savedInstanceState)
+    }
 
     // Called once, before the engine starts, so it can pick the renderer.
     override fun getFlutterShellArgs(): FlutterShellArgs {
@@ -52,6 +80,115 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wordsmith/call")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        voiceChat = if (call.argument<Boolean>("mic") == true) VoiceChat.TALKING else VoiceChat.LISTENING
+                        syncService()
+                        result.success(null)
+                    }
+                    "stop" -> {
+                        voiceChat = VoiceChat.NONE
+                        syncService()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        val audio = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wordsmith/audio")
+        audio.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "keepPlaying" -> {
+                    keepPlaying = call.arguments == true
+                    syncService()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        val onInterruption = { interrupted: Boolean, forGood: Boolean ->
+            if (forGood) {
+                yielded = true
+                syncService()
+            }
+            audio.invokeMethod("interrupted", interrupted)
+        }
+        interruptions = onInterruption
+        GameAudioService.onInterruption = onInterruption
+    }
+
+    override fun onStart() {
+        super.onStart()
+        visible = true
+        yielded = false
+        syncService()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        visible = false
+        // Closing: onDestroy is next and ends it all.
+        if (!isFinishing) syncService()
+    }
+
+    /**
+     * Runs GameAudioService for whatever needs it: a voice chat with the mic
+     * on, and off screen a muted voice chat or the game's own sound. Android
+     * lets it start only on screen or just after leaving it, and keeps the
+     * mic only for one started on screen, so a call that goes live off
+     * screen gets its mic when the game is back.
+     */
+    private fun syncService() {
+        val mode = when {
+            voiceChat == VoiceChat.TALKING && (visible || GameAudioService.current == GameAudioService.VOICE) ->
+                GameAudioService.VOICE
+            visible -> GameAudioService.NONE
+            voiceChat != VoiceChat.NONE -> GameAudioService.LISTEN
+            keepPlaying && !yielded -> GameAudioService.PLAY
+            else -> GameAudioService.NONE
+        }
+        val intent = Intent(this, GameAudioService::class.java)
+        if (mode == GameAudioService.NONE) {
+            stopService(intent)
+            return
+        }
+        if (mode == GameAudioService.current) return
+        try {
+            startService(intent.putExtra(GameAudioService.MODE, mode))
+        } catch (e: Exception) {
+            // Too late: Android already counts the game as in the background.
+            Log.w("MainActivity", "game audio service: $e")
+        }
+    }
+
+    override fun onDestroy() {
+        // The engine ends with this activity (Flutter destroys an engine it
+        // created), and with it the game's sounds and any call.
+        voiceChat = VoiceChat.NONE
+        keepPlaying = false
+        stopService(Intent(this, GameAudioService::class.java))
+        if (GameAudioService.onInterruption === interruptions) GameAudioService.onInterruption = null
+        openActivities--
+        // Really closed: backed out of, or swiped away from recents while
+        // something kept the process alive. Not a configuration change.
+        val closing = isFinishing && !isChangingConfigurations
+        super.onDestroy()
+        if (closing) endProcess()
+    }
+
+    /**
+     * Ends the process once the player has closed the game, so no sound,
+     * call or connection can outlive it. The engine is already gone, and
+     * the audio and WebRTC plugins' players with it; this makes sure of the
+     * rest. Waits a moment for writes in flight, and stands down if the game
+     * was opened again meanwhile. Notifications still arrive: Android starts
+     * the process again for them.
+     */
+    private fun endProcess() {
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (openActivities == 0) Process.killProcess(Process.myPid())
+        }, 500)
     }
 
     /**
@@ -140,7 +277,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private companion object {
-        const val COMPAT = "compatGraphics"
+        /** MainActivity instances alive in this process. */
+        var openActivities = 0
+
+        const val COMPAT ="compatGraphics"
         const val COMPAT_AUTO = "compatGraphicsAuto"
         const val BACKEND = "backend"
         const val SEEN_EXIT_AT = "seenExitAt"

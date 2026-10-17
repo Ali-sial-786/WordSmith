@@ -227,6 +227,11 @@ their avatar, with voice.
   Roughly 400–500 MB an hour per player in a 5-player room; Wi-Fi is best.
 - **Off by default.** The camera and mic switches are remembered. Nothing is
   recorded.
+- **In the background:** voices go on both ways. While the mic is on,
+  `GameAudioService` runs as a microphone foreground service ("Voice chat
+  on"), started from the screen since Android 11+ cuts the mic off for
+  background apps otherwise; a muted call gets a media-playback one off
+  screen. The camera pauses until the game is back.
 - **Setup:** the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`
   GitHub secrets, which the deploy workflow copies to the Worker. Without
   them the route answers `503 video_unavailable` and the app says so.
@@ -304,7 +309,7 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
   - Sparks and embers use a small custom particle system.
   - Heat shimmer and molten glow use Flutter **fragment shaders** (`FragmentProgram`).
   - Haptics through `HapticFeedback`.
-- **Audio:** `audioplayers` with a pool per sound effect. The tile "tink" uses eight pre-pitched files that rise in pitch with each letter. Ambience is a looping player, sounds mix with the user's own music rather than taking audio focus, and each has its own volume setting.
+- **Audio:** `audioplayers` with a pool per sound effect. The tile "tink" uses eight pre-pitched files that rise in pitch with each letter. Ambience is a looping player, sounds mix with the user's own music rather than taking audio focus, and each has its own volume setting. With "Keep playing in the background" on (the default), music and ambience carry on off screen: `GameAudioService` runs as a media-playback foreground service while the game is off screen (Android 17 silences background audio without one) and holds duckable audio focus, so a phone call or another app starting to play pauses them until it's over or the game is back. With it off they pause off screen. Closing the game (backing out, or swiping it away) ends the process from `MainActivity.onDestroy`, so nothing outlives it.
 - **Web build:** used **only** to take automated screenshots during development (there's no Android emulator in the build environment). The product is Android-only.
 - **Real-time client:** reconnects automatically with backoff, re-sends `READY` and rebuilds the screen from the `SNAPSHOT`. Words are sent with increasing `seq` numbers, and results are matched back by `seq`.
 

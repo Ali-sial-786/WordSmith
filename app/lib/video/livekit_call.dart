@@ -3,15 +3,19 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:livekit_client/livekit_client.dart';
 
+import 'call_service.dart';
 import 'video_call.dart';
 
 /// Video chat through LiveKit Cloud. Small, low-frame-rate video (the bubbles
 /// are avatar-sized), and each phone only downloads the size it shows.
 class LiveKitCall extends VideoCall {
-  LiveKitCall({required this.me});
+  LiveKitCall({required this.me, this.service = const CallService()});
 
   /// This player's user ID (their LiveKit identity).
   final String me;
+
+  /// Keeps the call, and its mic, going while the app is in the background.
+  final CallService service;
 
   Room? _room;
   EventsListener<RoomEvent>? _events;
@@ -20,6 +24,9 @@ class LiveKitCall extends VideoCall {
   bool _cameraOn = false;
   bool _micOn = false;
   bool _leaving = false;
+
+  /// What the service was last told: null out of the call, else the mic.
+  bool? _serviceMic;
 
   static const _options = RoomOptions(
     adaptiveStream: true,
@@ -40,6 +47,24 @@ class LiveKitCall extends VideoCall {
   void _set(VideoStatus status) {
     _status = status;
     notifyListeners();
+  }
+
+  /// Tells the service whether we're in the call and whether the mic is on,
+  /// so friends keep hearing us (and we them) with the app in the
+  /// background. It stays through a reconnect, since Android won't start it
+  /// again off screen.
+  void _syncService() {
+    final inCall = _room != null && (_status == VideoStatus.live || _status == VideoStatus.reconnecting);
+    final mic = inCall ? _micOn : null;
+    if (mic == _serviceMic) return;
+    _serviceMic = mic;
+    unawaited(mic == null ? service.stop() : service.start(mic: mic));
+  }
+
+  @override
+  void notifyListeners() {
+    _syncService();
+    super.notifyListeners();
   }
 
   @override
@@ -196,6 +221,7 @@ class LiveKitCall extends VideoCall {
   void dispose() {
     _leaving = true;
     unawaited(_close());
+    _syncService();
     super.dispose();
   }
 }

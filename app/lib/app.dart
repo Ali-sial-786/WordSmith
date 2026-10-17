@@ -46,10 +46,8 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/play/:stage',
-      builder: (_, state) => PuzzleScreen(
-        key: ValueKey(state.pathParameters['stage']),
-        stage: int.parse(state.pathParameters['stage']!),
-      ),
+      builder: (_, state) =>
+          PuzzleScreen(key: ValueKey(state.pathParameters['stage']), stage: int.parse(state.pathParameters['stage']!)),
     ),
     GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
     GoRoute(path: '/armory', builder: (_, _) => const ArmoryScreen()),
@@ -61,10 +59,8 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/friends', builder: (_, _) => const FriendsScreen()),
     GoRoute(
       path: '/daily',
-      builder: (_, state) => DailyScreen(
-        key: ValueKey(state.uri.queryParameters['date']),
-        date: state.uri.queryParameters['date'],
-      ),
+      builder: (_, state) =>
+          DailyScreen(key: ValueKey(state.uri.queryParameters['date']), date: state.uri.queryParameters['date']),
     ),
     GoRoute(path: '/daily/calendar', builder: (_, _) => const CalendarScreen()),
     GoRoute(path: '/lore', builder: (_, _) => const LoreScreen()),
@@ -136,17 +132,9 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final sfx = ref.read(sfxProvider);
-    switch (state) {
-      case AppLifecycleState.hidden || AppLifecycleState.paused:
-        sfx.setAway(true);
-      case AppLifecycleState.detached:
-        sfx.shutDown();
-      case AppLifecycleState.resumed:
-        sfx.setAway(false);
-      case AppLifecycleState.inactive:
-        break;
-    }
+    // Off screen, sounds keep going or pause as the player chose; closing
+    // stops them (MainActivity makes sure of that natively).
+    ref.read(sfxProvider).lifecycle(state);
     if (state != AppLifecycleState.resumed) return;
     // Catch up on anything finished offline when the player comes back.
     ref.read(accountProvider.notifier).sync();

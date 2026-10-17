@@ -41,6 +41,12 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) => n.update((s) => s.copyWith(ambienceVolume: v)),
           ),
           SwitchListTile(
+            title: const Text('Keep playing in the background'),
+            subtitle: const Text('Music and sounds carry on when you switch apps or the screen turns off'),
+            value: s.backgroundAudio,
+            onChanged: (v) => n.update((s) => s.copyWith(backgroundAudio: v)),
+          ),
+          SwitchListTile(
             title: const Text('Vibration'),
             value: s.haptics,
             onChanged: (v) => n.update((s) => s.copyWith(haptics: v)),
@@ -201,10 +207,7 @@ class _AccountSection extends ConsumerWidget {
             title: Text(account.server?.username ?? 'Signed in'),
             subtitle: Text(account.user?.email ?? ''),
             trailing: account.syncing
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.sync), onPressed: n.sync),
           ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
@@ -244,9 +247,7 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
     });
     try {
       final google = !(ref.read(accountProvider).user?.usesPassword ?? true);
-      await ref
-          .read(accountProvider.notifier)
-          .deleteAccount(password: google ? null : _password.text);
+      await ref.read(accountProvider.notifier).deleteAccount(password: google ? null : _password.text);
       if (mounted) Navigator.of(context).pop();
     } on AuthFailure catch (e) {
       setState(() => _error = e.message);
@@ -286,10 +287,7 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Keep it'),
-        ),
+        TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('Keep it')),
         TextButton(
           onPressed: _busy ? null : _delete,
           child: const Text('Delete', style: TextStyle(color: Palette.quenchRed)),

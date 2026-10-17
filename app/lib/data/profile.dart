@@ -2,12 +2,7 @@ import '../engine/hints.dart';
 import '../engine/progression.dart';
 
 class Stats {
-  const Stats({
-    this.wordsForged = 0,
-    this.bonusWords = 0,
-    this.longestWord = '',
-    this.soloDone = 0,
-  });
+  const Stats({this.wordsForged = 0, this.bonusWords = 0, this.longestWord = '', this.soloDone = 0});
 
   factory Stats.fromJson(Map<String, dynamic> json) => Stats(
     wordsForged: json['wordsForged'] as int? ?? 0,
@@ -21,12 +16,7 @@ class Stats {
   final String longestWord;
   final int soloDone;
 
-  Stats copyWith({
-    int? wordsForged,
-    int? bonusWords,
-    String? longestWord,
-    int? soloDone,
-  }) => Stats(
+  Stats copyWith({int? wordsForged, int? bonusWords, String? longestWord, int? soloDone}) => Stats(
     wordsForged: wordsForged ?? this.wordsForged,
     bonusWords: bonusWords ?? this.bonusWords,
     longestWord: longestWord ?? this.longestWord,
@@ -61,10 +51,7 @@ class Profile {
     scrapBin: json['scrapBin'] as int? ?? 0,
     hints: json['hints'] == null
         ? const {HintKind.hammer: startingHammers}
-        : {
-            for (final e in (json['hints'] as Map).entries)
-              HintKind.byName(e.key as String): e.value as int,
-          },
+        : {for (final e in (json['hints'] as Map).entries) HintKind.byName(e.key as String): e.value as int},
     stats: Stats.fromJson((json['stats'] as Map?)?.cast() ?? const {}),
     masterworkPieces: json['masterworkPieces'] as int? ?? 0,
   );
@@ -128,6 +115,7 @@ class Settings {
     this.sfxVolume = 0.9,
     this.musicVolume = 0.6,
     this.ambienceVolume = 0.4,
+    this.backgroundAudio = true,
     this.haptics = true,
     this.reducedMotion = false,
     this.videoChat = false,
@@ -142,6 +130,7 @@ class Settings {
     sfxVolume: (json['sfx'] as num?)?.toDouble() ?? 0.9,
     musicVolume: (json['music'] as num?)?.toDouble() ?? 0.6,
     ambienceVolume: (json['ambience'] as num?)?.toDouble() ?? 0.4,
+    backgroundAudio: json['backgroundAudio'] as bool? ?? true,
     haptics: json['haptics'] as bool? ?? true,
     reducedMotion: json['reducedMotion'] as bool? ?? false,
     videoChat: json['videoChat'] as bool? ?? false,
@@ -155,6 +144,10 @@ class Settings {
   final double sfxVolume;
   final double musicVolume;
   final double ambienceVolume;
+
+  /// Music, ambience and sounds carry on while the app is in the background
+  /// or the screen is off; otherwise they pause until it's back.
+  final bool backgroundAudio;
   final bool haptics;
   final bool reducedMotion;
 
@@ -179,6 +172,7 @@ class Settings {
     double? sfxVolume,
     double? musicVolume,
     double? ambienceVolume,
+    bool? backgroundAudio,
     bool? haptics,
     bool? reducedMotion,
     bool? videoChat,
@@ -191,6 +185,7 @@ class Settings {
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
     ambienceVolume: ambienceVolume ?? this.ambienceVolume,
+    backgroundAudio: backgroundAudio ?? this.backgroundAudio,
     haptics: haptics ?? this.haptics,
     reducedMotion: reducedMotion ?? this.reducedMotion,
     videoChat: videoChat ?? this.videoChat,
@@ -205,6 +200,7 @@ class Settings {
     'sfx': sfxVolume,
     'music': musicVolume,
     'ambience': ambienceVolume,
+    'backgroundAudio': backgroundAudio,
     'haptics': haptics,
     'reducedMotion': reducedMotion,
     'videoChat': videoChat,
