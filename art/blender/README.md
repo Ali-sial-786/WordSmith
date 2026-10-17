@@ -146,20 +146,22 @@ Every render is logged in `_renders/render_times.log`.
 | cells.py | 2 × 512² (→128²) | 128 | ~1.5 min (23 s + 73 s) | |
 | icon.py | 1024² + ID pass | 128 / 16 | ~1.5–2.5 min (85–137 s + 3 s) | |
 | ui_kit.py | 7 pieces at 2× (plate 960×384 → 480×192) | 256 | ~25 min (plate 553 s, primary 326 s, panels 183–199 s, rounds 87–117 s, tab 54 s) | measured while a background render shared the 4 cores; `--ss 1 --samples 48` previews all seven in ~2 min |
-| scene_hall.py | 720×1561 (→1080×2340) | 80 | ~8.5 min (509 s) | volumetric haze + flame volumes |
-| scene_tin.py | 720×1561 (→1080×2340) | 80 | ~5.5 min (339 s) | volumetric haze |
-| scene_copper.py | 720×1561 (→1080×2340) | 80 | ~2.5 min (148 s) | |
-| scene_bronze.py | 720×1561 (→1080×2340) | 80 | ~7.5 min (448 s) | volumetric haze, torches |
-| scene_iron.py | 720×1561 (→1080×2340) | 64 | ~5 min (309 s) | haze (volume step rate 8) for the moon shaft |
-| scene_steel.py | 720×1561 (→1080×2340) | 64 | ~5 min (295 s) | haze |
-| scene_silver.py | 720×1561 (→1080×2340) | 64 | ~4.5 min (265 s) | haze |
-| scene_gold.py | 720×1561 (→1080×2340) | 64 | ~5.5 min (328 s) | ~500 objects (coins are instances) |
-| scene_damascus.py | 720×1561 (→1080×2340) | 64 | ~6 min (373 s) | haze |
-| scene_starmetal.py | 720×1561 (→1080×2340) | 64 | ~7 min (419 s) | haze, emissive sky, displaced ground |
+| scene_hall.py | 1080×2340 | 80 | ~22 min (1332 s) | volumetric haze + flame volumes; measured while the UI kit renders shared the cores |
+| scene_tin.py | 1080×2340 | 80 | ~25 min (1520 s) | volumetric haze; shared the cores with the UI kit renders |
+| scene_copper.py | 1080×2340 | 80 | ~8.5 min (500 s) | |
+| scene_bronze.py | 1080×2340 | 80 | ~19 min (1156 s) | volumetric haze, torches |
+| scene_iron.py | 1080×2340 | 64 | ~12 min (est.) | haze (volume step rate 8) for the moon shaft |
+| scene_steel.py | 1080×2340 | 64 | ~11 min (est.) | haze |
+| scene_silver.py | 1080×2340 | 64 | ~10 min (est.) | haze |
+| scene_gold.py | 1080×2340 | 64 | ~12 min (est.) | ~500 objects (coins are instances) |
+| scene_damascus.py | 1080×2340 | 64 | ~14 min (est.) | haze |
+| scene_starmetal.py | 1080×2340 | 64 | ~16 min (est.) | haze, emissive sky, displaced ground |
 | post.py (all) | | | ~30 s | |
 
-Total for `./run_all.sh` is about 1.5–2 h. `QUICK=1` previews take 10–60 s per asset. The chapter scenes from bronze
-on default to 64 samples and a volume step rate of 8 (bronze: 80 / 4), which keeps each under ~8 min.
+Native 1080×2340 costs about 2.25× the old 720×1561 renders (est. = 2.25 × the earlier 0.667-scale
+time on an otherwise idle 4-core machine). Total for `./run_all.sh` is about 3–3.5 h. `QUICK=1` previews
+take 10–60 s per asset. The chapter scenes from bronze on default to 64 samples and a volume step rate
+of 8 (bronze: 80 / 4).
 
 ## Look and tuning
 
