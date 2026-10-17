@@ -125,6 +125,7 @@ class Settings {
     this.videoChat = false,
     this.videoCamera = true,
     this.videoMic = true,
+    this.inviteNotifications = true,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) => Settings(
@@ -136,6 +137,7 @@ class Settings {
     videoChat: json['videoChat'] as bool? ?? false,
     videoCamera: json['videoCamera'] as bool? ?? true,
     videoMic: json['videoMic'] as bool? ?? true,
+    inviteNotifications: json['inviteNotifications'] as bool? ?? true,
   );
 
   final double sfxVolume;
@@ -152,6 +154,9 @@ class Settings {
   final bool videoCamera;
   final bool videoMic;
 
+  /// Phone notifications when a friend invites you to a room.
+  final bool inviteNotifications;
+
   Settings copyWith({
     double? sfxVolume,
     double? musicVolume,
@@ -161,6 +166,7 @@ class Settings {
     bool? videoChat,
     bool? videoCamera,
     bool? videoMic,
+    bool? inviteNotifications,
   }) => Settings(
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
@@ -170,6 +176,7 @@ class Settings {
     videoChat: videoChat ?? this.videoChat,
     videoCamera: videoCamera ?? this.videoCamera,
     videoMic: videoMic ?? this.videoMic,
+    inviteNotifications: inviteNotifications ?? this.inviteNotifications,
   );
 
   Map<String, Object> toJson() => {
@@ -181,5 +188,6 @@ class Settings {
     'videoChat': videoChat,
     'videoCamera': videoCamera,
     'videoMic': videoMic,
+    'inviteNotifications': inviteNotifications,
   };
 }

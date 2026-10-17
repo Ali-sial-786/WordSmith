@@ -135,6 +135,10 @@ class ApiClient {
 
   Future<DailyInfo> daily() async => DailyInfo.fromJson(await _send('GET', '/daily'));
 
+  /// Invite notifications to this phone (shared/push.md).
+  Future<void> registerPushToken(String token) => _send('POST', '/me/push-token', body: {'token': token});
+  Future<void> deletePushToken(String token) => _send('DELETE', '/me/push-token', body: {'token': token});
+
   Future<DailyOutcome> completeDaily({
     required String date,
     required List<String> foundWords,

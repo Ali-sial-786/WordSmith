@@ -14,6 +14,7 @@ import 'game/providers.dart';
 import 'net/api_client.dart';
 import 'net/config.dart';
 import 'net/hub_client.dart';
+import 'net/push.dart';
 import 'net/room_client.dart';
 import 'video/livekit_call.dart';
 
@@ -45,6 +46,7 @@ Future<void> main() async {
               : (code) => RoomClient(baseUrl: AppConfig.apiBase, code: code, token: auth.idToken),
         ),
         videoCallFactoryProvider.overrideWithValue(api == null ? null : (me) => LiveKitCall(me: me)),
+        if (api != null && AppConfig.hasFirebase) pushServiceProvider.overrideWithValue(FirebasePushService()),
       ],
       child: const WordsmithApp(),
     ),

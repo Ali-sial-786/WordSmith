@@ -8,13 +8,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordsmith/app.dart';
 import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
+import 'package:wordsmith/features/coop/room_screen.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/game/providers.dart';
 
 import '../fixtures/fake_backend.dart';
 import '../fixtures/puzzles.dart';
 
-Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server) async {
+Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server, {FakePush? push}) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -33,6 +34,7 @@ Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server) asy
       ),
       authServiceProvider.overrideWithValue(auth),
       apiClientProvider.overrideWithValue(server.client(auth)),
+      if (push != null) pushServiceProvider.overrideWithValue(push),
     ],
   );
   addTearDown(container.dispose);
@@ -99,5 +101,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Continue with Google'), findsNothing);
     expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
+  });
+
+  testWidgets('tapping an invite notification opens that room', (tester) async {
+    final push = FakePush();
+    await _pumpApp(tester, FakeAuth(), FakeServer(), push: push);
+    push.tap({'type': 'invite', 'code': 'K7Q2AB', 'mode': 'vs', 'from': 'u2'});
+    await tester.pumpAndSettle();
+    final room = tester.widget<RoomScreen>(find.byType(RoomScreen));
+    expect((room.code, room.mode), ('K7Q2AB', 'vs'));
   });
 }

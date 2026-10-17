@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:wordsmith/auth/auth_service.dart';
 import 'package:wordsmith/net/api_client.dart';
+import 'package:wordsmith/net/push.dart';
 
 /// Sign-in without Firebase.
 class FakeAuth implements AuthService {
@@ -118,6 +119,9 @@ class FakeServer {
   bool dailyDone = false;
   int dailyStreak = 0;
   final dailyPosts = <Map<String, dynamic>>[];
+
+  /// Push tokens registered for invite notifications.
+  final pushTokens = <String>{};
   bool deletedMe = false;
   final calls = <String>[];
 
@@ -187,6 +191,12 @@ class FakeServer {
       case 'DELETE /me':
         deletedMe = true;
         return _json(200, {'ok': true});
+      case 'POST /me/push-token':
+        pushTokens.add(body['token'] as String);
+        return _json(200, {'ok': true});
+      case 'DELETE /me/push-token':
+        pushTokens.remove(body['token']);
+        return _json(200, {'ok': true});
       case 'GET /daily':
         if (dailyPuzzle == null) return _json(404, {'error': 'not_found'});
         return _json(200, {
@@ -222,4 +232,36 @@ class FakeServer {
 
   static http.Response _json(int status, Object body) =>
       http.Response(jsonEncode(body), status, headers: {'content-type': 'application/json'});
+}
+
+/// Invite notifications without Firebase.
+class FakePush implements PushService {
+  bool allowed = true;
+  String? current = 'fcm-token-1';
+  int deletes = 0;
+  final _refresh = StreamController<String>.broadcast();
+  final _opened = StreamController<Map<String, dynamic>>.broadcast();
+
+  void refresh(String token) {
+    current = token;
+    _refresh.add(token);
+  }
+
+  void tap(Map<String, dynamic> data) => _opened.add(data);
+
+  @override
+  Future<bool> requestPermission() async => allowed;
+  @override
+  Future<String?> token() async => current;
+  @override
+  Stream<String> get tokenRefresh => _refresh.stream;
+  @override
+  Stream<Map<String, dynamic>> get opened => _opened.stream;
+  @override
+  Future<Map<String, dynamic>?> initialOpen() async => null;
+  @override
+  Future<void> deleteToken() async {
+    deletes++;
+    current = 'fcm-token-${deletes + 1}';
+  }
 }

@@ -2,4 +2,6 @@
 <resources>
     <!-- Forge Black from docs/ART_AND_AUDIO.md -->
     <color name="forge_black">#17110E</color>
+    <!-- Notification accent: Molten -->
+    <color name="notification_accent">#FFB23F</color>
 </resources>

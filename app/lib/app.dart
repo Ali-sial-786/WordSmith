@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +16,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'game/account.dart';
+import 'net/push.dart';
 import 'ui/theme/theme.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -56,14 +59,29 @@ class WordsmithApp extends ConsumerStatefulWidget {
 }
 
 class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBindingObserver {
+  StreamSubscription<Map<String, dynamic>>? _opened;
+
+  GoRouter get _router => widget.router ?? appRouter;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // A tapped invite notification opens that room.
+    final push = ref.read(pushServiceProvider);
+    push.initialOpen().then(_openInvite);
+    _opened = push.opened.listen(_openInvite);
+  }
+
+  void _openInvite(Map<String, dynamic>? data) {
+    final target = inviteTarget(data);
+    if (target == null || !mounted) return;
+    _router.push('/room/${target.code}?mode=${target.mode}');
   }
 
   @override
   void dispose() {
+    _opened?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -81,7 +99,7 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       title: 'Wordsmith',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      routerConfig: widget.router ?? appRouter,
+      routerConfig: _router,
     );
   }
 }

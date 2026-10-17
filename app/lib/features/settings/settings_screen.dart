@@ -59,6 +59,13 @@ class SettingsScreen extends ConsumerWidget {
               value: s.videoChat,
               onChanged: (v) => n.update((s) => s.copyWith(videoChat: v)),
             ),
+          if (ref.watch(accountProvider).isReady)
+            SwitchListTile(
+              title: const Text('Invite notifications'),
+              subtitle: const Text('A notification when a friend invites you to a room'),
+              value: s.inviteNotifications,
+              onChanged: (v) => ref.read(accountProvider.notifier).setInviteNotifications(v),
+            ),
           const _AccountSection(),
           const Divider(height: 32),
           ListTile(

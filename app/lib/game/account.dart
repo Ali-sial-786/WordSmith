@@ -7,6 +7,7 @@ import '../auth/auth_service.dart';
 import '../net/api_client.dart';
 import '../net/hub_client.dart';
 import '../net/models.dart';
+import '../net/push.dart';
 import '../net/room_client.dart';
 import '../video/video_call.dart';
 import 'providers.dart';
@@ -18,6 +19,9 @@ final hubClientProvider = Provider<HubClient?>((_) => null);
 
 /// Opens the connection to a room by code (null without a server).
 final roomClientFactoryProvider = Provider<RoomClient Function(String code)?>((_) => null);
+
+/// Invite notifications; overridden in main() when Firebase is set up.
+final pushServiceProvider = Provider<PushService>((_) => const DisabledPushService());
 
 /// Today's Daily Commission, once signed in (null otherwise). Invalidated after
 /// forging it.
@@ -211,7 +215,11 @@ class AccountController extends Notifier<AccountState> {
 
   /// Returns false if the player backed out of Google's account picker.
   Future<bool> signInWithGoogle() => _auth.signInWithGoogle();
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    // While still signed in, so the server can forget this phone.
+    await _unregisterPush();
+    await _auth.signOut();
+  }
 
   /// Picks the username and avatar. Throws [ApiException] (e.g. taken).
   Future<void> setup(String username, String avatar) async {
@@ -232,6 +240,59 @@ class AccountController extends Notifier<AccountState> {
     if (!state.isReady) return;
     unawaited(refreshFriends());
     unawaited(_startHub());
+    unawaited(_registerPush());
+  }
+
+  // ---- Invite notifications ----
+
+  String? _pushToken;
+  StreamSubscription<String>? _pushRefresh;
+
+  PushService get _push => ref.read(pushServiceProvider);
+
+  /// Registers this phone for invite notifications, if they're on.
+  Future<void> _registerPush() async {
+    if (!ref.read(settingsProvider).inviteNotifications || _api == null) return;
+    if (!await _push.requestPermission()) return;
+    final token = await _push.token();
+    if (token == null || !ref.mounted || !state.isReady) return;
+    _pushToken = token;
+    await _sendPushToken(token);
+    _pushRefresh ??= _push.tokenRefresh.listen((t) {
+      _pushToken = t;
+      _sendPushToken(t);
+    });
+  }
+
+  Future<void> _sendPushToken(String token) async {
+    try {
+      await _api?.registerPushToken(token);
+    } on ApiException catch (e) {
+      // An older server without the route, or offline: try again next time.
+      debugPrint('push token not sent: ${e.code}');
+    }
+  }
+
+  Future<void> _unregisterPush() async {
+    await _pushRefresh?.cancel();
+    _pushRefresh = null;
+    final token = _pushToken ?? await _push.token();
+    _pushToken = null;
+    if (token != null) {
+      try {
+        await _api?.deletePushToken(token);
+      } on ApiException catch (e) {
+        debugPrint('push token not removed: ${e.code}');
+      }
+    }
+    await _push.deleteToken();
+  }
+
+  /// The Settings switch for invite notifications.
+  Future<void> setInviteNotifications(bool on) async {
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(inviteNotifications: on));
+    if (!state.isReady) return;
+    on ? await _registerPush() : await _unregisterPush();
   }
 
   // ---- Solo progress ----
@@ -372,6 +433,11 @@ class AccountController extends Notifier<AccountState> {
     await _auth.reauthenticate(password: password);
     await _api!.deleteMe();
     await _stopHub();
+    // The server dropped this phone's token with the account.
+    await _pushRefresh?.cancel();
+    _pushRefresh = null;
+    _pushToken = null;
+    await _push.deleteToken();
     await _auth.deleteUser();
     await ref.read(profileProvider.notifier).resetLocal();
     state = const AccountState(phase: AccountPhase.signedOut);

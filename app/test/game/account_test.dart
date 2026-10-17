@@ -15,6 +15,7 @@ import '../fixtures/fake_backend.dart';
 Future<(ProviderContainer, FakeAuth, FakeServer, Store)> _setUp({
   Map<String, Object> prefs = const {},
   FakeAuth? auth,
+  FakePush? push,
 }) async {
   SharedPreferences.setMockInitialValues({
     'profile.v1': jsonEncode({'userId': 'install-abc'}),
@@ -28,6 +29,7 @@ Future<(ProviderContainer, FakeAuth, FakeServer, Store)> _setUp({
       storeProvider.overrideWithValue(store),
       authServiceProvider.overrideWithValue(fakeAuth),
       apiClientProvider.overrideWithValue(server.client(fakeAuth)),
+      if (push != null) pushServiceProvider.overrideWithValue(push),
     ],
   );
   addTearDown(container.dispose);
@@ -231,5 +233,41 @@ void main() {
     await expectLater(n.checkRoom('K7Q2AB'), fails('round_in_progress'));
     server.rooms['K7Q2AB'] = room('results', 2);
     await n.checkRoom('K7Q2AB');
+  });
+
+  test('invite notifications register this phone, follow refreshes, and stop on sign-out', () async {
+    final push = FakePush();
+    final (c, auth, server, _) = await _setUp(push: push);
+    server.username = 'Ali';
+    auth.passwords['a@b.c'] = 'secret1';
+    await c.read(accountProvider.notifier).signIn('a@b.c', 'secret1');
+    await _settle();
+    expect(server.pushTokens, {'fcm-token-1'});
+
+    push.refresh('fcm-token-9');
+    await _settle();
+    expect(server.pushTokens, containsAll(['fcm-token-1', 'fcm-token-9']));
+
+    await c.read(accountProvider.notifier).setInviteNotifications(false);
+    expect(server.pushTokens, isNot(contains('fcm-token-9')));
+    expect(push.deletes, 1);
+    expect(c.read(settingsProvider).inviteNotifications, isFalse);
+
+    await c.read(accountProvider.notifier).setInviteNotifications(true);
+    expect(server.pushTokens, contains('fcm-token-2'));
+
+    await c.read(accountProvider.notifier).signOut();
+    await _settle();
+    expect(server.pushTokens, isNot(contains('fcm-token-2')), reason: 'removed while still signed in');
+  });
+
+  test('no notifications without permission or with the switch off', () async {
+    final push = FakePush()..allowed = false;
+    final (c, auth, server, _) = await _setUp(push: push);
+    server.username = 'Ali';
+    auth.passwords['a@b.c'] = 'secret1';
+    await c.read(accountProvider.notifier).signIn('a@b.c', 'secret1');
+    await _settle();
+    expect(server.pushTokens, isEmpty);
   });
 }
