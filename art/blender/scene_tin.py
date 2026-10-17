@@ -183,15 +183,15 @@ def build(M):
 
     # outside: ground, a cottage, a fence, hills, chickens ------------------
     K.plane("Ground", (0, 14, -0.01), (60, 20), mat=M["ground"])
-    K.box("Cottage", (6.5, 24.0, 1.3), (3.2, 2.6, 2.6), M["cottage"], bevel=0.05)
+    K.box("Cottage", (5.6, 30.0, 1.3), (3.2, 2.6, 2.6), M["cottage"], bevel=0.05)
     bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=2.6, depth=1.6,
-                                    location=(6.5, 24.0, 3.4), rotation=(0, 0, math.pi / 4))
+                                    location=(5.6, 30.0, 3.4), rotation=(0, 0, math.pi / 4))
     rf = bpy.context.active_object
     rf.scale = (1.0, 0.75, 1.0)
     C.assign(rf, M["roof"])
-    K.box("Cottage2", (-2.5, 30.0, 1.2), (2.6, 2.4, 2.4), M["cottage"], bevel=0.05)
+    K.box("Cottage2", (9.5, 38.0, 1.2), (2.6, 2.4, 2.4), M["cottage"], bevel=0.05)
     bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=2.2, depth=1.4,
-                                    location=(-2.5, 30.0, 3.1), rotation=(0, 0, math.pi / 4))
+                                    location=(9.5, 38.0, 3.1), rotation=(0, 0, math.pi / 4))
     C.assign(bpy.context.active_object, M["roof"])
     for i in range(9):
         K.box(f"Fence{i}", (-0.6 + i * 0.55, 7.2, 0.45), (0.08, 0.08, 0.9), M["timber"], bevel=0.01)
@@ -207,9 +207,9 @@ def build(M):
     chicken("Hen3", (0.95, 6.0, 0), rot_z=math.radians(-30), white=True)
 
     # dawn light: low warm sun through the door, sky fill -------------------
-    sun = C.sun_light("Sun", (-82, 0, -22), 7.0, angle=3, color=(1.0, 0.6, 0.45))
+    sun = C.sun_light("Sun", (-70.7, 0, -57.9), 6.0, angle=3, color=(1.0, 0.6, 0.45))
     C.area_light("DoorSky", ((DOOR_X0 + DOOR_X1) / 2, BACK + 0.4, 1.4),
-                 ((DOOR_X0 + DOOR_X1) / 2, 0.0, 0.6), 40, size=1.1, size_y=2.2,
+                 ((DOOR_X0 + DOOR_X1) / 2 - 0.6, 2.0, 1.2), 12, size=1.1, size_y=2.2,
                  shape="RECTANGLE", color=(0.75, 0.7, 0.95))
     C.area_light("RimAnvil", (-0.2, 2.4, 1.3), (AX, AY, 0.8), 25, size=0.8,
                  color=(1.0, 0.5, 0.2))
