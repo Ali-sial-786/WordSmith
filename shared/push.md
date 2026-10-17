@@ -55,3 +55,31 @@ settings → Service accounts → Generate new private key. The deploy workflow
 copies it from the GitHub secret of the same name. The server signs a
 Google OAuth JWT (RS256) with it and caches the access token until shortly
 before it expires.
+
+## Daily reminders
+
+A player can ask for one reminder a day when the Daily Commission is still
+waiting. The app converts the hour they pick from local time to UTC.
+
+- `PUT /v1/me/reminder` with `{hour}` (an integer 0–23, a UTC hour) or
+  `{hour: null}` (off) → `{ok: true, hour}`. `400 invalid_body` otherwise. It
+  needs a set-up account. The profile gains `reminderHour` (the UTC hour, or
+  `null`).
+- A Cron Trigger runs at the start of every hour. For each account whose
+  `reminderHour` is the current UTC hour, that has push tokens, hasn't
+  completed today's Daily Commission and hasn't been reminded today, it sends
+  one notification to each token and records today's date:
+
+  ```json
+  {
+    "notification": { "title": "Today's Daily Commission is waiting",
+                      "body": "Keep your 5-day streak going!" },
+    "data": { "type": "daily" },
+    "android": { "priority": "normal", "ttl": "3600s", "collapse_key": "daily" }
+  }
+  ```
+
+  The body is "Keep your N-day streak going!" when the player's streak
+  (ending yesterday) is at least 1, otherwise "A new puzzle is on the anvil."
+- Up to 500 accounts per run, oldest reminder first. Without an FCM key it
+  does nothing.
