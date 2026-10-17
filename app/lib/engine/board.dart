@@ -36,6 +36,7 @@ class SubmitResult {
     this.completedSlots = const [],
     this.newCells = const [],
     this.collected = const [],
+    this.gilded = false,
   });
 
   final SubmitOutcome outcome;
@@ -53,14 +54,18 @@ class SubmitResult {
 
   /// Pickups collected by this action.
   final List<Pickup> collected;
+
+  /// Whether this action collected the gilded cell's blueprint piece.
+  final bool gilded;
 }
 
 class RevealResult {
-  const RevealResult(this.cells, this.completedSlots, this.collected);
+  const RevealResult(this.cells, this.completedSlots, this.collected, {this.gilded = false});
 
   final List<CellPos> cells;
   final List<Slot> completedSlots;
   final List<Pickup> collected;
+  final bool gilded;
 
   bool get isEmpty => cells.isEmpty;
 }
@@ -74,6 +79,8 @@ class Board {
     Iterable<String> bonusFound = const [],
     List<Pickup> pickups = const [],
     Iterable<int> collectedPickups = const [],
+    this.gilded,
+    this._gildedCollected = false,
   }) : _found = {...foundSlots},
        _auto = {...autoSlots},
        _revealed = {...revealed},
@@ -84,11 +91,16 @@ class Board {
   final Puzzle puzzle;
   final List<Pickup> pickups;
 
+  /// The gilded cell (index into [Puzzle.cells]), if this puzzle has one
+  /// (shared/masterworks.md).
+  final int? gilded;
+
   final Set<int> _found;
   final Set<int> _auto;
   final Set<CellPos> _revealed;
   final Set<String> _bonusFound;
   final Set<int> _collected;
+  bool _gildedCollected;
 
   /// Slots the player forged by entering the word.
   Set<int> get foundSlots => Set.unmodifiable(_found);
@@ -104,6 +116,12 @@ class Board {
 
   /// Indices (into [pickups]) already collected.
   Set<int> get collectedPickups => Set.unmodifiable(_collected);
+
+  /// Whether the gilded cell's blueprint piece has been collected.
+  bool get gildedCollected => _gildedCollected;
+
+  /// Whether [cell] is the gilded cell and its piece is still there.
+  bool isGilded(CellPos cell) => !_gildedCollected && gilded != null && puzzle.cells[gilded!] == cell;
 
   bool isSlotComplete(Slot slot) =>
       _found.contains(slot.index) || _auto.contains(slot.index);
@@ -153,6 +171,7 @@ class Board {
         completedSlots: completed,
         newCells: newCells,
         collected: _collectFor(completed),
+        gilded: _collectGilded(completed),
       );
     }
     if (puzzle.bonus.contains(word)) {
@@ -181,7 +200,7 @@ class Board {
         completed.add(slot);
       }
     }
-    return RevealResult(newly, completed, _collectFor(completed));
+    return RevealResult(newly, completed, _collectFor(completed), gilded: _collectGilded(completed));
   }
 
   /// Where a Hammer Strike lands: a random empty cell.
@@ -224,6 +243,12 @@ class Board {
       }
     }
     return done;
+  }
+
+  bool _collectGilded(List<Slot> completed) {
+    if (_gildedCollected || gilded == null) return false;
+    final cell = puzzle.cells[gilded!];
+    return _gildedCollected = completed.any((s) => s.cells.contains(cell));
   }
 
   List<Pickup> _collectFor(List<Slot> completed) {

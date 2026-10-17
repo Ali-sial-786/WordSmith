@@ -21,7 +21,11 @@ enum SfxId {
   roundWin('round_win'),
   roundLose('round_lose'),
   seriesWin('series_win'),
-  rivalFinished('rival_finished');
+  rivalFinished('rival_finished'),
+  gilded('gilded'),
+  masterwork('masterwork'),
+  claim('claim'),
+  page('page');
 
   const SfxId(this.file);
   final String file;

@@ -50,6 +50,7 @@ class ServerProfile {
     required this.scrapBin,
     required this.hints,
     required this.stats,
+    this.masterworkPieces = 0,
   });
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -67,6 +68,7 @@ class ServerProfile {
         HintKind.byName(e.key as String): (e.value as num).toInt(),
     },
     stats: ServerStats.fromJson((j['stats'] as Map?)?.cast() ?? const {}),
+    masterworkPieces: ((j['masterworks'] as Map?)?['pieces'] as num?)?.toInt() ?? 0,
   );
 
   final String id;
@@ -80,6 +82,7 @@ class ServerProfile {
   final int scrapBin;
   final Map<HintKind, int> hints;
   final ServerStats stats;
+  final int masterworkPieces;
 }
 
 class PlayerSummary {

@@ -15,6 +15,9 @@ abstract final class Palette {
   static const quenchRed = Color(0xFFD9433B);
   static const verdigris = Color(0xFF3FA58E);
 
+  /// Gilded cells and Masterwork pieces.
+  static const gold = Color(0xFFE8C04A);
+
   static const darkLetter = Color(0xFF2A1608);
 
   static Color heat(Heat heat) => switch (heat) {

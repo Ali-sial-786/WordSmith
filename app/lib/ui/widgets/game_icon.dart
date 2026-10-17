@@ -35,6 +35,15 @@ class GameIcon extends StatelessWidget {
     'flame': Icons.local_fire_department,
     'map': Icons.map,
     'user': Icons.person,
+    'scroll': Icons.receipt_long,
+    'gift': Icons.card_giftcard,
+    'stoke': Icons.whatshot,
+    'calendar': Icons.calendar_month,
+    'book': Icons.menu_book,
+    'blueprint': Icons.architecture,
+    'gilded': Icons.diamond,
+    'swap': Icons.swap_horiz,
+    'speaker': Icons.volume_up,
   };
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/armory/armory_screen.dart';
 import 'features/account/setup_screen.dart';
 import 'features/account/sign_in_screen.dart';
 import 'features/campaign/chapters_screen.dart';
@@ -32,6 +33,7 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
     GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+    GoRoute(path: '/armory', builder: (_, _) => const ArmoryScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/credits', builder: (_, _) => const CreditsScreen()),
     GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),

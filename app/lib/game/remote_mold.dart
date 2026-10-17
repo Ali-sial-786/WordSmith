@@ -107,6 +107,9 @@ class RemoteMold implements MoldModel {
   @override
   String? pickupAt(CellPos cell) => _pickups.contains(cell) ? 'ember' : null;
 
+  @override
+  bool isGilded(CellPos cell) => false;
+
   String? _ownerOf(CellPos cell) {
     for (final e in _owner.entries) {
       if (e.value != null && (_slotsAt[cell] ?? const []).contains(e.key)) return e.value;

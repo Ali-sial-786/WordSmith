@@ -22,6 +22,9 @@ abstract interface class MoldModel {
   /// Hint kind name of an ember still sitting in [cell].
   String? pickupAt(CellPos cell);
 
+  /// Whether [cell] is gilded and its blueprint piece is still there.
+  bool isGilded(CellPos cell);
+
   /// Co-op: the colour of the player who forged the word through [cell].
   /// Null uses the chapter's metal.
   Color? ownerColor(CellPos cell);
@@ -53,6 +56,8 @@ class BoardMold implements MoldModel {
 
   @override
   String? pickupAt(CellPos cell) => board.isFilled(cell) ? null : board.pickupAt(cell)?.kind.name;
+  @override
+  bool isGilded(CellPos cell) => board.isGilded(cell);
   @override
   Color? ownerColor(CellPos cell) => null;
   @override

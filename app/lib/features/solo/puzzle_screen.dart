@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../audio/sfx.dart';
 import '../../engine/board.dart';
 import '../../engine/hints.dart';
+import '../../engine/masterworks.dart';
 import '../../engine/pickups.dart';
 import '../../engine/puzzle.dart';
 import '../../game/account.dart';
@@ -134,7 +135,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
         _preview.currentState?.react(r.word, PreviewResult.good);
         _sfx.play(SfxId.clang);
         _haptic(HapticFeedback.mediumImpact);
-        _announcePickups(r.collected);
+        _announcePickups(r.collected, gilded: r.gilded);
       case SubmitOutcome.bonus:
         _preview.currentState?.react(r.word, PreviewResult.bonus);
         _sfx.play(SfxId.bonus);
@@ -174,14 +175,31 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     if (_game.isComplete) _finish();
   }
 
-  void _announcePickups(List<Pickup> pickups) {
-    if (pickups.isEmpty) return;
-    Future.delayed(const Duration(milliseconds: 450), () {
-      if (!mounted) return;
-      _sfx.play(SfxId.pickup);
-      final names = pickups.map((p) => '+1 ${p.kind.title}').join(', ');
-      _toast.currentState?.show('Ember found! $names', color: Palette.molten);
-    });
+  void _announcePickups(List<Pickup> pickups, {bool gilded = false}) {
+    if (pickups.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 450), () {
+        if (!mounted) return;
+        _sfx.play(SfxId.pickup);
+        final names = pickups.map((p) => '+1 ${p.kind.title}').join(', ');
+        _toast.currentState?.show('Ember found! $names', color: Palette.molten);
+      });
+    }
+    if (gilded) {
+      Future.delayed(Duration(milliseconds: pickups.isEmpty ? 450 : 1500), () {
+        if (!mounted) return;
+        _sfx.play(SfxId.gilded);
+        _burstAt(_moldKey, small: true);
+        // The piece is already counted; show the Masterwork it went to.
+        final before = MasterworkProgress(ref.read(profileProvider).masterworkPieces - 1);
+        final spec = before.current;
+        _toast.currentState?.show(
+          spec == null
+              ? 'Blueprint piece found!'
+              : 'Blueprint piece found! ${before.piecesInCurrent + 1}/${spec.pieces}',
+          color: Palette.gold,
+        );
+      });
+    }
   }
 
   void _afterReveal(RevealResult? r, SfxId sound) {
@@ -191,7 +209,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     for (final s in r.completedSlots) {
       _cues.stagger(s.cells);
     }
-    _announcePickups(r.collected);
+    _announcePickups(r.collected, gilded: r.gilded);
     if (_game.isComplete) _finish();
   }
 
@@ -267,6 +285,9 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     }
     if (reward.leveledUp) {
       Future.delayed(const Duration(milliseconds: 900), () => _sfx.play(SfxId.levelUp));
+    }
+    if (reward.masterwork != null) {
+      Future.delayed(const Duration(milliseconds: 1700), () => _sfx.play(SfxId.masterwork));
     }
     final campaign = ref.read(campaignProvider);
     final next = (widget.stage ?? 0) + 1;

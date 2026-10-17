@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/masterwork_info.dart';
 import '../../engine/hints.dart';
+import '../../engine/masterworks.dart';
 import '../../engine/progression.dart';
 import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
+import '../../ui/widgets/masterwork_art.dart';
 import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/xp_bar.dart';
 
@@ -63,6 +66,8 @@ class ProfileScreen extends ConsumerWidget {
             subtitle: Text('Every $scrapBinCapacity bonus words become a Hammer Strike'),
             trailing: Text('${p.scrapBin}/$scrapBinCapacity', style: displayStyle(18)),
           ),
+          const SizedBox(height: 16),
+          const _ArmoryCard(),
           const SizedBox(height: 16),
           Text('Records', style: text.titleMedium),
           const SizedBox(height: 8),
@@ -130,4 +135,57 @@ class _Stat extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The Masterwork being built, with a way into the Armory.
+class _ArmoryCard extends ConsumerWidget {
+  const _ArmoryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final progress = MasterworkProgress(ref.watch(profileProvider).masterworkPieces);
+    final current = progress.current;
+    final name = current == null
+        ? null
+        : ref.watch(masterworkInfoProvider).value?.firstWhere((i) => i.id == current.id).name;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.push('/armory'),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: current == null ? Palette.soot : blueprintPaper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: current == null ? Palette.gold.withValues(alpha: 0.6) : const Color(0xFF6FA8DC)),
+        ),
+        child: Row(
+          children: [
+            MasterworkArt(
+              spec: current ?? masterworkSpecs.last,
+              collected: current == null ? masterworkSpecs.last.pieces : progress.piecesInCurrent,
+              size: 56,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Armory', style: text.titleMedium),
+                  Text(
+                    current == null
+                        ? 'All ${masterworkSpecs.length} Masterworks forged'
+                        : '${name ?? 'Next Masterwork'}: ${progress.piecesInCurrent}/${current.pieces} pieces · '
+                              '${progress.finished} forged',
+                    style: text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Palette.steel),
+          ],
+        ),
+      ),
+    );
+  }
 }

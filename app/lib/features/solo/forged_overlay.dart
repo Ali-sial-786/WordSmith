@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../data/campaign.dart';
+import '../../data/masterwork_info.dart';
 import '../../engine/hints.dart';
+import '../../engine/masterworks.dart';
 import '../../engine/pickups.dart';
 import '../../engine/progression.dart';
 import '../../game/providers.dart';
@@ -214,6 +218,10 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     ],
                   ),
                 ],
+                if (r.gildedPiece) ...[
+                  const SizedBox(height: 14),
+                  _MasterworkNote(reward: r),
+                ],
                 if (chapterDone && !campaignDone) ...[
                   const SizedBox(height: 14),
                   Text(
@@ -321,6 +329,84 @@ class _Banner extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The blueprint piece this puzzle gave, or the Masterwork it finished.
+class _MasterworkNote extends ConsumerWidget {
+  const _MasterworkNote({required this.reward});
+
+  final CompletionReward reward;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final infos = ref.watch(masterworkInfoProvider).value;
+    final done = reward.masterwork;
+    if (done != null) {
+      final info = infos?.firstWhere((i) => i.id == done.id);
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Palette.gold.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Palette.gold.withValues(alpha: 0.7)),
+        ),
+        child: Column(
+          children: [
+            Text('MASTERWORK COMPLETE!', textAlign: TextAlign.center, style: displayStyle(20, color: Palette.gold)),
+            const SizedBox(height: 8),
+            SvgPicture.asset(
+              'assets/masterworks/${done.id}.svg',
+              width: 72,
+              height: 72,
+              colorFilter: const ColorFilter.mode(Palette.gold, BlendMode.srcIn),
+              placeholderBuilder: (_) => const SizedBox.square(dimension: 72),
+            ),
+            const SizedBox(height: 6),
+            Text(info?.name ?? '', textAlign: TextAlign.center, style: text.titleMedium),
+            Text('It now hangs in your Armory.', style: text.bodySmall?.copyWith(color: Palette.steel)),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 6,
+              children: [
+                Text('+$masterworkXp XP', style: text.labelMedium),
+                for (final e in reward.masterworkHints.entries)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GameIcon(e.key.name, size: 18, color: Palette.gold),
+                      const SizedBox(width: 4),
+                      Text('+${e.value} ${e.key.title}', style: text.labelMedium),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+    final progress = MasterworkProgress(ref.watch(profileProvider).masterworkPieces);
+    final current = progress.current;
+    final name = current == null ? null : infos?.firstWhere((i) => i.id == current.id).name;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const GameIcon('gilded', size: 20, color: Palette.gold),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            current == null
+                ? 'Blueprint piece found!'
+                : 'Blueprint piece: ${progress.piecesInCurrent}/${current.pieces}${name == null ? '' : ' for $name'}',
+            style: text.bodyMedium,
+          ),
+        ),
+      ],
     );
   }
 }

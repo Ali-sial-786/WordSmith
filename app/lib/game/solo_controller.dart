@@ -6,6 +6,7 @@ import '../data/campaign.dart';
 import '../data/store.dart';
 import '../engine/board.dart';
 import '../engine/hints.dart';
+import '../engine/masterworks.dart';
 import '../engine/pickups.dart';
 import '../engine/puzzle.dart';
 import 'providers.dart';
@@ -33,13 +34,20 @@ class SoloController extends SoloGame {
     } else {
       final p = profile.current;
       pickupSeed = p.userId;
+      final pickups = pickupsFor(
+        userId: pickupSeed,
+        puzzleId: puzzle.id,
+        cellCount: puzzle.letterCount,
+        level: p.level,
+      );
       board = Board(
         puzzle,
-        pickups: pickupsFor(
+        pickups: pickups,
+        gilded: gildedCellFor(
           userId: pickupSeed,
           puzzleId: puzzle.id,
           cellCount: puzzle.letterCount,
-          level: p.level,
+          pickups: pickups,
         ),
       );
       letters = puzzle.letters;
@@ -97,7 +105,7 @@ class SoloController extends SoloGame {
     var smelted = false;
     switch (result.outcome) {
       case SubmitOutcome.found:
-        _collect(result.collected);
+        _collect(result.collected, gilded: result.gilded);
       case SubmitOutcome.bonus:
         smelted = profile.addBonusWord();
       default:
@@ -150,15 +158,16 @@ class SoloController extends SoloGame {
     profile.spendHint(kind);
     _hintsUsed[kind.name] = (_hintsUsed[kind.name] ?? 0) + 1;
     final result = board.reveal(cells);
-    _collect(result.collected);
+    _collect(result.collected, gilded: result.gilded);
     _changed();
     return result;
   }
 
-  void _collect(List<Pickup> pickups) {
+  void _collect(List<Pickup> pickups, {required bool gilded}) {
     for (final p in pickups) {
       profile.addHint(p.kind);
     }
+    if (gilded) profile.addMasterworkPiece();
   }
 
   void _changed() {

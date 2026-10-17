@@ -23,6 +23,8 @@ class SavedPuzzle {
     required this.hintsUsed,
     required this.elapsedMs,
     required this.pickupSeed,
+    this.gilded,
+    this.gildedCollected = false,
   });
 
   factory SavedPuzzle.fromBoard({
@@ -45,6 +47,8 @@ class SavedPuzzle {
     hintsUsed: hintsUsed,
     elapsedMs: elapsedMs,
     pickupSeed: pickupSeed,
+    gilded: board.gilded,
+    gildedCollected: board.gildedCollected,
   );
 
   factory SavedPuzzle.fromJson(Map<String, dynamic> json) => SavedPuzzle(
@@ -66,6 +70,8 @@ class SavedPuzzle {
     hintsUsed: (json['hintsUsed'] as Map).cast<String, int>(),
     elapsedMs: json['elapsedMs'] as int? ?? 0,
     pickupSeed: json['pickupSeed'] as String? ?? '',
+    gilded: json['gilded'] as int?,
+    gildedCollected: json['gildedDone'] as bool? ?? false,
   );
 
   final int stage;
@@ -85,6 +91,10 @@ class SavedPuzzle {
   /// The id the pickups were seeded with (install id before sign-in).
   final String pickupSeed;
 
+  /// The gilded cell, if any, and whether its piece was collected.
+  final int? gilded;
+  final bool gildedCollected;
+
   /// Pickups collected so far in this puzzle.
   List<Pickup> get collectedPickups => [for (final i in collected) pickups[i]];
 
@@ -96,6 +106,8 @@ class SavedPuzzle {
     bonusFound: bonusFound,
     pickups: pickups,
     collectedPickups: collected,
+    gilded: gilded,
+    gildedCollected: gildedCollected,
   );
 
   Map<String, Object> toJson() => {
@@ -113,6 +125,8 @@ class SavedPuzzle {
     'hintsUsed': hintsUsed,
     'elapsedMs': elapsedMs,
     'pickupSeed': pickupSeed,
+    'gilded': ?gilded,
+    'gildedDone': gildedCollected,
   };
 }
 

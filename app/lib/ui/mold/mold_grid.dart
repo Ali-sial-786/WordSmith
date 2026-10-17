@@ -44,6 +44,7 @@ class MoldGrid extends StatelessWidget {
     required this.cues,
     this.chiselMode = false,
     this.onCellTap,
+    this.onFilledTap,
     this.maxCell = 80,
   });
 
@@ -52,6 +53,9 @@ class MoldGrid extends StatelessWidget {
   final MoldCues cues;
   final bool chiselMode;
   final ValueChanged<CellPos>? onCellTap;
+
+  /// Outside chisel mode: a tap on a filled cell (to look up its words).
+  final ValueChanged<CellPos>? onFilledTap;
   final double maxCell;
 
   @override
@@ -95,8 +99,11 @@ class MoldGrid extends StatelessWidget {
       delay: cues.fillDelay[pos] ?? Duration.zero,
       flash: cues.flash[pos] ?? 0,
       pickup: fill == CellFill.filled ? null : mold.pickupAt(pos),
+      gilded: fill != CellFill.filled && mold.isGilded(pos),
       highlight: chiselMode && empty,
-      onTap: chiselMode && empty && onCellTap != null ? () => onCellTap!(pos) : null,
+      onTap: chiselMode
+          ? (empty && onCellTap != null ? () => onCellTap!(pos) : null)
+          : (fill == CellFill.filled && onFilledTap != null ? () => onFilledTap!(pos) : null),
     );
   }
 }
@@ -110,6 +117,7 @@ class MoldCell extends StatefulWidget {
     required this.delay,
     required this.flash,
     this.pickup,
+    this.gilded = false,
     this.initial,
     this.highlight = false,
     this.onTap,
@@ -126,6 +134,9 @@ class MoldCell extends StatefulWidget {
 
   /// Hint kind name of an uncollected pickup in this cell.
   final String? pickup;
+
+  /// A gilded cell whose blueprint piece is still there.
+  final bool gilded;
   final bool highlight;
   final VoidCallback? onTap;
 
@@ -156,7 +167,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    if (widget.pickup != null || widget.highlight) _pulse.repeat(reverse: true);
+    if (widget.pickup != null || widget.highlight || widget.gilded) _pulse.repeat(reverse: true);
   }
 
   @override
@@ -175,7 +186,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
       _burst(small: true);
     }
     if (widget.flash != oldWidget.flash) _pop.forward(from: 0);
-    final wantsPulse = widget.pickup != null || widget.highlight;
+    final wantsPulse = widget.pickup != null || widget.highlight || widget.gilded;
     if (wantsPulse && !_pulse.isAnimating) {
       _pulse.repeat(reverse: true);
     } else if (!wantsPulse && _pulse.isAnimating) {
@@ -306,6 +317,29 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
                 ),
               ),
             ),
+          ),
+        ),
+      );
+    }
+    if (widget.gilded && !filled) {
+      final shine = _pulse.value;
+      layers.add(
+        Container(
+          width: s,
+          height: s,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            gradient: LinearGradient(
+              begin: Alignment(-1.4 + 2.4 * shine, -1),
+              end: Alignment(-0.4 + 2.4 * shine, 1),
+              colors: [
+                Palette.gold.withValues(alpha: 0.10),
+                Palette.gold.withValues(alpha: 0.38),
+                Palette.gold.withValues(alpha: 0.10),
+              ],
+            ),
+            border: Border.all(color: Palette.gold.withValues(alpha: 0.7 + 0.3 * shine), width: max(1.5, s * 0.05)),
+            boxShadow: [BoxShadow(color: Palette.gold.withValues(alpha: 0.25 + 0.2 * shine), blurRadius: s * 0.3)],
           ),
         ),
       );

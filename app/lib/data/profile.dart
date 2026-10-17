@@ -51,6 +51,7 @@ class Profile {
     this.scrapBin = 0,
     this.hints = const {HintKind.hammer: startingHammers},
     this.stats = const Stats(),
+    this.masterworkPieces = 0,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -65,6 +66,7 @@ class Profile {
               HintKind.byName(e.key as String): e.value as int,
           },
     stats: Stats.fromJson((json['stats'] as Map?)?.cast() ?? const {}),
+    masterworkPieces: json['masterworkPieces'] as int? ?? 0,
   );
 
   /// Install ID until accounts arrive; the account ID afterwards.
@@ -76,6 +78,9 @@ class Profile {
   final int scrapBin;
   final Map<HintKind, int> hints;
   final Stats stats;
+
+  /// Blueprint pieces collected from gilded cells (shared/masterworks.md).
+  final int masterworkPieces;
 
   LevelProgress get progress => levelForTotalXp(totalXp);
   int get level => progress.level;
@@ -90,6 +95,7 @@ class Profile {
     int? scrapBin,
     Map<HintKind, int>? hints,
     Stats? stats,
+    int? masterworkPieces,
   }) => Profile(
     userId: userId ?? this.userId,
     totalXp: totalXp ?? this.totalXp,
@@ -97,6 +103,7 @@ class Profile {
     scrapBin: scrapBin ?? this.scrapBin,
     hints: hints ?? this.hints,
     stats: stats ?? this.stats,
+    masterworkPieces: masterworkPieces ?? this.masterworkPieces,
   );
 
   Profile withHints(HintKind kind, int delta) {
@@ -112,6 +119,7 @@ class Profile {
     'scrapBin': scrapBin,
     'hints': {for (final e in hints.entries) e.key.name: e.value},
     'stats': stats.toJson(),
+    'masterworkPieces': masterworkPieces,
   };
 }
 

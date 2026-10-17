@@ -6,6 +6,7 @@ import '../data/profile.dart';
 import '../data/store.dart';
 import '../engine/board.dart';
 import '../engine/hints.dart';
+import '../engine/masterworks.dart';
 import '../engine/progression.dart';
 import '../net/models.dart';
 
@@ -31,6 +32,9 @@ class CompletionReward {
     required this.hints,
     required this.unlocked,
     required this.chapterFinished,
+    this.gildedPiece = false,
+    this.masterwork,
+    this.masterworkHints = const {},
   });
 
   final int xp;
@@ -43,6 +47,14 @@ class CompletionReward {
   /// Hint types that became available with this level-up.
   final List<HintKind> unlocked;
   final bool chapterFinished;
+
+  /// Whether this puzzle's gilded cell gave a blueprint piece.
+  final bool gildedPiece;
+
+  /// The Masterwork that piece finished. Its XP is in [xp]; its hints are
+  /// [masterworkHints].
+  final MasterworkSpec? masterwork;
+  final Map<HintKind, int> masterworkHints;
 
   bool get leveledUp => after.level > before.level;
 }
@@ -85,6 +97,7 @@ class ProfileNotifier extends Notifier<Profile> {
     final s = server.stats;
     _set(
       local.copyWith(
+        masterworkPieces: server.masterworkPieces + (pending?.gildedCollected == true ? 1 : 0),
         userId: server.id,
         totalXp: server.totalXp,
         campaignStage: server.nextStage > local.campaignStage
@@ -119,6 +132,10 @@ class ProfileNotifier extends Notifier<Profile> {
   void addHint(HintKind kind, [int count = 1]) =>
       _set(state.withHints(kind, count));
 
+  /// A blueprint piece from a gilded cell. Finishing a Masterwork is
+  /// rewarded when the puzzle is forged.
+  void addMasterworkPiece() => _set(state.copyWith(masterworkPieces: state.masterworkPieces + 1));
+
   /// Drops a bonus word in the Scrap Bin. Returns true when the bin was
   /// full and got smelted into a Hammer Strike.
   bool addBonusWord() {
@@ -144,11 +161,22 @@ class ProfileNotifier extends Notifier<Profile> {
     required String pickupSeed,
   }) {
     final before = state.progress;
-    final xp = soloXp(bonusWords: board.bonusFound.length);
+    // The piece was counted when it was collected; did it finish one?
+    final masterwork = board.gildedCollected
+        ? MasterworkProgress(state.masterworkPieces - 1).finishedBy(1)
+        : null;
+    final xp = soloXp(bonusWords: board.bonusFound.length) + (masterwork == null ? 0 : masterworkXp);
     var next = state.copyWith(totalXp: state.totalXp + xp);
     final after = next.progress;
     final hints = levelUpRewards(before.level, after.level);
-    for (final e in hints.entries) {
+    final masterworkHints = <HintKind, int>{};
+    if (masterwork != null) {
+      for (final kind in [HintKind.chisel, HintKind.sparks]) {
+        final k = kind.unlockedAt(before.level) ? kind : HintKind.hammer;
+        masterworkHints[k] = (masterworkHints[k] ?? 0) + 1;
+      }
+    }
+    for (final e in [...hints.entries, ...masterworkHints.entries]) {
       next = next.withHints(e.key, e.value);
     }
     final typed = [
@@ -178,6 +206,7 @@ class ProfileNotifier extends Notifier<Profile> {
       'pickups': [
         for (final i in board.collectedPickups) board.pickups[i].toJson(),
       ],
+      'gilded': [?(board.gildedCollected ? board.gilded : null)],
       // The id pickups were seeded with (the install id before sign-in).
       'pickupSeed': pickupSeed,
       'durationMs': elapsedMs,
@@ -193,6 +222,9 @@ class ProfileNotifier extends Notifier<Profile> {
           if (!k.unlockedAt(before.level) && k.unlockedAt(after.level)) k,
       ],
       chapterFinished: chapterFinished,
+      gildedPiece: board.gildedCollected,
+      masterwork: masterwork,
+      masterworkHints: masterworkHints,
     );
   }
 }
