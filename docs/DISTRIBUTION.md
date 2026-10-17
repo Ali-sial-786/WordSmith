@@ -1,19 +1,20 @@
 # Wordsmith — Sharing It With Friends
 
-> Status: **Plan approved, not yet built.**
+> Status: **in use.** Builds are signed with the permanent release key.
 >
-> **Approach:** no Play Store. The app is shared as a signed **APK** through
-> **Firebase App Distribution**. That means no $25 fee and none of the Play
-> rules (closed testing, data safety form, store listing).
+> **Approach:** no Play Store. Each release is a signed **APK** on the repo's
+> **GitHub Releases** page, and the owner sends it to friends directly (chat,
+> email, Drive). That means no $25 fee and none of the Play rules (closed
+> testing, data safety form, store listing). Firebase App Distribution was
+> dropped on 2026-10-17 (DECISIONS.md).
 
 ---
 
 ## 1. How friends install and update
 
-1. You add a friend's email to the **"friends" tester group** in Firebase App Distribution.
-2. They get an email invite. They accept it, then install the app through the App Tester app or the web link.
-3. The first time, Android asks them to **allow installs from this source**. Google Play Protect may warn that the app is from an unknown developer, and they tap **Install anyway**.
-4. **Updates:** when a new version is released, App Distribution notifies them and they tap to update.
+1. You download the APK from the repo's **Releases** page (or Claude sends it) and send the file to friends.
+2. They open it on their phone. The first time, Android asks them to **allow installs from this source** (the chat or file app they opened it from). Google Play Protect may warn that the app is from an unknown developer, and they tap **Install anyway**.
+3. **Updates:** send the new APK the same way. Every build is signed with the same key, so it installs over the old one.
    - The app also shows its own **"Update available" banner**, using `/v1/version`.
    - Very old versions are blocked from multiplayer until they update.
 5. Progress is stored on the server, so updating or reinstalling **never loses anything**.
@@ -51,14 +52,19 @@ or installing from a computer with ADB.
 ```
 bump `version:` in app/pubspec.yaml, then: git tag v0.3.0 && git push --tags
    └─► .github/workflows/release.yml: tests → build signed release APK
-          ├─► upload to Firebase App Distribution → "friends" group notified
-          └─► keep the APK as a workflow artifact (30 days)
-   (from M2: also deploy the Worker, run D1 migrations, bump /v1/version)
+          ├─► GitHub Release "Wordsmith 0.3.0" with wordsmith-0.3.0.apk attached
+          └─► the same APK as a workflow artifact (30 days)
+   (the server deploys separately: .github/workflows/deploy-server.yml)
 ```
 
-**The GitHub repository is public.** That's fine for the code and puzzles,
-but the signing key, its passwords and the Firebase service-account key must
-only ever live in **GitHub Actions secrets**, never in a commit or an artifact.
+**The GitHub repository is public**, so anyone who finds the Releases page
+can download the APK. It holds nothing secret (the Firebase API key and
+server URL ship in every APK anyway), but strangers could install it and make
+an account. Making the repository private hides it; private repos still get
+2,000 free Actions minutes a month.
+
+The signing key and its passwords must only ever live in **GitHub Actions
+secrets** (and your own backup), never in a commit or an artifact.
 The release workflow writes the key to disk only for the build and deletes it
 afterwards.
 
@@ -67,26 +73,14 @@ afterwards.
 Secrets go into GitHub repository settings, **never into chat or a commit**.
 The Firebase project already exists: **`wordsmith-8f550`**.
 
-### For the first friend build (now)
+### For friend builds
 
-1. **Add the Android app to Firebase.**
-   - Firebase console → `wordsmith-8f550` → ⚙ **Project settings** → **Your apps** → **Add app** → Android.
-   - Package name **`com.wordsmithforge.game`**, nickname "Wordsmith". Leave the SHA field empty for now.
-   - Download `google-services.json` when offered and keep it for M2 (sign-in). It isn't needed for the first build.
-   - Copy the **App ID** shown under the app (it looks like `1:123…:android:abc…`).
-2. **Turn on App Distribution.**
-   - Console → **Release & Monitor → App Distribution** → **Get started**.
-   - **Testers & Groups** → **Add group** named **friends**, then add your friends' email addresses.
-3. **Create a service account so GitHub can upload builds.**
-   - Google Cloud console (same project) → **IAM & Admin → Service Accounts** → **Create service account** named `github-releases`.
-   - Give it the role **Firebase App Distribution Admin**.
-   - Open it → **Keys** → **Add key → JSON**. A file downloads.
-4. **Make the signing key.** See "Signing key" below.
-5. **Add GitHub secrets.** In the repo: **Settings → Secrets and variables → Actions → New repository secret**:
-   - `FIREBASE_ANDROID_APP_ID`: the App ID from step 1.
-   - `FIREBASE_SERVICE_ACCOUNT`: the whole contents of the JSON file from step 3. Then delete the file.
-   - `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`: from step 4.
-6. **Register with Google** (needed in Brazil, Indonesia, Singapore and Thailand now, and everywhere from 2027). Sign up for the free **limited distribution** account in the Android Developer Console, then register `com.wordsmithforge.game` and the signing key's certificate.
+1. **Add the Android app to Firebase.** Done: package `com.wordsmithforge.game`, App ID `1:920525083065:android:64d3e8d63203074d96e668`.
+2. **Make the signing key.** Done on 2026-10-17 (see "Signing key" below).
+3. **Add GitHub secrets.** In the repo: **Settings → Secrets and variables → Actions → New repository secret**:
+   - `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`: from step 2.
+   - `FIREBASE_ANDROID_API_KEY`: the `current_key` value in `google-services.json` (see M2 below).
+4. **Register with Google** (needed in Brazil, Indonesia, Singapore and Thailand now, and everywhere from 2027). Sign up for the free **limited distribution** account in the Android Developer Console, then register `com.wordsmithforge.game` and the signing key's certificate.
 
 ### Signing key
 
@@ -118,7 +112,7 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 4. **My Profile → API Tokens → Create Token** → use the template **"Edit Cloudflare Workers"** → under Permissions, **add** "Account · D1 · Edit" → limit it to your account → **Create Token** and copy it (it's shown once).
 5. In GitHub, add the repository **secrets** `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID`.
 6. GitHub → **Actions → Deploy server → Run workflow**. On its first run it creates the database, loads the campaign and deploys. The run's summary shows the **server URL**.
-7. In GitHub → **Settings → Secrets and variables → Actions → Variables**, add the **variable** `API_BASE_URL` = that URL, so friend builds connect to it.
+7. The live URL, `https://wordsmith-api.wordsmith-forge.workers.dev`, is built into the app (`app/lib/net/config.dart`). The optional repository **variable** `API_BASE_URL` overrides it for friend builds.
 
 Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
 `flutter build apk --dart-define-from-file=dart_defines.json`.

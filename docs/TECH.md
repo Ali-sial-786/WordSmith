@@ -15,7 +15,7 @@
 | API | **Cloudflare Workers** (TypeScript) | Free plan |
 | Real-time rooms | **Cloudflare Durable Objects**, one per room, acting as the referee | Free plan |
 | Database | **Cloudflare D1** (SQLite): profiles, XP, hints, friends, puzzles | Free plan |
-| Distribution | **Firebase App Distribution** plus Google's free limited-distribution developer account (see [DISTRIBUTION.md](DISTRIBUTION.md)) | Free |
+| Distribution | Signed APK on **GitHub Releases**, sent to friends directly, plus Google's free limited-distribution developer account (see [DISTRIBUTION.md](DISTRIBUTION.md)) | Free |
 | CI/CD | GitHub Actions | Free tier |
 | Puzzle generator | Python 3 script (`tools/puzzlegen`) | — |
 
@@ -303,7 +303,7 @@ WordSmith/
 | Server rules | Vitest unit tests for every pure rule: claims, scoring, VS resolution, clinch, sudden death, XP and level-ups, hint grants |
 | Worker + Durable Objects + D1 | `@cloudflare/vitest-plugin` runs the real Workers runtime (workerd) locally. Includes **scripted bot clients**, e.g. 4 bots sending the same word in the same instant (exactly one gets it) and a 5-player best-of-3 with a timed-out round and a sudden-death round. |
 | Puzzle generator | Every word is reachable from the letters, the crossword is connected with no stray adjacent letters, it fits within 10×10, a word uses all the letters, the output is the same every run for the same seed, and no blocked words appear |
-| CI (GitHub Actions) | On every PR: `flutter analyze` + tests, server typecheck + tests, generator tests. When a release is tagged: build a signed APK, upload it to Firebase App Distribution, and deploy the Worker. |
+| CI (GitHub Actions) | On every PR: `flutter analyze` + tests, server typecheck + tests, generator tests. When a release is tagged: build a signed APK and attach it to a GitHub Release. When `server/` changes on the default branch: deploy the Worker. |
 
 Local development uses `wrangler dev`, which runs the Worker, Durable Objects
 and D1 locally with no Docker. The app is pointed at it with a build flag.

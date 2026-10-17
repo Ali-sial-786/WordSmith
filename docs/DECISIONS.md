@@ -21,3 +21,4 @@ update the relevant plan document too.
 | 2026-10-17 | **English only. No free-text chat** (preset emotes instead). | — |
 | 2026-10-17 | **App ID (package name):** `com.wordsmithforge.game`. | No personal username in it. Confirmed when it's registered in the limited distribution account. |
 | 2026-10-17 | **Firebase project:** `wordsmith-8f550` (Spark, free plan), owned by the project owner's Google account. | Used for sign-in (M2) and App Distribution. The project ID is not a secret; service-account keys are, and they go only in GitHub secrets. |
+| 2026-10-17 | **No Firebase App Distribution.** Releases are GitHub Releases with the signed APK attached; the owner sends the file to friends. | Simpler for the owner (no tester group, service account or App Tester app). Updates install over the old version because every build uses the same signing key. |

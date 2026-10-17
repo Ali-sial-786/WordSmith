@@ -5,7 +5,7 @@
 >
 > **Status (2026-10-17):**
 > - **M0:** done.
-> - **M1:** built. The first friend build is waiting on the one-time setup in DISTRIBUTION.md §5 (signing key, Firebase App Distribution).
+> - **M1:** done. Builds are signed with the permanent release key and shared as APKs (GitHub Releases).
 > - **M2:** live. The server runs at https://wordsmith-api.wordsmith-forge.workers.dev and deploys from GitHub Actions.
 > - **M3:** the app side is built (lobby, shared round, results; contract in shared/room-protocol.md). The server side is in progress.
 > - **M4–M5:** not started.
@@ -49,9 +49,9 @@ placeholder Forge Hall, and the Worker responds locally.
   - Tin and Copper backgrounds
   - icon set
   - core sounds (tile tink, clang, invalid, bonus, Forged!)
-- **Distribution:** release signing, the App Distribution pipeline, the limited distribution account, and the **first build sent to friends**.
+- **Distribution:** release signing, the release pipeline (GitHub Releases), the limited distribution account, and the **first build sent to friends**.
 
-**Done when** friends can install it through App Distribution and play the
+**Done when** friends can install the APK and play the
 campaign offline, with all hint types, pickups and the Scrap Bin working.
 
 ## M2 — Accounts and progression

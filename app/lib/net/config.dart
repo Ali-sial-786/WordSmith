@@ -4,8 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 /// `--dart-define-from-file=dart_defines.json` (git-ignored). Without them
 /// the app runs solo-only.
 abstract final class AppConfig {
-  /// Worker base URL, e.g. `https://wordsmith-api.example.workers.dev`.
-  static const apiBase = String.fromEnvironment('API_BASE');
+  /// Worker base URL. Public; override with `--dart-define=API_BASE=…`.
+  static const apiBase = String.fromEnvironment(
+    'API_BASE',
+    defaultValue: 'https://wordsmith-api.wordsmith-forge.workers.dev',
+  );
 
   /// Firebase web API key for the Android app. Not a secret (it ships in
   /// every APK), but kept out of the public repo to avoid secret-scanning
