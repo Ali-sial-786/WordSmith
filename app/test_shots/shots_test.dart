@@ -214,10 +214,10 @@ void main() {
     await _shoot(tester, 'vs_podium', VsResultsView(session: s, onLeave: () {}));
   });
 
-  for (final location in ['/', '/daily']) {
+  for (final location in ['/', '/daily', '/chapters', '/profile', '/settings']) {
     testWidgets('hall signed in $location', (tester) async {
       SharedPreferences.setMockInitialValues({
-        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 420, 'campaignStage': 12}),
+        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 2600, 'campaignStage': 132}),
         'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
       });
       final store = await Store.open();
@@ -225,22 +225,14 @@ void main() {
       final server = FakeServer()
         ..username = 'Ali_Smith'
         ..avatar = 'avatar_03'
-        ..totalXp = 420
-        ..completed = 11
+        ..totalXp = 2600
+        ..completed = 131
         ..dailyPuzzle = (tearJson()..['id'] = 'daily-2026-10-17')
         ..dailyStreak = 4;
       final container = ProviderContainer(
         overrides: [
           storeProvider.overrideWithValue(store),
-          campaignProvider.overrideWithValue(
-            Campaign.fromJson({
-              'version': 1,
-              'chapters': [
-                {'id': 'tin', 'name': 'Tin', 'first': 1, 'count': 40},
-              ],
-              'puzzles': [for (var i = 0; i < 40; i++) tearJson()..['id'] = 'c-${(i + 1).toString().padLeft(4, '0')}'],
-            }),
-          ),
+          campaignProvider.overrideWithValue(await tester.runAsync(Campaign.load) ?? (throw StateError('no campaign'))),
           authServiceProvider.overrideWithValue(auth),
           apiClientProvider.overrideWithValue(server.client(auth)),
         ],
