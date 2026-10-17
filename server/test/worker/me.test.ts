@@ -168,6 +168,7 @@ describe("DELETE /v1/me", () => {
       env.DB.prepare("INSERT INTO xp_events (user_id, source, amount, ref, created_at) VALUES (?, 'solo', 10, 'c-0001', ?)").bind(uid, now),
       env.DB.prepare("INSERT INTO solo_results VALUES (?, 1, ?)").bind(uid, now),
       env.DB.prepare("INSERT INTO pickup_seeds VALUES (?, 'install-00000000000000000000000000000000', ?)").bind(uid, now),
+      env.DB.prepare("INSERT INTO push_tokens (token, user_id, registered_at) VALUES (?, ?, ?)").bind(`fcm-${uid}`, uid, now),
       env.DB.prepare("INSERT INTO matches VALUES ('match-del', 'coop', 'ABCDEF', ?, ?, ?)").bind(
         now,
         now,
@@ -192,6 +193,7 @@ describe("DELETE /v1/me", () => {
       ["xp_events", "user_id"],
       ["solo_results", "user_id"],
       ["pickup_seeds", "user_id"],
+      ["push_tokens", "user_id"],
       ["match_players", "user_id"],
     ]) {
       const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`).bind(uid).first<{ n: number }>();

@@ -32,9 +32,6 @@ export const ACCESS_TOKEN_MARGIN_MS = 5 * 60_000;
 /** Google's access tokens last an hour; assumed when a response doesn't say. */
 const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 3600;
 
-/** Each request to Google gives up after this long. */
-const REQUEST_TIMEOUT_MS = 10_000;
-
 // ---------------------------------------------------------------------------
 // The service account
 // ---------------------------------------------------------------------------
@@ -254,7 +251,6 @@ export class FcmSender {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ grant_type: JWT_BEARER_GRANT, assertion }).toString(),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     const body = await readBody(res);
     if (!res.ok || !isRecord(body) || !nonEmpty(body.access_token)) {
@@ -273,7 +269,6 @@ export class FcmSender {
         method: "POST",
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
         body: JSON.stringify({ message }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       const body = await readBody(res);
       // Google no longer takes the access token; the next send fetches another.

@@ -133,3 +133,17 @@ jobs:
           npx wrangler secret bulk "$RUNNER_TEMP/livekit.json"
           rm -f "$RUNNER_TEMP/livekit.json"
           echo "Video chat: LiveKit secrets set." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set the FCM secret (invite notifications)
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          FCM_SERVICE_ACCOUNT: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FCM_SERVICE_ACCOUNT" ]; then
+            echo "::notice::The FCM_SERVICE_ACCOUNT secret is not set, so invite notifications stay off (docs/DISTRIBUTION.md §5)."
+            exit 0
+          fi
+          node -e 'const e = process.env; process.stdout.write(JSON.stringify({ FCM_SERVICE_ACCOUNT: e.FCM_SERVICE_ACCOUNT }))' > "$RUNNER_TEMP/fcm.json"
+          npx wrangler secret bulk "$RUNNER_TEMP/fcm.json"
+          rm -f "$RUNNER_TEMP/fcm.json"
+          echo "Invite notifications: FCM secret set." >> "$GITHUB_STEP_SUMMARY"

@@ -12,7 +12,11 @@ an FCM service account; until then everything below quietly does nothing.
   account; the oldest is dropped.
 - `DELETE /v1/me/push-token` with `{token}` → `{ok: true}` (sign-out, or
   notifications turned off). Unknown tokens are fine.
-- Both need a set-up account. Deleting an account deletes its tokens.
+- Both need a set-up account (`403 setup_required`). A token must be 1–4096
+  printable ASCII characters without spaces (`400 invalid_push_token`). DELETE
+  only removes the caller's own token. Tokens are stored even while the server
+  has no FCM key, so they work as soon as it's added. Deleting an account
+  deletes its tokens.
 
 ## Sending
 
@@ -34,6 +38,10 @@ FCM HTTP v1 message:
   }
 }
 ```
+
+An invite that only reached the friend's phones gets no reply, like a relayed
+one. Invites for the same room share a `collapse_key`, so they replace each
+other on the phone.
 
 Tokens FCM reports as unregistered or invalid (404, or 400
 `INVALID_ARGUMENT` about the token) are deleted. Other failures are logged

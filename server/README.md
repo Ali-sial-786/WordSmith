@@ -15,8 +15,9 @@ contract.
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
 | `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
+| `src/push/` | Invite notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), and the invite message (`invite.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
-| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql` and `0003_daily_completions.sql` |
+| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql` and `0004_push_tokens.sql` |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
 | `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
@@ -52,7 +53,9 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `GET /health` | `{ok: true}` |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
 | `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). The username can't change (`409 already_set`), but repeating it with another avatar changes the avatar. |
-| `DELETE /me` | `{ok: true}`. Deletes all my rows. Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
+| `DELETE /me` | `{ok: true}`. Deletes all my rows (push tokens too). Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
+| `POST /me/push-token` | `{token}` → `{ok: true}`: this phone's FCM registration token gets invite notifications (below). A token another account had moves here; an account keeps its 5 newest. `400 invalid_push_token` unless `token` is 1–4096 printable ASCII characters without spaces. |
+| `DELETE /me/push-token` | `{token}` → `{ok: true}`: no more notifications to that phone (sign-out, or turned off). Only removes my own token; unknown tokens are fine. `400 invalid_push_token` as above. |
 | `GET /users/:username` | `{id, username, avatar, level, rank, campaignCompleted, stats, friendship}`; `friendship` is `self`, `none`, `friends`, `request_sent` or `request_received`. `404 user_not_found`. |
 | `POST /solo/sync` | `{entries: [...]}` → `{profile, results}`; see below |
 | `GET /daily` | `{date, heat, puzzle, completed, streak, best}`: today's Daily Commission (below) |
@@ -68,7 +71,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
-Friends, the leaderboard, the hub, rooms and the Daily Commission need a set-up account
+Friends, the leaderboard, the hub, rooms, the Daily Commission and push tokens need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync` and `/users/:username` don't.
 
 ### Profile
@@ -132,7 +135,7 @@ JSON `{op, ...}`, defined in `src/hub/protocol.ts`:
 |---|---|---|
 | `PRESENCE` | S→C | `{userId, status}`; status is `online`, `solo`, `in_room:<CODE>` or `offline` |
 | `SET_STATUS` | C→S | `{status}`: `online`, `solo` or `in_room:<6 chars A–Z 0–9>` |
-| `INVITE` | C→S | `{to, code, mode: "coop" \| "vs"}`, only to an accepted friend who's online |
+| `INVITE` | C→S | `{to, code, mode: "coop" \| "vs"}`, only to an accepted friend who's online or, with push on, has a phone registered (below) |
 | `INVITE` | S→C | `{from, fromUsername, code, mode}` |
 | `OPEN_ROOMS` | S→C | `{rooms: [{code, mode, hostId, hostUsername, players, max}]}`: joinable rooms (lobby or results, not full) hosted by my friends, newest first |
 | `ERROR` | S→C | `{code}`: `bad_message`, `unknown_op`, `bad_status`, `bad_invite`, `not_friends`, `friend_offline`, `rate_limited` |
@@ -145,6 +148,20 @@ Send the exact text `{"op":"PING"}` as a keep-alive; the runtime answers
 `{"op":"PONG"}` without waking the hub. Accepting or removing a friend
 through REST updates both players' presence at once. Deleting an account
 closes its sockets with code 4001.
+
+### Invite notifications
+
+[shared/push.md](../shared/push.md), in `src/push/` and HubDO. It's off
+until the Worker secret `FCM_SERVICE_ACCOUNT` holds a service account's JSON
+key (`client_email`, `private_key` as a PKCS#8 PEM, `project_id`); the deploy
+workflow copies it from the GitHub secret of the same name. A missing or
+malformed secret means push is off: invites behave exactly as before, and
+the hub doesn't touch D1 for them. Tokens are stored either way.
+
+- **Tokens** live in `push_tokens` (`migrations/0004_push_tokens.sql`): the token is unique across accounts, and registering it again gives it a new, higher `id`, so each account keeps its 5 highest.
+- **Sending:** when the hub relays an `INVITE`, it also reads the friend's tokens (one D1 query) and sends each an HTTP v1 message: title `<username> invited you to Co-op` or `… to Versus`, body `Tap to join room <CODE>`, `data: {type: "invite", code, mode, from: <user id>}`, `android: {priority: "high", ttl: "300s", collapse_key: "invite-<CODE>"}`. It goes out with `ctx.waitUntil`, after the socket relay. Only when the friend has no open socket does the hub wait for the token read, since it decides the reply: `ERROR friend_offline` if they have no tokens either, otherwise nothing (as for a relayed invite).
+- **Google:** the sender signs an RS256 JWT with the key (`iss` = `client_email`, `scope` = `https://www.googleapis.com/auth/firebase.messaging`, `aud` = `https://oauth2.googleapis.com/token`, one hour), trades it for an access token, and keeps that per isolate until 5 minutes before it expires (a 401 from FCM drops it early).
+- **Failures:** a token FCM calls dead (404 or `UNREGISTERED`, or 400 `INVALID_ARGUMENT` about `message.token`) is deleted. Anything else is logged and ignored, so an invite never fails because a notification did.
 
 ### Rooms
 
@@ -265,8 +282,8 @@ npx vitest run --project worker   # just the Worker
 
 The tests run as two Vitest projects:
 
-- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router and the campaign and bank SQL scripts.
-- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` moves the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks across days run without waiting.
+- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
+- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` moves the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks across days run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
 
 ## Changing the schema
 
@@ -288,6 +305,11 @@ secret) and the `HUB` and `ROOM` Durable Objects with their
 4. Load the campaign: `npm run db:campaign && npx wrangler d1 execute wordsmith --remote --file data/campaign.sql`. Repeat whenever the campaign changes.
 5. Load the multiplayer bank: `npm run db:bank && npx wrangler d1 execute wordsmith --remote --file data/bank.sql`. Repeat whenever `data/mp_bank.json` changes. (The deploy workflow in `.github/workflows/deploy-server.yml` doesn't do this step yet.)
 6. Deploy with `npm run deploy`, which runs `wrangler deploy`.
+
+Optional Worker secrets, which the deploy workflow copies from GitHub
+secrets of the same names when they're set: `LIVEKIT_URL`,
+`LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` (video chat), and
+`FCM_SERVICE_ACCOUNT` (invite notifications).
 
 CI deploys need the GitHub secrets `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ACCOUNT_ID`. Neither is set up yet. To raise the app version

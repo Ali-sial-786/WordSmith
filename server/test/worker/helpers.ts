@@ -97,7 +97,8 @@ export interface Client {
   readonly token: string;
   get(path: string): Promise<Response>;
   post(path: string, body: unknown): Promise<Response>;
-  del(path: string): Promise<Response>;
+  /** A DELETE, with a JSON body if `body` is given. */
+  del(path: string, body?: unknown): Promise<Response>;
 }
 
 export async function client(uid = uniqueUid()): Promise<Client> {
@@ -109,7 +110,10 @@ export async function client(uid = uniqueUid()): Promise<Client> {
     get: (path) => request(path, { headers: auth }),
     post: (path, body) =>
       request(path, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(body) }),
-    del: (path) => request(path, { method: "DELETE", headers: auth }),
+    del: (path, body) =>
+      body === undefined
+        ? request(path, { method: "DELETE", headers: auth })
+        : request(path, { method: "DELETE", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(body) }),
   };
 }
 
