@@ -215,7 +215,9 @@ in hot metal.
 
 **Co-op scales with team size.** It uses a puzzle from the host's heat tier
 with about **2 more grid words for each player after the first**, so four
-people don't finish it in seconds.
+people don't finish it in seconds. Two practical limits apply:
+- A 4-letter Ember anvil can't support that many common words, so Ember rooms of 3–4 get puzzles of 6–11 words.
+- A 10×10 grid tops out at about 22 words, which caps White Heat for 4 players.
 
 ---
 
@@ -231,7 +233,7 @@ people don't finish it in seconds.
   2. Find every word of 3+ letters that can be made from them, in both the answer and bonus pools.
   3. Choose K answer words, always including one that uses every letter.
   4. Lay them out as a connected crossword with proper crossword spacing, so no stray words form. It must fit within **10 × 10**.
-  5. Score the difficulty (letter count, word count, how common the words are, longest word) and assign a heat tier.
+  5. Generate each puzzle for a target heat tier, then score its difficulty (letter count, word count, how common the words are, longest word) to order puzzles within a chapter.
   6. Write the puzzle out as JSON.
 - **Two separate pools:**
   - The **campaign** pool is bundled in the app.

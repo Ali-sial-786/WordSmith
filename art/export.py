@@ -6,7 +6,7 @@
     python3 art/export.py icons       #    ...or one step: fonts | icons | audio | credits
 
 Steps:
-  fonts    copy the variable TTFs and their licence texts to app/assets/fonts/
+  fonts    copy the variable TTFs to app/assets/fonts/ and licence texts (+ SCOWL's) to app/assets/licenses/
   icons    clean game-icons.net / Material Symbols SVGs into single-colour glyphs
            (background removed, fill #ffffff, so the app can tint them) in app/assets/icons/
   audio    run art/audio/build_audio.py (needs ffmpeg + numpy) -> app/assets/audio/
@@ -106,11 +106,25 @@ def file_meta(pack: dict, rel: str) -> dict:
 # ------------------------------------------------------------------ fonts
 def export_fonts() -> None:
     out = ASSETS / "fonts"
+    licences = ASSETS / "licenses"
     out.mkdir(parents=True, exist_ok=True)
+    licences.mkdir(parents=True, exist_ok=True)
     for app_name, (pack, ttf, lic, app_lic) in FONTS.items():
         shutil.copyfile(src_path(pack, ttf), out / app_name)
-        shutil.copyfile(src_path(pack, lic), out / app_lic)
-        print(f"fonts/{app_name:26} {(out / app_name).stat().st_size / 1024:7.1f} KiB  + {app_lic}")
+        # Licence texts go to assets/licenses/, which the app bundles and
+        # shows on its licences page.
+        shutil.copyfile(src_path(pack, lic), licences / app_lic)
+        print(f"fonts/{app_name:26} {(out / app_name).stat().st_size / 1024:7.1f} KiB  + licenses/{app_lic}")
+    export_scowl_notice(licences)
+
+
+def export_scowl_notice(licences: Path) -> None:
+    """The puzzles contain SCOWL words, so the app shows SCOWL's notice too."""
+    md = (ART.parent / "tools" / "puzzlegen" / "data" / "LICENSES.md").read_text()
+    section = md.split("## SCOWL copyright notice", 1)[1]
+    notice = section.split("```", 2)[1].strip("\n")
+    (licences / "SCOWL.txt").write_text(notice + "\n")
+    print("licenses/SCOWL.txt")
 
 
 # ------------------------------------------------------------------ icons

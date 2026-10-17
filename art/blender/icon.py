@@ -96,14 +96,17 @@ def build():
     # sparks bursting from the strike
     spk = P.spark_material("Spark", strength=14.0)
     origin = Vector((0.55, -0.15, 1.88))
+    # keep the letter clear: no spark may cross the middle of the tile
+    avoid = [(TILE_POS + Vector((0, 0, 0.15)), TILE_R * 0.8)]
     # main fan: up and to the right/front, away from the letter
     sp = P.sparks(origin, count=22, seed=7, direction=(0.55, -0.45, 0.70),
                   spread=48, length=(0.14, 0.42), dist=(0.55, 1.6),
-                  radius=0.026, mat=spk, gravity=0.1)
+                  radius=0.026, mat=spk, gravity=0.1, avoid=avoid)
     # a few low, fast streaks skimming out to the right over the heel
     sp += P.sparks(origin, count=10, seed=11, direction=(1.0, -0.55, 0.05),
                    spread=22, length=(0.12, 0.3), dist=(0.7, 1.5),
-                   radius=0.022, mat=spk, gravity=0.12, name="SparkL")
+                   radius=0.022, mat=spk, gravity=0.12, name="SparkL",
+                   avoid=avoid)
     return anvil, tile, letter, ham, sp
 
 

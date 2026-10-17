@@ -61,6 +61,7 @@ flutter:
     - assets/audio/
     - assets/icons/
     - assets/credits.json
+    - assets/licenses/
 
   # Variable fonts: styles set the weight with FontVariation('wght', …).
   fonts:

@@ -21,6 +21,9 @@ and, later, the server. Any change here must be made in all three places.
 }
 ```
 
+(The example's bonus list is shortened. A real one lists every accepted word,
+such as `ETA` and `TARE`.)
+
 | Field | Meaning |
 |---|---|
 | `id` | Unique ID. Campaign: `c-NNNN` (1-based stage number, zero-padded to 4). Multiplayer bank: `m-NNNNN`. |

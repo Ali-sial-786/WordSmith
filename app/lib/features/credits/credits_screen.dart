@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app_info.dart';
 import '../../ui/theme/theme.dart';
 
 /// Third-party credits, generated into assets/credits.json from
@@ -59,6 +60,15 @@ class CreditsScreen extends StatelessWidget {
               Text('Word lists', style: text.titleMedium),
               for (final (title, author, licence, url) in _wordLists)
                 _Entry(title: title, author: author, licence: licence, url: url),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () => showLicensePage(
+                  context: context,
+                  applicationName: 'Wordsmith',
+                  applicationVersion: appVersion,
+                ),
+                child: const Text('Full licence texts'),
+              ),
               const SizedBox(height: 16),
               Text('Art, sound and fonts', style: text.titleMedium),
               for (final a in assets)

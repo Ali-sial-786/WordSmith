@@ -10,7 +10,10 @@
   "vars": {
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
     "LATEST_VERSION": "0.1.0",
-    "MIN_SUPPORTED_VERSION": "0.1.0"
+    "MIN_SUPPORTED_VERSION": "0.1.0",
+    // Firebase ID tokens must have aud = this and
+    // iss = https://securetoken.google.com/<this> (docs/TECH.md §3). Not a secret.
+    "FIREBASE_PROJECT_ID": "wordsmith-8f550"
   },
   "d1_databases": [
     {
@@ -22,6 +25,17 @@
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
+  ],
+  "durable_objects": {
+    "bindings": [
+      // One global instance (idFromName("global")): presence, invites, open rooms.
+      { "name": "HUB", "class_name": "HubDO" }
+      // RoomDO arrives in M3.
+    ]
+  },
+  // Durable Object class migrations. Append new entries; never edit old ones.
+  // SQLite-backed classes are the only kind the Workers Free plan allows.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["HubDO"] }
   ]
-  // Durable Object bindings (HubDO, RoomDO) arrive in M2/M3.
 }

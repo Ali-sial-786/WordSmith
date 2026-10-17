@@ -185,23 +185,33 @@ def anvil(name="Anvil", mat=None, depth=1.0, location=(0, 0, 0), rot_z=0.0,
             f = 1.0
         v.co.y *= f
     C.shade_smooth(ob, auto_angle=40)
-    # horn: cone along -X, top roughly flush with the face
+    # horn: dense lathe along -X, top roughly flush with the face
     hr = 0.36
-    bpy.ops.mesh.primitive_cone_add(vertices=48, radius1=hr, radius2=0.025,
-                                    depth=horn_len,
-                                    location=(-1.0 - horn_len / 2 + 0.06, 0, 1.62 - hr),
-                                    rotation=(0, -math.pi / 2, 0))
-    horn = bpy.context.active_object
-    horn.name = name + "Horn"
-    horn.scale = (1.0, depth / (2 * hr) * 0.9, 1.0)
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-    # bend the tip slightly up
+    prof = []
+    nseg = 40
+    for i in range(nseg + 1):
+        t = i / nseg
+        r = hr * (1 - t) ** 0.9 + 0.022 * t
+        prof.append((r, -horn_len * t))
+    prof.append((0.0, -horn_len - 0.012))
+    horn = C.lathe(name + "Horn", [(0.0, 0.05)] + [(hr, 0.05)] + prof, segments=64)
+    horn.rotation_euler = (0, math.pi / 2, 0)        # lathe Z -> world +X... flip
+    bpy.context.view_layer.objects.active = horn
+    bpy.ops.object.select_all(action="DESELECT")
+    horn.select_set(True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    # lathe axis -Z became -X? ensure the tip points to -X
+    xs = [v.co.x for v in horn.data.vertices]
+    if abs(min(xs)) < abs(max(xs)):
+        for v in horn.data.vertices:
+            v.co.x = -v.co.x
+        horn.data.flip_normals()
     for v in horn.data.vertices:
-        t = max(0.0, (-v.co.x - 0.0) / (horn_len / 2))
+        v.co.y *= depth / (2 * hr) * 0.9
+        t = max(0.0, -v.co.x / horn_len)
         v.co.z += 0.06 * t * t
+    horn.location = (-1.0 + 0.06, 0, 1.62 - hr)
     C.shade_smooth(horn)
-    sub = horn.modifiers.new("Sub", "SUBSURF")
-    sub.levels = sub.render_levels = 1
     # merge
     bpy.ops.object.select_all(action="DESELECT")
     horn.select_set(True)
@@ -297,12 +307,19 @@ def tongs(name="Tongs", mat=None, length=1.6):
     return root
 
 
+def _seg_dist(a, b, p):
+    ab = b - a
+    t = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+    return (a + ab * t - p).length
+
+
 # --------------------------------------------------------------------------
 # sparks
 # --------------------------------------------------------------------------
 def sparks(origin, count=40, seed=1, direction=(0, 0, 1), spread=70.0,
            length=(0.15, 0.6), dist=(0.1, 1.6), radius=0.012, mat=None,
-           name="Spark", gravity=0.0):
+           name="Spark", gravity=0.0, avoid=()):
+    """avoid: [(center, radius)] spheres no spark may pass through."""
     """Thin emissive streaks flying out of `origin` (motion-blurred look)."""
     rnd = random.Random(seed)
     mat = mat or spark_material()
@@ -338,6 +355,8 @@ def sparks(origin, count=40, seed=1, direction=(0, 0, 1), spread=70.0,
         head_pos = Vector(origin) + dirv * dd
         head_pos.z -= gravity * dd * dd
         tail_pos = head_pos - dirv * L
+        if any(_seg_dist(tail_pos, head_pos, Vector(c)) < r for c, r in avoid):
+            continue
         ob = bpy.data.objects.new(f"{name}{i}", base.data)
         C.link(ob)
         ob.location = tail_pos
