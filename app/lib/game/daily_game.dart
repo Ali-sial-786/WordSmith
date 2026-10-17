@@ -22,6 +22,7 @@ class DailyGame extends SoloGame {
     required this.api,
     required this.store,
     required this.profile,
+    this.onForged,
     Random? rng,
   }) : _rng = rng ?? Random() {
     board = Board(info.puzzle);
@@ -34,6 +35,9 @@ class DailyGame extends SoloGame {
   final ApiClient api;
   final Store store;
   final ProfileNotifier profile;
+
+  /// Called once the server has accepted today's result.
+  final VoidCallback? onForged;
   final Random _rng;
 
   @override
@@ -135,6 +139,7 @@ class DailyGame extends SoloGame {
       durationMs: _clock.elapsedMilliseconds,
     );
     outcome = result;
+    onForged?.call();
     profile.applyServer(result.profile, pending: store.loadSavedPuzzle());
     final after = profile.current.progress;
     return CompletionReward(
@@ -158,4 +163,10 @@ String prettyDate(String isoDate) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
+}
+
+/// Today's Daily Commission date: the UTC day, `YYYY-MM-DD`.
+String todayUtc([DateTime? now]) {
+  final d = (now ?? DateTime.now()).toUtc();
+  return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

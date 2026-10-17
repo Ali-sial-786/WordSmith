@@ -10,6 +10,7 @@ import 'package:wordsmith/auth/auth_service.dart';
 import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/game/account.dart';
+import 'package:wordsmith/game/daily_game.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/ui/anvil/anvil_ring.dart';
 
@@ -79,7 +80,7 @@ void main() {
     expect(find.text('3-day streak'), findsOneWidget);
     expect(find.text('+25 XP'), findsOneWidget);
     final post = server.dailyPosts.single;
-    expect(post['date'], '2026-10-17');
+    expect(post['date'], todayUtc());
     expect((post['foundWords'] as List).toSet(), {'TEAR', 'EAT', 'RATE'});
 
     await tester.tap(find.text('Forge Hall').last);

@@ -241,4 +241,40 @@ void main() {
     expect(session.tally['u1'], 1);
     expect(session.countdownLeft, Duration.zero);
   });
+
+  test('back during the standings, my mold shows that round\'s missed words', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send(_lobby('round'))
+      ..send(_roundStart(now));
+    await until(() => session.mold != null);
+    room.send({
+      'op': 'SNAPSHOT',
+      'lobby': _lobby('standings'),
+      'standings': {
+        'reason': 'timeout',
+        'round': 1,
+        'winner': 'u2',
+        'how': 'timeout',
+        'progress': [],
+        'tally': {'u2': 1},
+        'answers': [
+          {'slot': 0, 'word': 'CAT'},
+          {'slot': 1, 'word': 'COT'},
+          {'slot': 2, 'word': 'TOE'},
+        ],
+        'next': {
+          'round': 2,
+          'suddenDeath': false,
+          'players': ['u1', 'u2', 'u3'],
+        },
+        'standingsEndsAt': now + 5000,
+      },
+    });
+    await until(() => session.standings != null);
+    expect(session.mold!.letterAt((x: 0, y: 1)), 'O');
+    expect(session.standings!.round, 1);
+  });
 }

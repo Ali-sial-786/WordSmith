@@ -254,4 +254,17 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     expect(room.sockets, hasLength(1), reason: 'no reconnect after a 4xxx close');
   });
+
+  test('a round that starts before its LOBBY arrives already counts as the countdown', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..send(_lobby(phase: 'results'))
+      ..send(_roundStart(now));
+    await until(() => session.round != null);
+    expect(session.phase, 'countdown', reason: 'no flash of the lobby between results and the next round');
+    room.send(_lobby(phase: 'round'));
+    await until(() => session.lobby!.phase == 'round');
+    expect(session.phase, 'round');
+  });
 }

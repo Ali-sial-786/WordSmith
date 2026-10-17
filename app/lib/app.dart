@@ -16,6 +16,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'game/account.dart';
+import 'game/daily_game.dart';
 import 'net/push.dart';
 import 'ui/theme/theme.dart';
 
@@ -76,7 +77,11 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
   void _openInvite(Map<String, dynamic>? data) {
     final target = inviteTarget(data);
     if (target == null || !mounted) return;
-    _router.push('/room/${target.code}?mode=${target.mode}');
+    final path = _router.routerDelegate.currentConfiguration.uri.path;
+    if (path == '/room/${target.code}') return; // already there
+    final location = '/room/${target.code}?mode=${target.mode}';
+    // In another room: switch rooms (go replaces it, so it leaves cleanly).
+    path.startsWith('/room/') ? _router.go(location) : _router.push(location);
   }
 
   @override
@@ -88,8 +93,12 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
     // Catch up on anything finished offline when the player comes back.
-    if (state == AppLifecycleState.resumed) ref.read(accountProvider.notifier).sync();
+    ref.read(accountProvider.notifier).sync();
+    // A new UTC day means a new Daily Commission.
+    final daily = ref.read(dailyProvider).value;
+    if (daily != null && daily.date != todayUtc()) ref.invalidate(dailyProvider);
   }
 
   @override

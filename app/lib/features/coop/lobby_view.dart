@@ -279,9 +279,10 @@ class _InviteSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final account = ref.watch(accountProvider);
-    final online = account.friends.friends
-        .where((f) => (account.presence[f.id] ?? 'offline') != 'offline' && !inRoom.contains(f.id))
-        .toList();
+    bool isOnline(String id) => (account.presence[id] ?? 'offline') != 'offline';
+    // Online friends first; offline ones can still get a notification.
+    final friends = account.friends.friends.where((f) => !inRoom.contains(f.id)).toList()
+      ..sort((a, b) => (isOnline(a.id) ? 0 : 1).compareTo(isOnline(b.id) ? 0 : 1));
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -290,17 +291,19 @@ class _InviteSheet extends ConsumerWidget {
         children: [
           Text('Invite friends', style: displayStyle(20)),
           const SizedBox(height: 8),
-          if (online.isEmpty)
+          if (friends.isEmpty)
             Text(
-              'No friends online right now. Share the code $code instead.',
+              'No friends to invite yet. Share the code $code instead.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-          for (final f in online)
+          for (final f in friends)
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: AvatarBadge(avatar: f.avatar, size: 40, presence: account.presence[f.id]),
               title: Text(f.username),
-              subtitle: Text(presenceLabel(account.presence[f.id])),
+              subtitle: Text(
+                isOnline(f.id) ? presenceLabel(account.presence[f.id]) : 'Offline · gets a notification if it can',
+              ),
               trailing: TextButton(
                 onPressed: () {
                   ref.read(accountProvider.notifier).invite(f.id, code, mode);

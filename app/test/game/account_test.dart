@@ -176,6 +176,11 @@ void main() {
     expect(store.loadSyncQueue(), isEmpty);
   });
 
+  test("a sign-in token that can't refresh offline is an offline error, not a crash", () async {
+    final api = ApiClient(baseUrl: 'https://forge.test', token: () async => throw Exception('network-request-failed'));
+    await expectLater(api.me(), throwsA(isA<ApiException>().having((e) => e.offline, 'offline', isTrue)));
+  });
+
   test('Continue with Google signs up a new smith, and backing out does nothing', () async {
     final (c, auth, server, _) = await _setUp();
     await _settle();
@@ -221,8 +226,14 @@ void main() {
     auth.passwords['a@b.c'] = 'secret1';
     await c.read(accountProvider.notifier).signIn('a@b.c', 'secret1');
     await _settle();
-    Map<String, Object?> room(String phase, int players) =>
-        {'code': 'K7Q2AB', 'mode': 'coop', 'phase': phase, 'players': players, 'maxPlayers': 4};
+    Map<String, Object?> room(String phase, int players, {bool seated = false}) => {
+      'code': 'K7Q2AB',
+      'mode': 'coop',
+      'phase': phase,
+      'players': players,
+      'maxPlayers': 4,
+      'seated': seated,
+    };
     final n = c.read(accountProvider.notifier);
     Matcher fails(String code) => throwsA(isA<ApiException>().having((e) => e.code, 'code', code));
 
@@ -233,6 +244,10 @@ void main() {
     await expectLater(n.checkRoom('K7Q2AB'), fails('round_in_progress'));
     server.rooms['K7Q2AB'] = room('results', 2);
     await n.checkRoom('K7Q2AB');
+
+    // Someone who already holds a seat can always come back.
+    server.rooms['K7Q2AB'] = room('round', 4, seated: true);
+    expect(await n.checkRoom('K7Q2AB'), 'coop');
   });
 
   test('invite notifications register this phone, follow refreshes, and stop on sign-out', () async {

@@ -289,6 +289,7 @@ class VsRoundEnd extends RoomEvent {
     required this.answers,
     this.next,
     this.standingsEndsAt,
+    this.round,
   });
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
@@ -310,6 +311,7 @@ class VsRoundEnd extends RoomEvent {
               [for (final id in (next['players'] as List?) ?? const []) id as String],
             ),
       standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
+      round: (j['round'] as num?)?.toInt(),
     );
   }
 
@@ -323,6 +325,9 @@ class VsRoundEnd extends RoomEvent {
   final List<(int, String)> answers;
   final NextRound? next;
   final int? standingsEndsAt;
+
+  /// The round that ended.
+  final int? round;
 }
 
 class PodiumPlace {
@@ -597,6 +602,7 @@ class RoomClient {
       token: token,
       connect: connect,
       giveUpAfter: rejoinWindow,
+      maxRetryDelay: const Duration(seconds: 2),
       // 4001: account deleted; 4000–4099: the room closed or turned us away.
       shouldStop: (c) => c >= 4000 && c < 4100,
       onMessage: _onMessage,

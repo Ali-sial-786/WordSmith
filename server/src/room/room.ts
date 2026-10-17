@@ -381,7 +381,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /** `GET /v1/rooms/:code`, or `null` if there's no such room. */
-  async summary(): Promise<RoomSummary | null> {
+  async summary(userId?: string): Promise<RoomSummary | null> {
     await this.catchUp(Date.now());
     await this.settle();
     const room = this.room();
@@ -394,6 +394,7 @@ export class RoomDO extends DurableObject<Env> {
       host: host === undefined ? null : { id: host.id, username: host.username },
       players: room.players.filter((p) => !p.left).length,
       maxPlayers: MAX_PLAYERS[room.mode],
+      seated: userId !== undefined && room.players.some((p) => p.id === userId && !p.left),
     };
   }
 

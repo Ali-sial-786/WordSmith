@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:wordsmith/auth/auth_service.dart';
 import 'package:wordsmith/net/api_client.dart';
+import 'package:wordsmith/game/daily_game.dart';
 import 'package:wordsmith/net/push.dart';
 
 /// Sign-in without Firebase.
@@ -200,7 +201,7 @@ class FakeServer {
       case 'GET /daily':
         if (dailyPuzzle == null) return _json(404, {'error': 'not_found'});
         return _json(200, {
-          'date': '2026-10-17',
+          'date': todayUtc(),
           'heat': 1,
           'puzzle': dailyPuzzle,
           'completed': dailyDone,

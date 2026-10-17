@@ -93,4 +93,13 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 1500));
     expect(hub.sockets, hasLength(1));
   });
+
+  test('keeps trying when there is no token yet, then connects', () async {
+    await client.dispose();
+    var calls = 0;
+    client = HubClient(baseUrl: hub.base, token: () async => ++calls < 2 ? null : 'tok123');
+    await client.start();
+    await until(() => hub.received.isNotEmpty);
+    expect(calls, greaterThanOrEqualTo(2));
+  });
 }

@@ -43,7 +43,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   final _cues = MoldCues();
   late final AccountController _account;
   late final Sfx _sfx;
+  late final SettingsNotifier _settings;
   StreamSubscription<RoomEvent>? _sub;
+  StreamSubscription<String>? _hubErrors;
   bool _left = false;
 
   /// The room's video chat, while it's on.
@@ -58,16 +60,74 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     super.initState();
     _account = ref.read(accountProvider.notifier);
     _sfx = ref.read(sfxProvider);
+    _settings = ref.read(settingsProvider.notifier);
+    _hubErrors = _account.hubErrors.listen((code) {
+      if (code == 'friend_offline') _toast("That friend is offline and can't get a notification right now.");
+    });
+    _prepare();
+  }
+
+  /// No room client in this build (no online play).
+  bool get _offlineBuild => ref.read(roomClientFactoryProvider) == null;
+
+  /// Why we can't join (missing, full, mid-round, signed out), worded for players.
+  String? _problem;
+
+  /// Checks the room before joining, whichever way the player got here
+  /// (code, friend, invite banner or notification): missing, full and
+  /// mid-round rooms explain themselves instead of spinning, and the wrong
+  /// mode reopens as the right one.
+  Future<void> _prepare() async {
     final factory = ref.read(roomClientFactoryProvider);
+    if (factory == null) return;
+    if (!await _accountReady()) {
+      if (mounted) setState(() => _problem = 'Sign in to join rooms with friends.');
+      return;
+    }
+    try {
+      final mode = await _account.checkRoom(widget.code);
+      if (!mounted) return;
+      if (mode != widget.mode) {
+        _reopening = true;
+        context.pushReplacement('/room/${widget.code}?mode=$mode');
+        return;
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // Offline: join anyway; the socket keeps trying while the seat is held.
+      if (!e.offline) {
+        setState(() => _problem = e.friendly);
+        return;
+      }
+    }
     final me = ref.read(accountProvider).user?.uid ?? '';
-    if (factory != null) {
-      final client = factory(widget.code);
+    final client = factory(widget.code);
+    setState(() {
       _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
         ..addListener(_changed);
-      _sub = _session!.effects.listen(_onEffect);
-      _session!.start();
-      _account.setStatus('in_room:${widget.code}');
+    });
+    _sub = _session!.effects.listen(_onEffect);
+    _session!.start();
+    _account.setStatus('in_room:${widget.code}');
+  }
+
+  /// Waits (briefly) for the account, e.g. when a notification opened the
+  /// app and sign-in is still being restored. False if signed out.
+  Future<bool> _accountReady() async {
+    bool settled(AccountState s) =>
+        s.isReady || s.phase == AccountPhase.signedOut || s.phase == AccountPhase.unavailable;
+    var state = ref.read(accountProvider);
+    if (!settled(state)) {
+      final done = Completer<void>();
+      final sub = ref.listenManual(accountProvider, (_, next) {
+        if (settled(next) && !done.isCompleted) done.complete();
+      });
+      await done.future.timeout(const Duration(seconds: 15), onTimeout: () {});
+      sub.close();
+      if (!mounted) return false;
+      state = ref.read(accountProvider);
     }
+    return state.isReady;
   }
 
   bool _reopening = false;
@@ -115,7 +175,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       await call.join(url: grant.url, token: grant.token, camera: s.videoCamera, mic: s.videoMic);
     } on ApiException catch (e) {
       // Turn the setting back off so we don't ask again on every update.
-      if (e.code == 'video_unavailable') ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: false));
+      if (e.code == 'video_unavailable') _settings.update((s) => s.copyWith(videoChat: false));
       _toast(e.friendly);
     } finally {
       _videoStarting = false;
@@ -136,12 +196,12 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   }
 
   void _enableVideo() {
-    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: true));
+    _settings.update((s) => s.copyWith(videoChat: true));
     _startVideo();
   }
 
   void _disableVideo() {
-    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: false));
+    _settings.update((s) => s.copyWith(videoChat: false));
     _stopVideo();
   }
 
@@ -149,14 +209,14 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final call = _video;
     if (call == null) return;
     await call.setCamera(!call.cameraOn);
-    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoCamera: call.cameraOn));
+    _settings.update((s) => s.copyWith(videoCamera: call.cameraOn));
   }
 
   Future<void> _toggleMic() async {
     final call = _video;
     if (call == null) return;
     await call.setMic(!call.micOn);
-    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoMic: call.micOn));
+    _settings.update((s) => s.copyWith(videoMic: call.micOn));
   }
 
   RoomVideo get _roomVideo => RoomVideo(
@@ -232,13 +292,15 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     );
     if (ok != true || !mounted) return;
     setState(() => _left = true);
-    await _stopVideo();
+    // Leave the room first: tearing down video can take a few seconds.
     await _session?.leave();
+    await _stopVideo();
     if (mounted) context.canPop() ? context.pop() : context.go('/');
   }
 
   @override
   void dispose() {
+    _hubErrors?.cancel();
     final video = _video;
     if (video != null) {
       video.removeListener(_videoChanged);
@@ -252,8 +314,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         ..removeListener(_changed)
         ..dispose();
     }
-    _account.setStatus('online');
-    _sfx.music('music_hall');
+    // Reopening as the other mode: the new screen has already set these.
+    if (!_reopening) {
+      if (session != null) _account.setStatus('online');
+      _sfx.music('music_hall');
+    }
     super.dispose();
   }
 
@@ -262,7 +327,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final session = _session;
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
     return PopScope(
-      canPop: false,
+      // Nothing joined yet (checking, or a problem): back just goes back.
+      canPop: session == null,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _leave();
       },
@@ -274,7 +340,14 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           dim: 0.62,
           child: SparkField(
             intensity: reducedMotion ? 0.35 : 1,
-            child: SafeArea(child: session == null ? _message('Online play is not set up in this build.') : _body(session)),
+            child: SafeArea(
+              child: switch (session) {
+                _ when _offlineBuild => _message('Online play is not set up in this build.'),
+                _ when _problem != null => _message(_problem!, action: 'Back to the Forge Hall'),
+                null => _message('Joining forge ${widget.code}…', busy: true),
+                final s => _body(s),
+              },
+            ),
           ),
         ),
       ),

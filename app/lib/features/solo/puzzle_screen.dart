@@ -53,14 +53,19 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
   bool _chisel = false;
   bool _finishing = false;
 
-  Sfx get _sfx => ref.read(sfxProvider);
+  /// Read once: delayed sound callbacks can fire after the screen is gone.
+  late final Sfx _sfx;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _sfx = ref.read(sfxProvider);
     final daily = widget.daily;
     final api = ref.read(apiClientProvider);
+    // Outlives this screen, so a result that lands after leaving still
+    // refreshes the Forge Hall.
+    final container = ProviderScope.containerOf(context, listen: false);
     _game =
         (daily != null && api != null
               ? DailyGame(
@@ -68,6 +73,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                   api: api,
                   store: ref.read(storeProvider),
                   profile: ref.read(profileProvider.notifier),
+                  onForged: () => container.invalidate(dailyProvider),
                 )
               : SoloController(
                   stage: widget.stage!,
@@ -276,8 +282,6 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       bonusWords: _game.board.bonusFound.length,
     );
     if (!mounted) return;
-    // Refreshed only now: the daily screen swaps to "done" when it reloads.
-    if (game is DailyGame) ref.invalidate(dailyProvider);
     if (game is SoloController && action == ForgedAction.next && next <= campaign.stageCount) {
       context.pushReplacement('/play/$next');
     } else {
@@ -293,6 +297,19 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
         return await _game.finish();
       } on ApiException catch (e) {
         if (!mounted) return null;
+        // Problems trying again can't fix (an old day's puzzle, say).
+        if (!e.offline && e.status != 409 && e.status < 500) {
+          ProviderScope.containerOf(context, listen: false).invalidate(dailyProvider);
+          await showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("That commission can't be forged"),
+              content: Text(e.friendly),
+              actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+            ),
+          );
+          return null;
+        }
         final retry = await showDialog<bool>(
           context: context,
           barrierDismissible: false,

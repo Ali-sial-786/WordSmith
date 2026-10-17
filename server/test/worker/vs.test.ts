@@ -141,6 +141,7 @@ describe("Versus rooms", () => {
       host: { id: host.uid, username: host.username },
       players: 1,
       maxPlayers: 5,
+      seated: true,
     });
     const listing = { code, mode: "vs", hostId: host.uid, hostUsername: host.username, max: 5 };
     expect(await hub.next({ op: "OPEN_ROOMS" })).toEqual({ op: "OPEN_ROOMS", rooms: [{ ...listing, players: 1 }] });

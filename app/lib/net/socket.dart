@@ -21,6 +21,7 @@ class ReconnectingSocket {
     this.onGiveUp,
     this.shouldStop = _accountGone,
     this.giveUpAfter,
+    this.maxRetryDelay = const Duration(seconds: 30),
     SocketConnector? connect,
   }) : _connect = connect ?? defaultConnector;
 
@@ -47,6 +48,10 @@ class ReconnectingSocket {
 
   /// Stop retrying after being disconnected this long (null: never).
   final Duration? giveUpAfter;
+
+  /// The longest wait between attempts (rooms keep it short so a dropped
+  /// player is back well inside their 30 s seat window).
+  final Duration maxRetryDelay;
   final SocketConnector _connect;
 
   WebSocketChannel? _channel;
@@ -67,9 +72,13 @@ class ReconnectingSocket {
 
   Future<void> _open() async {
     if (!_running) return;
-    final t = await token();
-    if (t == null) return;
     try {
+      // Inside the try: refreshing an expired token needs the network too.
+      final t = await token();
+      if (t == null) {
+        _scheduleRetry(null);
+        return;
+      }
       final channel = _connect(uri, [protocol, t]);
       await channel.ready;
       if (!_running) {
@@ -118,9 +127,10 @@ class ReconnectingSocket {
       return;
     }
     final seconds = [1, 2, 4, 8, 15, 30][_attempt.clamp(0, 5)];
+    final delay = Duration(seconds: seconds) < maxRetryDelay ? Duration(seconds: seconds) : maxRetryDelay;
     _attempt++;
     _retry?.cancel();
-    _retry = Timer(Duration(seconds: seconds), _open);
+    _retry = Timer(delay, _open);
   }
 
   void _teardown() {

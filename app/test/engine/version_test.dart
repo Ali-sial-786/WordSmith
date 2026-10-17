@@ -24,4 +24,9 @@ void main() {
     expect(inviteTarget({'type': 'other', 'code': 'K7Q2AB'}), isNull);
     expect(inviteTarget(null), isNull);
   });
+
+  test("today's commission is the UTC day", () {
+    expect(todayUtc(DateTime.utc(2026, 10, 17, 23, 59)), '2026-10-17');
+    expect(todayUtc(DateTime.utc(2027, 1, 4, 0, 1)), '2027-01-04');
+  });
 }

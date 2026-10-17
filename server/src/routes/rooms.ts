@@ -2,7 +2,7 @@
  * Rooms (shared/room-protocol.md):
  *
  * - `POST /v1/rooms {mode: "coop" | "vs"}` → `{code}`; the caller is the host
- * - `GET /v1/rooms/:code` → `{code, mode, phase, host: {id, username}, players, maxPlayers}`, or 404 `room_not_found`
+ * - `GET /v1/rooms/:code` → `{code, mode, phase, host: {id, username}, players, maxPlayers, seated}`, or 404 `room_not_found`
  * - `GET /v1/ws/room/:code` → WebSocket upgrade to that room's RoomDO
  * - `POST /v1/rooms/:code/video` → `{url, token, room, expiresAt}`: a LiveKit
  *   token for the room's video chat. 403 `not_in_room` unless the caller
@@ -55,9 +55,9 @@ export async function postRoom(c: AuthedContext): Promise<Response> {
 }
 
 export async function getRoom(c: AuthedContext): Promise<Response> {
-  await requireSetUp(c);
+  const account = await requireSetUp(c);
   const code = codeParam(c);
-  const summary = await roomStub(c.env, code).summary();
+  const summary = await roomStub(c.env, code).summary(account.id);
   if (summary === null) throw new ApiError(404, "room_not_found");
   return json(summary);
 }

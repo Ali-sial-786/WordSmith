@@ -250,19 +250,27 @@ class AccountController extends Notifier<AccountState> {
 
   PushService get _push => ref.read(pushServiceProvider);
 
+  /// Registering and unregistering run one at a time, in order.
+  Future<void> _pushQueue = Future.value();
+
+  Future<void> _serial(Future<void> Function() step) =>
+      _pushQueue = _pushQueue.then((_) => step()).catchError((Object e) => debugPrint('push: $e'));
+
   /// Registers this phone for invite notifications, if they're on.
-  Future<void> _registerPush() async {
-    if (!ref.read(settingsProvider).inviteNotifications || _api == null) return;
-    if (!await _push.requestPermission()) return;
+  Future<void> _registerPush() => _serial(() async {
+    bool wanted() => ref.mounted && state.isReady && ref.read(settingsProvider).inviteNotifications;
+    if (!wanted() || _api == null) return;
+    if (!await _push.requestPermission() || !wanted()) return;
     final token = await _push.token();
-    if (token == null || !ref.mounted || !state.isReady) return;
+    if (token == null || !wanted()) return;
     _pushToken = token;
     await _sendPushToken(token);
+    if (!wanted()) return;
     _pushRefresh ??= _push.tokenRefresh.listen((t) {
       _pushToken = t;
       _sendPushToken(t);
     });
-  }
+  });
 
   Future<void> _sendPushToken(String token) async {
     try {
@@ -273,7 +281,7 @@ class AccountController extends Notifier<AccountState> {
     }
   }
 
-  Future<void> _unregisterPush() async {
+  Future<void> _unregisterPush() => _serial(() async {
     await _pushRefresh?.cancel();
     _pushRefresh = null;
     final token = _pushToken ?? await _push.token();
@@ -286,7 +294,7 @@ class AccountController extends Notifier<AccountState> {
       }
     }
     await _push.deleteToken();
-  }
+  });
 
   /// The Settings switch for invite notifications.
   Future<void> setInviteNotifications(bool on) async {
@@ -384,13 +392,16 @@ class AccountController extends Notifier<AccountState> {
   /// is missing, full or mid-round.
   Future<String> checkRoom(String code) async {
     final room = await _api!.room(code);
+    final mode = room['mode'] as String? ?? 'coop';
+    // Already holding a seat (dropped, or the app was closed): always allowed back.
+    if (room['seated'] == true) return mode;
     final players = (room['players'] as num?)?.toInt() ?? 0;
     final max = (room['maxPlayers'] as num?)?.toInt() ?? 4;
     if (players >= max) throw const ApiException(409, 'room_full');
     if (const {'countdown', 'round', 'standings'}.contains(room['phase'])) {
       throw const ApiException(409, 'round_in_progress');
     }
-    return room['mode'] as String? ?? 'coop';
+    return mode;
   }
 
   void dismissInvite(HubInvite invite) =>
@@ -420,10 +431,15 @@ class AccountController extends Notifier<AccountState> {
         state = state.copyWith(invites: [...state.invites, event]);
       case HubOpenRooms(:final rooms):
         state = state.copyWith(openRooms: rooms);
-      case HubError():
-        break;
+      case HubError(:final code):
+        _hubErrors.add(code);
     }
   }
+
+  final _hubErrors = StreamController<String>.broadcast();
+
+  /// Hub error codes, e.g. `friend_offline` after an invite nobody can get.
+  Stream<String> get hubErrors => _hubErrors.stream;
 
   // ---- Account deletion ----
 

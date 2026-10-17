@@ -6,16 +6,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordsmith/app.dart';
+import 'package:wordsmith/auth/auth_service.dart';
 import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/features/coop/room_screen.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/game/providers.dart';
+import 'package:wordsmith/net/room_client.dart';
 
 import '../fixtures/fake_backend.dart';
 import '../fixtures/puzzles.dart';
 
-Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server, {FakePush? push}) async {
+Future<void> _pumpApp(
+  WidgetTester tester,
+  FakeAuth auth,
+  FakeServer server, {
+  FakePush? push,
+  String? location,
+  bool rooms = false,
+}) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -35,6 +44,10 @@ Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server, {Fa
       authServiceProvider.overrideWithValue(auth),
       apiClientProvider.overrideWithValue(server.client(auth)),
       if (push != null) pushServiceProvider.overrideWithValue(push),
+      if (rooms)
+        roomClientFactoryProvider.overrideWithValue(
+          (code) => RoomClient(baseUrl: 'http://127.0.0.1:9', code: code, token: auth.idToken),
+        ),
     ],
   );
   addTearDown(container.dispose);
@@ -42,7 +55,9 @@ Future<void> _pumpApp(WidgetTester tester, FakeAuth auth, FakeServer server, {Fa
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: WordsmithApp(router: GoRouter(routes: appRouter.configuration.routes)),
+      child: WordsmithApp(
+        router: GoRouter(initialLocation: location ?? '/', routes: appRouter.configuration.routes),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -110,5 +125,23 @@ void main() {
     await tester.pumpAndSettle();
     final room = tester.widget<RoomScreen>(find.byType(RoomScreen));
     expect((room.code, room.mode), ('K7Q2AB', 'vs'));
+  });
+
+  testWidgets('a room that is mid-round explains itself instead of spinning', (tester) async {
+    final auth = FakeAuth(
+      signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com'),
+    );
+    final server = FakeServer()..username = 'Ali';
+    server.rooms['K7Q2AB'] = {
+      'code': 'K7Q2AB',
+      'mode': 'coop',
+      'phase': 'round',
+      'players': 2,
+      'maxPlayers': 4,
+      'seated': false,
+    };
+    await _pumpApp(tester, auth, server, location: '/room/K7Q2AB?mode=coop', rooms: true);
+    expect(find.text("They're mid-round. Try again when it ends."), findsOneWidget);
+    expect(find.text('Back to the Forge Hall'), findsOneWidget);
   });
 }

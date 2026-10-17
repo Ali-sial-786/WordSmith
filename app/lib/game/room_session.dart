@@ -42,7 +42,12 @@ abstract class RoomSession extends ChangeNotifier {
   Stream<RoomEvent> get effects => _effects.stream;
 
   bool get isHost => lobby?.hostId == me;
-  String get phase => lobby?.phase ?? 'lobby';
+
+  /// A ROUND_START can arrive a moment before the LOBBY that moves the phase
+  /// on; until then, act as if the countdown has begun (no lobby flash).
+  String? _phaseAhead;
+
+  String get phase => _phaseAhead ?? lobby?.phase ?? 'lobby';
   RoomPlayer? get myPlayer => lobby?.player(me);
 
   int get serverNow => DateTime.now().millisecondsSinceEpoch + clockOffsetMs;
@@ -103,6 +108,13 @@ abstract class RoomSession extends ChangeNotifier {
         syncClock(serverNow);
       case RoomLobby():
         lobby = e;
+        _phaseAhead = null;
+      case RoundStart():
+        if (lobby?.phase != 'countdown' && lobby?.phase != 'round') _phaseAhead = 'countdown';
+        handle(e);
+      case RoomSnapshot():
+        _phaseAhead = null;
+        handle(e);
       default:
         handle(e);
     }

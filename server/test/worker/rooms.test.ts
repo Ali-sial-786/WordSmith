@@ -102,7 +102,11 @@ describe("POST /v1/rooms and GET /v1/rooms/:code", () => {
       host: { id: a.uid, username: a.username },
       players: 1,
       maxPlayers: 4,
+      seated: true,
     });
+    // Someone else sees the room, but not as theirs.
+    const b = await setUpClient();
+    expect(await body(await b.get(`/v1/rooms/${code}`))).toMatchObject({ players: 1, seated: false });
 
     // A code in use can't be opened again (POST /v1/rooms then tries another).
     const other = { id: "someone", username: "Someone", avatar: "avatar_02", level: 1 };

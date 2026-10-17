@@ -11,7 +11,7 @@ and point and XP values in `server/src/rules/`. All messages are JSON
   - The code is 6 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
   - The creator becomes the host and is seated straight away (`connected: false` until their socket arrives, with the usual 30 s to connect).
   - Requires a set-up account.
-- `GET /v1/rooms/:code` returns `{code, mode, phase, host: {id, username} | null, players, maxPlayers}`, where `players` is a **count**, or `404 room_not_found`.
+- `GET /v1/rooms/:code` returns `{code, mode, phase, host: {id, username} | null, players, maxPlayers, seated}`, where `players` is a **count** and `seated` says whether the caller holds a seat (then they can always come back, even mid-round or when the room is full), or `404 room_not_found`.
 - `POST /v1/rooms/:code/video` returns `{url, token, room, expiresAt}` for the room's optional **video chat**: a LiveKit token (camera and microphone only) for a LiveKit room named after the code and the room's creation time. Only for players holding a seat (`403 not_in_room`); `503 video_unavailable` while the server has no LiveKit project. The app then talks to LiveKit directly; video never goes through the RoomDO. LiveKit identities are user IDs, so bubbles match `LOBBY` players.
 - `GET /v1/ws/room/:code` upgrades to a WebSocket, offering subprotocols `wordsmith.v1, <ID token>` (like the hub).
   - The Worker looks up the player's username, avatar and level and passes them to the room.

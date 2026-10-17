@@ -66,7 +66,13 @@ class ApiClient {
     final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) headers['Content-Type'] = 'application/json';
     if (auth) {
-      final t = await token();
+      String? t;
+      try {
+        t = await token();
+      } on Exception {
+        // Refreshing an expired ID token needs the network.
+        throw const ApiException(0, 'offline');
+      }
       if (t == null) throw const ApiException(401, 'unauthorized', 'not_signed_in');
       headers['Authorization'] = 'Bearer $t';
     }

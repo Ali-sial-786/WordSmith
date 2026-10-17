@@ -120,8 +120,16 @@ class VsSession extends RoomSession {
       }
     }
     if (s.standings != null) {
-      standings = s.standings;
-      tally = {...s.standings!.tally};
+      final end = s.standings!;
+      standings = end;
+      tally = {...end.tally};
+      // Back during the standings: show that round's answers on my mold, or
+      // drop a mold left over from an earlier round.
+      if (end.round != null && round?.round != end.round) {
+        mold = null;
+      } else {
+        mold?.showAnswers(end.answers);
+      }
     }
     if (s.seriesEnd != null) seriesEnd = s.seriesEnd;
   }

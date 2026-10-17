@@ -259,6 +259,8 @@ export interface RoomSummary {
   readonly host: { readonly id: string; readonly username: string } | null;
   readonly players: number;
   readonly maxPlayers: number;
+  /** The caller holds a seat (they can always come back, even mid-round or when full). */
+  readonly seated: boolean;
 }
 
 export function parseIdentity(raw: string | null): RoomIdentity | null {
