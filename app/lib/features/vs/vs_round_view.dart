@@ -161,6 +161,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
 
   @override
   Widget build(BuildContext context) {
+    final leftHanded = ref.watch(settingsProvider.select((s) => s.leftHanded));
     final round = _s.round!;
     final mold = _s.mold!;
     if (_orderRound != round.round) {
@@ -203,6 +204,8 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
                 SizedBox(
                   height: ring + 8,
                   child: Row(
+                    // Left-handed: Turn on the right, hints or status on the left.
+                    textDirection: leftHanded ? TextDirection.rtl : TextDirection.ltr,
                     children: [
                       SizedBox(
                         width: side,

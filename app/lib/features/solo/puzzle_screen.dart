@@ -47,8 +47,7 @@ class PuzzleScreen extends ConsumerStatefulWidget {
   ConsumerState<PuzzleScreen> createState() => _PuzzleScreenState();
 }
 
-class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
-    with WidgetsBindingObserver {
+class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBindingObserver {
   late final SoloGame _game;
   final _cues = MoldCues();
   final _preview = GlobalKey<WordPreviewState>();
@@ -131,10 +130,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     final word = (_game.board.puzzle.slots.map((s) => s.word).toList()..sort((a, b) => a.length - b.length)).first;
     final used = <int>[];
     for (final ch in word.split('')) {
-      final tile = List.generate(_game.letters.length, (i) => i).firstWhere(
-        (i) => _game.letters[i] == ch && !used.contains(i),
-        orElse: () => -1,
-      );
+      final tile = List.generate(
+        _game.letters.length,
+        (i) => i,
+      ).firstWhere((i) => _game.letters[i] == ch && !used.contains(i), orElse: () => -1);
       if (tile < 0) return null;
       used.add(tile);
     }
@@ -210,15 +209,9 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
             _sfx.play(SfxId.pickup);
             _burstAt(_scrapKey);
           });
-          _toast.currentState?.show(
-            'Scrap Bin smelted: +1 Hammer Strike!',
-            color: Palette.molten,
-          );
+          _toast.currentState?.show('Scrap Bin smelted: +1 Hammer Strike!', color: Palette.molten);
         } else {
-          _toast.currentState?.show(
-            'Bonus word! Scrap Bin $bin/$scrapBinCapacity',
-            color: Palette.verdigris,
-          );
+          _toast.currentState?.show('Bonus word! Scrap Bin $bin/$scrapBinCapacity', color: Palette.verdigris);
         }
       case SubmitOutcome.alreadyFound:
         _cues.pulse(r.slot!.cells);
@@ -288,10 +281,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       return;
     }
     if (!_game.canUse(kind)) {
-      _toast.currentState?.show(
-        'No ${kind.title}s left: level up or find embers',
-        color: Palette.steel,
-      );
+      _toast.currentState?.show('No ${kind.title}s left: level up or find embers', color: Palette.steel);
       return;
     }
     switch (kind) {
@@ -393,9 +383,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       dailyLate: game is DailyGame && game.info.date != todayUtc(),
       // A first completion of a commission unlocks the next Lore page.
       lorePage: game is DailyGame && game.outcome?.alreadyDone == false ? game.info.total : null,
-      pickups: [
-        for (final i in _game.board.collectedPickups) _game.board.pickups[i],
-      ],
+      pickups: [for (final i in _game.board.collectedPickups) _game.board.pickups[i]],
       bonusWords: _game.board.bonusFound.length,
       words: [for (final s in _game.board.puzzle.slots) s.word]
         ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
@@ -450,6 +438,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
   Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider);
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
+    final leftHanded = ref.watch(settingsProvider.select((s) => s.leftHanded));
     final metal = MetalStyle.forChapter(_game.look);
     return Scaffold(
       body: ForgeBackground(
@@ -464,6 +453,35 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
               builder: (context, c) {
                 final ring = min(c.maxWidth * 0.64, c.maxHeight * 0.37);
                 final side = (c.maxWidth - ring) / 2;
+                final tools = SizedBox(
+                  width: side,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      KeyedSubtree(
+                        key: _scrapKey,
+                        child: _ScrapBin(count: profile.scrapBin, words: _game.board.bonusFound),
+                      ),
+                      RoundMetalButton(icon: 'turn', tooltip: 'Turn the tiles', onPressed: _finishing ? null : _turn),
+                    ],
+                  ),
+                );
+                final hints = SizedBox(
+                  width: side,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (final kind in HintKind.values)
+                        _HintButton(
+                          kind: kind,
+                          count: profile.hintCount(kind),
+                          unlocked: kind.unlockedAt(profile.level),
+                          active: kind == HintKind.chisel && _chisel,
+                          onPressed: _finishing ? null : () => _useHint(kind),
+                        ),
+                    ],
+                  ),
+                );
                 return Column(
                   children: [
                     _TopBar(title: _game.title, subtitle: _game.subtitle),
@@ -493,9 +511,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                             duration: const Duration(milliseconds: 200),
                             child: Text(
                               'Swipe across the letters to forge a word',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: Palette.molten,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Palette.molten),
                             ),
                           ),
                         WordPreview(key: _preview, word: _word),
@@ -505,26 +521,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                       height: ring + 8,
                       child: Row(
                         children: [
-                          SizedBox(
-                            width: side,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                KeyedSubtree(
-                                  key: _scrapKey,
-                                  child: _ScrapBin(
-                                    count: profile.scrapBin,
-                                    words: _game.board.bonusFound,
-                                  ),
-                                ),
-                                RoundMetalButton(
-                                  icon: 'turn',
-                                  tooltip: 'Turn the tiles',
-                                  onPressed: _finishing ? null : _turn,
-                                ),
-                              ],
-                            ),
-                          ),
+                          if (leftHanded) hints else tools,
                           AnvilRing(
                             letters: _game.letters,
                             order: _game.order,
@@ -534,22 +531,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                             onSelectionChanged: _onSelection,
                             onSubmit: _onSubmit,
                           ),
-                          SizedBox(
-                            width: side,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                for (final kind in HintKind.values)
-                                  _HintButton(
-                                    kind: kind,
-                                    count: profile.hintCount(kind),
-                                    unlocked: kind.unlockedAt(profile.level),
-                                    active: kind == HintKind.chisel && _chisel,
-                                    onPressed: _finishing ? null : () => _useHint(kind),
-                                  ),
-                              ],
-                            ),
-                          ),
+                          if (leftHanded) tools else hints,
                         ],
                       ),
                     ),

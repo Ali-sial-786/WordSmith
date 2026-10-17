@@ -134,6 +134,7 @@ class Settings {
     this.videoCamera = true,
     this.videoMic = true,
     this.inviteNotifications = true,
+    this.leftHanded = false,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) => Settings(
@@ -146,6 +147,7 @@ class Settings {
     videoCamera: json['videoCamera'] as bool? ?? true,
     videoMic: json['videoMic'] as bool? ?? true,
     inviteNotifications: json['inviteNotifications'] as bool? ?? true,
+    leftHanded: json['leftHanded'] as bool? ?? false,
   );
 
   final double sfxVolume;
@@ -165,6 +167,9 @@ class Settings {
   /// Phone notifications when a friend invites you to a room.
   final bool inviteNotifications;
 
+  /// Hint buttons on the left of the anvil, Turn and the Scrap Bin on the right.
+  final bool leftHanded;
+
   Settings copyWith({
     double? sfxVolume,
     double? musicVolume,
@@ -175,6 +180,7 @@ class Settings {
     bool? videoCamera,
     bool? videoMic,
     bool? inviteNotifications,
+    bool? leftHanded,
   }) => Settings(
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
@@ -185,6 +191,7 @@ class Settings {
     videoCamera: videoCamera ?? this.videoCamera,
     videoMic: videoMic ?? this.videoMic,
     inviteNotifications: inviteNotifications ?? this.inviteNotifications,
+    leftHanded: leftHanded ?? this.leftHanded,
   );
 
   Map<String, Object> toJson() => {
@@ -197,5 +204,6 @@ class Settings {
     'videoCamera': videoCamera,
     'videoMic': videoMic,
     'inviteNotifications': inviteNotifications,
+    'leftHanded': leftHanded,
   };
 }

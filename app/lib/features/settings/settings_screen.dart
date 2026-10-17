@@ -44,6 +44,12 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) => n.update((s) => s.copyWith(haptics: v)),
           ),
           SwitchListTile(
+            title: const Text('Left-handed layout'),
+            subtitle: const Text('Hint buttons on the left of the anvil'),
+            value: s.leftHanded,
+            onChanged: (v) => n.update((s) => s.copyWith(leftHanded: v)),
+          ),
+          SwitchListTile(
             title: const Text('Reduce motion'),
             subtitle: const Text('Fewer sparks and drifting embers'),
             value: s.reducedMotion,
