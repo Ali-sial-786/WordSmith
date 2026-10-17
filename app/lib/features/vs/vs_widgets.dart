@@ -48,8 +48,10 @@ class RivalStrip extends StatelessWidget {
     if (round == null) return const SizedBox.shrink();
     // Racers see their rivals; someone watching sudden death sees every racer.
     final ids = [for (final id in round.racers) if (!session.racing || id != session.me) id];
+    // Taller when the phone uses bigger text, so names still fit.
+    final textExtra = MediaQuery.textScalerOf(context).scale(14) - 14;
     return SizedBox(
-      height: call == null ? 74 : 86,
+      height: (call == null ? 74 : 86) + textExtra,
       child: Row(
         children: [for (final id in ids.take(5)) Expanded(child: _RivalTile(session: session, id: id, call: call))],
       ),

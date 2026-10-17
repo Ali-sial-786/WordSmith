@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../engine/hints.dart';
 import '../../engine/progression.dart';
+import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -19,6 +21,9 @@ class ProfileScreen extends ConsumerWidget {
     final progress = p.progress;
     final text = Theme.of(context).textTheme;
     final nextRank = Rank.values.where((r) => r.minLevel > progress.level).firstOrNull;
+    final account = ref.watch(accountProvider);
+    final server = account.server;
+    final daily = ref.watch(dailyProvider).value;
     return Scaffold(
       appBar: AppBar(title: Text('Profile', style: displayStyle(22)), centerTitle: true),
       body: ListView(
@@ -62,21 +67,37 @@ class ProfileScreen extends ConsumerWidget {
           _Stat('Words forged', '${p.stats.wordsForged}'),
           _Stat('Bonus words', '${p.stats.bonusWords}'),
           _Stat('Longest word', p.stats.longestWord.isEmpty ? '—' : p.stats.longestWord),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Palette.soot,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Palette.ash),
+          if (daily != null)
+            _Stat('Daily streak', '${daily.streak} ${daily.streak == 1 ? 'day' : 'days'} (best ${daily.best})'),
+          if (server != null) ...[
+            const SizedBox(height: 16),
+            Text('With friends', style: text.titleMedium),
+            const SizedBox(height: 8),
+            _Stat('Co-op rounds', '${server.stats.coopRounds}'),
+            _Stat('Master of the Forge (MVP)', '${server.stats.coopMvps}'),
+            _Stat('Versus series won', '${server.stats.vsSeriesWon} of ${server.stats.vsSeries}'),
+            _Stat('Versus rounds won', '${server.stats.vsRoundsWon}'),
+          ] else if (account.phase != AccountPhase.unavailable) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Palette.soot,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Palette.ash),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Sign in to keep your progress safe on every phone, and to play Co-op, '
+                    'Versus and the Daily Commission with friends.',
+                    style: text.bodySmall,
+                  ),
+                  TextButton(onPressed: () => context.push('/sign-in'), child: const Text('Sign in')),
+                ],
+              ),
             ),
-            child: Text(
-              'Accounts, friends, Co-op and Versus arrive in upcoming updates. '
-              'Your solo progress is saved on this phone and will move to your '
-              'account when you sign in.',
-              style: text.bodySmall,
-            ),
-          ),
+          ],
         ],
       ),
     );

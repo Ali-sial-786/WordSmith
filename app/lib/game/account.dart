@@ -32,6 +32,22 @@ final dailyProvider = FutureProvider<DailyInfo?>(
   retry: (_, _) => null,
 );
 
+/// The server's `/v1/version`: the newest app version and the oldest one it
+/// still plays online with. Null offline or without a server.
+final serverVersionProvider = FutureProvider<({String latest, String minSupported})?>(
+  (ref) async {
+    final api = ref.read(apiClientProvider);
+    if (api == null) return null;
+    try {
+      final v = await api.version();
+      return (latest: v['latest'] as String? ?? '0.0.0', minSupported: v['minSupported'] as String? ?? '0.0.0');
+    } on ApiException {
+      return null;
+    }
+  },
+  retry: (_, _) => null,
+);
+
 /// Makes a room's video chat for this player (user ID); null without online play.
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 
@@ -290,7 +306,10 @@ class AccountController extends Notifier<AccountState> {
   // ---- Presence ----
 
   /// `online` in menus, `solo` while forging a campaign puzzle.
-  void setStatus(String status) => _hub?.setStatus(status);
+  /// Screens call this from dispose, which can outlive the controller.
+  void setStatus(String status) {
+    if (ref.mounted) _hub?.setStatus(status);
+  }
 
   void invite(String friendId, String code, String mode) => _hub?.invite(friendId, code, mode);
 

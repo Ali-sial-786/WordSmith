@@ -121,7 +121,9 @@ Future<FakeVideoCall> _call() async {
 RoomVideo _video(VideoCall? call) =>
     RoomVideo(available: true, call: call, onEnable: () {}, onDisable: () {}, onCamera: () {}, onMic: () {});
 
-Future<void> _pump(WidgetTester tester, Widget child) async {
+Future<void> _pump(WidgetTester tester, Widget child, {double textScale = 1}) async {
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -194,5 +196,18 @@ void main() {
     expect(find.text('YOU WIN THE SERIES!'), findsOneWidget);
     expect(find.text('Embers: +1 Chisel'), findsOneWidget);
     expect(find.text('Rematch'), findsOneWidget);
+  });
+
+  testWidgets('the lobby and a round still fit with 130% text', (tester) async {
+    await _pump(tester, LobbyView(session: _session('lobby'), onLeave: () {}, video: _video(null)), textScale: 1.3);
+    expect(tester.takeException(), isNull);
+
+    final start = _start();
+    final s = _session('round')
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('round'))
+      ..tally = start.tally;
+    await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(await _call())), textScale: 1.3);
+    expect(tester.takeException(), isNull);
   });
 }

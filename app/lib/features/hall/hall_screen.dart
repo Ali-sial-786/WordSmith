@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app_info.dart';
 import '../../engine/hints.dart';
 import '../../game/account.dart';
 import '../../net/hub_client.dart';
@@ -63,6 +64,7 @@ class HallScreen extends ConsumerWidget {
                           style: text.titleSmall?.copyWith(color: Palette.steel),
                         ),
                         const SizedBox(height: 22),
+                        const _UpdateBanner(),
                         if (online && !account.isReady) ...[
                           _AccountBanner(state: account),
                           const SizedBox(height: 14),
@@ -184,6 +186,34 @@ class HallScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "A new version is out", from the server's /v1/version.
+class _UpdateBanner extends ConsumerWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final v = ref.watch(serverVersionProvider).value;
+    if (v == null || compareVersions(v.latest, appVersion) <= 0) return const SizedBox.shrink();
+    final tooOld = compareVersions(appVersion, v.minSupported) < 0;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: (tooOld ? Palette.quenchRed : Palette.verdigris).withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tooOld ? Palette.quenchRed : Palette.verdigris),
+      ),
+      child: Text(
+        tooOld
+            ? 'This version is too old for online play. Install Wordsmith ${v.latest} to play with friends.'
+            : 'Wordsmith ${v.latest} is out! Get the new APK from whoever shares it, or the GitHub Releases page.',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyMedium,
       ),
     );
   }

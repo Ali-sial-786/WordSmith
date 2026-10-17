@@ -435,7 +435,7 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 56,
+      height: 60,
       child: Row(
         children: [
           IconButton(
@@ -446,8 +446,9 @@ class _TopBar extends StatelessWidget {
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(20)),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(19)),
                 Text(
                   subtitle,
                   maxLines: 1,
