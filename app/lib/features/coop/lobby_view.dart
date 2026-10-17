@@ -13,6 +13,7 @@ import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 import 'room_video.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// Before a round (co-op or Versus): the code to share, who's in, ready
 /// checks, the series length in Versus, and the host's start.
@@ -174,14 +175,7 @@ class _CodeCard extends StatelessWidget {
   final String code;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Palette.soot,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFF8C6B47)),
-    ),
-    child: Column(
+  Widget build(BuildContext context) => ForgePanel(padding: const EdgeInsets.all(14), child: Column(
       children: [
         Text('Room code', style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(height: 4),
@@ -206,8 +200,7 @@ class _CodeCard extends StatelessWidget {
           ],
         ),
       ],
-    ),
-  );
+    ));
 }
 
 class _PlayerRow extends StatelessWidget {

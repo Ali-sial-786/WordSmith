@@ -15,6 +15,7 @@ import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/reward_popup.dart';
 import '../../ui/widgets/xp_bar.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// Daily Stoke, Work Orders, Gifts and the Weekly Trials.
 class BoardScreen extends ConsumerStatefulWidget {
@@ -56,7 +57,10 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
   Widget build(BuildContext context) {
     final board = ref.watch(forgeBoardProvider);
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text('Forge Board', style: displayStyle(22))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text('Forge Board', style: displayStyle(22)),
+      ),
       extendBodyBehindAppBar: true,
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
@@ -178,13 +182,8 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Container(
+    return ForgePanel(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Palette.soot.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF5C4733)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -276,7 +275,11 @@ class _StokeStep extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: done ? Palette.ash : today ? Palette.ember.withValues(alpha: 0.25) : Palette.forgeBlack,
+              color: done
+                  ? Palette.ash
+                  : today
+                  ? Palette.ember.withValues(alpha: 0.25)
+                  : Palette.forgeBlack,
               border: Border.all(
                 color: today
                     ? Palette.molten
@@ -326,36 +329,34 @@ class _OrdersCard extends StatelessWidget {
             onClaim: () => onClaim(o.slot),
             onSwap: () => onSwap(o.slot),
           ),
-        Container(
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Palette.gold.withValues(alpha: orders.chestReady && !orders.chestClaimed ? 0.16 : 0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.gold.withValues(alpha: 0.5)),
-          ),
-          child: Row(
-            children: [
-              const GameIcon('crown', size: 26, color: Palette.gold),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Smith's Ledger: fill all three", style: text.titleSmall),
-                    const SizedBox(height: 2),
-                    RewardChips(reward: orders.chestReward, dim: orders.chestClaimed),
-                  ],
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: ForgePanel(
+            padding: const EdgeInsets.all(12),
+            gold: true,
+            child: Row(
+              children: [
+                const GameIcon('crown', size: 26, color: Palette.gold),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Smith's Ledger: fill all three", style: text.titleSmall),
+                      const SizedBox(height: 2),
+                      RewardChips(reward: orders.chestReward, dim: orders.chestClaimed),
+                    ],
+                  ),
                 ),
-              ),
-              if (orders.chestClaimed)
-                const Icon(Icons.check_circle, color: Palette.verdigris)
-              else
-                FilledButton(
-                  onPressed: orders.chestReady && busy == null ? () => onClaim('chest') : null,
-                  child: Text(allClaimed ? 'Open' : '${orders.daily.where((o) => o.claimed).length}/3'),
-                ),
-            ],
+                if (orders.chestClaimed)
+                  const Icon(Icons.check_circle, color: Palette.verdigris)
+                else
+                  FilledButton(
+                    onPressed: orders.chestReady && busy == null ? () => onClaim('chest') : null,
+                    child: Text(allClaimed ? 'Open' : '${orders.daily.where((o) => o.claimed).length}/3'),
+                  ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -549,28 +550,27 @@ class _TrialsCard extends StatelessWidget {
           'Ends in ${timeLeft(trials.endsAt)}.',
       children: [
         if (last != null && last.claimable)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Palette.gold.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Palette.gold),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Last week: ${_place(last.place)} of ${last.of}!', style: text.titleSmall),
-                      const SizedBox(height: 2),
-                      RewardChips(reward: last.reward!),
-                    ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ForgePanel(
+              padding: const EdgeInsets.all(12),
+              gold: true,
+              glint: true,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Last week: ${_place(last.place)} of ${last.of}!', style: text.titleSmall),
+                        const SizedBox(height: 2),
+                        RewardChips(reward: last.reward!),
+                      ],
+                    ),
                   ),
-                ),
-                FilledButton(onPressed: busy ? null : onClaim, child: const Text('Claim')),
-              ],
+                  FilledButton(onPressed: busy ? null : onClaim, child: const Text('Claim')),
+                ],
+              ),
             ),
           )
         else if (last != null && last.reward != null)
@@ -581,8 +581,7 @@ class _TrialsCard extends StatelessWidget {
               style: text.bodySmall,
             ),
           ),
-        if (trials.standings.length < 2)
-          Text('Add friends to compete in the trials.', style: text.bodySmall),
+        if (trials.standings.length < 2) Text('Add friends to compete in the trials.', style: text.bodySmall),
         for (final (i, s) in trials.standings.indexed)
           Container(
             margin: const EdgeInsets.only(bottom: 4),

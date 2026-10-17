@@ -6,6 +6,7 @@ import '../../net/board.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
 import 'game_icon.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// A quick "you got this" card for a claimed [reward]. It closes itself after
 /// a moment, or on a tap.
@@ -63,32 +64,35 @@ class _RewardCardState extends State<_RewardCard> {
         onTap: () => Navigator.of(context).maybePop(),
         child: Material(
           color: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 320),
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Palette.soot,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Palette.molten),
-              boxShadow: [BoxShadow(color: Palette.ember.withValues(alpha: 0.35), blurRadius: 30)],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(widget.title, textAlign: TextAlign.center, style: displayStyle(24, color: Palette.molten)),
-                const SizedBox(height: 14),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 16,
-                  runSpacing: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: ForgePanel(
+                padding: const EdgeInsets.all(20),
+                gold: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (r.xp > 0) _Item(icon: 'star', label: '+${r.xp} XP'),
-                    for (final e in r.hints.entries) _Item(icon: e.key.name, label: '+${e.value} ${e.key.title}'),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: displayStyle(24, color: Palette.molten),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 16,
+                      runSpacing: 10,
+                      children: [
+                        if (r.xp > 0) _Item(icon: 'star', label: '+${r.xp} XP'),
+                        for (final e in r.hints.entries) _Item(icon: e.key.name, label: '+${e.value} ${e.key.title}'),
+                      ],
+                    ),
+                    if (r.isEmpty) Text('Nothing this time.', style: text.bodyMedium),
                   ],
                 ),
-                if (r.isEmpty) Text('Nothing this time.', style: text.bodyMedium),
-              ],
+              ),
             ),
           ),
         ),

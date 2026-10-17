@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import 'forge_frame.dart';
 import 'game_icon.dart';
 
 /// A round riveted-iron button for in-game controls.
@@ -39,48 +40,37 @@ class RoundMetalButton extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: const Alignment(-0.3, -0.4),
-                  colors: active
-                      ? const [Palette.molten, Palette.ember, Color(0xFF7A2A0A)]
-                      : const [Color(0xFF55504B), Color(0xFF34302C), Color(0xFF1E1B19)],
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: active ? Palette.ember.withValues(alpha: 0.6) : Colors.black.withValues(alpha: 0.5),
+                      blurRadius: active ? 14 : 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                border: Border.all(
-                  color: active ? Palette.whiteHeat : const Color(0xFF8C6B47),
-                  width: 2,
+                child: Image.asset(
+                  active ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.medium,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => _PaintedRound(active: active),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: active
-                        ? Palette.ember.withValues(alpha: 0.6)
-                        : Colors.black.withValues(alpha: 0.5),
-                    blurRadius: active ? 14 : 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
-              child: Center(
-                child: Opacity(
-                  opacity: enabled ? 1 : 0.45,
-                  child: GameIcon(
-                    icon,
-                    size: size * 0.5,
-                    color: active ? Palette.darkLetter : Palette.whiteHeat,
-                  ),
-                ),
+            ),
+            Center(
+              child: Opacity(
+                opacity: enabled ? 1 : 0.45,
+                child: GameIcon(icon, size: size * 0.5, color: active ? Palette.darkLetter : Palette.whiteHeat),
               ),
             ),
             if (locked)
               Positioned.fill(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Palette.forgeBlack.withValues(alpha: 0.55),
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: Palette.forgeBlack.withValues(alpha: 0.55)),
                   child: Center(
                     child: GameIcon('lock', size: size * 0.36, color: Palette.steel),
                   ),
@@ -119,6 +109,27 @@ class RoundMetalButton extends StatelessWidget {
   }
 }
 
+/// The round button as paint alone, if its rendered ring can't be loaded.
+class _PaintedRound extends StatelessWidget {
+  const _PaintedRound({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(
+        center: const Alignment(-0.3, -0.4),
+        colors: active
+            ? const [Palette.molten, Palette.ember, Color(0xFF7A2A0A)]
+            : const [Color(0xFF55504B), Color(0xFF34302C), Color(0xFF1E1B19)],
+      ),
+      border: Border.all(color: active ? Palette.whiteHeat : const Color(0xFF8C6B47), width: 2),
+    ),
+  );
+}
+
 /// A wide forged-plate button for menus.
 class PlateButton extends StatelessWidget {
   const PlateButton({
@@ -144,70 +155,46 @@ class PlateButton extends StatelessWidget {
     final fg = primary ? Palette.darkLetter : Palette.whiteHeat;
     return Opacity(
       opacity: enabled ? 1 : 0.5,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: Ink(
-            height: height,
-            decoration: BoxDecoration(
+      child: SizedBox(
+        height: height,
+        child: ForgeFrame(
+          kind: primary ? ForgeFrameKind.platePrimary : ForgeFrameKind.plate,
+          glint: primary && enabled,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onPressed,
               borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: primary
-                    ? const [Color(0xFFFFC45E), Palette.molten, Palette.ember]
-                    : const [Color(0xFF4A433D), Color(0xFF332D29), Color(0xFF241F1C)],
-              ),
-              border: Border.all(
-                color: primary ? const Color(0xFFFFE2A8) : const Color(0xFF8C6B47),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: primary
-                      ? Palette.ember.withValues(alpha: 0.45)
-                      : Colors.black.withValues(alpha: 0.4),
-                  blurRadius: primary ? 18 : 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Row(
-                children: [
-                  if (icon != null) ...[
-                    GameIcon(icon!, size: 26, color: fg),
-                    const SizedBox(width: 14),
-                  ],
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: displayStyle(primary ? 19 : 16, color: fg),
-                        ),
-                        if (sublabel != null)
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  children: [
+                    if (icon != null) ...[GameIcon(icon!, size: 26, color: fg), const SizedBox(width: 14)],
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            sublabel!,
+                            label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: primary
-                                  ? Palette.darkLetter.withValues(alpha: 0.8)
-                                  : Palette.steel,
-                            ),
+                            style: displayStyle(primary ? 19 : 16, color: fg),
                           ),
-                      ],
+                          if (sublabel != null)
+                            Text(
+                              sublabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: primary ? Palette.darkLetter.withValues(alpha: 0.8) : Palette.steel,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

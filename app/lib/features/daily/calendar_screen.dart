@@ -10,6 +10,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// This month's and last month's Daily Commissions: done days, missed days
 /// to play late, and the month's trophy.
@@ -39,7 +40,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final calendar = ref.watch(dailyCalendarProvider(month));
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text('Commission Calendar', style: displayStyle(20))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text('Commission Calendar', style: displayStyle(20)),
+      ),
       extendBodyBehindAppBar: true,
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
@@ -143,13 +147,8 @@ class _TrophyBar extends StatelessWidget {
         : n < daysInMonth
         ? 'Every day for gold (${daysInMonth - n} to go)'
         : 'A perfect month!';
-    return Container(
+    return ForgePanel(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Palette.soot.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: trophy == null ? Palette.ash : trophyColors[trophy]!),
-      ),
       child: Row(
         children: [
           GameIcon('trophy', size: 40, color: trophy == null ? Palette.ash : trophyColors[trophy]!),
@@ -188,7 +187,9 @@ class _MonthGrid extends StatelessWidget {
     final lead = DateTime.utc(month.year, month.month).weekday - 1;
     final cells = <Widget>[
       for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
-        Center(child: Text(d, style: text.labelMedium?.copyWith(color: Palette.steel))),
+        Center(
+          child: Text(d, style: text.labelMedium?.copyWith(color: Palette.steel)),
+        ),
       for (var i = 0; i < lead; i++) const SizedBox.shrink(),
       for (var day = 1; day <= days; day++) _Day(date: _iso(month, day), day: day, done: done, today: today),
     ];
@@ -202,8 +203,7 @@ class _MonthGrid extends StatelessWidget {
     );
   }
 
-  static String _iso(DateTime m, int day) =>
-      '${_month(m)}-${day.toString().padLeft(2, '0')}';
+  static String _iso(DateTime m, int day) => '${_month(m)}-${day.toString().padLeft(2, '0')}';
 }
 
 class _Day extends StatelessWidget {
@@ -223,7 +223,12 @@ class _Day extends StatelessWidget {
     final missed = !isDone && !isToday && !future;
     return Semantics(
       button: !future,
-      label: '$date${isDone ? ', done' : missed ? ', missed: play late' : ''}',
+      label:
+          '$date${isDone
+              ? ', done'
+              : missed
+              ? ', missed: play late'
+              : ''}',
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: future || isDone ? null : () => context.push(isToday ? '/daily' : '/daily?date=$date'),
@@ -250,7 +255,11 @@ class _Day extends StatelessWidget {
                 child: Text(
                   '$day',
                   style: text.labelSmall?.copyWith(
-                    color: future ? Palette.ash : isDone ? Palette.whiteHeat : Palette.steel,
+                    color: future
+                        ? Palette.ash
+                        : isDone
+                        ? Palette.whiteHeat
+                        : Palette.steel,
                   ),
                 ),
               ),

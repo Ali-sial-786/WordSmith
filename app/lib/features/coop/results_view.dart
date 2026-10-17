@@ -8,6 +8,7 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// After a round: stars, team score, MVP, everyone's points, missed words.
 class ResultsView extends StatelessWidget {
@@ -55,14 +56,7 @@ class ResultsView extends StatelessWidget {
         ),
         if (r.mvp != null) ...[
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Palette.ember.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Palette.molten),
-            ),
-            child: Row(
+          ForgePanel(padding: const EdgeInsets.all(12), gold: true, child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const GameIcon('crown', size: 28, color: Palette.molten),
@@ -74,8 +68,7 @@ class ResultsView extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
+            )),
         ],
         const SizedBox(height: 14),
         for (final p in r.players)

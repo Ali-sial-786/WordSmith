@@ -15,6 +15,7 @@ import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/masterwork_art.dart';
 import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/xp_bar.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -108,14 +109,7 @@ class ProfileScreen extends ConsumerWidget {
             _Stat('Versus rounds won', '${server.stats.vsRoundsWon}'),
           ] else if (account.phase != AccountPhase.unavailable) ...[
             const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Palette.soot,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Palette.ash),
-              ),
-              child: Column(
+            ForgePanel(padding: const EdgeInsets.all(14), child: Column(
                 children: [
                   Text(
                     'Sign in to keep your progress safe on every phone, and to play Co-op, '
@@ -124,8 +118,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   TextButton(onPressed: () => context.push('/sign-in'), child: const Text('Sign in')),
                 ],
-              ),
-            ),
+              )),
           ],
         ],
       ),

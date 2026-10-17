@@ -22,6 +22,7 @@ import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/reward_popup.dart';
 import '../../ui/widgets/xp_bar.dart';
 import '../coop/coop_entry.dart';
+import '../../ui/widgets/forge_frame.dart';
 
 /// Home screen.
 class HallScreen extends ConsumerWidget {
@@ -61,9 +62,10 @@ class HallScreen extends ConsumerWidget {
                         Text(
                           'WORDSMITH',
                           textAlign: TextAlign.center,
-                          style: displayStyle(40, color: Palette.molten).copyWith(
-                            shadows: const [Shadow(color: Palette.ember, blurRadius: 28)],
-                          ),
+                          style: displayStyle(
+                            40,
+                            color: Palette.molten,
+                          ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 28)]),
                         ),
                         Text(
                           'Forge words. Level up.',
@@ -72,10 +74,7 @@ class HallScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 22),
                         const _UpdateBanner(),
-                        if (online && !account.isReady) ...[
-                          _AccountBanner(state: account),
-                          const SizedBox(height: 14),
-                        ],
+                        if (online && !account.isReady) ...[_AccountBanner(state: account), const SizedBox(height: 14)],
                         for (final invite in account.invites) ...[
                           _InviteBanner(invite: invite),
                           const SizedBox(height: 10),
@@ -125,13 +124,9 @@ class HallScreen extends ConsumerWidget {
                               Expanded(
                                 child: PlateButton(
                                   label: 'Friends',
-                                  sublabel: account.isReady
-                                      ? '${account.friendsOnline} online'
-                                      : 'Sign in first',
+                                  sublabel: account.isReady ? '${account.friendsOnline} online' : 'Sign in first',
                                   icon: 'friends',
-                                  onPressed: account.isReady
-                                      ? () => context.push('/friends')
-                                      : null,
+                                  onPressed: account.isReady ? () => context.push('/friends') : null,
                                 ),
                               ),
                             ],
@@ -350,13 +345,10 @@ class _InviteBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final n = ref.read(accountProvider.notifier);
-    return Container(
+    return ForgePanel(
       padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
-      decoration: BoxDecoration(
-        color: Palette.ember.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Palette.molten),
-      ),
+      gold: true,
+      glint: true,
       child: Row(
         children: [
           Expanded(
@@ -372,10 +364,7 @@ class _InviteBanner extends ConsumerWidget {
             },
             child: const Text('Join', style: TextStyle(color: Palette.molten)),
           ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 18),
-            onPressed: () => n.dismissInvite(invite),
-          ),
+          IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => n.dismissInvite(invite)),
         ],
       ),
     );
@@ -397,11 +386,7 @@ class _AccountBanner extends ConsumerWidget {
         'Sign in',
         () => context.push('/sign-in'),
       ),
-      AccountPhase.needsSetup => (
-        'Pick your smith name to finish setting up.',
-        'Set up',
-        () => context.push('/setup'),
-      ),
+      AccountPhase.needsSetup => ('Pick your smith name to finish setting up.', 'Set up', () => context.push('/setup')),
       AccountPhase.failed => (
         state.error ?? "Can't reach the forge right now.",
         'Retry',
@@ -409,13 +394,8 @@ class _AccountBanner extends ConsumerWidget {
       ),
       _ => ('Connecting to the forge…', null, null),
     };
-    return Container(
+    return ForgePanel(
       padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: Palette.soot.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Palette.ember.withValues(alpha: 0.6)),
-      ),
       child: Row(
         children: [
           Expanded(child: Text(message, style: text.bodyMedium)),
@@ -456,13 +436,8 @@ class _ProfileCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: ForgePanel(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Palette.soot.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF5C4733)),
-        ),
         child: Column(
           children: [
             Row(
@@ -519,11 +494,7 @@ class _ProfileCard extends StatelessWidget {
                     opacity: e.key.unlockedAt(level) ? 1 : 0.4,
                     child: Row(
                       children: [
-                        GameIcon(
-                          e.key.unlockedAt(level) ? e.key.name : 'lock',
-                          size: 20,
-                          color: Palette.molten,
-                        ),
+                        GameIcon(e.key.unlockedAt(level) ? e.key.name : 'lock', size: 20, color: Palette.molten),
                         const SizedBox(width: 6),
                         Text(
                           e.key.unlockedAt(level) ? '${e.value}' : 'Lv ${e.key.unlockLevel}',
