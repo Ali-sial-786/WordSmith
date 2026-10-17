@@ -54,7 +54,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 
 | Route | Body → response |
 |---|---|
-| `GET /version` | `{latest, minSupported, protocol}`, from the `vars` in `wrangler.jsonc` |
+| `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself (`APK_URL`), or null |
 | `GET /health` | `{ok: true}` |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
 | `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). The username can't change (`409 already_set`), but repeating it with another avatar changes the avatar. |

@@ -42,6 +42,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         openActivities++
         super.onCreate(savedInstanceState)
+        AppUpdater.cleanUp(this)
     }
 
     // Called once, before the engine starts, so it can pick the renderer.
@@ -107,6 +108,8 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        val update = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wordsmith/update")
+        update.setMethodCallHandler(AppUpdater(this, update)::handle)
         val onInterruption = { interrupted: Boolean, forGood: Boolean ->
             if (forGood) {
                 yielded = true

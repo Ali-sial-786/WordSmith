@@ -37,49 +37,43 @@ final dailyProvider = FutureProvider<DailyInfo?>(
 );
 
 /// An earlier day's Daily Commission (`YYYY-MM-DD`), to play late.
-final dailyForDateProvider = FutureProvider.family<DailyInfo?, String>(
-  (ref, date) async {
-    final ready = ref.watch(accountProvider.select((a) => a.isReady));
-    final api = ref.read(apiClientProvider);
-    if (!ready || api == null) return null;
-    return api.daily(date: date);
-  },
-  retry: (_, _) => null,
-);
+final dailyForDateProvider = FutureProvider.family<DailyInfo?, String>((ref, date) async {
+  final ready = ref.watch(accountProvider.select((a) => a.isReady));
+  final api = ref.read(apiClientProvider);
+  if (!ready || api == null) return null;
+  return api.daily(date: date);
+}, retry: (_, _) => null);
 
 /// One month (`YYYY-MM`) of the Daily Commission calendar.
-final dailyCalendarProvider = FutureProvider.family<DailyCalendar?, String>(
-  (ref, month) async {
-    final ready = ref.watch(accountProvider.select((a) => a.isReady));
-    final api = ref.read(apiClientProvider);
-    if (!ready || api == null) return null;
-    return api.dailyCalendar(month);
-  },
-  retry: (_, _) => null,
-);
+final dailyCalendarProvider = FutureProvider.family<DailyCalendar?, String>((ref, month) async {
+  final ready = ref.watch(accountProvider.select((a) => a.isReady));
+  final api = ref.read(apiClientProvider);
+  if (!ready || api == null) return null;
+  return api.dailyCalendar(month);
+}, retry: (_, _) => null);
 
-/// The server's `/v1/version`: the newest app version and the oldest one it
-/// still plays online with. Null offline or without a server.
-final serverVersionProvider = FutureProvider<({String latest, String minSupported})?>(
-  (ref) async {
-    final api = ref.read(apiClientProvider);
-    if (api == null) return null;
-    try {
-      final v = await api.version();
-      return (latest: v['latest'] as String? ?? '0.0.0', minSupported: v['minSupported'] as String? ?? '0.0.0');
-    } on ApiException {
-      return null;
-    }
-  },
-  retry: (_, _) => null,
-);
+/// The server's `/v1/version`: the newest app version, the oldest one it
+/// still plays online with, and the newest one's APK. Null offline or
+/// without a server. Invalidate it to check again.
+final serverVersionProvider = FutureProvider<({String latest, String minSupported, String? apk})?>((ref) async {
+  final api = ref.read(apiClientProvider);
+  if (api == null) return null;
+  try {
+    final v = await api.version();
+    return (
+      latest: v['latest'] as String? ?? '0.0.0',
+      minSupported: v['minSupported'] as String? ?? '0.0.0',
+      apk: v['apk'] as String?,
+    );
+  } on ApiException {
+    return null;
+  }
+}, retry: (_, _) => null);
 
 /// Makes a room's video chat for this player (user ID); null without online play.
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 
-final accountProvider = NotifierProvider<AccountController, AccountState>(
-  AccountController.new,
-);
+final accountProvider = NotifierProvider<AccountController, AccountState>(AccountController.new);
 
 enum AccountPhase {
   /// This build has no sign-in or server configured.
@@ -124,9 +118,7 @@ class AccountState {
 
   bool get isReady => phase == AccountPhase.ready;
 
-  int get friendsOnline => friends.friends
-      .where((f) => (presence[f.id] ?? 'offline') != 'offline')
-      .length;
+  int get friendsOnline => friends.friends.where((f) => (presence[f.id] ?? 'offline') != 'offline').length;
 
   AccountState copyWith({
     AccountPhase? phase,
@@ -174,10 +166,7 @@ class AccountController extends Notifier<AccountState> {
     // The auth stream starts with the current user, which triggers the load.
     _authSub = _auth.changes.listen(_onUser);
     final user = _auth.current;
-    return AccountState(
-      phase: user == null ? AccountPhase.signedOut : AccountPhase.loading,
-      user: user,
-    );
+    return AccountState(phase: user == null ? AccountPhase.signedOut : AccountPhase.loading, user: user);
   }
 
   Future<void> _onUser(AuthUser? user) async {
@@ -190,8 +179,7 @@ class AccountController extends Notifier<AccountState> {
       return;
     }
     if (_loadingUid == user.uid) return;
-    if (state.user?.uid == user.uid &&
-        (state.phase == AccountPhase.ready || state.phase == AccountPhase.needsSetup)) {
+    if (state.user?.uid == user.uid && (state.phase == AccountPhase.ready || state.phase == AccountPhase.needsSetup)) {
       return;
     }
     state = AccountState(phase: AccountPhase.loading, user: user);
@@ -488,8 +476,7 @@ class AccountController extends Notifier<AccountState> {
     return mode;
   }
 
-  void dismissInvite(HubInvite invite) =>
-      state = state.copyWith(invites: [...state.invites]..remove(invite));
+  void dismissInvite(HubInvite invite) => state = state.copyWith(invites: [...state.invites]..remove(invite));
 
   Future<void> _startHub() async {
     final hub = _hub;

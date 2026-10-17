@@ -387,7 +387,7 @@ removes the daily caps.
 
 ## 13. Versioning
 
-- `GET /v1/version` returns `{latest, minSupported}`.
-- If the app is older than `latest`, it shows an **update banner**.
+- `GET /v1/version` returns `{latest, minSupported, apk}`.
+- If the app is older than `latest`, it shows an **update banner**. On Android its **Update now** button downloads `apk` (the GitHub Release's APK) with a progress bar and opens Android's installer; Settings → Version checks again on demand.
 - If it's older than `minSupported`, it **blocks multiplayer** until the player updates. This keeps the protocol in step across all friends' phones.
 - The protocol has a version number, and rooms refuse clients on a different major version.

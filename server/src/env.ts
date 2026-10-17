@@ -10,6 +10,11 @@ export interface Env {
   ROOM: DurableObjectNamespace<RoomDO>;
   LATEST_VERSION: string;
   MIN_SUPPORTED_VERSION: string;
+  /**
+   * The APK of LATEST_VERSION, with `{version}` standing for it: the GitHub
+   * Release that release.yml publishes. The app updates itself from it.
+   */
+  APK_URL?: string;
   /** Firebase project whose ID tokens we accept (`aud`, and part of `iss`). */
   FIREBASE_PROJECT_ID: string;
   /**

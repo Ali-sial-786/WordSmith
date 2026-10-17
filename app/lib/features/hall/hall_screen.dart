@@ -24,7 +24,9 @@ import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/reward_popup.dart';
 import '../../ui/widgets/xp_bar.dart';
+import '../../update/app_updater.dart';
 import '../coop/coop_entry.dart';
+import '../update/update_sheet.dart';
 import '../../ui/widgets/forge_frame.dart';
 
 /// Home screen.
@@ -222,6 +224,7 @@ class _UpdateBanner extends ConsumerWidget {
     final v = ref.watch(serverVersionProvider).value;
     if (v == null || compareVersions(v.latest, appVersion) <= 0) return const SizedBox.shrink();
     final tooOld = compareVersions(appVersion, v.minSupported) < 0;
+    final apk = ref.watch(appUpdaterProvider).supported ? v.apk : null;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
@@ -230,16 +233,34 @@ class _UpdateBanner extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: tooOld ? Palette.quenchRed : Palette.verdigris),
       ),
-      child: Text(
-        tooOld
-            ? kIsWeb
-                  ? 'This version is too old for online play. Close the game and open it again to update.'
-                  : 'This version is too old for online play. Install Wordsmith ${v.latest} to play with friends.'
-            : kIsWeb
-            ? 'Wordsmith ${v.latest} is out! Close the game and open it again to update.'
-            : 'Wordsmith ${v.latest} is out! Get the new APK from whoever shares it, or the GitHub Releases page.',
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodyMedium,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            tooOld
+                ? kIsWeb
+                      ? 'This version is too old for online play. Close the game and open it again to update.'
+                      : apk != null
+                      ? 'This version is too old for online play. Update to play with friends.'
+                      : 'This version is too old for online play. Install Wordsmith ${v.latest} to play with friends.'
+                : kIsWeb
+                ? 'Wordsmith ${v.latest} is out! Close the game and open it again to update.'
+                : apk != null
+                ? 'Wordsmith ${v.latest} is out!'
+                : 'Wordsmith ${v.latest} is out! Get the new APK from whoever shares it, or the GitHub Releases page.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (apk != null) ...[
+            const SizedBox(height: 10),
+            PlateButton(
+              label: 'Update now',
+              primary: true,
+              height: 46,
+              onPressed: () => showUpdateSheet(context, version: v.latest, apk: apk),
+            ),
+          ],
+        ],
       ),
     );
   }

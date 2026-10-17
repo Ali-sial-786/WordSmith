@@ -9,9 +9,12 @@ import '../../data/diagnostics.dart';
 import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
+import '../../net/config.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/crash_notice.dart';
+import '../../update/app_updater.dart';
+import '../update/update_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -20,7 +23,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(settingsProvider);
     final n = ref.read(settingsProvider.notifier);
-    final text = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text('Settings', style: displayStyle(22)), centerTitle: true),
       body: ListView(
@@ -106,10 +108,7 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/credits'),
           ),
-          ListTile(
-            title: const Text('Version'),
-            trailing: Text(appVersion, style: text.bodyMedium),
-          ),
+          const _VersionTile(),
         ],
       ),
     );
@@ -164,6 +163,56 @@ class _Troubleshooting extends ConsumerWidget {
             },
           ),
       ],
+    );
+  }
+}
+
+/// The version, and in the Android app a check for a newer one, which it
+/// can download and install.
+class _VersionTile extends ConsumerStatefulWidget {
+  const _VersionTile();
+
+  @override
+  ConsumerState<_VersionTile> createState() => _VersionTileState();
+}
+
+class _VersionTileState extends ConsumerState<_VersionTile> {
+  bool _checking = false;
+
+  Future<void> _check() async {
+    setState(() => _checking = true);
+    ref.invalidate(serverVersionProvider);
+    final v = await ref.read(serverVersionProvider.future);
+    if (!mounted) return;
+    setState(() => _checking = false);
+    final apk = v?.apk;
+    if (v != null && apk != null && compareVersions(v.latest, appVersion) > 0) {
+      await showUpdateSheet(context, version: v.latest, apk: apk);
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(v == null ? "Couldn't reach the forge. Check your connection." : 'You have the latest version.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final version = Text(appVersion, style: text.bodyMedium);
+    if (!ref.watch(appUpdaterProvider).supported || !AppConfig.hasServer) {
+      return ListTile(title: const Text('Version'), trailing: version);
+    }
+    final v = ref.watch(serverVersionProvider).value;
+    final newer = v != null && v.apk != null && compareVersions(v.latest, appVersion) > 0;
+    return ListTile(
+      title: const Text('Version'),
+      subtitle: Text(newer ? 'Wordsmith ${v.latest} is out. Tap to update.' : 'Tap to check for updates'),
+      trailing: _checking
+          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : version,
+      onTap: _checking ? null : _check,
     );
   }
 }

@@ -10,6 +10,8 @@ export interface VersionInfo {
   latest: string;
   minSupported: string;
   protocol: number;
+  /** Where the Android app downloads `latest` to update itself; null when not set up. */
+  apk: string | null;
 }
 
 /** Body of `GET /v1/version`. */
@@ -18,5 +20,6 @@ export function versionInfo(env: Env): VersionInfo {
     latest: env.LATEST_VERSION,
     minSupported: env.MIN_SUPPORTED_VERSION,
     protocol: PROTOCOL_VERSION,
+    apk: env.APK_URL ? env.APK_URL.replaceAll("{version}", env.LATEST_VERSION) : null,
   };
 }
