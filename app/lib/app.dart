@@ -21,6 +21,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'game/account.dart';
+import 'game/providers.dart';
 import 'game/daily_game.dart';
 import 'net/push.dart';
 import 'ui/theme/theme.dart';
@@ -132,6 +133,17 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final sfx = ref.read(sfxProvider);
+    switch (state) {
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        sfx.setAway(true);
+      case AppLifecycleState.detached:
+        sfx.shutDown();
+      case AppLifecycleState.resumed:
+        sfx.setAway(false);
+      case AppLifecycleState.inactive:
+        break;
+    }
     if (state != AppLifecycleState.resumed) return;
     // Catch up on anything finished offline when the player comes back.
     ref.read(accountProvider.notifier).sync();

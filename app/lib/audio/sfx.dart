@@ -76,6 +76,10 @@ class Sfx {
   String? _track;
   Settings _settings;
 
+  /// The app is off screen (home button, recents, another app): nothing
+  /// plays until it's back.
+  bool _away = false;
+
   /// Loads every sound in the background; sounds play once loaded.
   Future<void> preload() async {
     if (!_enabled) return;
@@ -120,7 +124,8 @@ class Sfx {
       if (track == null) return;
       await player.setReleaseMode(ReleaseMode.loop);
       await player.setVolume(_musicVolume);
-      await player.play(AssetSource('audio/$track.ogg'));
+      await player.setSource(AssetSource('audio/$track.ogg'));
+      if (!_away) await player.resume();
     } on Object catch (e) {
       debugPrint('music $track unavailable: $e');
     }
@@ -133,7 +138,7 @@ class Sfx {
   void tink(int n) => _play('tink_${n.clamp(1, tinkCount)}', 0.8);
 
   void _play(String file, double volume) {
-    if (!_enabled || _settings.sfxVolume <= 0) return;
+    if (!_enabled || _away || _settings.sfxVolume <= 0) return;
     _voices[file]?.play(volume * _settings.sfxVolume).catchError((Object e) {
       debugPrint('sound $file failed: $e');
     });
@@ -143,12 +148,44 @@ class Sfx {
     if (!_enabled || _ambience != null) return;
     try {
       final player = AudioPlayer();
+      _ambience = player;
       await player.setReleaseMode(ReleaseMode.loop);
       await player.setVolume(_ambienceVolume);
-      await player.play(AssetSource('audio/forge_ambience.ogg'));
-      _ambience = player;
+      await player.setSource(AssetSource('audio/forge_ambience.ogg'));
+      if (!_away) await player.resume();
     } on Object catch (e) {
       debugPrint('ambience unavailable: $e');
+    }
+  }
+
+  /// Pauses the music and ambience while the app is off screen ([away]),
+  /// and picks them up again when it's back.
+  Future<void> setAway(bool away) async {
+    if (!_enabled || away == _away) return;
+    _away = away;
+    try {
+      if (away) {
+        await _music?.pause();
+        await _ambience?.pause();
+      } else {
+        if (_track != null) await _music?.resume();
+        await _ambience?.resume();
+      }
+    } on Object catch (e) {
+      debugPrint('audio ${away ? 'pause' : 'resume'}: $e');
+    }
+  }
+
+  /// The app is closing: stop everything for good.
+  Future<void> shutDown() async {
+    _away = true;
+    for (final p in [_music, _ambience]) {
+      try {
+        await p?.stop();
+        await p?.release();
+      } on Object catch (e) {
+        debugPrint('audio shut down: $e');
+      }
     }
   }
 }

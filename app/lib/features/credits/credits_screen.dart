@@ -58,7 +58,7 @@ class CreditsScreen extends StatelessWidget {
               Text(
                 'Wordsmith is made with free, openly licensed fonts, sounds, '
                 'icons and word lists. Thank you to their creators.\n\n'
-                'Icons by Lorc, Delapouite, Carl Olsen and Kier Heyl from '
+                'Icons by Lorc, Delapouite, Carl Olsen, Kier Heyl, SeregaCthtuf, Willdabeast and Caro Asercion from '
                 'game-icons.net, CC BY 3.0. Sound effects include CC0 packs by '
                 'Kenney (kenney.nl) and PagDev.',
                 style: text.bodyMedium,
