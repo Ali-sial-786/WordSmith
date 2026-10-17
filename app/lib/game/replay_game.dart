@@ -40,7 +40,9 @@ class ReplayGame extends SoloGame {
   @override
   String get title => chapter.name;
   @override
-  String get subtitle => 'Replay · Puzzle ${stage - chapter.first + 1} of ${chapter.count}';
+  String get subtitle => campaign.isMaster(stage)
+      ? 'Replay · Puzzle ${stage - chapter.first + 1}'
+      : 'Replay · Puzzle ${stage - chapter.first + 1} of ${chapter.count}';
 
   @override
   WordFeedback submit(String word) {

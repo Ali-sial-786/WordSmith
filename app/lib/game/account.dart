@@ -263,6 +263,25 @@ class AccountController extends Notifier<AccountState> {
     unawaited(refreshFriends());
     unawaited(_startHub());
     unawaited(_registerPush());
+    // Again each time: the UTC hour moves with daylight saving.
+    final reminder = ref.read(settingsProvider).reminderHour;
+    if (reminder != null) unawaited(_sendReminder(reminder).catchError((Object _) {}));
+  }
+
+  // ---- Daily reminder ----
+
+  /// A reminder at [localHour] when the Daily Commission is still waiting,
+  /// or none (null). Throws [ApiException] if the server can't be told.
+  Future<void> setDailyReminder(int? localHour) async {
+    if (state.isReady) await _sendReminder(localHour);
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(reminderHour: () => localHour));
+    if (localHour != null) unawaited(_registerPush());
+  }
+
+  Future<void> _sendReminder(int? localHour) {
+    final now = DateTime.now();
+    final utc = localHour == null ? null : DateTime(now.year, now.month, now.day, localHour).toUtc().hour;
+    return _api!.setReminder(utc);
   }
 
   // ---- Invite notifications ----

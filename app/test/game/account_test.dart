@@ -285,4 +285,26 @@ void main() {
     await _settle();
     expect(server.pushTokens, isEmpty);
   });
+
+  test('the daily reminder is sent as a UTC hour, again on each start, and can be turned off', () async {
+    final (c, auth, server, _) = await _setUp(
+      prefs: {
+        'settings.v1': jsonEncode({'reminderHour': 8}),
+      },
+      auth: FakeAuth(signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com')),
+    );
+    server.username = 'Ali';
+    await _settle();
+    final now = DateTime.now();
+    expect(server.reminderUtcHour, DateTime(now.year, now.month, now.day, 8).toUtc().hour);
+    expect(server.reminderPuts, 1, reason: 'resent when the account becomes ready');
+
+    await c.read(accountProvider.notifier).setDailyReminder(19);
+    expect(server.reminderUtcHour, DateTime(now.year, now.month, now.day, 19).toUtc().hour);
+    expect(c.read(settingsProvider).reminderHour, 19);
+
+    await c.read(accountProvider.notifier).setDailyReminder(null);
+    expect(server.reminderUtcHour, isNull);
+    expect(c.read(settingsProvider).reminderHour, isNull);
+  });
 }

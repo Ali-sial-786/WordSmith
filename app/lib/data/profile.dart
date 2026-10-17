@@ -135,6 +135,7 @@ class Settings {
     this.videoMic = true,
     this.inviteNotifications = true,
     this.leftHanded = false,
+    this.reminderHour,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) => Settings(
@@ -148,6 +149,7 @@ class Settings {
     videoMic: json['videoMic'] as bool? ?? true,
     inviteNotifications: json['inviteNotifications'] as bool? ?? true,
     leftHanded: json['leftHanded'] as bool? ?? false,
+    reminderHour: json['reminderHour'] as int?,
   );
 
   final double sfxVolume;
@@ -170,6 +172,9 @@ class Settings {
   /// Hint buttons on the left of the anvil, Turn and the Scrap Bin on the right.
   final bool leftHanded;
 
+  /// Local hour (0–23) for the Daily Commission reminder; null for none.
+  final int? reminderHour;
+
   Settings copyWith({
     double? sfxVolume,
     double? musicVolume,
@@ -181,6 +186,7 @@ class Settings {
     bool? videoMic,
     bool? inviteNotifications,
     bool? leftHanded,
+    int? Function()? reminderHour,
   }) => Settings(
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
@@ -192,6 +198,7 @@ class Settings {
     videoMic: videoMic ?? this.videoMic,
     inviteNotifications: inviteNotifications ?? this.inviteNotifications,
     leftHanded: leftHanded ?? this.leftHanded,
+    reminderHour: reminderHour == null ? this.reminderHour : reminderHour(),
   );
 
   Map<String, Object> toJson() => {
@@ -205,5 +212,6 @@ class Settings {
     'videoMic': videoMic,
     'inviteNotifications': inviteNotifications,
     'leftHanded': leftHanded,
+    'reminderHour': ?reminderHour,
   };
 }

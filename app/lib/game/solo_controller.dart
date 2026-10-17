@@ -90,7 +90,8 @@ class SoloController extends SoloGame {
   @override
   String get title => chapter.name;
   @override
-  String get subtitle => 'Puzzle $stageInChapter of ${chapter.count}';
+  String get subtitle =>
+      campaign.isMaster(stage) ? 'Puzzle $stageInChapter' : 'Puzzle $stageInChapter of ${chapter.count}';
 
   @override
   Future<CompletionReward> finish() async => reward!;

@@ -67,10 +67,23 @@ class SettingsScreen extends ConsumerWidget {
             ),
           if (ref.watch(accountProvider).isReady)
             SwitchListTile(
-              title: const Text('Invite notifications'),
-              subtitle: const Text('A notification when a friend invites you to a room'),
+              title: const Text('Notifications'),
+              subtitle: const Text('Room invites and gifts from friends, and your daily reminder'),
               value: s.inviteNotifications,
               onChanged: (v) => ref.read(accountProvider.notifier).setInviteNotifications(v),
+            ),
+          if (ref.watch(accountProvider).isReady)
+            SwitchListTile(
+              title: const Text('Daily reminder'),
+              subtitle: Text(
+                s.reminderHour == null
+                    ? "A nudge when today's commission is still waiting"
+                    : 'At ${_hourLabel(context, s.reminderHour!)}, if the commission is still waiting. Tap to change.',
+              ),
+              value: s.inviteNotifications && s.reminderHour != null,
+              onChanged: s.inviteNotifications
+                  ? (on) => _pickReminder(context, ref, on ? (s.reminderHour ?? 19) : null)
+                  : null,
             ),
           const _AccountSection(),
           const Divider(height: 32),
@@ -228,5 +241,27 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
         ),
       ],
     );
+  }
+}
+
+String _hourLabel(BuildContext context, int hour) =>
+    MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay(hour: hour, minute: 0));
+
+/// Turns the Daily Commission reminder off ([hour] null) or asks for its hour.
+Future<void> _pickReminder(BuildContext context, WidgetRef ref, int? hour) async {
+  int? chosen = hour;
+  if (hour != null) {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: hour, minute: 0),
+      helpText: 'Remind me at (the hour counts)',
+    );
+    if (picked == null) return;
+    chosen = picked.hour;
+  }
+  try {
+    await ref.read(accountProvider.notifier).setDailyReminder(chosen);
+  } on ApiException catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.friendly)));
   }
 }

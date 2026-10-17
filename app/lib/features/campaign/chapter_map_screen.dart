@@ -19,7 +19,11 @@ class ChapterMapScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final campaign = ref.watch(campaignProvider);
     final stage = ref.watch(profileProvider.select((p) => p.campaignStage));
-    final chapter = campaign.chapters.firstWhere((c) => c.id == chapterId, orElse: () => campaign.chapters.first);
+    final chapter = chapterId == campaign.master.id
+        ? campaign.master
+        : campaign.chapters.firstWhere((c) => c.id == chapterId, orElse: () => campaign.chapters.first);
+    // The Master Forge is long: list only the puzzles reached so far.
+    final count = chapter == campaign.master ? (stage - chapter.first + 1).clamp(0, chapter.count) : chapter.count;
     final metal = MetalStyle.forChapter(chapter.id);
     final text = Theme.of(context).textTheme;
     return Scaffold(
@@ -49,7 +53,7 @@ class ChapterMapScreen extends ConsumerWidget {
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                   ),
-                  itemCount: chapter.count,
+                  itemCount: count,
                   itemBuilder: (context, i) {
                     final s = chapter.first + i;
                     final done = s < stage;

@@ -33,8 +33,8 @@ class HallScreen extends ConsumerWidget {
     final account = ref.watch(accountProvider);
     final campaign = ref.watch(campaignProvider);
     final stage = profile.campaignStage;
-    final finished = stage > campaign.stageCount;
-    final chapter = campaign.chapterFor(finished ? campaign.stageCount : stage);
+    final finished = stage > campaign.maxStage;
+    final chapter = campaign.chapterFor(finished ? campaign.maxStage : stage);
     final text = Theme.of(context).textTheme;
     final progress = profile.progress;
     final online = account.phase != AccountPhase.unavailable;
@@ -94,7 +94,9 @@ class HallScreen extends ConsumerWidget {
                         PlateButton(
                           label: finished ? 'Campaign complete' : 'Forge',
                           sublabel: finished
-                              ? 'More puzzles are coming'
+                              ? 'Every puzzle forged ten times over!'
+                              : campaign.isMaster(stage)
+                              ? '${chapter.name} · Puzzle ${stage - chapter.first + 1}'
                               : '${chapter.name} · Puzzle ${stage - chapter.first + 1} of ${chapter.count}',
                           icon: 'anvil',
                           primary: true,

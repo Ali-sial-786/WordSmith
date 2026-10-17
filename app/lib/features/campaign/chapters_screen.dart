@@ -31,10 +31,10 @@ class ChaptersScreen extends ConsumerWidget {
         child: SafeArea(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-            itemCount: campaign.chapters.length,
+            itemCount: campaign.chapters.length + (campaign.isMaster(stage) ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
-              final ch = campaign.chapters[i];
+              final ch = i < campaign.chapters.length ? campaign.chapters[i] : campaign.master;
               final done = (stage - ch.first).clamp(0, ch.count);
               final locked = stage < ch.first;
               final current = ch.contains(stage);
@@ -100,7 +100,11 @@ class ChaptersScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                done == ch.count ? 'Complete' : '$done / ${ch.count} forged',
+                                ch == campaign.master
+                                    ? 'Every puzzle again, at full XP · $done forged'
+                                    : done == ch.count
+                                    ? 'Complete'
+                                    : '$done / ${ch.count} forged',
                                 style: text.labelSmall,
                               ),
                             ],

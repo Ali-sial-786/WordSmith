@@ -104,9 +104,15 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
   void _openInvite(Map<String, dynamic>? data) {
     if (!mounted) return;
     final path = _router.routerDelegate.currentConfiguration.uri.path;
-    // A gift: open the Forge Board, unless mid-room or mid-puzzle.
-    if (data?['type'] == 'gift') {
-      if (path == '/' || path == '/friends') _router.push('/board');
+    // A gift or the daily reminder: open the board or the commission,
+    // unless mid-room or mid-puzzle.
+    final screen = switch (data?['type']) {
+      'gift' => '/board',
+      'daily' => '/daily',
+      _ => null,
+    };
+    if (screen != null) {
+      if (path == '/' || path == '/friends') _router.push(screen);
       return;
     }
     final target = inviteTarget(data);

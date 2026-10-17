@@ -55,16 +55,35 @@ class Campaign {
   final List<Map<String, dynamic>> _raw;
   final Map<int, Puzzle> _parsed = {};
 
+  /// Stages in the campaign proper.
   int get stageCount => _raw.length;
 
-  /// Puzzle for campaign [stage] (1-based), parsed on first use.
-  Puzzle puzzle(int stage) =>
-      _parsed[stage] ??= Puzzle.fromJson(_raw[stage - 1]);
+  /// The last stage there is: the Master Forge goes round nine more times
+  /// (shared/master-forge.md).
+  int get maxStage => stageCount * 10;
 
-  Chapter chapterFor(int stage) => chapters.firstWhere(
-    (c) => c.contains(stage),
-    orElse: () => chapters.last,
+  /// Whether [stage] is past the campaign proper.
+  bool isMaster(int stage) => stage > stageCount;
+
+  /// The campaign stage whose puzzle [stage] plays.
+  int baseStage(int stage) => isMaster(stage) ? (stage - stageCount - 1) % stageCount + 1 : stage;
+
+  /// Puzzle for [stage] (1-based), parsed on first use.
+  Puzzle puzzle(int stage) {
+    final base = baseStage(stage);
+    return _parsed[base] ??= Puzzle.fromJson(_raw[base - 1]);
+  }
+
+  /// The tenth chapter, open once the campaign is done.
+  late final Chapter master = Chapter(
+    id: 'master',
+    name: 'Master Forge',
+    first: stageCount + 1,
+    count: maxStage - stageCount,
   );
+
+  Chapter chapterFor(int stage) =>
+      isMaster(stage) ? master : chapters.firstWhere((c) => c.contains(stage), orElse: () => chapters.last);
 
   int chapterIndex(Chapter chapter) => chapters.indexOf(chapter);
 }

@@ -209,6 +209,10 @@ class FakeServer {
     return _json(200, {'profile': profile(uid), 'board': board(uid), 'reward': got});
   }
 
+  /// The daily reminder's UTC hour (shared/push.md), and how often it was set.
+  int? reminderUtcHour;
+  int reminderPuts = 0;
+
   /// Push tokens registered for invite notifications.
   final pushTokens = <String>{};
   bool deletedMe = false;
@@ -307,6 +311,10 @@ class FakeServer {
           'trophy': days.length >= 7 ? 'bronze' : null,
           'trophies': {'bronze': 1, 'silver': 0, 'gold': 2},
         });
+      case 'PUT /me/reminder':
+        reminderUtcHour = body['hour'] as int?;
+        reminderPuts++;
+        return _json(200, {'ok': true, 'hour': reminderUtcHour});
       case 'GET /me/board':
         return _json(200, board(token));
       case 'POST /me/stoke/claim':

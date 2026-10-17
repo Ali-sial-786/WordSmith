@@ -177,6 +177,9 @@ class ApiClient {
   Future<BoardClaim> claimGifts() async =>
       BoardClaim.fromJson(await _send('POST', '/me/gifts/claim', body: const {}));
 
+  /// The Daily Commission reminder's UTC hour, or null for none (shared/push.md).
+  Future<void> setReminder(int? utcHour) => _send('PUT', '/me/reminder', body: {'hour': utcHour});
+
   Future<void> sendGift(String friendId) =>
       _send('POST', '/friends/${Uri.encodeComponent(friendId)}/gift', body: const {});
 

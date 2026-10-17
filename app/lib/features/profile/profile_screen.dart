@@ -73,6 +73,8 @@ class ProfileScreen extends ConsumerWidget {
           Text('Records', style: text.titleMedium),
           const SizedBox(height: 8),
           _Stat('Campaign', '${(p.campaignStage - 1).clamp(0, campaign.stageCount)} / ${campaign.stageCount} puzzles'),
+          if (campaign.isMaster(p.campaignStage))
+            _Stat('Master Forge', '${p.campaignStage - 1 - campaign.stageCount} puzzles'),
           _Stat('Words forged', '${p.stats.wordsForged}'),
           _Stat('Bonus words', '${p.stats.bonusWords}'),
           _Stat('Longest word', p.stats.longestWord.isEmpty ? '—' : p.stats.longestWord),

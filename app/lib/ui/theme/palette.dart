@@ -60,6 +60,8 @@ class MetalStyle {
     'gold': MetalStyle(Color(0xFFE1B53B), Color(0xFFFFE08A), Color(0xFF3A2805)),
     'damascus': MetalStyle(Color(0xFF8E9399), Color(0xFFCDD1D6), Color(0xFF15171A)),
     'starmetal': MetalStyle(Color(0xFF4B3F86), Color(0xFF9C8CF0), Color(0xFFF4EEFF)),
+    // The Master Forge: white gold.
+    'master': MetalStyle(Color(0xFFF0D98A), Color(0xFFFFF6D6), Color(0xFF3A2805)),
   };
 
   static MetalStyle forChapter(String id) => _byChapter[id] ?? _byChapter['iron']!;

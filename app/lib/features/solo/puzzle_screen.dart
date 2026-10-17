@@ -378,7 +378,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
       context,
       reward: reward,
       chapter: game is SoloController ? game.chapter : null,
-      nextChapter: game is SoloController && next <= campaign.stageCount ? campaign.chapterFor(next) : null,
+      nextChapter: game is SoloController && next <= campaign.maxStage ? campaign.chapterFor(next) : null,
       daily: game is DailyGame ? game.outcome : null,
       dailyLate: game is DailyGame && game.info.date != todayUtc(),
       // A first completion of a commission unlocks the next Lore page.
@@ -389,7 +389,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
         ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
     );
     if (!mounted) return;
-    if (game is SoloController && action == ForgedAction.next && next <= campaign.stageCount) {
+    if (game is SoloController && action == ForgedAction.next && next <= campaign.maxStage) {
       context.pushReplacement('/play/$next');
     } else {
       context.go('/');
