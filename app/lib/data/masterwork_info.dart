@@ -17,6 +17,11 @@ class MasterworkInfo {
   String get art => 'assets/masterworks/${spec.id}.svg';
 }
 
+/// Every Masterwork with plain names, until the real ones load.
+final List<MasterworkInfo> plainMasterworks = [
+  for (final spec in masterworkSpecs) MasterworkInfo(spec: spec, name: _titleCase(spec.id), blurb: ''),
+];
+
 /// Every Masterwork in build order. Falls back to plain names if the asset
 /// can't be read, so the Armory always works.
 final masterworkInfoProvider = FutureProvider<List<MasterworkInfo>>((ref) async {

@@ -27,7 +27,10 @@ class ChapterMapScreen extends ConsumerWidget {
     final metal = MetalStyle.forChapter(chapter.id);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text(chapter.name, style: displayStyle(22))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(chapter.name, style: displayStyle(22)),
+      ),
       extendBodyBehindAppBar: true,
       body: ForgeBackground(
         image: chapterBackground(chapter.id),
@@ -60,38 +63,49 @@ class ChapterMapScreen extends ConsumerWidget {
                     final current = s == stage;
                     return Semantics(
                       button: done || current,
-                      label: 'Puzzle ${i + 1}${done ? ', forged' : current ? ', next' : ', locked'}',
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: done
-                            ? () => context.push('/replay/$s')
-                            : current
-                            ? () => context.push('/play/$s')
-                            : null,
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: done
-                                ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [metal.highlight, metal.base, Color.lerp(metal.base, Colors.black, 0.4)!],
-                                  )
-                                : null,
-                            color: done ? null : Palette.soot.withValues(alpha: current ? 0.95 : 0.6),
-                            border: Border.all(
-                              color: current ? Palette.molten : Palette.ash,
-                              width: current ? 2.5 : 1,
+                      label:
+                          'Puzzle ${i + 1}${done
+                              ? ', forged'
+                              : current
+                              ? ', next'
+                              : ', locked'}',
+                      child: Material(
+                        // Ink paints on the nearest Material: this one, above the background.
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: done
+                              ? () => context.push('/replay/$s')
+                              : current
+                              ? () => context.push('/play/$s')
+                              : null,
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              gradient: done
+                                  ? LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [metal.highlight, metal.base, Color.lerp(metal.base, Colors.black, 0.4)!],
+                                    )
+                                  : null,
+                              color: done ? null : Palette.soot.withValues(alpha: current ? 0.95 : 0.6),
+                              border: Border.all(
+                                color: current ? Palette.molten : Palette.ash,
+                                width: current ? 2.5 : 1,
+                              ),
+                              boxShadow: [
+                                if (current) BoxShadow(color: Palette.ember.withValues(alpha: 0.5), blurRadius: 14),
+                              ],
                             ),
-                            boxShadow: [if (current) BoxShadow(color: Palette.ember.withValues(alpha: 0.5), blurRadius: 14)],
-                          ),
-                          child: Center(
-                            child: done || current
-                                ? Text(
-                                    '${i + 1}',
-                                    style: displayStyle(20, color: done ? metal.letter : Palette.molten),
-                                  )
-                                : const GameIcon('lock', size: 18, color: Palette.ash),
+                            child: Center(
+                              child: done || current
+                                  ? Text(
+                                      '${i + 1}',
+                                      style: displayStyle(20, color: done ? metal.letter : Palette.molten),
+                                    )
+                                  : const GameIcon('lock', size: 18, color: Palette.ash),
+                            ),
                           ),
                         ),
                       ),

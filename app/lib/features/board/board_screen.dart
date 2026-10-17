@@ -219,7 +219,7 @@ class _StokeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return _Panel(
-      icon: 'stoke',
+      icon: 'bellows',
       title: 'Stoke the Forge',
       subtitle: 'A reward every day you visit. Day 7 is the big one.',
       children: [
@@ -243,7 +243,7 @@ class _StokeCard extends StatelessWidget {
         else
           PlateButton(
             label: busy ? 'Stoking…' : 'Stoke! (Day ${stoke.day})',
-            icon: 'stoke',
+            icon: 'bellows',
             primary: true,
             height: 50,
             onPressed: busy ? null : onClaim,

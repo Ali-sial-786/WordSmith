@@ -284,7 +284,7 @@ class _BoardButtonState extends ConsumerState<_BoardButton> {
     final claim = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const GameIcon('stoke', size: 40, color: Palette.molten),
+        icon: const GameIcon('bellows', size: 40, color: Palette.molten),
         title: Text('Stoke the Forge · Day ${board.stoke.day}'),
         content: Text("Today's reward: ${reward.label}.", textAlign: TextAlign.center),
         actions: [

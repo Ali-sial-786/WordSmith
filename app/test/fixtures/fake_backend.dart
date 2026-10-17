@@ -105,6 +105,7 @@ class FakeServer {
   int totalXp = 0;
   int completed = 0;
   int scrapBin = 0;
+  int masterworkPieces = 0;
   Map<String, int> hints = {'hammer': 3, 'chisel': 0, 'sparks': 0};
   final synced = <Map<String, dynamic>>[];
   final takenNames = <String>{'taken'};
@@ -233,6 +234,7 @@ class FakeServer {
     'scrapBin': scrapBin,
     'hints': hints,
     'stats': {'wordsForged': synced.length * 3, 'longestWord': '', 'soloDone': synced.length},
+    'masterworks': {'pieces': masterworkPieces},
   };
 
   ApiClient client(AuthService auth) => ApiClient(

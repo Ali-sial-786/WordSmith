@@ -419,9 +419,9 @@ class _SwipeGuideState extends State<SwipeGuide> with SingleTickerProviderStateM
         head,
       ];
       return Opacity(
-        opacity: fade.clamp(0.0, 1.0),
+        opacity: 0.8 * fade.clamp(0.0, 1.0),
         child: CustomPaint(
-          painter: _TrailPainter(points: path, pointer: null, width: widget.size * 0.18),
+          painter: _TrailPainter(points: path, pointer: null, width: widget.size * 0.14),
           child: Stack(
             children: [
               Positioned(

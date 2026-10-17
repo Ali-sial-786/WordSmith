@@ -37,7 +37,7 @@ class GameIcon extends StatelessWidget {
     'user': Icons.person,
     'scroll': Icons.receipt_long,
     'gift': Icons.card_giftcard,
-    'stoke': Icons.whatshot,
+    'bellows': Icons.whatshot,
     'calendar': Icons.calendar_month,
     'book': Icons.menu_book,
     'blueprint': Icons.architecture,

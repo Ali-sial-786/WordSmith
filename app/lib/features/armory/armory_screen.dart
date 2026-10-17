@@ -17,61 +17,62 @@ class ArmoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = MasterworkProgress(ref.watch(profileProvider).masterworkPieces);
-    final infos = ref.watch(masterworkInfoProvider).value;
+    final infos = ref.watch(masterworkInfoProvider).value ?? plainMasterworks;
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text('The Armory', style: displayStyle(22))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text('The Armory', style: displayStyle(22)),
+      ),
       extendBodyBehindAppBar: true,
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
         dim: 0.7,
         fire: 0.5,
         child: SafeArea(
-          child: infos == null
-              ? const Center(child: CircularProgressIndicator(color: Palette.molten))
-              : CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                      sliver: SliverToBoxAdapter(
-                        child: Text(
-                          progress.allDone
-                              ? 'Every Masterwork is forged. The smiths of legend salute you.'
-                              : 'Gilded cells hide in campaign puzzles. Forge the word through one '
-                                    'to win a blueprint piece. ${progress.finished} of '
-                                    '${masterworkSpecs.length} Masterworks forged.',
-                          textAlign: TextAlign.center,
-                          style: text.bodyMedium?.copyWith(color: Palette.steel),
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 180,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.78,
-                        ),
-                        itemCount: infos.length,
-                        itemBuilder: (context, i) => _Tile(
-                          info: infos[i],
-                          state: i < progress.finished
-                              ? _State.done
-                              : i == progress.finished
-                              ? _State.building
-                              : _State.locked,
-                          collected: i < progress.finished
-                              ? infos[i].spec.pieces
-                              : i == progress.finished
-                              ? progress.piecesInCurrent
-                              : 0,
-                        ),
-                      ),
-                    ),
-                  ],
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    progress.allDone
+                        ? 'Every Masterwork is forged. The smiths of legend salute you.'
+                        : 'Gilded cells hide in campaign puzzles. Forge the word through one '
+                              'to win a blueprint piece. ${progress.finished} of '
+                              '${masterworkSpecs.length} Masterworks forged.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: Palette.steel),
+                  ),
                 ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 180,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.78,
+                  ),
+                  itemCount: infos.length,
+                  itemBuilder: (context, i) => _Tile(
+                    info: infos[i],
+                    state: i < progress.finished
+                        ? _State.done
+                        : i == progress.finished
+                        ? _State.building
+                        : _State.locked,
+                    collected: i < progress.finished
+                        ? infos[i].spec.pieces
+                        : i == progress.finished
+                        ? progress.piecesInCurrent
+                        : 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -98,44 +99,43 @@ class _Tile extends StatelessWidget {
         _State.building => '${info.name}, $collected of ${info.spec.pieces} pieces',
         _State.locked => 'A Masterwork still to come',
       },
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: state == _State.locked ? null : () => _showDetail(context),
-        child: Ink(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: building ? blueprintPaper : Palette.soot.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: switch (state) {
-                _State.done => Palette.gold.withValues(alpha: 0.7),
-                _State.building => const Color(0xFF6FA8DC),
-                _State.locked => Palette.ash,
-              },
+      child: Material(
+        // Ink paints on the nearest Material: this one, above the background.
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: state == _State.locked ? null : () => _showDetail(context),
+          child: Ink(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: building ? blueprintPaper : Palette.soot.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: switch (state) {
+                  _State.done => Palette.gold.withValues(alpha: 0.7),
+                  _State.building => const Color(0xFF6FA8DC),
+                  _State.locked => Palette.ash,
+                },
+              ),
             ),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: FittedBox(
-                  child: MasterworkArt(
-                    spec: info.spec,
-                    collected: collected,
-                    locked: state == _State.locked,
+            child: Column(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    child: MasterworkArt(spec: info.spec, collected: collected, locked: state == _State.locked),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                state == _State.locked ? '???' : info.name,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: text.labelLarge?.copyWith(color: state == _State.done ? Palette.gold : null),
-              ),
-              if (building)
-                Text('$collected / ${info.spec.pieces} pieces', style: text.bodySmall),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  state == _State.locked ? '???' : info.name,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.labelLarge?.copyWith(color: state == _State.done ? Palette.gold : null),
+                ),
+                if (building) Text('$collected / ${info.spec.pieces} pieces', style: text.bodySmall),
+              ],
+            ),
           ),
         ),
       ),
@@ -169,8 +169,7 @@ class _Tile extends StatelessWidget {
                 style: displayStyle(24, color: state == _State.done ? Palette.gold : Palette.whiteHeat),
               ),
               const SizedBox(height: 6),
-              if (info.blurb.isNotEmpty)
-                Text(info.blurb, textAlign: TextAlign.center, style: text.bodyMedium),
+              if (info.blurb.isNotEmpty) Text(info.blurb, textAlign: TextAlign.center, style: text.bodyMedium),
               const SizedBox(height: 10),
               Text(
                 state == _State.done

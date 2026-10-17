@@ -13,6 +13,8 @@ import 'package:wordsmith/app.dart';
 import 'package:wordsmith/auth/auth_service.dart';
 import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
+import 'package:wordsmith/engine/masterworks.dart';
+import 'package:wordsmith/game/daily_game.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/features/coop/lobby_view.dart';
 import 'package:wordsmith/features/coop/round_view.dart';
@@ -25,6 +27,7 @@ import 'package:wordsmith/game/vs_session.dart';
 import 'package:wordsmith/net/room_client.dart';
 import 'package:wordsmith/ui/mold/mold_grid.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
+import 'package:wordsmith/ui/widgets/meaning_sheet.dart';
 import 'package:wordsmith/ui/widgets/forge_background.dart';
 
 import '../test/fixtures/fake_backend.dart';
@@ -214,10 +217,21 @@ void main() {
     await _shoot(tester, 'vs_podium', VsResultsView(session: s, onLeave: () {}));
   });
 
-  for (final location in ['/', '/daily', '/chapters', '/profile', '/settings']) {
+  for (final location in [
+    '/',
+    '/daily',
+    '/chapters',
+    '/profile',
+    '/settings',
+    '/board',
+    '/armory',
+    '/daily/calendar',
+    '/lore',
+    '/chapters/copper',
+  ]) {
     testWidgets('hall signed in $location', (tester) async {
       SharedPreferences.setMockInitialValues({
-        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 2600, 'campaignStage': 132}),
+        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 2600, 'campaignStage': 132, 'masterworkPieces': 16}),
         'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
       });
       final store = await Store.open();
@@ -228,7 +242,30 @@ void main() {
         ..totalXp = 2600
         ..completed = 131
         ..dailyPuzzle = (tearJson()..['id'] = 'daily-2026-10-17')
-        ..dailyStreak = 4;
+        ..dailyStreak = 4
+        ..masterworkPieces = 16
+        ..stokeDay = 3
+        ..stokeClaimed = location != '/board'
+        ..lastWeek = {
+          'week': '2026-W41',
+          'place': 2,
+          'of': 3,
+          'reward': FakeServer.reward(50, {'chisel': 1}),
+        };
+      final now = DateTime.now().toUtc();
+      for (final d in [1, 2, 4, 5, 6, 8, 9, 10]) {
+        if (d < now.day) server.dailyDays.add(todayUtc(DateTime.utc(now.year, now.month, d)));
+      }
+      server.friends.addAll([
+        {'id': 'uid-sam', 'username': 'sam', 'avatar': 'avatar_05', 'level': 12, 'rank': 'Journeyman'},
+        {'id': 'uid-kit', 'username': 'Kit', 'avatar': 'avatar_09', 'level': 7, 'rank': 'Apprentice'},
+      ]);
+      server.giftsPending.add({
+        'id': 1,
+        'from': {'id': 'uid-sam', 'username': 'sam', 'avatar': 'avatar_05'},
+        'sentAt': 0,
+      });
+      server.giftsSent.add('uid-kit');
       final container = ProviderContainer(
         overrides: [
           storeProvider.overrideWithValue(store),
@@ -320,4 +357,51 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/puzzle_$chapter.png'));
     });
   }
+
+  testWidgets('meaning sheet', (tester) async {
+    await _shoot(tester, 'meaning', const MeaningView(word: 'TEMPER'));
+  });
+
+  testWidgets('puzzle with a gilded cell', (tester) async {
+    // A player whose first puzzle hides a gilded cell.
+    var user = 0;
+    while (gildedCellFor(userId: 'u$user', puzzleId: 'c-0001', cellCount: 9, pickups: const []) == null) {
+      user++;
+    }
+    SharedPreferences.setMockInitialValues({
+      'profile.v1': jsonEncode({'userId': 'u$user', 'totalXp': 900, 'campaignStage': 1}),
+      'settings.v1': jsonEncode({'reducedMotion': false, 'haptics': false}),
+    });
+    final store = await Store.open();
+    final container = ProviderContainer(
+      overrides: [
+        storeProvider.overrideWithValue(store),
+        campaignProvider.overrideWithValue(
+          Campaign.fromJson({
+            'version': 1,
+            'chapters': [
+              {'id': 'copper', 'name': 'Copper', 'first': 1, 'count': 50},
+            ],
+            'puzzles': [tearJson()],
+          }),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.binding.setSurfaceSize(const Size(412, 892));
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: WordsmithApp(router: GoRouter(initialLocation: '/play/1', routes: appRouter.configuration.routes)),
+      ),
+    );
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/puzzle_gilded.png'));
+    await tester.pump(const Duration(seconds: 5));
+  });
 }
