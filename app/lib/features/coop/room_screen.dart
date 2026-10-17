@@ -70,8 +70,20 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     }
   }
 
+  bool _reopening = false;
+
   void _changed() {
     if (!mounted) return;
+    // Opened with the wrong mode (an old link)? Reopen as what the room is.
+    final mode = _session?.lobby?.mode;
+    if (mode != null && mode != widget.mode && !_reopening) {
+      _reopening = true;
+      _left = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.pushReplacement('/room/${widget.code}?mode=$mode');
+      });
+      return;
+    }
     // Round music while racing or forging together; hall music otherwise.
     final phase = _session?.phase;
     ref.read(sfxProvider).music(phase == 'countdown' || phase == 'round' ? 'music_round' : 'music_hall');
@@ -207,7 +219,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Leave the forge?'),
-        content: const Text('You can rejoin with the code while the room is open.'),
+        content: Text(
+          _session is VsSession && const {'countdown', 'round', 'standings'}.contains(_session?.phase)
+              ? "You're mid-series. If you're not back within 30 seconds, you can't win any more rounds."
+              : 'You can rejoin with the code while the room is open.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave')),

@@ -48,6 +48,18 @@ class ChaptersScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Palette.soot.withValues(alpha: 0.9),
+                      // The chapter's own scene, darkened, once its art exists.
+                      image: hasChapterScene(ch.id)
+                          ? DecorationImage(
+                              image: AssetImage(chapterBackground(ch.id)),
+                              fit: BoxFit.cover,
+                              alignment: const Alignment(0, -0.3),
+                              colorFilter: ColorFilter.mode(
+                                Colors.black.withValues(alpha: 0.55),
+                                BlendMode.darken,
+                              ),
+                            )
+                          : null,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: current ? Palette.molten : const Color(0xFF5C4733),
