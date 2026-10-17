@@ -27,7 +27,17 @@ export default defineConfig(async () => {
           plugins: [
             cloudflareTest({
               wrangler: { configPath: "./wrangler.jsonc" },
-              miniflare: { bindings: { TEST_MIGRATIONS: migrations, TEST_CAMPAIGN: campaign, TEST_BANK: bank } },
+              miniflare: {
+                bindings: {
+                  TEST_MIGRATIONS: migrations,
+                  TEST_CAMPAIGN: campaign,
+                  TEST_BANK: bank,
+                  // A made-up LiveKit project, so the video route can sign tokens.
+                  LIVEKIT_URL: "wss://wordsmith-test.livekit.cloud",
+                  LIVEKIT_API_KEY: "APItestkey",
+                  LIVEKIT_API_SECRET: "test-secret-that-is-long-enough-for-hs256",
+                },
+              },
             }),
           ],
           test: {

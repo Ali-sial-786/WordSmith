@@ -13,7 +13,7 @@ import { Router } from "./router";
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
 import { deleteMe, getMe, getUser, postSetup } from "./routes/me";
-import { getRoom, getRoomSocket, postRoom } from "./routes/rooms";
+import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { postSync } from "./routes/solo";
 import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
@@ -47,6 +47,7 @@ const router = new Router<Handler>([
 
   { method: "POST", path: "/v1/rooms", handler: authed(postRoom) },
   { method: "GET", path: "/v1/rooms/:code", handler: authed(getRoom) },
+  { method: "POST", path: "/v1/rooms/:code/video", handler: authed(postRoomVideo) },
 
   // These authenticate themselves, from the WebSocket subprotocol header.
   { method: "GET", path: "/v1/ws/hub", handler: open(getHubSocket) },

@@ -10,13 +10,17 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
+import '../../ui/widgets/video_bubble.dart';
+import '../../video/video_call.dart';
+import 'room_video.dart';
 
 /// Before a round: the code to share, who's in, ready checks, host start.
 class LobbyView extends ConsumerWidget {
-  const LobbyView({super.key, required this.session, required this.onLeave});
+  const LobbyView({super.key, required this.session, required this.onLeave, this.video = RoomVideo.none});
 
   final CoopSession session;
   final VoidCallback onLeave;
+  final RoomVideo video;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,13 +52,16 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 18),
         Text('Smiths ${lobby.players.length}/4', style: text.titleMedium),
         const SizedBox(height: 6),
-        for (final p in lobby.players) _PlayerRow(player: p, isHost: p.id == lobby.hostId, isMe: p.id == session.me),
+        for (final p in lobby.players)
+          _PlayerRow(player: p, isHost: p.id == lobby.hostId, isMe: p.id == session.me, call: video.call),
         for (var i = lobby.players.length; i < 4; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Text('Waiting for a smith…', style: text.bodySmall),
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        VideoBar(video: video),
+        const SizedBox(height: 12),
         if (me != null)
           PlateButton(
             label: me.ready ? 'Ready!' : "I'm ready",
@@ -123,7 +130,12 @@ class _CodeCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(code, style: letterStyle(36, color: Palette.molten).copyWith(letterSpacing: 8)),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(code, style: letterStyle(36, color: Palette.molten).copyWith(letterSpacing: 8)),
+              ),
+            ),
             IconButton(
               tooltip: 'Copy code',
               icon: const Icon(Icons.copy, color: Palette.steel),
@@ -142,11 +154,12 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.player, required this.isHost, required this.isMe});
+  const _PlayerRow({required this.player, required this.isHost, required this.isMe, this.call});
 
   final RoomPlayer player;
   final bool isHost;
   final bool isMe;
+  final VideoCall? call;
 
   @override
   Widget build(BuildContext context) {
@@ -161,9 +174,13 @@ class _PlayerRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Opacity(
-            opacity: player.connected ? 1 : 0.4,
-            child: AvatarBadge(avatar: player.avatar, size: 40),
+          VideoBubble(
+            userId: player.id,
+            avatar: player.avatar,
+            size: 48,
+            call: call,
+            color: color,
+            dimmed: !player.connected,
           ),
           const SizedBox(width: 12),
           Expanded(

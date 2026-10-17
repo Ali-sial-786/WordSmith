@@ -271,6 +271,19 @@ export class RoomDO extends DurableObject<Env> {
     return true;
   }
 
+  /**
+   * The LiveKit room for this room's video chat, if `userId` holds a seat
+   * (`POST /v1/rooms/:code/video`); otherwise `null`. Named after the code
+   * and creation time, so a reused code never shares a call.
+   */
+  async videoRoom(userId: string): Promise<string | null> {
+    await this.catchUp(Date.now());
+    await this.settle();
+    const room = this.room();
+    if (room === null || !room.players.some((p) => p.id === userId && !p.left)) return null;
+    return `wordsmith-${room.code}-${room.createdAt.toString(36)}`;
+  }
+
   /** `GET /v1/rooms/:code`, or `null` if there's no such room. */
   async summary(): Promise<RoomSummary | null> {
     await this.catchUp(Date.now());

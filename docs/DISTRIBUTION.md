@@ -114,6 +114,12 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 6. GitHub → **Actions → Deploy server → Run workflow**. On its first run it creates the database, loads the campaign and deploys. The run's summary shows the **server URL**.
 7. The live URL, `https://wordsmith-api.wordsmith-forge.workers.dev`, is built into the app (`app/lib/net/config.dart`). The optional repository **variable** `API_BASE_URL` overrides it for friend builds.
 
+**Video chat (LiveKit, free):** optional.
+1. Sign up at **https://cloud.livekit.io** (Google or GitHub login) on the free **Build** plan and create a project named `wordsmith`.
+2. **Settings → API Keys → Create key.** Note the project URL (`wss://….livekit.cloud`), the API key and the API secret (shown once).
+3. Add the GitHub **secrets** `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`.
+4. GitHub → **Actions → Deploy server → Run workflow** (or wait for the next server change). The run copies them to the Worker.
+
 Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
 `flutter build apk --dart-define-from-file=dart_defines.json`.
 

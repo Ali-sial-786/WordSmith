@@ -8,6 +8,7 @@ import '../net/api_client.dart';
 import '../net/hub_client.dart';
 import '../net/models.dart';
 import '../net/room_client.dart';
+import '../video/video_call.dart';
 import 'providers.dart';
 
 /// Overridden in main() from the build's settings (net/config.dart).
@@ -17,6 +18,9 @@ final hubClientProvider = Provider<HubClient?>((_) => null);
 
 /// Opens the connection to a room by code (null without a server).
 final roomClientFactoryProvider = Provider<RoomClient Function(String code)?>((_) => null);
+
+/// Makes a room's video chat for this player (user ID); null without online play.
+final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 
 final accountProvider = NotifierProvider<AccountController, AccountState>(
   AccountController.new,

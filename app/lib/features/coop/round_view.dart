@@ -15,18 +15,27 @@ import '../../ui/anvil/anvil_ring.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
-import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/toast_line.dart';
+import '../../ui/widgets/video_bubble.dart';
 import '../../ui/widgets/word_preview.dart';
+import '../../video/video_call.dart';
+import 'room_video.dart';
 
 /// The co-op round: one shared mold, everyone's anvil has the same letters.
 class RoundView extends ConsumerStatefulWidget {
-  const RoundView({super.key, required this.session, required this.cues, required this.onLeave});
+  const RoundView({
+    super.key,
+    required this.session,
+    required this.cues,
+    required this.onLeave,
+    this.video = RoomVideo.none,
+  });
 
   final CoopSession session;
   final MoldCues cues;
   final VoidCallback onLeave;
+  final RoomVideo video;
 
   @override
   ConsumerState<RoundView> createState() => _RoundViewState();
@@ -182,8 +191,8 @@ class _RoundViewState extends ConsumerState<RoundView> {
             final side = (c.maxWidth - ring) / 2;
             return Column(
               children: [
-                _TopStrip(session: _s, timeLeft: left, onLeave: widget.onLeave),
-                _Teammates(session: _s),
+                _TopStrip(session: _s, timeLeft: left, onLeave: widget.onLeave, video: widget.video),
+                _Teammates(session: _s, call: widget.video.call),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
@@ -297,11 +306,12 @@ class _RoundViewState extends ConsumerState<RoundView> {
 }
 
 class _TopStrip extends StatelessWidget {
-  const _TopStrip({required this.session, required this.timeLeft, required this.onLeave});
+  const _TopStrip({required this.session, required this.timeLeft, required this.onLeave, required this.video});
 
   final CoopSession session;
   final Duration timeLeft;
   final VoidCallback onLeave;
+  final RoomVideo video;
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +326,8 @@ class _TopStrip extends StatelessWidget {
           Expanded(
             child: Text('Team $team', style: displayStyle(18)),
           ),
+          if (video.call != null)
+            VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -336,15 +348,16 @@ class _TopStrip extends StatelessWidget {
 }
 
 class _Teammates extends StatelessWidget {
-  const _Teammates({required this.session});
+  const _Teammates({required this.session, this.call});
 
   final CoopSession session;
+  final VideoCall? call;
 
   @override
   Widget build(BuildContext context) {
     final players = session.lobby?.players ?? const [];
     return SizedBox(
-      height: 46,
+      height: call == null ? 46 : 58,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -359,9 +372,13 @@ class _Teammates extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Opacity(
-                    opacity: p.connected ? 1 : 0.4,
-                    child: AvatarBadge(avatar: p.avatar, size: 30),
+                  VideoBubble(
+                    userId: p.id,
+                    avatar: p.avatar,
+                    size: call == null ? 30 : 42,
+                    call: call,
+                    color: Palette.players[p.color % 4],
+                    dimmed: !p.connected,
                   ),
                   const SizedBox(width: 6),
                   Text(

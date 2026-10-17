@@ -8,13 +8,16 @@ import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/coop_session.dart';
 import '../../game/providers.dart';
+import '../../net/api_client.dart';
 import '../../net/room_client.dart';
 import '../../ui/effects/sparks.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/widgets/forge_background.dart';
+import '../../video/video_call.dart';
 import 'lobby_view.dart';
 import 'results_view.dart';
+import 'room_video.dart';
 import 'round_view.dart';
 
 /// One co-op room, from lobby to results and back.
@@ -34,6 +37,13 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   StreamSubscription<RoomEvent>? _sub;
   bool _left = false;
 
+  /// The room's video chat, while it's on.
+  VideoCall? _video;
+  bool _videoStarting = false;
+
+  /// Video starts by itself once per room (when the setting is on).
+  bool _videoAutoTried = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,8 +59,87 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   }
 
   void _changed() {
+    if (!mounted) return;
+    // Video joins once the room has seated us.
+    if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
+      _videoAutoTried = true;
+      _startVideo();
+    }
+    setState(() {});
+  }
+
+  // ---- Video chat ----
+
+  bool get _videoAvailable => ref.read(videoCallFactoryProvider) != null && ref.read(apiClientProvider) != null;
+
+  void _toast(String message) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _startVideo() async {
+    if (_video != null || _videoStarting || _left || !_videoAvailable) return;
+    _videoStarting = true;
+    try {
+      final grant = await ref.read(apiClientProvider)!.roomVideo(widget.code);
+      if (!mounted || _left) return;
+      final call = ref.read(videoCallFactoryProvider)!(_session!.me)..addListener(_videoChanged);
+      setState(() => _video = call);
+      final s = ref.read(settingsProvider);
+      await call.join(url: grant.url, token: grant.token, camera: s.videoCamera, mic: s.videoMic);
+    } on ApiException catch (e) {
+      // Turn the setting back off so we don't ask again on every update.
+      if (e.code == 'video_unavailable') ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: false));
+      _toast(e.friendly);
+    } finally {
+      _videoStarting = false;
+    }
+  }
+
+  void _videoChanged() {
     if (mounted) setState(() {});
   }
+
+  Future<void> _stopVideo() async {
+    final call = _video;
+    if (call == null) return;
+    setState(() => _video = null);
+    call.removeListener(_videoChanged);
+    await call.leave();
+    call.dispose();
+  }
+
+  void _enableVideo() {
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: true));
+    _startVideo();
+  }
+
+  void _disableVideo() {
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoChat: false));
+    _stopVideo();
+  }
+
+  Future<void> _toggleCamera() async {
+    final call = _video;
+    if (call == null) return;
+    await call.setCamera(!call.cameraOn);
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoCamera: call.cameraOn));
+  }
+
+  Future<void> _toggleMic() async {
+    final call = _video;
+    if (call == null) return;
+    await call.setMic(!call.micOn);
+    ref.read(settingsProvider.notifier).update((s) => s.copyWith(videoMic: call.micOn));
+  }
+
+  RoomVideo get _roomVideo => RoomVideo(
+    available: _videoAvailable,
+    call: _video,
+    onEnable: _enableVideo,
+    onDisable: _disableVideo,
+    onCamera: _toggleCamera,
+    onMic: _toggleMic,
+  );
 
   void _onEffect(RoomEvent e) {
     final sfx = ref.read(sfxProvider);
@@ -110,12 +199,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     );
     if (ok != true || !mounted) return;
     setState(() => _left = true);
+    await _stopVideo();
     await _session?.leave();
     if (mounted) context.canPop() ? context.pop() : context.go('/');
   }
 
   @override
   void dispose() {
+    final video = _video;
+    if (video != null) {
+      video.removeListener(_videoChanged);
+      video.leave().whenComplete(video.dispose);
+    }
     _sub?.cancel();
     final session = _session;
     if (session != null) {
@@ -163,8 +258,13 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     if (s.lobby == null) return _message('Joining forge ${widget.code}…', busy: true);
     final view = switch (s.phase) {
       'results' when s.results != null => ResultsView(session: s, cues: _cues, onLeave: _leave),
-      'countdown' || 'round' when s.round != null => RoundView(session: s, cues: _cues, onLeave: _leave),
-      _ => LobbyView(session: s, onLeave: _leave),
+      'countdown' || 'round' when s.round != null => RoundView(
+        session: s,
+        cues: _cues,
+        onLeave: _leave,
+        video: _roomVideo,
+      ),
+      _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
     };
     return Stack(
       children: [

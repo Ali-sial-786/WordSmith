@@ -4,6 +4,9 @@
  * - `POST /v1/rooms {mode: "coop"}` → `{code}`; the caller is the host
  * - `GET /v1/rooms/:code` → `{code, mode, phase, host: {id, username}, players, maxPlayers}`, or 404 `room_not_found`
  * - `GET /v1/ws/room/:code` → WebSocket upgrade to that room's RoomDO
+ * - `POST /v1/rooms/:code/video` → `{url, token, room, expiresAt}`: a LiveKit
+ *   token for the room's video chat. 403 `not_in_room` unless the caller
+ *   holds a seat; 503 `video_unavailable` until LiveKit is set up.
  *
  * All need a set-up account (`403 setup_required`).
  */
@@ -16,6 +19,7 @@ import { ROOM_IDENTITY_HEADER, ROOM_PROTOCOL_HEADER, type RoomDO } from "../room
 import { levelFromTotalXp } from "../rules/progression";
 import { normalizeRoomCode, roomCodeFromBytes, ROOM_CODE_LENGTH, type RoomMode } from "../rules/room";
 import type { SetUpAccount } from "../db/accounts";
+import { liveKitConfig, liveKitToken, VIDEO_TOKEN_TTL_MS } from "../video/livekit";
 import { requireSetUp, type AuthedContext, type RequestContext } from "./context";
 
 /** Fresh codes to try before giving up (a clash is a one-in-a-billion event). */
@@ -77,4 +81,16 @@ export async function getRoomSocket(c: RequestContext): Promise<Response> {
   const headers = new Headers({ Upgrade: "websocket", [ROOM_IDENTITY_HEADER]: JSON.stringify(identityOf(account)) });
   if (protocol !== null) headers.set(ROOM_PROTOCOL_HEADER, protocol);
   return roomStub(c.env, code).fetch("https://room.internal/connect", { headers });
+}
+
+export async function postRoomVideo(c: AuthedContext): Promise<Response> {
+  const account = await requireSetUp(c);
+  const code = codeParam(c);
+  const config = liveKitConfig(c.env);
+  if (config === null) throw new ApiError(503, "video_unavailable", "Video chat isn't set up on this server");
+  const room = await roomStub(c.env, code).videoRoom(account.id);
+  if (room === null) throw new ApiError(403, "not_in_room");
+  const now = Date.now();
+  const token = await liveKitToken(config, { identity: account.id, name: account.username, room, now });
+  return json({ url: config.url, token, room, expiresAt: now + VIDEO_TOKEN_TTL_MS });
 }

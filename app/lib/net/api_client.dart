@@ -30,6 +30,8 @@ class ApiException implements Exception {
     'room_not_found' => 'No forge with that code. Check it and try again.',
     'room_full' => 'That forge is full.',
     'round_in_progress' => "They're mid-round. Try again when it ends.",
+    'video_unavailable' => "Video chat isn't set up on the server yet.",
+    'not_in_room' => 'Join the room first.',
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
@@ -129,6 +131,12 @@ class ApiClient {
   /// Room summary; throws `room_not_found` for a bad code.
   Future<Map<String, dynamic>> room(String code) =>
       _send('GET', '/rooms/${Uri.encodeComponent(code)}');
+
+  /// A LiveKit token for a room's video chat; only for players in the room.
+  Future<({String url, String token})> roomVideo(String code) async {
+    final j = await _send('POST', '/rooms/${Uri.encodeComponent(code)}/video', body: const {});
+    return (url: j['url'] as String, token: j['token'] as String);
+  }
 
   Future<List<LeaderboardEntry>> leaderboard() async => [
     for (final e in ((await _send('GET', '/leaderboard'))['entries'] as List)

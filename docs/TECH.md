@@ -202,6 +202,27 @@ All the rules are plain, side-effect-free TypeScript in `server/src/rules/`:
 The Durable Object only wires these into the network and storage. That keeps
 the rules unit-testable and easy to tweak.
 
+### Video chat (optional)
+Players can turn on video chat in a room (Settings, or the lobby's video
+row). Each player then shows up as a small live video bubble in place of
+their avatar, with voice.
+- **Service:** [LiveKit Cloud](https://livekit.io), free Build plan
+  (5,000 participant-minutes a month; a 4-player, 20-minute game uses 80).
+  The app uses `livekit_client`; media goes between phones and LiveKit,
+  never through the Worker or the RoomDO.
+- **Access:** `POST /v1/rooms/:code/video` checks the caller holds a seat
+  (`RoomDO.videoRoom`) and signs a 2-hour LiveKit token (HS256 with the
+  project's API secret, `server/src/video/livekit.ts`): one room, camera and
+  microphone only, identity = user ID.
+- **Light on data:** 240×180 video at 15 fps without simulcast, adaptive
+  streaming (each phone downloads only the size it shows) and dynacast.
+  Roughly 400–500 MB an hour per player in a 5-player room; Wi-Fi is best.
+- **Off by default.** The camera and mic switches are remembered. Nothing is
+  recorded.
+- **Setup:** the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`
+  GitHub secrets, which the deploy workflow copies to the Worker. Without
+  them the route answers `503 video_unavailable` and the app says so.
+
 ---
 
 ## 7. Data model (D1)
@@ -327,6 +348,7 @@ reset every day at 00:00 UTC.
 | Worker requests | 100,000/day | Logins, profile fetches and syncs: far below the limit for a friend group. |
 | D1 | 5M rows read/day, 100k rows written/day, 5 GB | Far below the limit. |
 | Firebase Auth | Free on Spark (about 50k monthly users) | Far below the limit. |
+| LiveKit Cloud (video chat) | 5,000 participant-minutes a month | About 60 four-player, 20-minute games with video on. Past it, video stops until the next month; the game itself is unaffected. |
 
 If a free limit is hit, further operations **fail until the next reset**
 rather than charging money. The server will return a clear

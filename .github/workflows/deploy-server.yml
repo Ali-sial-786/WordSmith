@@ -107,7 +107,7 @@ jobs:
               echo ""
               echo "URL: $url"
               echo ""
-              echo "Set the repository **variable** \`API_BASE_URL\` to this URL so friend builds use it."
+              echo "The app has this URL built in (app/lib/net/config.dart); the optional variable \`API_BASE_URL\` overrides it."
             } >> "$GITHUB_STEP_SUMMARY"
             # A brand-new workers.dev address can take a minute to answer.
             for i in $(seq 1 18); do
@@ -117,3 +117,19 @@ jobs:
             echo "::error::$url/v1/health did not answer within 3 minutes"
             exit 1
           fi
+
+      - name: Set the LiveKit secrets (video chat)
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+        run: |
+          if [ -z "$LIVEKIT_URL" ] || [ -z "$LIVEKIT_API_KEY" ] || [ -z "$LIVEKIT_API_SECRET" ]; then
+            echo "::notice::LiveKit secrets are not set, so video chat stays off (docs/DISTRIBUTION.md §5)."
+            exit 0
+          fi
+          node -e 'const e = process.env; process.stdout.write(JSON.stringify({ LIVEKIT_URL: e.LIVEKIT_URL, LIVEKIT_API_KEY: e.LIVEKIT_API_KEY, LIVEKIT_API_SECRET: e.LIVEKIT_API_SECRET }))' > "$RUNNER_TEMP/livekit.json"
+          npx wrangler secret bulk "$RUNNER_TEMP/livekit.json"
+          rm -f "$RUNNER_TEMP/livekit.json"
+          echo "Video chat: LiveKit secrets set." >> "$GITHUB_STEP_SUMMARY"

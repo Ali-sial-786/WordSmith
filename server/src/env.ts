@@ -12,4 +12,11 @@ export interface Env {
   MIN_SUPPORTED_VERSION: string;
   /** Firebase project whose ID tokens we accept (`aud`, and part of `iss`). */
   FIREBASE_PROJECT_ID: string;
+  /**
+   * LiveKit project for in-room video chat (Worker secrets, set by the deploy
+   * workflow). Video is off while any of them is missing.
+   */
+  LIVEKIT_URL?: string;
+  LIVEKIT_API_KEY?: string;
+  LIVEKIT_API_SECRET?: string;
 }

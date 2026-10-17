@@ -44,6 +44,16 @@ class SettingsScreen extends ConsumerWidget {
             value: s.reducedMotion,
             onChanged: (v) => n.update((s) => s.copyWith(reducedMotion: v)),
           ),
+          if (ref.watch(accountProvider).phase != AccountPhase.unavailable)
+            SwitchListTile(
+              title: const Text('Video chat in Co-op and Versus'),
+              subtitle: const Text(
+                'Friends in your room see you in a small bubble, and you hear each other. '
+                'Uses more data, so Wi-Fi is best.',
+              ),
+              value: s.videoChat,
+              onChanged: (v) => n.update((s) => s.copyWith(videoChat: v)),
+            ),
           const _AccountSection(),
           const Divider(height: 32),
           ListTile(

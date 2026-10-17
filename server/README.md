@@ -62,6 +62,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `POST /rooms` | `{mode: "coop"}` → `{code}`: a new room with me as host (below). `400 unsupported_mode` for `"vs"` (M4), `400 invalid_mode` otherwise. |
 | `GET /rooms/:code` | `{code, mode, phase, host: {id, username} \| null, players, maxPlayers}`; `players` is a count. The code is case-insensitive. `404 room_not_found`. |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
+| `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
 Friends, the leaderboard, the hub and rooms need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync` and `/users/:username` don't.

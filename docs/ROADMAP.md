@@ -7,7 +7,8 @@
 > - **M0:** done.
 > - **M1:** done. Builds are signed with the permanent release key and shared as APKs (GitHub Releases).
 > - **M2:** live. The server runs at https://wordsmith-api.wordsmith-forge.workers.dev and deploys from GitHub Actions.
-> - **M3:** built on both sides (RoomDO, puzzle bank, lobby, shared round, results; contract in shared/room-protocol.md). Waiting on a real-phones test.
+> - **M3:** built on both sides (RoomDO, puzzle bank, lobby, shared round, results; contract in shared/room-protocol.md). A live two-player round passed against the real server; waiting on a real-phones test.
+> - **Video chat (extra):** optional LiveKit video bubbles in rooms, built; needs the LiveKit secrets and a two-phone test.
 > - **M4–M5:** not started.
 
 ---

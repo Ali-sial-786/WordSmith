@@ -15,6 +15,7 @@ import 'net/api_client.dart';
 import 'net/config.dart';
 import 'net/hub_client.dart';
 import 'net/room_client.dart';
+import 'video/livekit_call.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +44,7 @@ Future<void> main() async {
               ? null
               : (code) => RoomClient(baseUrl: AppConfig.apiBase, code: code, token: auth.idToken),
         ),
+        videoCallFactoryProvider.overrideWithValue(api == null ? null : (me) => LiveKitCall(me: me)),
       ],
       child: const WordsmithApp(),
     ),
