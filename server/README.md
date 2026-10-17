@@ -14,9 +14,9 @@ contract.
 | `src/routes/` | The REST and WebSocket handlers |
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
-| `src/room/` | RoomDO (`room.ts`), the co-op referee, and its message protocol (`protocol.ts`) |
+| `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
-| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql` |
+| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql` and `0003_daily_completions.sql` |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
 | `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
@@ -29,11 +29,13 @@ contract.
 | `pickups.ts` | Campaign pickup seeding ([shared/pickups.md](../shared/pickups.md)) |
 | `campaign.ts` | A campaign puzzle's grid words, bonus words and letter cells, for checking syncs |
 | `sync.ts` | Checking and applying offline solo results (see below) |
+| `daily.ts` | The Daily Commission: the day's heat and puzzle pick, which day a completion may be for, streaks, daily XP, and checking and applying a completion (with sync.ts's checks and hint arithmetic) |
 | `coop.ts` | Claim decisions, word points, MVP and stars |
 | `room.ts` | Room codes, colours, the host, room timings (countdown, rejoin, closing) and the SUBMIT rate limit |
 | `mold.ts` | A bank puzzle's slots and cells, which slots filled cells complete, where hints and embers land |
 | `coop-round.ts` | One co-op round: claims, self-completing slots, hints, embers, scores, results and XP |
 | `vs.ts` | Round results, series clinch, sudden death and the podium |
+| `vs-round.ts` | One Versus round on everyone's own mold (claims, self-completing slots, embers, progress) and the series around it (tally, racers who left, what comes next, results and XP) |
 
 ## Routes
 
@@ -53,18 +55,20 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `DELETE /me` | `{ok: true}`. Deletes all my rows. Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
 | `GET /users/:username` | `{id, username, avatar, level, rank, campaignCompleted, stats, friendship}`; `friendship` is `self`, `none`, `friends`, `request_sent` or `request_received`. `404 user_not_found`. |
 | `POST /solo/sync` | `{entries: [...]}` → `{profile, results}`; see below |
+| `GET /daily` | `{date, heat, puzzle, completed, streak, best}`: today's Daily Commission (below) |
+| `POST /daily/complete` | `{date, foundWords, bonusWords?, hintsUsed?, durationMs}` → `{profile, xp, streak, best, alreadyDone}`. `400 wrong_day`, `400 incomplete`, `400 too_fast`, `400 invalid_body`; `409 sync_conflict` (retry). |
 | `GET /friends` | `{friends, incoming, outgoing}`, each a list of `{id, username, avatar, level, rank, since}` |
 | `POST /friends/request` | `{username}` → `{status: "pending" \| "accepted", user}`. Asking someone who already asked you accepts. `404 user_not_found`, `400 cannot_friend_self`, `409 already_friends`, `409 too_many_requests`. |
 | `POST /friends/respond` | `{userId, accept}` → `{status: "accepted" \| "declined", user}`. `404 request_not_found`. |
 | `DELETE /friends/:id` | `{ok: true}`. Removes a friend, cancels my request, or declines theirs. `404 not_found`. |
 | `GET /leaderboard` | `{entries: [{place, id, username, avatar, level, rank, totalXp, vsSeriesWon, vsRoundsWon, coopRounds, coopMvps, me}]}`, me plus my friends by XP. There's no co-op best score yet: the schema has no column for it. |
 | `GET /ws/hub` | WebSocket upgrade to HubDO (below) |
-| `POST /rooms` | `{mode: "coop"}` → `{code}`: a new room with me as host (below). `400 unsupported_mode` for `"vs"` (M4), `400 invalid_mode` otherwise. |
+| `POST /rooms` | `{mode: "coop" \| "vs"}` → `{code}`: a new room with me as host (below). `400 invalid_mode` otherwise. |
 | `GET /rooms/:code` | `{code, mode, phase, host: {id, username} \| null, players, maxPlayers}`; `players` is a count. The code is case-insensitive. `404 room_not_found`. |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
-Friends, the leaderboard, the hub and rooms need a set-up account
+Friends, the leaderboard, the hub, rooms and the Daily Commission need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync` and `/users/:username` don't.
 
 ### Profile
@@ -109,6 +113,15 @@ Every result is final, so the app can drop all the entries it sent and take
 - **Pickups** are checked by recomputing `pickupsFor(seed, puzzleId, cellCount, levelAtStart)`. The seed is `pickupSeed` (the app's install ID from before sign-in) or else the account's uid. A claim on the right cell gets the server's type; other claims are dropped (`pickupsRejected`). An account may use its own uid and up to 5 install IDs (`pickup_seeds` table).
 - `503 campaign_unavailable` means the server's campaign table is empty: keep the queue and retry later. `409 sync_conflict` means the profile kept changing during the sync: retry.
 
+### Daily Commission
+
+[shared/daily.md](../shared/daily.md), with the rules in `src/rules/daily.ts`:
+
+- **The day** is the UTC date. Its heat follows the weekday (Mon 1, Tue 2, Wed 3, Thu 4, Fri 5, Sat 6, Sun 3), and its puzzle is candidate `fnv1a32("daily:" + date) % n` among the `n` size-1 bank puzzles at that heat, ordered by id (the nearest heat that has some if that one has none; `503 daily_unavailable` if the bank is empty). `puzzle` is in the campaign format with `id: "daily-<date>"`; `heat` is the puzzle's.
+- **Streaks** come from `daily_completions`: `streak` is the run of days ending today, or yesterday while today isn't done; `best` the longest run.
+- **Completing** is checked like a solo sync entry: `date` must be today, or yesterday during the first hour of today (`wrong_day`); the typed grid words plus the hints used must be able to fill every letter cell (`incomplete`; a slot that filled in by itself needn't be in `foundWords`, and words that aren't grid words are ignored); at least 1 s per word typed (`too_fast`). The first completion of a day grants `25 + 5 × (streak − 1)` XP, capped at 55, with level-up rewards; the puzzle's bonus words among `bonusWords` go to the Scrap Bin (others are ignored); the hints used come off the stock after the Scrap Bin's hammers and before level-up rewards, never below 0. Typed words count as words forged. A repeat answers `alreadyDone: true` and grants nothing.
+- **Written** in one optimistic batch like solo sync: the `daily_completions` row, `xp_events` (`source: "daily"`, `ref`: the date), the profile, hints and stats, and `puzzle_seen` for the bank puzzle, so rooms don't serve it again for 60 days. Deleting the account deletes its completions.
+
 ### Hub WebSocket
 
 Connect to `/v1/ws/hub` offering the subprotocols `wordsmith.v1, <ID token>`
@@ -136,7 +149,7 @@ closes its sockets with code 4001.
 ### Rooms
 
 Implements [shared/room-protocol.md](../shared/room-protocol.md) for
-`mode: "coop"`; the message types are in `src/room/protocol.ts`. Connect to
+`mode: "coop"` and, further down, `mode: "vs"`; the message types are in `src/room/protocol.ts`. Connect to
 `/v1/ws/room/<CODE>` offering `wordsmith.v1, <ID token>`, like the hub. You
 get `WELCOME`, then `SNAPSHOT`.
 
@@ -201,6 +214,26 @@ nearest deadline. Hint spends, ember grants and XP writes also move
 `profiles.updated_at` on, so a solo sync running at the same moment retries
 instead of overwriting them.
 
+### Versus rooms ("Anvil Clash")
+
+The contract's "Versus (M4)" section, refereed in `src/rules/vs-round.ts`
+(with `vs.ts`, `heat.ts` and `progression.ts`). Everything above about
+joining, dropping out, the host, closing and the alarm applies, with these
+differences:
+
+- **Seats:** up to 5, colours 0–4 (4 is titanium). `GET /rooms/:code` says `maxPlayers: 5`; open rooms list `max: 5`.
+- **Lobby:** `LOBBY.series` (3, 5, 7 or 10; default 3) is set by the host's `CONFIG {series}` in the lobby (`not_host`, `wrong_phase`; any other value is `bad_message`, and so is `CONFIG` in a co-op room). `LOBBY.heat` is the median level of the seated players (`vsHeat`), and the series' heat while one is on.
+- **START** (and `AGAIN` from results) needs 2 connected players (`not_enough_players`) and starts a series with everyone seated (connected or within their 30 s) as racers, at the room's length and heat. `HINT` is always `ERROR no_hints`.
+- **Phases:** `lobby → countdown → round → standings (10 s) → countdown → … → results`. Newcomers are refused with `409 round_in_progress` during countdown, round and standings.
+- **Rounds:** each picks a size-1 bank puzzle at the series' heat, skipping puzzles anyone still in the series saw in the last 60 days, and records it as seen. `ROUND_START` adds `series`, `regular` (`null` in sudden death), `suddenDeath`, `players` (racing; everyone else watches) and `tally` (wins before the round). The timer is `vsRoundTimerMs(heat)`.
+- **Words:** each racer has their own mold. `WORD_RESULT` has no `points`; `claimed` adds `slot`, `auto` (crossing slots this completed on the sender's mold) and `pickup` (an ember, granted after the series); `already` (no `by`) means the sender already has the word, including a slot that filled in by itself or a bonus word they found; `bonus` words go to the Scrap Bin at the end. Every gain sends `PROGRESS {id, filled, total}` to everyone. Watching (sudden death, or out of the series) gets `ERROR not_playing`; standings and results get `too_late`; lobby and countdown `ERROR wrong_phase`.
+- **Round end:** the first racer to fill every letter wins at once (`reason`/`how: "finished"`). At the timer the most letters wins, ties going to whoever got there first by a server-side counter (`timeout`), or nobody (`none`). `ROUND_END` = `{round, reason, winner, how, progress, tally, answers, next, standingsEndsAt}`; `round` (the round that ended) isn't in the contract.
+- **Series:** decided among the racers still in it (`seriesStatus`): clinched, or a clear leader after the last regular round, ends it; a tie after the last regular round is sudden death between the tied leaders, replayed with the same players while nobody wins.
+- **Leaving:** a racer who leaves or runs out of rejoin time is out: they stay listed (not connected) until the series ends, keep their wins on the podium and get XP for the rounds they raced, but can't win. If that leaves one racer (or decides the series) it ends at once: a round in play is resolved first (`reason: "timeout"`); a countdown's round never started and doesn't count; during the standings only `SERIES_END` follows. A racer who left may come back to watch.
+- **`SERIES_END`** `{winner, early, forfeit, rounds, podium: [{id, username, wins, place}], xp}`: the podium ranks everyone in the series by wins (equal wins share a place; the winner first among them). `forfeit` means the others all left (then `early` is false). `xp[id]` is co-op's shape plus `pickups` (embers collected). If the room closes mid-series, it ends with what was played (`winner` only if already decided).
+- **XP:** one D1 batch at the end of the series (retried like co-op's): the `matches` row (`mode: "vs"`, summary with the series), `match_players` (podium place, round wins, XP), `xp_events` (`source: "vs"`), `vsSeriesXp` (5 per round raced, 10 per round won, 30 for the series), level-up rewards, Scrap Bin hammers from the series' bonus words, embers, and stats `vs_series`, `vs_series_won`, `vs_rounds_won`, `words_forged` and `longest_word`.
+- **SNAPSHOT:** `lobby`; during a countdown or round `round` (the `ROUND_START` fields plus `mine: {claims, auto}`, the receiver's own mold, empty for someone watching, and `progress`); during standings `standings` (the last `ROUND_END`); during results `results` (the `SERIES_END`) and `standings`.
+
 ## Local development
 
 You need Node 22.12 or newer. Local mode doesn't need a Cloudflare account or
@@ -232,8 +265,8 @@ npx vitest run --project worker   # just the Worker
 
 The tests run as two Vitest projects:
 
-- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), sync checks, usernames, the hub and room protocols, the router and the campaign and bank SQL scripts.
-- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts`) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`.
+- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router and the campaign and bank SQL scripts.
+- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` moves the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks across days run without waiting.
 
 ## Changing the schema
 

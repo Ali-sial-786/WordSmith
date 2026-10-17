@@ -48,6 +48,27 @@ async function hints(uid: string): Promise<Record<string, number>> {
   return Object.fromEntries(results.map((r) => [r.item, r.count]));
 }
 
+/** The next LOBBY on `s` in which `uid` is (or isn't) connected, skipping older ones still queued. */
+async function lobbyWhere(s: Socket, uid: string, connected: boolean): Promise<Message> {
+  for (;;) {
+    const lobby = await s.next({ op: "LOBBY" });
+    if (lobby.players.some((p: Message) => p.id === uid && p.connected === connected)) return lobby;
+  }
+}
+
+/**
+ * Makes the room pick a known puzzle: every other size-1 bank puzzle at
+ * this heat is marked as seen by `uid` just now.
+ */
+async function forcePuzzle(uid: string, heat: number, want: (p: { id: string; bonus: string[] }) => boolean): Promise<string> {
+  const pool = env.TEST_BANK.filter((r) => r.heat === heat && r.size === 1).map((r) => JSON.parse(r.data) as { id: string; bonus: string[] });
+  const target = pool.find(want);
+  if (target === undefined) throw new Error("no such puzzle in the bank");
+  const insert = env.DB.prepare("INSERT OR REPLACE INTO puzzle_seen (user_id, puzzle_id, seen_at) VALUES (?1, ?2, ?3)");
+  await env.DB.batch(pool.filter((p) => p !== target).map((p) => insert.bind(uid, p.id, Date.now())));
+  return target.id;
+}
+
 async function me(c: Client): Promise<Message> {
   return body<Message>(await c.get("/v1/me"));
 }
@@ -166,7 +187,7 @@ describe("Versus rooms", () => {
     const sb = await join(b, code);
     // A second player who has dropped doesn't count.
     sb.ws.close();
-    await sa.next({ op: "LOBBY" });
+    await lobbyWhere(sa, b.uid, false);
     sa.send({ op: "START" });
     expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "not_enough_players" });
     const sb2 = await join(b, code);
@@ -221,7 +242,7 @@ describe("Versus rooms", () => {
     await sa.next({ op: "LOBBY", phase: "countdown" });
     expect((await openSocket(d, `/v1/ws/room/${code}`)).status).toBe(409);
     sc.ws.close();
-    await sa.next({ op: "LOBBY" });
+    await lobbyWhere(sa, c.uid, false);
     const back = await connect(c, `/v1/ws/room/${code}`);
     const snap = await back.next({ op: "SNAPSHOT" });
     expect(snap.lobby.phase).toBe("countdown");
@@ -238,6 +259,7 @@ describe("Versus rooms", () => {
       const [a, b, c, d, e, f] = players as [Smith, Smith, Smith, Smith, Smith, Smith];
       const five = [a, b, c, d, e];
       const ids = five.map((p) => p.uid);
+      const first = await forcePuzzle(a.uid, 1, (p) => p.bonus.length >= 1);
       const code = await createVsRoom(a);
       const sockets: Socket[] = [];
       for (const p of five) sockets.push(await join(p, code));
@@ -254,8 +276,12 @@ describe("Versus rooms", () => {
       expect(start1.tally).toEqual(Object.fromEntries(ids.map((id) => [id, 0])));
       await setEmbers(code, []);
       const r1 = await roundOf(code);
+      expect(r1.puzzle.id).toBe(first);
       for (const w of [...r1.puzzle.slots.map((s) => s.word), ...r1.puzzle.bonus]) expect(withoutLetters(start1)).not.toContain(w);
-      const seen = await env.DB.prepare("SELECT user_id FROM puzzle_seen WHERE puzzle_id = ?1").bind(r1.puzzle.id).all<{ user_id: string }>();
+      // (Players from earlier tests in this file may have had it too.)
+      const seen = await env.DB.prepare("SELECT user_id FROM puzzle_seen WHERE puzzle_id = ?1 AND user_id IN (SELECT value FROM json_each(?2))")
+        .bind(r1.puzzle.id, JSON.stringify([...ids, f.uid]))
+        .all<{ user_id: string }>();
       expect(seen.results.map((r) => r.user_id).sort()).toEqual([...ids].sort());
 
       const w1 = r1.puzzle.slots[0]!;
@@ -288,7 +314,7 @@ describe("Versus rooms", () => {
 
       // A racer who drops during the standings gets them back.
       se.ws.close();
-      await sa.next({ op: "LOBBY" });
+      await lobbyWhere(sa, e.uid, false);
       se = await connect(e, `/v1/ws/room/${code}`);
       const snapStandings = await se.next({ op: "SNAPSHOT" });
       expect(snapStandings.lobby.phase).toBe("standings");
@@ -328,7 +354,7 @@ describe("Versus rooms", () => {
       expect(await sc.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "not_playing" });
       // A watcher rejoining sees an empty mold of their own, and everyone's progress.
       sd.ws.close();
-      await sa.next({ op: "LOBBY" });
+      await lobbyWhere(sa, d.uid, false);
       sd = await connect(d, `/v1/ws/room/${code}`);
       const watching = (await sd.next({ op: "SNAPSHOT" })).round;
       expect(watching).toMatchObject({ round: 4, suddenDeath: true, players: [a.uid, b.uid], mine: { claims: [], auto: [] } });
@@ -390,7 +416,7 @@ describe("Versus rooms", () => {
 
       // A rejoin during results gets the series and the last round.
       sc.ws.close();
-      await sa.next({ op: "LOBBY" });
+      await lobbyWhere(sa, c.uid, false);
       sc = await connect(c, `/v1/ws/room/${code}`);
       const snapResults = await sc.next({ op: "SNAPSHOT" });
       expect(snapResults.results).toEqual({ ...series, op: undefined });
@@ -504,7 +530,8 @@ describe("Versus rooms", () => {
       // B forges a word and drops: their mold freezes.
       await forge(sb, w1!.word, 1);
       sb.ws.close();
-      const dropped = await sa.next({ op: "LOBBY" });
+      const dropped = await lobbyWhere(sa, b.uid, false);
+      expect(dropped.phase).toBe("round");
       expect(dropped.players.find((p: Message) => p.id === b.uid)).toMatchObject({ connected: false, color: 1 });
       await forge(sa, w2!.word, 1);
 
@@ -527,8 +554,10 @@ describe("Versus rooms", () => {
       expect(await forge(back, w2!.word, 3)).toMatchObject({ result: "claimed" });
 
       // C drops and doesn't come back: out of the series, but still listed until it ends.
+      await lobbyWhere(sa, b.uid, true);
       sc.ws.close();
-      await sa.next({ op: "LOBBY" });
+      await lobbyWhere(sa, c.uid, false);
+      // The alarm is C's rejoin deadline (30 s), well before the round's timer.
       expect(await runDurableObjectAlarm(stub(code))).toBe(true);
       const lobby = await sa.next({ op: "LOBBY" });
       expect(lobby.phase).toBe("round");

@@ -27,13 +27,20 @@ the server checks the result when it's sent.
   → `{profile, xp, streak, best, alreadyDone}`
   - `date` must be today, or yesterday within the first hour of today (UTC).
     Otherwise `400 wrong_day`.
-  - Every grid word must be in `foundWords` (`400 incomplete`), and
-    `durationMs` must be at least 1 s per grid word (`400 too_fast`), as in solo sync.
+  - As in solo sync: the typed words in `foundWords` plus the hints used must
+    account for every cell (`400 incomplete`); a slot that fills in from its
+    crossings needn't be typed. `durationMs` must be at least 1 s per typed
+    word (`400 too_fast`). Unknown words and invalid bonus words are ignored.
   - The first completion of a day grants **25 XP plus 5 per streak day beyond the
     first, up to +30** (so 25–55), takes the hints used from the stock (never
     below 0), and adds valid bonus words to the Scrap Bin. Level-up rewards
     apply as usual. A repeat for the same day grants nothing: `alreadyDone: true`.
 - Both need a set-up account.
+- Other errors: `400 invalid_body` (bad shape or date), `503 daily_unavailable`
+  (empty bank), `409 sync_conflict` (the profile kept changing; retry).
+- Completing marks the bank puzzle as seen, so co-op and Versus won't serve it
+  to that player for 60 days. The answers are public through `GET` (fine for a
+  friends-only game).
 
 ## Storage
 

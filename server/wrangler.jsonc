@@ -9,7 +9,7 @@
   },
   "vars": {
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
-    "LATEST_VERSION": "0.1.0",
+    "LATEST_VERSION": "0.2.0",
     "MIN_SUPPORTED_VERSION": "0.1.0",
     // Firebase ID tokens must have aud = this and
     // iss = https://securetoken.google.com/<this> (docs/TECH.md §3). Not a secret.

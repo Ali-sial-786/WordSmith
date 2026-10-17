@@ -115,10 +115,28 @@ function isCount(value: unknown, max: number): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= max;
 }
 
-function stringList(value: unknown, maxItems: number): string[] | null {
+/** A list of at most `maxItems` strings, each short enough to be a word; `null` if it isn't one. */
+export function stringList(value: unknown, maxItems: number): string[] | null {
   if (!Array.isArray(value) || value.length > maxItems) return null;
   if (!value.every((w) => typeof w === "string" && w.length <= MAX_WORD_LENGTH)) return null;
   return value as string[];
+}
+
+/**
+ * `{hammer, chisel, sparks}` hint counts, each optional (0); missing or
+ * `null` is no hints. Returns the name of the bad field if there is one.
+ */
+export function parseHintCounts(raw: unknown): { readonly ok: true; readonly hints: HintCounts } | { readonly ok: false; readonly detail: string } {
+  const hints = noHints();
+  if (raw === undefined || raw === null) return { ok: true, hints };
+  if (!isRecord(raw)) return { ok: false, detail: "hintsUsed" };
+  for (const kind of HINT_KINDS) {
+    const n = raw[kind];
+    if (n === undefined) continue;
+    if (!isCount(n, MAX_HINTS_USED)) return { ok: false, detail: `hintsUsed.${kind}` };
+    hints[kind] = n;
+  }
+  return { ok: true, hints };
 }
 
 const HINT_KIND_SET: ReadonlySet<string> = new Set(HINT_KINDS);
@@ -136,16 +154,9 @@ export function parseSyncEntry(raw: unknown): ParsedEntry {
   const bonusWords = raw.bonusWords === undefined ? [] : stringList(raw.bonusWords, MAX_BONUS_WORDS);
   if (bonusWords === null) return bad("bonusWords");
 
-  const hintsUsed = noHints();
-  if (raw.hintsUsed !== undefined && raw.hintsUsed !== null) {
-    if (!isRecord(raw.hintsUsed)) return bad("hintsUsed");
-    for (const kind of HINT_KINDS) {
-      const n = raw.hintsUsed[kind];
-      if (n === undefined) continue;
-      if (!isCount(n, MAX_HINTS_USED)) return bad(`hintsUsed.${kind}`);
-      hintsUsed[kind] = n;
-    }
-  }
+  const parsedHints = parseHintCounts(raw.hintsUsed);
+  if (!parsedHints.ok) return bad(parsedHints.detail);
+  const hintsUsed = parsedHints.hints;
 
   // The app writes `pickups`; docs/TECH.md §8 calls it `pickupsCollected`.
   const rawPickups = raw.pickups ?? raw.pickupsCollected ?? [];
@@ -218,18 +229,53 @@ export function checkEntry(
   const bonus = normalizedSet(entry.bonusWords);
   if (bonus === null || [...bonus].some((w) => !puzzle.bonus.has(w))) return "unknown_bonus_word";
 
-  // Every letter cell is filled at the end. A cell no typed word covers can
-  // only have been shown by a hint (a slot that completes itself only does
-  // so once all its cells are already showing), so the hints used must be
-  // able to account for all of them.
+  if (!couldBeFilled(puzzle, found, entry.hintsUsed)) return "incomplete";
+  if (!isPlausibleDuration(entry.durationMs, found.size)) return "too_fast";
+  return null;
+}
+
+/**
+ * Whether typing `found` (grid words) and using these hints can have
+ * filled every letter cell. A cell no typed word covers can only have been
+ * shown by a hint (a slot that completes itself only does so once all its
+ * cells are already showing), so the hints used must account for all of them.
+ */
+export function couldBeFilled(puzzle: CampaignPuzzle, found: ReadonlySet<string>, used: Readonly<HintCounts>): boolean {
   const covered = new Set<number>();
   for (const word of found) for (const cell of puzzle.wordCells.get(word) ?? []) covered.add(cell);
-  const used = entry.hintsUsed;
   const revealable = used.hammer + used.chisel + SPARK_SHOWER_LETTERS * used.sparks;
-  if (puzzle.cellCount - covered.size > revealable) return "incomplete";
+  return puzzle.cellCount - covered.size <= revealable;
+}
 
-  if (entry.durationMs < MIN_MS_PER_FOUND_WORD * found.size) return "too_fast";
-  return null;
+/** At least {@link MIN_MS_PER_FOUND_WORD} for each word typed. */
+export function isPlausibleDuration(durationMs: number, typedWords: number): boolean {
+  return durationMs >= MIN_MS_PER_FOUND_WORD * typedWords;
+}
+
+/**
+ * Takes the hints used in a puzzle off the stock. `gained` arrived during
+ * it (pickups, Scrap Bin hammers), so it can pay for them; `rewards`
+ * (level-ups) only come at the end. Stock never goes below zero: an
+ * overdraw is reported as `clamped`.
+ */
+export function spendHints(
+  stock: Readonly<HintCounts>,
+  gained: Readonly<HintCounts>,
+  used: Readonly<HintCounts>,
+  rewards: Readonly<HintCounts>,
+): { readonly hints: HintCounts; readonly clamped: HintCounts | null } {
+  const hints = noHints();
+  const clamped = noHints();
+  let anyClamped = false;
+  for (const kind of HINT_KINDS) {
+    const available = stock[kind] + gained[kind];
+    if (used[kind] > available) {
+      clamped[kind] = used[kind] - available;
+      anyClamped = true;
+    }
+    hints[kind] = Math.max(available - used[kind], 0) + rewards[kind];
+  }
+  return { hints, clamped: anyClamped ? clamped : null };
 }
 
 export interface PickupCheck {
@@ -372,7 +418,7 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
   );
 
   let { totalXp, scrapBin, campaignCompleted, wordsForged, longestWord, soloDone } = state;
-  const hints: HintCounts = { ...state.hints };
+  let hints: HintCounts = { ...state.hints };
   const completed = new Set(state.completedStages);
   const seeds = new Set(state.installSeeds);
   const newInstallSeeds: string[] = [];
@@ -404,17 +450,8 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
     const gained = noHints();
     gained.hammer += scrap.hammers;
     for (const p of pickups.granted) gained[p.kind] += 1;
-    const clamped = noHints();
-    let anyClamped = false;
-    for (const kind of HINT_KINDS) {
-      const available = hints[kind] + gained[kind];
-      const used = entry.hintsUsed[kind];
-      if (used > available) {
-        clamped[kind] = used - available;
-        anyClamped = true;
-      }
-      hints[kind] = Math.max(available - used, 0) + award.rewards[kind];
-    }
+    const spent = spendHints(hints, gained, entry.hintsUsed, award.rewards);
+    hints = spent.hints;
 
     totalXp = award.totalXp;
     scrapBin = scrap.bin;
@@ -436,7 +473,7 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
       pickups: pickups.granted,
       pickupsRejected: pickups.rejected,
     };
-    results[index] = anyClamped ? { ...result, hintsClamped: clamped } : result;
+    results[index] = spent.clamped !== null ? { ...result, hintsClamped: spent.clamped } : result;
   }
 
   return {

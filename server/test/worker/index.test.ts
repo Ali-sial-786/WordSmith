@@ -12,7 +12,7 @@ describe("routes", () => {
     const res = await get("/v1/version");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^application\/json/);
-    expect(await res.json()).toEqual({ latest: "0.1.0", minSupported: "0.1.0", protocol: 1 });
+    expect(await res.json()).toEqual({ latest: "0.2.0", minSupported: "0.1.0", protocol: 1 });
   });
 
   it("GET /v1/health is ok", async () => {
@@ -41,6 +41,7 @@ describe("routes", () => {
 describe("D1 schema", () => {
   const TABLES = [
     "campaign",
+    "daily_completions",
     "friends",
     "inventory",
     "match_players",
@@ -55,7 +56,7 @@ describe("D1 schema", () => {
     "xp_events",
   ];
 
-  it("has every table from TECH.md §7, plus pickup_seeds", async () => {
+  it("has every table from TECH.md §7, plus pickup_seeds and daily_completions", async () => {
     const { results } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY name",
     ).all<{ name: string }>();

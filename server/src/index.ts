@@ -14,6 +14,7 @@ import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
 import { deleteMe, getMe, getUser, postSetup } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
+import { getDaily, postDailyComplete } from "./routes/daily";
 import { postSync } from "./routes/solo";
 import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
@@ -38,6 +39,9 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
 
   { method: "POST", path: "/v1/solo/sync", handler: authed(postSync) },
+
+  { method: "GET", path: "/v1/daily", handler: authed(getDaily) },
+  { method: "POST", path: "/v1/daily/complete", handler: authed(postDailyComplete) },
 
   { method: "GET", path: "/v1/friends", handler: authed(getFriends) },
   { method: "POST", path: "/v1/friends/request", handler: authed(postFriendRequest) },

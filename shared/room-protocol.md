@@ -119,3 +119,15 @@ Everything above applies unless this section says otherwise. Game rules are in
 - **Embers:** the same cells for everyone. Each racer who forges a word through an ember collects it once; it's granted after the series, not usable during it.
 - **XP** (one D1 batch at `SERIES_END`): `vsSeriesXp` (5 per round played, 10 per round won, 30 for winning the series), plus level-up rewards, Scrap Bin hammers from bonus words, ember pickups, and stats (VS series played and won, VS rounds won).
 - **Open rooms:** VS rooms in `lobby` or `results` that aren't full are listed to friends like co-op ones (`mode: "vs"`, `max: 5`).
+
+## As built (VS details beyond the tables above)
+
+- `ROUND_START.round` counts from 1 in each series, sudden death included. `tally` is the wins *before* the round, for every racer in the series (also ones who left).
+- `ROUND_END` also carries `round` (the round that ended).
+- `WORD_RESULT` in VS has no `points`, and `already` has no `by`. `already` also covers a slot that filled in by itself on your mold and a bonus word you'd already found.
+- `SNAPSHOT` for someone watching has `mine: {claims: [], auto: []}`; bonus words aren't included.
+- Clinch, sudden death and forfeit only count racers still in the series. Racers who left keep their wins on the podium, which ranks by wins with the series winner first among equals.
+- When people leaving decides the series: mid-round, the round is resolved among those left (`ROUND_END` with `reason: "timeout"`), then `SERIES_END`; during a countdown, the round is dropped (no `ROUND_END`) and `SERIES_END` follows; during standings, only `SERIES_END` follows. A forfeit always has `early: false`.
+- A racer who left can reconnect and watch; their `SUBMIT` gets `not_playing`. `SUBMIT` during standings gets `too_late`. `CONFIG` in a co-op room or with a bad value gets `bad_message`. `HINT` gets `no_hints` in every phase.
+- If the room idle-closes mid-series, `SERIES_END` goes out with what was played (`winner: null` unless already decided) and XP is still written.
+- Heat is fixed at `START` for the whole series. The series length can only be changed in the lobby (before the first series).
