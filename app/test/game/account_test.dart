@@ -98,6 +98,54 @@ void main() {
     expect(profile.hintCount(HintKind.hammer), 2);
   });
 
+  test('Crucible runs are sent before solo results, and an open run keeps its hints spent', () async {
+    final (c, auth, server, store) = await _setUp();
+    server.username = 'Ali';
+    await store.enqueueSurvival({
+      'runId': 'r1',
+      'startedAt': 1,
+      'endedAt': 2,
+      'saved': 2,
+      'puzzles': [
+        {
+          'stage': 1,
+          'puzzleId': 'c-0001',
+          'foundWords': ['FEAR', 'EAR'],
+          'hintsUsed': {'hammer': 1},
+          'cleared': false,
+        },
+      ],
+    });
+    // A run still going on this phone: its hint isn't on the server yet.
+    await store.saveOpenSurvival({
+      'runId': 'r2',
+      'startedAt': 3,
+      'endedAt': 4,
+      'saved': 0,
+      'puzzles': [
+        {
+          'stage': 2,
+          'puzzleId': 'c-0002',
+          'foundWords': <String>[],
+          'hintsUsed': {'hammer': 1},
+          'cleared': false,
+        },
+      ],
+    });
+    auth.passwords['ali@example.com'] = 'secret1';
+    await c.read(accountProvider.notifier).signIn('ali@example.com', 'secret1');
+    await _settle();
+
+    expect(server.survivalRuns.single['runId'], 'r1');
+    expect(store.loadSurvivalQueue(), isEmpty);
+    expect(server.calls.indexOf('POST /survival/solo'), lessThan(server.calls.lastIndexOf('GET /me')));
+    final profile = c.read(profileProvider);
+    expect(profile.totalXp, 2);
+    // 3 to start, 1 spent in the sent run (server), 1 in the open run (local).
+    expect(profile.hintCount(HintKind.hammer), 1);
+    expect(c.read(accountProvider).server!.survivalBest!.words, 2);
+  });
+
   test('a puzzle in progress keeps its hint use and bonus words on top of the server profile', () async {
     final saved = {
       'stage': 3,

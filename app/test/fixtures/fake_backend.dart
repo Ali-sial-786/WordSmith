@@ -214,6 +214,10 @@ class FakeServer {
   int? reminderUtcHour;
   int reminderPuts = 0;
 
+  /// Crucible runs received (shared/survival.md), and the best one.
+  final survivalRuns = <Map<String, dynamic>>[];
+  Map<String, Object>? survivalBest;
+
   /// Push tokens registered for invite notifications.
   final pushTokens = <String>{};
   bool deletedMe = false;
@@ -235,6 +239,7 @@ class FakeServer {
     'hints': hints,
     'stats': {'wordsForged': synced.length * 3, 'longestWord': '', 'soloDone': synced.length},
     'masterworks': {'pieces': masterworkPieces},
+    'survivalBest': survivalBest,
   };
 
   ApiClient client(AuthService auth) => ApiClient(
@@ -278,6 +283,30 @@ class FakeServer {
           'results': [
             for (final e in entries) {'stage': e['stage'], 'accepted': true},
           ],
+        });
+      case 'POST /survival/solo':
+        if (survivalRuns.any((r) => r['runId'] == body['runId'])) {
+          return _json(200, {'profile': profile(token), 'xp': {'xp': 0, 'level': 1, 'levelUps': 0}, 'duplicate': true});
+        }
+        survivalRuns.add(body);
+        final puzzles = (body['puzzles'] as List).cast<Map<String, dynamic>>();
+        final words = puzzles.fold<int>(0, (n, p) => n + (p['foundWords'] as List).length);
+        final cleared = puzzles.where((p) => p['cleared'] == true).length;
+        final xp = (words + 8 * cleared).clamp(0, 150);
+        totalXp += xp;
+        for (final p in puzzles) {
+          for (final u in (p['hintsUsed'] as Map).cast<String, int>().entries) {
+            hints[u.key] = ((hints[u.key] ?? 0) - u.value).clamp(0, 999);
+          }
+        }
+        final best = {'puzzles': cleared, 'words': words, 'saved': body['saved'] as int, 'at': 1};
+        final newBest = survivalBest == null || cleared > (survivalBest!['puzzles'] as int);
+        if (newBest) survivalBest = best;
+        return _json(200, {
+          'profile': profile(token),
+          'xp': {'xp': xp, 'level': 1, 'levelUps': 0, 'rewards': {}},
+          'best': survivalBest,
+          'newBest': newBest,
         });
       case 'GET /friends':
         return _json(200, {'friends': friends, 'incoming': incoming, 'outgoing': []});

@@ -358,6 +358,7 @@ exact rules live in the shared contracts.
 | Master / expert levels | **Master Forge**: after Starmetal, every puzzle again at full XP | `shared/master-forge.md` |
 | Reminder notifications | **Daily reminder** at an hour you pick, only when the commission is still waiting | `shared/push.md` |
 | Tutorial | A hand traces a word on the first puzzle; one-time tips for embers, gilded cells and meanings | — |
+| Timed / survival modes | **Survival**: one heated word at a time on a countdown; if it isn't forged in time it melts and the round ends. Solo as **The Crucible** (an endless run of puzzles), and as a lobby option in Co-op and Versus | `shared/survival.md` |
 
 Also: a left-handed layout (hints on the left of the anvil).
 
