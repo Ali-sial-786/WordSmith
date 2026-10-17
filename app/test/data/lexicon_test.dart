@@ -66,4 +66,14 @@ void main() {
     expect(await lexicon.lookup(''), isNull);
     expect(bundle.loads.where((k) => k.endsWith('f.json.gz')).length, 1, reason: 'shards are cached');
   });
+
+  test('the bundled dictionary has the forge words', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final lexicon = Lexicon(rootBundle);
+    final forge = (await lexicon.lookup('FORGE'))!;
+    expect(forge.senses.first.gloss, 'create by hammering');
+    expect((await lexicon.lookup('INGOTS'))!.base, 'INGOT');
+    expect((await lexicon.lookup('WENT'))!.base, 'GO');
+    expect(await lexicon.lookup('THE'), isNull);
+  });
 }

@@ -171,8 +171,10 @@ class ProfileNotifier extends Notifier<Profile> {
     final hints = levelUpRewards(before.level, after.level);
     final masterworkHints = <HintKind, int>{};
     if (masterwork != null) {
+      // Locked types become Hammer Strikes, judged after the puzzle's own XP.
+      final level = levelForTotalXp(state.totalXp + xp - masterworkXp).level;
       for (final kind in [HintKind.chisel, HintKind.sparks]) {
-        final k = kind.unlockedAt(before.level) ? kind : HintKind.hammer;
+        final k = kind.unlockedAt(level) ? kind : HintKind.hammer;
         masterworkHints[k] = (masterworkHints[k] ?? 0) + 1;
       }
     }

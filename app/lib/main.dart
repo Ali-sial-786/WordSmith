@@ -75,6 +75,7 @@ Future<AuthService> _startAuth() async {
 Stream<LicenseEntry> _bundledLicences() async* {
   const files = {
     'SCOWL.txt': ['SCOWL word lists'],
+    'OEWN-CC-BY-4.0.txt': ['Open English WordNet'],
     'Cinzel-OFL.txt': ['Cinzel font'],
     'RobotoSlab-LICENSE.txt': ['Roboto Slab font'],
     'NunitoSans-OFL.txt': ['Nunito Sans font'],

@@ -20,6 +20,12 @@ class CreditsScreen extends StatelessWidget {
     ),
     ('ENABLE word list', 'Alan Beale and M. Cooper', 'Public domain', ''),
     (
+      'Open English WordNet 2024 (word meanings)',
+      'The Open English WordNet team, based on Princeton WordNet 3.1',
+      'CC BY 4.0 (shortened, a few senses left out)',
+      'https://github.com/globalwordnet/english-wordnet',
+    ),
+    (
       'List of Dirty, Naughty, Obscene and Otherwise Bad Words',
       'Shutterstock and contributors',
       'CC BY 4.0',
@@ -44,7 +50,8 @@ class CreditsScreen extends StatelessWidget {
       body: FutureBuilder(
         future: _load(),
         builder: (context, snap) {
-          final assets = snap.data ?? const [];
+          // The dictionary is listed with the word lists.
+          final assets = [for (final a in snap.data ?? const <Map<String, dynamic>>[]) if (a['file'] != 'dict/*.json.gz') a];
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [

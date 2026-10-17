@@ -31,6 +31,9 @@ void main() {
       ]);
       expect(gildedFor('user-123', 'c-0025', 3, 20), 1);
       expect(gildedFor('user-123', 'c-0025', 12, 20), 4);
+      expect(gildedFor('user-123', 'c-0205', 3, 20), 0, reason: 'wraps round');
+      expect(gildedFor('user-123', 'c-1306', 3, 20), 2, reason: 'steps past two pickups');
+      expect(gildedFor('user-123', 'c-0025', 1, 20), isNull, reason: 'the only cell holds a pickup');
     });
 
     test('no room when every cell holds a pickup', () {
