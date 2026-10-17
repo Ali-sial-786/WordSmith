@@ -15,6 +15,8 @@ import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/features/coop/lobby_view.dart';
+import 'package:wordsmith/features/coop/round_view.dart';
+import 'package:wordsmith/game/coop_session.dart';
 import 'package:wordsmith/features/vs/vs_results_view.dart';
 import 'package:wordsmith/features/vs/vs_round_view.dart';
 import 'package:wordsmith/features/vs/vs_standings_view.dart';
@@ -59,7 +61,9 @@ final _slots = [
   {'slot': 4, 'x': 2, 'y': 2, 'd': 'a', 'len': 3},
 ];
 
-RoundStart _start() => RoundStart.fromJson({
+RoundStart _start() => RoundStart.fromJson(_startJson());
+
+Map<String, dynamic> _startJson() => {
   'round': 3,
   'heat': 3,
   'startsAt': 0,
@@ -75,7 +79,7 @@ RoundStart _start() => RoundStart.fromJson({
   'suddenDeath': false,
   'players': ['u1', 'u2', 'u3', 'u4'],
   'tally': {'u1': 1, 'u2': 1, 'u3': 0, 'u4': 0},
-});
+};
 
 VsSession _session(String phase) => VsSession(
   client: RoomClient(baseUrl: 'http://127.0.0.1:9', code: 'V5X7KQ', token: () async => 't'),
@@ -258,4 +262,31 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/hall${location.replaceAll('/', '_')}.png'));
     });
   }
+
+  testWidgets('coop round', (tester) async {
+    final lobby = RoomLobby.fromJson({
+      ...{
+        'code': 'K7Q2AB',
+        'mode': 'coop',
+        'phase': 'round',
+        'hostId': 'u1',
+        'heat': 3,
+      },
+      'players': [
+        for (var i = 1; i <= 4; i++)
+          {'id': 'u$i', 'username': _names[i - 1], 'avatar': 'avatar_0${i + 2}', 'level': 5 + i, 'color': i - 1, 'ready': true, 'connected': true},
+      ],
+    });
+    final start = RoundStart.fromJson({..._startJson(), 'players': null});
+    final s = CoopSession(client: RoomClient(baseUrl: 'http://127.0.0.1:9', code: 'K7Q2AB', token: () async => 't'), me: 'u1')
+      ..lobby = lobby
+      ..round = start
+      ..mold = RemoteMold(start, () => lobby)
+      ..scores = {'u1': 50, 'u2': 30, 'u3': 0, 'u4': 20};
+    s.mold!.claim(0, 'STONE', 'u1');
+    s.mold!.claim(1, 'SEAT', 'u2');
+    s.mold!.claim(3, 'TON', 'u4');
+    s.feed.add(const FeedLine('sam forged SEAT  +30', Color(0xFFE1B53B)));
+    await _shoot(tester, 'coop_round', RoundView(session: s, cues: MoldCues(), onLeave: () {}));
+  });
 }
