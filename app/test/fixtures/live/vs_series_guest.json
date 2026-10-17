@@ -1,0 +1,593 @@
+{
+ "me": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+ "events": [
+  {
+   "op": "WELCOME",
+   "you": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+   "protocol": 1,
+   "serverNow": 1792217403139
+  },
+  {
+   "op": "SNAPSHOT",
+   "lobby": {
+    "code": "FZUXHT",
+    "mode": "vs",
+    "phase": "lobby",
+    "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+    "heat": 1,
+    "players": [
+     {
+      "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+      "username": "qahost718780",
+      "avatar": "avatar_05",
+      "level": 1,
+      "color": 0,
+      "ready": false,
+      "connected": true
+     },
+     {
+      "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+      "username": "qaguest578092",
+      "avatar": "avatar_05",
+      "level": 1,
+      "color": 1,
+      "ready": false,
+      "connected": true
+     }
+    ],
+    "series": 3
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "lobby",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 5
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "lobby",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "ERROR",
+   "code": "not_host"
+  },
+  {
+   "op": "ROUND_START",
+   "round": 1,
+   "heat": 1,
+   "startsAt": 1792217406282,
+   "endsAt": 1792217526282,
+   "serverNow": 1792217403282,
+   "letters": "TCAK",
+   "cols": 4,
+   "rows": 3,
+   "slots": [
+    {
+     "slot": 0,
+     "x": 0,
+     "y": 0,
+     "d": "a",
+     "len": 4
+    },
+    {
+     "slot": 1,
+     "x": 2,
+     "y": 0,
+     "d": "d",
+     "len": 3
+    },
+    {
+     "slot": 2,
+     "x": 0,
+     "y": 2,
+     "d": "a",
+     "len": 3
+    }
+   ],
+   "pickups": [],
+   "series": 3,
+   "regular": 1,
+   "suddenDeath": false,
+   "players": [
+    "IV2l2SOF26XnphvNQOjipz1xKWk1",
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32"
+   ],
+   "tally": {
+    "IV2l2SOF26XnphvNQOjipz1xKWk1": 0,
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32": 0
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "countdown",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "round",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "ERROR",
+   "code": "no_hints"
+  },
+  {
+   "op": "WORD_RESULT",
+   "seq": 1,
+   "word": "TACK",
+   "result": "claimed",
+   "slot": 0,
+   "auto": []
+  },
+  {
+   "op": "PROGRESS",
+   "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+   "filled": 4,
+   "total": 8
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 4,
+   "total": 8
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 6,
+   "total": 8
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 8,
+   "total": 8
+  },
+  {
+   "op": "ROUND_END",
+   "round": 1,
+   "reason": "finished",
+   "winner": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "how": "finished",
+   "progress": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "filled": 8,
+     "total": 8
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "filled": 4,
+     "total": 8
+    }
+   ],
+   "tally": {
+    "IV2l2SOF26XnphvNQOjipz1xKWk1": 1,
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32": 0
+   },
+   "answers": [
+    {
+     "slot": 0,
+     "word": "TACK"
+    },
+    {
+     "slot": 1,
+     "word": "CAT"
+    },
+    {
+     "slot": 2,
+     "word": "ACT"
+    }
+   ],
+   "next": {
+    "round": 2,
+    "suddenDeath": false,
+    "players": [
+     "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "GdG9KY8JTaRw7uuTlVuR6nddTS32"
+    ]
+   },
+   "standingsEndsAt": 1792217417421
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "standings",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "ROUND_START",
+   "round": 2,
+   "heat": 1,
+   "startsAt": 1792217420471,
+   "endsAt": 1792217540471,
+   "serverNow": 1792217417471,
+   "letters": "EMTL",
+   "cols": 4,
+   "rows": 3,
+   "slots": [
+    {
+     "slot": 0,
+     "x": 0,
+     "y": 0,
+     "d": "a",
+     "len": 4
+    },
+    {
+     "slot": 1,
+     "x": 0,
+     "y": 0,
+     "d": "d",
+     "len": 3
+    },
+    {
+     "slot": 2,
+     "x": 2,
+     "y": 0,
+     "d": "d",
+     "len": 3
+    }
+   ],
+   "pickups": [],
+   "series": 3,
+   "regular": 2,
+   "suddenDeath": false,
+   "players": [
+    "IV2l2SOF26XnphvNQOjipz1xKWk1",
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32"
+   ],
+   "tally": {
+    "IV2l2SOF26XnphvNQOjipz1xKWk1": 1,
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32": 0
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "countdown",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "round",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 4,
+   "total": 8
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 6,
+   "total": 8
+  },
+  {
+   "op": "PROGRESS",
+   "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "filled": 8,
+   "total": 8
+  },
+  {
+   "op": "ROUND_END",
+   "round": 2,
+   "reason": "finished",
+   "winner": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "how": "finished",
+   "progress": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "filled": 8,
+     "total": 8
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "filled": 0,
+     "total": 8
+    }
+   ],
+   "tally": {
+    "IV2l2SOF26XnphvNQOjipz1xKWk1": 2,
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32": 0
+   },
+   "answers": [
+    {
+     "slot": 0,
+     "word": "MELT"
+    },
+    {
+     "slot": 1,
+     "word": "MET"
+    },
+    {
+     "slot": 2,
+     "word": "LET"
+    }
+   ],
+   "next": null,
+   "standingsEndsAt": null
+  },
+  {
+   "op": "SERIES_END",
+   "winner": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "early": true,
+   "forfeit": false,
+   "rounds": 2,
+   "podium": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "wins": 2,
+     "place": 1
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "wins": 0,
+     "place": 2
+    }
+   ],
+   "xp": {
+    "GdG9KY8JTaRw7uuTlVuR6nddTS32": {
+     "xp": 10,
+     "level": 1,
+     "levelUps": 0,
+     "rewards": {
+      "hammer": 0,
+      "chisel": 0,
+      "sparks": 0
+     },
+     "scrapHammers": 0,
+     "pickups": {
+      "hammer": 0,
+      "chisel": 0,
+      "sparks": 0
+     }
+    },
+    "IV2l2SOF26XnphvNQOjipz1xKWk1": {
+     "xp": 60,
+     "level": 2,
+     "levelUps": 1,
+     "rewards": {
+      "hammer": 1,
+      "chisel": 0,
+      "sparks": 0
+     },
+     "scrapHammers": 0,
+     "pickups": {
+      "hammer": 0,
+      "chisel": 0,
+      "sparks": 0
+     }
+    }
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "results",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 2,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  },
+  {
+   "op": "LOBBY",
+   "code": "FZUXHT",
+   "mode": "vs",
+   "phase": "results",
+   "hostId": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "IV2l2SOF26XnphvNQOjipz1xKWk1",
+     "username": "qahost718780",
+     "avatar": "avatar_05",
+     "level": 2,
+     "color": 0,
+     "ready": false,
+     "connected": false
+    },
+    {
+     "id": "GdG9KY8JTaRw7uuTlVuR6nddTS32",
+     "username": "qaguest578092",
+     "avatar": "avatar_05",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ],
+   "series": 3
+  }
+ ]
+}

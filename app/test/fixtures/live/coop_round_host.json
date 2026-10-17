@@ -1,0 +1,450 @@
+{
+ "me": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+ "events": [
+  {
+   "op": "WELCOME",
+   "you": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "protocol": 1,
+   "serverNow": 1792217425570
+  },
+  {
+   "op": "SNAPSHOT",
+   "lobby": {
+    "code": "UQC7MM",
+    "mode": "coop",
+    "phase": "lobby",
+    "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+    "heat": 1,
+    "players": [
+     {
+      "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+      "username": "qahost560353",
+      "avatar": "avatar_03",
+      "level": 1,
+      "color": 0,
+      "ready": false,
+      "connected": true
+     }
+    ]
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "lobby",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ]
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "lobby",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": true,
+     "connected": true
+    }
+   ]
+  },
+  {
+   "op": "ROUND_START",
+   "round": 1,
+   "heat": 1,
+   "startsAt": 1792217428815,
+   "endsAt": 1792217608815,
+   "serverNow": 1792217425815,
+   "letters": "DNAW",
+   "cols": 6,
+   "rows": 5,
+   "slots": [
+    {
+     "slot": 0,
+     "x": 0,
+     "y": 0,
+     "d": "d",
+     "len": 3
+    },
+    {
+     "slot": 1,
+     "x": 3,
+     "y": 0,
+     "d": "a",
+     "len": 3
+    },
+    {
+     "slot": 2,
+     "x": 3,
+     "y": 0,
+     "d": "d",
+     "len": 4
+    },
+    {
+     "slot": 3,
+     "x": 0,
+     "y": 2,
+     "d": "a",
+     "len": 4
+    },
+    {
+     "slot": 4,
+     "x": 1,
+     "y": 2,
+     "d": "d",
+     "len": 3
+    }
+   ],
+   "pickups": []
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "countdown",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ]
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "round",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ]
+  },
+  {
+   "op": "REVEAL",
+   "by": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+   "kind": "hammer",
+   "cells": [
+    {
+     "x": 1,
+     "y": 3,
+     "letter": "N"
+    }
+   ],
+   "auto": []
+  },
+  {
+   "op": "WORD_RESULT",
+   "seq": 1,
+   "word": "QZXV",
+   "result": "invalid"
+  },
+  {
+   "op": "WORD_RESULT",
+   "seq": 2,
+   "word": "DAWN",
+   "result": "claimed",
+   "points": 40
+  },
+  {
+   "op": "CLAIMED",
+   "slot": 3,
+   "word": "DAWN",
+   "by": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "points": 40,
+   "scores": {
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": 40,
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": 0
+   },
+   "auto": []
+  },
+  {
+   "op": "CLAIMED",
+   "slot": 4,
+   "word": "AND",
+   "by": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+   "points": 20,
+   "scores": {
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": 40,
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": 20
+   },
+   "auto": []
+  },
+  {
+   "op": "WORD_RESULT",
+   "seq": 3,
+   "word": "WAND",
+   "result": "claimed",
+   "points": 40
+  },
+  {
+   "op": "CLAIMED",
+   "slot": 2,
+   "word": "WAND",
+   "by": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "points": 40,
+   "scores": {
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": 80,
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": 20
+   },
+   "auto": []
+  },
+  {
+   "op": "CLAIMED",
+   "slot": 0,
+   "word": "WAD",
+   "by": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+   "points": 30,
+   "scores": {
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": 80,
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": 50
+   },
+   "auto": []
+  },
+  {
+   "op": "WORD_RESULT",
+   "seq": 4,
+   "word": "WAN",
+   "result": "claimed",
+   "points": 30
+  },
+  {
+   "op": "CLAIMED",
+   "slot": 1,
+   "word": "WAN",
+   "by": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "points": 30,
+   "scores": {
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": 110,
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": 50
+   },
+   "auto": []
+  },
+  {
+   "op": "ROUND_END",
+   "reason": "complete",
+   "teamScore": 160,
+   "filled": 13,
+   "total": 13,
+   "stars": 3,
+   "mvp": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "answers": [
+    {
+     "slot": 0,
+     "word": "WAD"
+    },
+    {
+     "slot": 1,
+     "word": "WAN"
+    },
+    {
+     "slot": 2,
+     "word": "WAND"
+    },
+    {
+     "slot": 3,
+     "word": "DAWN"
+    },
+    {
+     "slot": 4,
+     "word": "AND"
+    }
+   ],
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "points": 110,
+     "words": 3,
+     "longest": "DAWN",
+     "bonus": 0
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "points": 50,
+     "words": 2,
+     "longest": "AND",
+     "bonus": 0
+    }
+   ],
+   "xp": {
+    "4xi4SWiwqdVcj4491PfJJwXlHml2": {
+     "xp": 45,
+     "level": 1,
+     "levelUps": 0,
+     "rewards": {
+      "hammer": 0,
+      "chisel": 0,
+      "sparks": 0
+     },
+     "scrapHammers": 0
+    },
+    "vBekqNhanhcCWZFvxRXcyog1rwi1": {
+     "xp": 61,
+     "level": 2,
+     "levelUps": 1,
+     "rewards": {
+      "hammer": 1,
+      "chisel": 0,
+      "sparks": 0
+     },
+     "scrapHammers": 0
+    }
+   }
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "results",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 2,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ]
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "results",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 2,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": false
+    }
+   ]
+  },
+  {
+   "op": "LOBBY",
+   "code": "UQC7MM",
+   "mode": "coop",
+   "phase": "results",
+   "hostId": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+   "heat": 1,
+   "players": [
+    {
+     "id": "vBekqNhanhcCWZFvxRXcyog1rwi1",
+     "username": "qahost560353",
+     "avatar": "avatar_03",
+     "level": 2,
+     "color": 0,
+     "ready": false,
+     "connected": true
+    },
+    {
+     "id": "4xi4SWiwqdVcj4491PfJJwXlHml2",
+     "username": "qaguest452320",
+     "avatar": "avatar_03",
+     "level": 1,
+     "color": 1,
+     "ready": false,
+     "connected": true
+    }
+   ]
+  }
+ ]
+}
