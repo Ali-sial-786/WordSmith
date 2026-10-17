@@ -17,7 +17,7 @@ contract.
 | `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
 | `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), the invite and gift messages (`invite.ts`, `gift.ts`), and the daily reminders' hourly run (`reminder.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
-| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql` and `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) |
+| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql`, `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) and `0006_survival.sql` (The Crucible's runs and best runs) |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
 | `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
@@ -41,6 +41,7 @@ contract.
 | `coop-round.ts` | One co-op round: claims, self-completing slots, hints, embers, scores, results and XP |
 | `vs.ts` | Round results, series clinch, sudden death and the podium |
 | `vs-round.ts` | One Versus round on everyone's own mold (claims, self-completing slots, embers, progress) and the series around it (tally, racers who left, what comes next, results and XP) |
+| `survival.ts` | Survival ([shared/survival.md](../shared/survival.md)): the countdown (`survivalHeatMs`), the heat order and the heated slot, a mold's clock (grace, pauses), and checking and scoring a Crucible run. `coop-round.ts` and `vs-round.ts` keep each round's clocks |
 
 ## Routes
 
@@ -63,6 +64,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `PUT /me/reminder` | `{hour}` (a UTC hour 0–23, or `null`) → `{ok: true, hour}`: a daily reminder while the Daily Commission is waiting (below). `400 invalid_body`. |
 | `GET /users/:username` | `{id, username, avatar, level, rank, campaignCompleted, stats, friendship}`; `friendship` is `self`, `none`, `friends`, `request_sent` or `request_received`. `404 user_not_found`. |
 | `POST /solo/sync` | `{entries: [...]}` → `{profile, results}`; see below |
+| `POST /survival/solo` | A Crucible run `{runId, startedAt, endedAt, saved, puzzles}` → `{profile, xp: {xp, level, levelUps, rewards}, best, newBest, duplicate?}`; see Survival below. `400 invalid_run` (with a `message`), `503 campaign_unavailable`, `409 sync_conflict`. |
 | `GET /daily?date=` | `{date, heat, puzzle, completed, streak, best, total}`: today's Daily Commission, or a catch-up day's (below). `400 wrong_day`, `400 invalid_body`. |
 | `POST /daily/complete` | `{date, foundWords, bonusWords?, hintsUsed?, durationMs}` → `{profile, xp, late, streak, best, total, alreadyDone}`. `400 wrong_day`, `400 incomplete`, `400 too_fast`, `400 invalid_body`; `409 sync_conflict` (retry). |
 | `GET /daily/calendar?month=` | `{month, days, trophy, trophies}` for this month (default) or last. `400 wrong_month`, `400 invalid_body`. |
@@ -85,7 +87,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
 Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board and push tokens need a set-up account
-(`403 setup_required`). `/me`, `/me/setup`, `/solo/sync` and `/users/:username` don't.
+(`403 setup_required`). `/me`, `/me/setup`, `/solo/sync`, `/survival/solo` and `/users/:username` don't.
 
 ### Profile
 
@@ -98,6 +100,7 @@ Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board 
   "stats": {"wordsForged": 40, "longestWord": "THREAD", "soloDone": 12, "coopRounds": 0,
             "coopMvps": 0, "vsSeries": 0, "vsSeriesWon": 0, "vsRoundsWon": 0},
   "masterworks": {"pieces": 7}, "reminderHour": 18,
+  "survivalBest": {"puzzles": 4, "words": 31, "saved": 12, "at": 1792200300000},
   "createdAt": 1792200000000
 }
 ```
@@ -282,6 +285,14 @@ differences:
 - **XP:** one D1 batch at the end of the series (retried like co-op's): the `matches` row (`mode: "vs"`, summary with the series), `match_players` (podium place, round wins, XP), `xp_events` (`source: "vs"`), `vsSeriesXp` (5 per round raced, 10 per round won, 30 for the series), level-up rewards, Scrap Bin hammers from the series' bonus words, embers, and stats `vs_series`, `vs_series_won`, `vs_rounds_won`, `words_forged` and `longest_word`.
 - **SNAPSHOT:** `lobby`; during a countdown or round `round` (the `ROUND_START` fields plus `mine: {claims, auto}`, the receiver's own mold, empty for someone watching, and `progress`); during standings `standings` (the last `ROUND_END`); during results `results` (the `SERIES_END`) and `standings`.
 
+### Survival
+
+[shared/survival.md](../shared/survival.md), with the rules in `src/rules/survival.ts` (and each round's clocks in `coop-round.ts` and `vs-round.ts`):
+
+- **Rooms:** the host's `CONFIG {variant}` (lobby or results, either mode) picks the variant for the next `START` or `AGAIN`; a Versus series keeps the one it started with. Classic rooms are exactly as before: every survival field is left out, so a message without `variant` is classic.
+- **The clock:** a survival round keeps the heat order and a countdown per mold (the team's, or each racer's) in its stored round, and the DO's one alarm also covers the next melt (deadline + 300 ms). `endsAt` is only a 10-minute cap. A countdown pauses while nobody is there to forge it (co-op: no player connected; Versus: that racer away) and resumes, deadline moved on, when someone is back (`syncHeat` in `room.ts`).
+- **The Crucible:** `POST /v1/survival/solo` checks a run against the campaign (`checkSurvivalRun`), and writes it in one optimistic batch like solo sync: `survival_runs`, `xp_events` (`source: "survival"`, `ref`: the run id), hints, words forged, `survival_best` when the run beats it, and Work Orders progress. The profile's `survivalBest` comes from `survival_best`. Deleting the account deletes both tables' rows.
+
 ## Local development
 
 You need Node 22.12 or newer. Local mode doesn't need a Cloudflare account or
@@ -313,8 +324,8 @@ npx vitest run --project worker   # just the Worker
 
 The tests run as two Vitest projects:
 
-- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
-- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` and `board.test.ts` move the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks, Work Orders and Weekly Trials across days and weeks run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
+- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, Survival's rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
+- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus, `survival.test.ts` for Survival rooms; `survival-solo.test.ts` is The Crucible's endpoint) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` and `board.test.ts` move the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks, Work Orders and Weekly Trials across days and weeks run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
 
 ## Changing the schema
 

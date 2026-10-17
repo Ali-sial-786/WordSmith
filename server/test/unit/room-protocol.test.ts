@@ -53,6 +53,23 @@ describe("room parseClientMessage", () => {
   });
 });
 
+describe("room parseClientMessage: CONFIG with a variant (shared/survival.md)", () => {
+  it.each([
+    ['{"op":"CONFIG","variant":"survival"}', { op: "CONFIG", variant: "survival" }],
+    ['{"op":"CONFIG","variant":"classic"}', { op: "CONFIG", variant: "classic" }],
+    ['{"op":"CONFIG","variant":"survival","series":7}', { op: "CONFIG", variant: "survival", series: 7 }],
+  ])("reads %s", (raw, message) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: true, message });
+  });
+
+  it.each(['{"op":"CONFIG","variant":"hard"}', '{"op":"CONFIG","variant":null}', '{"op":"CONFIG","variant":"survival","series":4}', '{"op":"CONFIG","variant":"Survival"}'])(
+    "refuses %j",
+    (raw) => {
+      expect(parseClientMessage(raw)).toEqual({ ok: false });
+    },
+  );
+});
+
 describe("parseIdentity", () => {
   it("reads what the Worker sends", () => {
     expect(parseIdentity('{"id":"u1","username":"Ali","avatar":"avatar_03","level":12}')).toEqual({

@@ -79,7 +79,7 @@ function startedAlready(clock: HeatClock): HeatClock {
 
 async function survival(host: Socket, others: Socket[] = []): Promise<void> {
   host.send({ op: "CONFIG", variant: "survival" });
-  for (const s of [host, ...others]) expect(await s.next({ op: "LOBBY" })).toMatchObject({ variant: "survival" });
+  for (const s of [host, ...others]) await s.next({ op: "LOBBY", variant: "survival" });
 }
 
 const lastSubmit = new WeakMap<Socket, number>();

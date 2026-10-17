@@ -138,3 +138,30 @@ sends it when it can.
 - `survival_runs (uid, run_id, at, puzzles, words, saved, xp, PRIMARY KEY (uid, run_id))`
 - `survival_best (uid PRIMARY KEY, puzzles, words, saved, at)`
 - Both are removed with the account.
+
+## As built (server)
+
+Rooms:
+
+- **Classic is untouched:** survival fields (`variant`, `heated`, `saved`, `melted`) only appear in survival rooms and rounds, and `LOBBY.variant` only while it's `survival`. A message without `variant` is classic. (Existing clients and tests pin the classic messages exactly.)
+- **CONFIG:** `variant` in the lobby or results, `series` (Versus) in the lobby only; with both, the lobby only. No field, a bad value, or `series` in co-op is `bad_message`; then `wrong_phase`, then `not_host`. An unchanged value sends no `LOBBY`. A Versus series keeps the variant it started with, sudden death included.
+- **`heated`** in `ROUND_START` and `SNAPSHOT` has the `HEATED` fields, `serverNow` included. In Versus everyone gets `ROUND_START.heated`, watchers too.
+- **Order:** co-op `CLAIMED` or `REVEAL`, then `HEATED` to everyone. Versus `WORD_RESULT`, `PROGRESS`, then `HEATED` to each of the racer's open sockets. On a rejoin that resumes a countdown: `WELCOME`, `SNAPSHOT` (already resumed), then `HEATED`.
+- **Grace:** the melt is the alarm at `deadline` + 300 ms, so anything handled before it counts. A co-op `HINT` still waiting on D1 when the melt comes is refunded (`wrong_phase`).
+- **Pauses:** `startsAt` moves on with `deadline`, so `deadline − startsAt` is always `durationMs`. Time before the round's `startsAt` isn't a pause. A countdown whose melt is already due can't be paused.
+- **Melts:** in Versus the earliest melt goes first; an exact tie goes to the racer who joined first. A melt due after the 10-minute cap doesn't happen; the cap is a `timeout`.
+- **Wire:** `MELT` is `{slot}` in co-op and `{slot, id}` in Versus. `ROUND_END.melted` is `{slot}` in co-op and `{id, slot}` in Versus. Versus `saved` lists every racer in the round.
+- **SNAPSHOT:** co-op `round.heated` is `null` once the round is over (results still carry the finished round). In Versus, someone watching (a racer out of the series too) gets `heated: null`; `saved` is the receiver's own, and 0 if they didn't race.
+- **Stars:** a completed co-op survival round is timed against the 10-minute cap (★★★ inside 5 minutes).
+- **Records:** `matches.summary` gets `variant: "survival"`, plus `saved` and `melted` in co-op. `mode` stays `coop` or `vs`. Everyone in the round gets the +2 per saved bonus, players who left too.
+
+The Crucible (`POST /v1/survival/solo`):
+
+- Like solo sync, it needs a token but not a set-up account. `runId` is 1–64 of `A–Z a–z 0–9 _ -`. An empty `puzzles` list is fine (0 XP).
+- **Order of checks:** the body's shape, then the duplicate check, then the rest. So a run already recorded answers as a duplicate even if it would now fail (more than 24 h old, say). Also refused: `saved` greater than the run's grid words. The `400 invalid_run` has a `message` saying what's wrong.
+- `503 campaign_unavailable` (empty campaign table) and `409 sync_conflict` mean keep the run and retry, as in sync.
+- **Counting:** words are each puzzle's distinct found words, so a word found in two puzzles counts twice. `at` (runs and best) is the run's `endedAt`. `survival_runs.puzzles` is puzzles cleared. A tie with the best isn't a new best.
+- **Duplicate answer:** `xp.xp` is what the run was given; `levelUps` 0 and `rewards` zero (they were paid the first time); `level` is the current one; `best` is the current best; and `newBest` says whether this run is still the best. Other answers have no `duplicate`. Hints clamped aren't reported; the profile is the truth.
+- **Also written:** found words count as words forged and longest word, as in every mode (campaign progress and `soloDone` don't change). `xp_events` gets `source: "survival"` with the run id as `ref`, when the XP is above 0.
+- **Work Orders:** found words count as forged words. That feeds `letter_hunt` as well as `words` and `long_words`, as sync's do. Cleared puzzles count as `solo_puzzles`, the weekly 15 included. Nothing counts for `no_hints`.
+- The tables use `uid`, as written above (the older tables say `user_id`).
