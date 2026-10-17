@@ -705,8 +705,9 @@ export class RoomDO extends DurableObject<Env> {
     const round = this.round();
     if (round !== null && room.phase === "countdown") deadlines.push(round.startsAt);
     if (round !== null && room.phase === "round") deadlines.push(round.endsAt);
+    // Not while a write is in flight: its own caller reschedules afterwards.
     const award = this.read<PendingAward>(AWARD);
-    if (award !== null) deadlines.push(award.retryAt);
+    if (award !== null && this.awarding === null) deadlines.push(award.retryAt);
     return Math.min(...deadlines);
   }
 
@@ -757,7 +758,8 @@ export class RoomDO extends DurableObject<Env> {
       },
       usernames,
       attempts: 0,
-      retryAt: now,
+      // Written straight away by announceResults(); this is only for a write cut off by a restart.
+      retryAt: now + AWARD_RETRY_MS,
       announced: false,
     };
     this.write(AWARD, award);
