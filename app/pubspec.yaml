@@ -74,6 +74,7 @@ flutter:
     - assets/credits.json
     - assets/licenses/
     - assets/dict/
+    - assets/ui/
 
   shaders:
     - shaders/forge_fire.frag
