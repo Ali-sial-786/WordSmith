@@ -64,8 +64,7 @@ Map<String, int> _scores(Object? j) => {
 };
 
 List<(int, String)> _slotWords(Object? j) => [
-  for (final a in ((j as List?) ?? const []).cast<Map<String, dynamic>>())
-    (a['slot'] as int, a['word'] as String),
+  for (final a in ((j as List?) ?? const []).cast<Map<String, dynamic>>()) (a['slot'] as int, a['word'] as String),
 ];
 
 List<(CellPos, String)> _cellLetters(Object? j) => [
@@ -128,8 +127,7 @@ class RoomLobby extends RoomEvent {
     hostId: j['hostId'] as String? ?? '',
     heat: j['heat'] as int? ?? 1,
     players: [
-      for (final p in ((j['players'] as List?) ?? const []).cast<Map<String, dynamic>>())
-        RoomPlayer.fromJson(p),
+      for (final p in ((j['players'] as List?) ?? const []).cast<Map<String, dynamic>>()) RoomPlayer.fromJson(p),
     ],
     series: j['series'] as int? ?? 3,
     variant: j['variant'] as String? ?? 'classic',
@@ -169,9 +167,7 @@ class RemoteSlot {
   final bool across;
   final int length;
 
-  List<CellPos> get cells => [
-    for (var i = 0; i < length; i++) across ? (x: x + i, y: y) : (x: x, y: y + i),
-  ];
+  List<CellPos> get cells => [for (var i = 0; i < length; i++) across ? (x: x + i, y: y) : (x: x, y: y + i)];
 }
 
 class RoundStart extends RoomEvent {
@@ -349,6 +345,7 @@ class VsRoundEnd extends RoomEvent {
     this.standingsEndsAt,
     this.round,
     this.melted,
+    this.molds = const {},
   });
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
@@ -365,14 +362,16 @@ class VsRoundEnd extends RoomEvent {
       answers: _slotWords(j['answers']),
       next: next == null
           ? null
-          : NextRound(
-              (next['round'] as num?)?.toInt() ?? 0,
-              next['suddenDeath'] as bool? ?? false,
-              [for (final id in (next['players'] as List?) ?? const []) id as String],
-            ),
+          : NextRound((next['round'] as num?)?.toInt() ?? 0, next['suddenDeath'] as bool? ?? false, [
+              for (final id in (next['players'] as List?) ?? const []) id as String,
+            ]),
       standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
       round: (j['round'] as num?)?.toInt(),
       melted: melted == null ? null : (id: melted['id'] as String, slot: (melted['slot'] as num).toInt()),
+      molds: {
+        for (final e in ((j['molds'] as Map?) ?? const {}).entries)
+          e.key as String: [for (final s in (e.value as List?) ?? const []) (s as num).toInt()],
+      },
     );
   }
 
@@ -385,6 +384,11 @@ class VsRoundEnd extends RoomEvent {
   /// Survival: whose word melted, ending the round.
   final ({String id, int slot})? melted;
   final List<RacerProgress> progress;
+
+  /// Each racer's complete slots (forged or filled in by themselves), now the
+  /// round is over: rivals' cells are never shown before. Empty from a server
+  /// that doesn't send them.
+  final Map<String, List<int>> molds;
   final Map<String, int> tally;
   final List<(int, String)> answers;
   final NextRound? next;
@@ -459,12 +463,7 @@ class WordClaimed extends RoomEvent {
 }
 
 class BonusClaimed extends RoomEvent {
-  const BonusClaimed({
-    required this.word,
-    required this.by,
-    required this.points,
-    required this.scores,
-  });
+  const BonusClaimed({required this.word, required this.by, required this.points, required this.scores});
 
   final String word;
   final String by;
@@ -727,8 +726,7 @@ class RoomClient {
 
   /// Host only: best of [series] rounds (Versus), and the variant
   /// (`classic` or `survival`).
-  void config({int? series, String? variant}) =>
-      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant});
+  void config({int? series, String? variant}) => _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});

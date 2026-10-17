@@ -338,6 +338,7 @@ describe("endVsRound", () => {
           { id: "a", filled: 0, total: 9 },
           { id: "b", filled: 3, total: 9 },
         ],
+        molds: { a: [], b: [1] },
         tally: { a: 0, b: 1 },
         answers: [
           { slot: 0, word: "TEAR" },
@@ -364,6 +365,38 @@ describe("endVsRound", () => {
     const stopped = endVsRound(t, round(["a", "b"]), "timeout", T0, true);
     expect(stopped.fields).toMatchObject({ how: "none", next: null, standingsEndsAt: null });
     expect(stopped.outcome).toEqual({ winner: null, early: false, forfeit: false });
+  });
+
+  it("shows every racer's mold once it's over: the slots forged or filled in by themselves, sorted", () => {
+    // Finished: a's last word fills CDF (slot 1) in by itself.
+    const r = round(["a", "b"], { puzzle: crossed });
+    for (const w of ["DEF", "ABC", "BAF"]) applyVsSubmit(r, "a", w);
+    applyVsSubmit(r, "b", "CDF");
+    applyVsSubmit(r, "b", "ABC");
+    applyVsSubmit(r, "b", "BAD"); // bonus: not on the mold
+    expect(r.molds.a!.auto).toEqual([{ slot: 1, word: "CDF" }]);
+    expect(endVsRound(series(["a", "b"]), r, "finished", T0).fields).toMatchObject({ winner: "a", molds: { a: [0, 1, 2, 3], b: [0, 1] } });
+
+    // Timeout: someone with nothing has an empty mold.
+    const t = round(["a", "b", "c"]);
+    applyVsSubmit(t, "c", "RATE");
+    applyVsSubmit(t, "c", "TEAR");
+    applyVsSubmit(t, "a", "EAT");
+    expect(endVsRound(series(["a", "b", "c"]), t, "timeout", T0).fields.molds).toEqual({ a: [1], b: [], c: [0, 2] });
+  });
+
+  it("keeps the mold of a racer who left mid-round, and has none for someone watching", () => {
+    // Sudden death between a and b, c watching; b leaves before it ends.
+    const s = series(["a", "b", "c"]);
+    for (const w of ["a", "b", null]) play(s, w);
+    const r = round(["a", "b"], { n: 4, suddenDeath: true });
+    applyVsSubmit(r, "a", "EAT");
+    applyVsSubmit(r, "b", "RATE");
+    applyVsSubmit(r, "b", "TEAR");
+    markOut(s, "b");
+    const end = endVsRound(s, r, "timeout", T0, true);
+    expect(end.fields).toMatchObject({ winner: "a", how: "timeout" });
+    expect(end.fields.molds).toEqual({ a: [1], b: [0, 2] });
   });
 });
 

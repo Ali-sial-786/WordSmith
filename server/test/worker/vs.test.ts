@@ -309,6 +309,9 @@ describe("Versus rooms", () => {
         next: { round: 2, suddenDeath: false, players: ids },
       });
       expect(end1.progress).toEqual(ids.map((id) => ({ id, filled: id === a.uid ? r1.total : id === b.uid ? w1.len : 0, total: r1.total })));
+      // Now the round is over, everyone's mold: A's every slot, B's one word.
+      const allSlots = r1.puzzle.slots.map((s) => s.slot).sort((x, y) => x - y);
+      expect(end1.molds).toEqual(Object.fromEntries(ids.map((id) => [id, id === a.uid ? allSlots : id === b.uid ? [w1.slot] : []])));
       expect(typeof end1.standingsEndsAt).toBe("number");
       for (const s of sockets) await s.next({ op: "LOBBY", phase: "standings" });
       expect(await forge(sb, w1.word, 4)).toMatchObject({ result: "too_late" });
@@ -337,6 +340,7 @@ describe("Versus rooms", () => {
       const end2 = await sa.next({ op: "ROUND_END" });
       expect(end2).toMatchObject({ round: 2, reason: "timeout", winner: b.uid, how: "timeout", next: { round: 3, suddenDeath: false } });
       expect(end2.tally).toMatchObject({ [a.uid]: 1, [b.uid]: 1 });
+      expect(end2.molds).toEqual(Object.fromEntries(ids.map((id) => [id, id === b.uid || id === c.uid ? [w2.slot] : []])));
 
       // Round 3: nobody forges anything, so nobody wins; A and B are tied on top.
       await nextRound(code, sockets);
@@ -574,6 +578,8 @@ describe("Versus rooms", () => {
       expect((await back.closed).code).toBe(4002);
       const end = await sa.next({ op: "ROUND_END" });
       expect(end).toMatchObject({ round: 1, reason: "timeout", winner: a.uid, how: "timeout", next: null, standingsEndsAt: null });
+      // B and C left, but their molds are still shown.
+      expect(end.molds).toEqual({ [a.uid]: [w2!.slot], [b.uid]: [w1!.slot, w2!.slot].sort((x, y) => x - y), [c.uid]: [] });
       const series = await sa.next({ op: "SERIES_END" });
       expect(series).toMatchObject({ winner: a.uid, early: false, forfeit: true, rounds: 1 });
       expect(series.podium).toEqual([

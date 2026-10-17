@@ -220,6 +220,58 @@ void main() {
     expect(find.text('Round 4 of up to 5'), findsOneWidget);
   });
 
+  testWidgets('five racers\' molds fit under the standings and the round-over headline', (tester) async {
+    final start = _start();
+    // u5 left mid-round; a 3x3 mold of 7 letters, slots 0 CAT, 1 COT, 2 TOE.
+    final end = VsRoundEnd.fromJson({
+      'round': 3,
+      'reason': 'timeout',
+      'winner': 'u3',
+      'how': 'timeout',
+      'progress': [
+        for (final (i, filled) in [3, 5, 7, 3, 0].indexed) {'id': 'u${i + 1}', 'filled': filled, 'total': 7},
+      ],
+      'molds': {
+        'u1': [0],
+        'u2': [0, 1],
+        'u3': [0, 1, 2],
+        'u4': [2],
+        'u5': [],
+      },
+      'tally': {'u1': 1, 'u2': 1, 'u3': 1, 'u4': 0, 'u5': 0},
+      'answers': [],
+      'next': {
+        'round': 4,
+        'suddenDeath': false,
+        'players': ['u1', 'u2', 'u3', 'u4'],
+      },
+      'standingsEndsAt': DateTime.now().millisecondsSinceEpoch + 8000,
+    });
+    final s = _session('standings')
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('standings'))
+      ..standings = end
+      ..tally = end.tally;
+    for (final scale in [1.0, 1.3]) {
+      await _pump(
+        tester,
+        VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}),
+        textScale: scale,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('You'), findsOneWidget, reason: 'my own mold is in the row');
+      expect(find.text('7/7'), findsOneWidget);
+      expect(find.text('0/7'), findsOneWidget, reason: 'and the mold of someone who left');
+    }
+
+    s.lobby = _lobby('round');
+    await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Kit_the_Smith wins on time'), findsOneWidget);
+    expect(find.text('You'), findsOneWidget);
+    expect(find.text('5/7'), findsOneWidget);
+  });
+
   testWidgets('the podium fits five smiths', (tester) async {
     final s = _session('results')..seriesEnd = _seriesEnd;
     await _pump(tester, VsResultsView(session: s, onLeave: () {}));

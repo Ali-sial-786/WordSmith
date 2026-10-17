@@ -317,6 +317,8 @@ describe("Versus survival rounds", () => {
       melted: { id: "a", slot: 1 },
       tally: { a: 0, b: 0, c: 1 },
     });
+    // Everyone's mold as it was when a melted, theirs included.
+    expect(end.fields.molds).toEqual({ a: [0, 2], b: [1], c: [1] });
 
     // Nobody else has a letter: no winner.
     const s2 = newVsSeries({ matchId: "s2", length: 3, heat: 1, racerIds: ["a", "b"], startedAt: T0, variant: "survival" });

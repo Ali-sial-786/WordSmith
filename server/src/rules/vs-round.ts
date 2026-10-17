@@ -292,6 +292,15 @@ export function progressOf(r: VsRound): VsProgress[] {
   return r.playerIds.map((id) => ({ id, filled: r.molds[id]?.filled ?? 0, total: r.total }));
 }
 
+/**
+ * Every racer's complete slots (forged, or filled in by themselves), sorted:
+ * their molds, for `ROUND_END` only, once nothing more counts.
+ */
+export function moldsOf(r: VsRound): Record<string, number[]> {
+  const slots = (m: VsMold | undefined) => (m === undefined ? [] : [...m.claims, ...m.auto].map((s) => s.slot).sort((a, b) => a - b));
+  return Object.fromEntries(r.playerIds.map((id) => [id, slots(r.molds[id])]));
+}
+
 /** Who wins the round if it ends now, among `contenders` (the racers still in the series). */
 export function resolveRound(r: VsRound, contenders: readonly string[]): VsRoundResult {
   return resolveVsRound(
@@ -545,6 +554,8 @@ export interface VsRoundEndFields {
   readonly winner: string | null;
   readonly how: VsRoundEndHow;
   readonly progress: readonly VsProgress[];
+  /** Each racer's complete slots, sorted ({@link moldsOf}). */
+  readonly molds: Readonly<Record<string, readonly number[]>>;
   /** Wins after this round, for everyone in the series. */
   readonly tally: Readonly<Record<string, number>>;
   readonly answers: readonly SlotWord[];
@@ -587,6 +598,7 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
       winner: result.winner,
       how,
       progress: progressOf(r),
+      molds: moldsOf(r),
       tally: tallyOf(s),
       answers: r.puzzle.slots.map(({ slot, word }) => ({ slot, word })),
       next: outcome === null && !decision.over ? decision.next : null,

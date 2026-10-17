@@ -77,7 +77,10 @@ void main() {
   setUp(() async {
     room = _LocalRoom();
     await room.start();
-    session = VsSession(client: RoomClient(baseUrl: room.base, code: 'V5X7KQ', token: () async => 'tok'), me: 'u1');
+    session = VsSession(
+      client: RoomClient(baseUrl: room.base, code: 'V5X7KQ', token: () async => 'tok'),
+      me: 'u1',
+    );
     await session.start();
   });
 
@@ -158,7 +161,11 @@ void main() {
           {'slot': 1, 'word': 'COT'},
           {'slot': 2, 'word': 'TOE'},
         ],
-        'next': {'round': 2, 'suddenDeath': false, 'players': ['u1', 'u2', 'u3']},
+        'next': {
+          'round': 2,
+          'suddenDeath': false,
+          'players': ['u1', 'u2', 'u3'],
+        },
         'standingsEndsAt': now + 10000,
       })
       ..send(_lobby('standings'));
@@ -169,6 +176,49 @@ void main() {
     expect(session.standingsOrder.first, 'u2');
     expect(session.mold!.letterAt((x: 0, y: 1)), 'O', reason: 'missed words are shown');
     expect(session.mold!.fillOf((x: 0, y: 1)), CellFill.revealed);
+    expect(session.myFilled, 3, reason: "but they aren't mine");
+  });
+
+  test('the round end shows every racer\'s mold; one from an older server has none', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final end = {
+      'op': 'ROUND_END',
+      'round': 1,
+      'reason': 'timeout',
+      'winner': 'u2',
+      'how': 'timeout',
+      'progress': [
+        {'id': 'u1', 'filled': 3, 'total': 7},
+        {'id': 'u2', 'filled': 5, 'total': 7},
+        {'id': 'u3', 'filled': 0, 'total': 7},
+      ],
+      'molds': {
+        'u1': [2],
+        'u2': [0, 2],
+        'u3': [],
+      },
+      'tally': {'u1': 0, 'u2': 1, 'u3': 0},
+      'answers': [],
+      'next': null,
+      'standingsEndsAt': null,
+    };
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send(_lobby('round'))
+      ..send(_roundStart(now))
+      ..send(end);
+    await until(() => session.standings != null);
+    expect(session.standings!.molds, {
+      'u1': [2],
+      'u2': [0, 2],
+      'u3': <int>[],
+    });
+    expect(session.standings!.molds.keys, ['u1', 'u2', 'u3'], reason: 'in the round\'s order');
+
+    room.send({'op': 'SNAPSHOT', 'lobby': _lobby('standings'), 'standings': Map.of(end)..remove('molds')});
+    await until(() => session.standings!.molds.isEmpty);
+    expect(session.standings!.winner, 'u2');
   });
 
   test('sudden death leaves the others watching, and the series ends on a podium', () async {
@@ -315,7 +365,11 @@ void main() {
         ],
         'tally': {'u1': 1, 'u2': 0, 'u3': 0},
         'answers': [],
-        'next': {'round': 2, 'suddenDeath': false, 'players': ['u1', 'u2', 'u3']},
+        'next': {
+          'round': 2,
+          'suddenDeath': false,
+          'players': ['u1', 'u2', 'u3'],
+        },
         'standingsEndsAt': now + 10000,
         'variant': 'survival',
         'saved': {'u1': 1, 'u2': 2},

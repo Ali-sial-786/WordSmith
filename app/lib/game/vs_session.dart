@@ -1,4 +1,5 @@
 import '../net/room_client.dart';
+import '../ui/mold/mold_model.dart';
 import 'remote_mold.dart';
 import 'room_session.dart';
 
@@ -38,7 +39,8 @@ class VsSession extends RoomSession {
   /// The round has been decided; boards freeze until the next one.
   bool get roundOver => standings != null && round != null && phase != 'countdown';
 
-  int get myFilled => mold?.filledLetters ?? 0;
+  /// Letters I filled: the answers shown once the round is over don't count.
+  int get myFilled => mold?.cells.where((c) => mold!.fillOf(c) == CellFill.filled).length ?? 0;
   int get total => mold?.cells.length ?? 0;
 
   /// Racers in tally order (most wins first), then the rest of the room.

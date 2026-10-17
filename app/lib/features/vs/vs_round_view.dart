@@ -20,6 +20,7 @@ import '../../ui/widgets/video_bubble.dart';
 import '../../ui/widgets/word_preview.dart';
 import '../coop/emotes.dart';
 import '../coop/room_video.dart';
+import 'rival_molds.dart';
 import 'vs_widgets.dart';
 
 /// A Versus round: everyone races the same puzzle on their own mold. Rivals'
@@ -267,7 +268,10 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
                         onSelectionChanged: _onSelection,
                         onSubmit: _onSubmit,
                       ),
-                      SizedBox(width: side, child: _MyStatus(session: _s)),
+                      SizedBox(
+                        width: side,
+                        child: _MyStatus(session: _s),
+                      ),
                     ],
                   ),
                 ),
@@ -281,16 +285,24 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
           Positioned.fill(
             child: IgnorePointer(
               child: ColoredBox(
-                color: Palette.forgeBlack.withValues(alpha: 0.55),
+                color: Palette.forgeBlack.withValues(alpha: 0.7),
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(
-                      roundHeadline(_s, _s.standings!),
-                      textAlign: TextAlign.center,
-                      style: displayStyle(30, color: Palette.molten).copyWith(
-                        shadows: const [Shadow(color: Palette.ember, blurRadius: 24)],
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          roundHeadline(_s, _s.standings!),
+                          textAlign: TextAlign.center,
+                          style: displayStyle(
+                            30,
+                            color: Palette.molten,
+                          ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 24)]),
+                        ),
+                        // What everyone had forged, now it can be shown.
+                        RivalMolds(session: _s, end: _s.standings!, padding: const EdgeInsets.only(top: 22)),
+                      ],
                     ),
                   ),
                 ),
@@ -326,7 +338,10 @@ class _VsTopStrip extends StatelessWidget {
       height: 48,
       child: Row(
         children: [
-          IconButton(onPressed: onLeave, icon: const Icon(Icons.close, color: Palette.steel)),
+          IconButton(
+            onPressed: onLeave,
+            icon: const Icon(Icons.close, color: Palette.steel),
+          ),
           Expanded(
             child: Text(
               roundLabel(session),
@@ -335,7 +350,8 @@ class _VsTopStrip extends StatelessWidget {
               style: displayStyle(16, color: sudden ? Palette.quenchRed : Palette.whiteHeat),
             ),
           ),
-          if (video.call != null) VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
+          if (video.call != null)
+            VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
           // Survival has no round clock: the heated word is the clock.
           if (!session.survival)

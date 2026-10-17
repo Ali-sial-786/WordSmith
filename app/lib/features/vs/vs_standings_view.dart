@@ -10,6 +10,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../coop/emotes.dart';
+import 'rival_molds.dart';
 import 'vs_widgets.dart';
 
 /// The 10 seconds between Versus rounds: who won and how, the series tally,
@@ -57,7 +58,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
       children: [
         Row(
           children: [
-            IconButton(onPressed: widget.onLeave, icon: const Icon(Icons.close, color: Palette.steel)),
+            IconButton(
+              onPressed: widget.onLeave,
+              icon: const Icon(Icons.close, color: Palette.steel),
+            ),
             const Spacer(),
             EmoteButton(onEmote: s.emote),
           ],
@@ -65,9 +69,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
         Text(
           roundHeadline(s, end),
           textAlign: TextAlign.center,
-          style: displayStyle(28, color: winner == s.me ? Palette.molten : Palette.whiteHeat).copyWith(
-            shadows: winner == s.me ? const [Shadow(color: Palette.ember, blurRadius: 20)] : null,
-          ),
+          style: displayStyle(
+            28,
+            color: winner == s.me ? Palette.molten : Palette.whiteHeat,
+          ).copyWith(shadows: winner == s.me ? const [Shadow(color: Palette.ember, blurRadius: 20)] : null),
         ),
         const SizedBox(height: 4),
         Text(
@@ -83,15 +88,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
           textAlign: TextAlign.center,
           style: text.bodyMedium?.copyWith(color: Palette.steel),
         ),
+        RivalMolds(session: s, end: end, padding: const EdgeInsets.only(top: 20)),
         const SizedBox(height: 18),
         for (final id in s.standingsOrder)
-          _TallyRow(
-            session: s,
-            id: id,
-            wins: end.tally[id] ?? 0,
-            filled: lastFilled[id],
-            wonThis: id == winner,
-          ),
+          _TallyRow(session: s, id: id, wins: end.tally[id] ?? 0, filled: lastFilled[id], wonThis: id == winner),
         const SizedBox(height: 18),
         if (next != null) ...[
           Text(
@@ -125,7 +125,13 @@ class _VsStandingsViewState extends State<VsStandingsView> {
 }
 
 class _TallyRow extends StatelessWidget {
-  const _TallyRow({required this.session, required this.id, required this.wins, required this.filled, required this.wonThis});
+  const _TallyRow({
+    required this.session,
+    required this.id,
+    required this.wins,
+    required this.filled,
+    required this.wonThis,
+  });
 
   final VsSession session;
   final String id;
@@ -159,7 +165,9 @@ class _TallyRow extends StatelessWidget {
               children: [
                 Text(session.nameOf(id) + (id == session.me ? ' (you)' : ''), style: text.titleSmall),
                 Text(
-                  filled == null ? (player == null ? 'Left the forge' : 'Watched') : '${filled!.filled}/${filled!.total} letters',
+                  filled == null
+                      ? (player == null ? 'Left the forge' : 'Watched')
+                      : '${filled!.filled}/${filled!.total} letters',
                   style: text.bodySmall,
                 ),
               ],

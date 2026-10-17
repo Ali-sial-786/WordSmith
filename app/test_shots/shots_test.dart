@@ -54,7 +54,7 @@ RoomLobby _lobby(String phase, {int players = 4}) => RoomLobby.fromJson({
         'level': 3 * i + 2,
         'color': i - 1,
         'ready': i != 3,
-        'connected': true,
+        'connected': i != 5,
       },
   ],
 });
@@ -65,6 +65,14 @@ final _slots = [
   {'slot': 2, 'x': 4, 'y': 0, 'd': 'd', 'len': 5},
   {'slot': 3, 'x': 0, 'y': 3, 'd': 'a', 'len': 3},
   {'slot': 4, 'x': 2, 'y': 2, 'd': 'a', 'len': 3},
+];
+
+const _answers = [
+  {'slot': 0, 'word': 'STONE'},
+  {'slot': 1, 'word': 'SEAT'},
+  {'slot': 2, 'word': 'EATEN'},
+  {'slot': 3, 'word': 'TON'},
+  {'slot': 4, 'word': 'ONE'},
 ];
 
 RoundStart _start() => RoundStart.fromJson(_startJson());
@@ -313,23 +321,24 @@ void main() {
   testWidgets('vs standings', (tester) async {
     final start = _start();
     final end = VsRoundEnd.fromJson({
+      'round': 3,
       'reason': 'finished',
       'winner': 'u2',
       'how': 'finished',
       'progress': [
-        {'id': 'u1', 'filled': 12, 'total': 17},
-        {'id': 'u2', 'filled': 17, 'total': 17},
-        {'id': 'u3', 'filled': 6, 'total': 17},
-        {'id': 'u4', 'filled': 11, 'total': 17},
+        {'id': 'u1', 'filled': 10, 'total': 16},
+        {'id': 'u2', 'filled': 16, 'total': 16},
+        {'id': 'u3', 'filled': 3, 'total': 16},
+        {'id': 'u4', 'filled': 11, 'total': 16},
       ],
+      'molds': {
+        'u1': [0, 1, 3],
+        'u2': [0, 1, 2, 3, 4],
+        'u3': [3],
+        'u4': [0, 2, 4],
+      },
       'tally': {'u1': 1, 'u2': 2, 'u3': 0, 'u4': 0},
-      'answers': [
-        {'slot': 0, 'word': 'STONE'},
-        {'slot': 1, 'word': 'SEAT'},
-        {'slot': 2, 'word': 'EATEN'},
-        {'slot': 3, 'word': 'TON'},
-        {'slot': 4, 'word': 'ONE'},
-      ],
+      'answers': _answers,
       'next': {
         'round': 4,
         'suddenDeath': false,
@@ -343,8 +352,106 @@ void main() {
       ..standings = end
       ..tally = end.tally;
     s.mold!.claim(0, 'STONE', 'u1');
+    s.mold!.claim(1, 'SEAT', 'u1');
+    s.mold!.claim(3, 'TON', 'u1');
     s.mold!.showAnswers(end.answers);
     await _shoot(tester, 'vs_standings', VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}));
+  });
+
+  // Time runs out with five racing (Wren left mid-round): everyone's mold under the headline.
+  testWidgets('vs round over', (tester) async {
+    final start = RoundStart.fromJson({
+      ..._startJson(),
+      'endsAt': DateTime.now().millisecondsSinceEpoch,
+      'players': ['u1', 'u2', 'u3', 'u4', 'u5'],
+      'tally': {'u1': 1, 'u2': 1, 'u3': 0, 'u4': 0, 'u5': 0},
+    });
+    final end = VsRoundEnd.fromJson({
+      'round': 3,
+      'reason': 'timeout',
+      'winner': 'u3',
+      'how': 'timeout',
+      'progress': [
+        for (final (i, filled) in [8, 12, 14, 4, 0].indexed) {'id': 'u${i + 1}', 'filled': filled, 'total': 16},
+      ],
+      'molds': {
+        'u1': [0, 3],
+        'u2': [0, 1, 2],
+        'u3': [0, 1, 2, 4],
+        'u4': [1],
+        'u5': [],
+      },
+      'tally': {'u1': 1, 'u2': 1, 'u3': 1, 'u4': 0, 'u5': 0},
+      'answers': _answers,
+      'next': {
+        'round': 4,
+        'suddenDeath': false,
+        'players': ['u1', 'u2', 'u3', 'u4'],
+      },
+      'standingsEndsAt': DateTime.now().millisecondsSinceEpoch + 10000,
+    });
+    final s = _session('round')
+      ..lobby = _lobby('round', players: 5)
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('round', players: 5))
+      ..standings = end
+      ..tally = end.tally
+      ..progress = {for (final p in end.progress) p.id: p};
+    s.mold!.claim(0, 'STONE', 'u1');
+    s.mold!.claim(3, 'TON', 'u1');
+    s.mold!.showAnswers(end.answers);
+    await _shoot(tester, 'vs_round_over', VsRoundView(session: s, cues: MoldCues(), onLeave: () {}));
+  });
+
+  // A small phone: five molds, and Bo's melted word glowing red on theirs.
+  testWidgets('vs standings five', (tester) async {
+    final start = RoundStart.fromJson({
+      ..._startJson(),
+      'variant': 'survival',
+      'players': ['u1', 'u2', 'u3', 'u4', 'u5'],
+    });
+    final end = VsRoundEnd.fromJson({
+      'round': 3,
+      'reason': 'melted',
+      'winner': 'u2',
+      'how': 'survived',
+      'progress': [
+        for (final (i, filled) in [8, 10, 3, 13, 0].indexed) {'id': 'u${i + 1}', 'filled': filled, 'total': 16},
+      ],
+      'molds': {
+        'u1': [0, 1],
+        'u2': [0, 1, 3],
+        'u3': [3],
+        'u4': [0, 1, 3, 4],
+        'u5': [],
+      },
+      'tally': {'u1': 1, 'u2': 2, 'u3': 0, 'u4': 0, 'u5': 0},
+      'answers': _answers,
+      'next': {
+        'round': 4,
+        'suddenDeath': false,
+        'players': ['u1', 'u2', 'u3', 'u4'],
+      },
+      'standingsEndsAt': DateTime.now().millisecondsSinceEpoch + 7000,
+      'variant': 'survival',
+      'saved': {'u1': 1, 'u2': 2, 'u3': 0, 'u4': 3, 'u5': 0},
+      'melted': {'id': 'u4', 'slot': 2},
+    });
+    final s = _session('standings')
+      ..lobby = _lobby('standings', players: 5)
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('standings', players: 5))
+      ..standings = end
+      ..tally = end.tally;
+    s.mold!.claim(0, 'STONE', 'u1');
+    s.mold!.claim(1, 'SEAT', 'u1');
+    s.mold!.showAnswers(end.answers);
+    await _shoot(
+      tester,
+      'vs_standings_five',
+      VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}),
+      size: const Size(360, 740),
+    );
   });
 
   testWidgets('vs podium', (tester) async {
