@@ -113,12 +113,21 @@ export async function client(uid = uniqueUid()): Promise<Client> {
   };
 }
 
-/** A client whose account has a username and avatar. */
-export async function setUpClient(username = uniqueName(), avatar = "avatar_01", uid = uniqueUid()): Promise<Client & { username: string }> {
+/**
+ * A client whose account has a username and avatar. A generated name that
+ * happens to trip the profanity filter is replaced by another.
+ */
+export async function setUpClient(username?: string, avatar = "avatar_01", uid = uniqueUid()): Promise<Client & { username: string }> {
   const c = await client(uid);
-  const res = await c.post("/v1/me/setup", { username, avatar });
-  if (res.status !== 200) throw new Error(`setup failed: ${res.status} ${await res.text()}`);
-  return { ...c, username };
+  for (let attempt = 0; ; attempt++) {
+    const name = username ?? uniqueName();
+    const res = await c.post("/v1/me/setup", { username: name, avatar });
+    if (res.status === 200) return { ...c, username: name };
+    const text = await res.text();
+    if (username !== undefined || attempt >= 5 || !text.includes("username_not_allowed")) {
+      throw new Error(`setup failed: ${res.status} ${text}`);
+    }
+  }
 }
 
 /** Makes two set-up clients friends. */
