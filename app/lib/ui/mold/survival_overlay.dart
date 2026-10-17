@@ -30,6 +30,25 @@ class MeltView {
   final Object id;
 }
 
+/// Metal's glow as it heats, by how much of the time is spent: a dull red
+/// first, then cherry, orange and yellow, and white heat at the end.
+Color heatGlow(double spent) {
+  const ramp = [
+    (0.0, Color(0xFF5A1206)),
+    (0.25, Color(0xFF9C1E08)),
+    (0.5, Color(0xFFD9360C)),
+    (0.7, Color(0xFFFF7A1A)),
+    (0.86, Color(0xFFFFC24A)),
+    (1.0, Color(0xFFFFF4D6)),
+  ];
+  for (var i = 1; i < ramp.length; i++) {
+    final (t1, c1) = ramp[i];
+    final (t0, c0) = ramp[i - 1];
+    if (spent <= t1) return Color.lerp(c0, c1, (spent - t0) / (t1 - t0))!;
+  }
+  return ramp.last.$2;
+}
+
 /// How long the melt plays before the round's results.
 const meltDuration = Duration(milliseconds: 2400);
 
@@ -96,44 +115,72 @@ class _HeatPainter extends CustomPainter {
     if (heat.cells.isEmpty) return;
     final left = heat.remainingMs().clamp(0, heat.durationMs);
     final spent = 1 - left / max(1, heat.durationMs);
+    // Hotter faster towards the end.
+    final hot = pow(spent, 1.25).toDouble();
+    final now = time.value;
     // Faster as it gets hotter: about 1 beat a second, up to 4.
-    final beat = 0.5 + 0.5 * sin(time.value * pi * (2 + 6 * spent * spent));
-    final rim = Color.lerp(Palette.molten, Palette.quenchRed, spent)!;
-    for (final cell in heat.cells) {
-      final r = rectOf(cell);
+    final beat = 0.5 + 0.5 * sin(now * pi * (2 + 6 * spent * spent));
+    final glow = heatGlow(hot);
+    final cell = rectOf(heat.cells.first).width;
+
+    // The whole branch as one hot bar behind its cells: the gaps glow too.
+    final bar = heat.cells.map(rectOf).reduce((a, b) => a.expandToInclude(b));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bar.inflate(cell * (0.04 + 0.1 * hot)), Radius.circular(cell * 0.2)),
+      Paint()
+        ..color = glow.withValues(alpha: 0.18 + 0.5 * hot)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * (0.12 + 0.45 * hot)),
+    );
+
+    for (final (i, c) in heat.cells.indexed) {
+      final r = rectOf(c);
       final rr = RRect.fromRectAndRadius(r, Radius.circular(r.width * 0.16));
-      canvas
-        ..save()
-        ..clipRRect(rr);
-      final top = r.bottom - r.height * spent;
-      canvas.drawRect(
-        Rect.fromLTRB(r.left, top, r.right, r.bottom),
+      // A flicker, like metal in the fire, that grows with the heat.
+      final shimmer = 1 + 0.12 * hot * sin(now * 11 + i * 1.7) * sin(now * 4.3 + i);
+      final a = ((0.12 + 0.62 * hot) * shimmer).clamp(0.0, 0.8);
+      // Brightest in the middle of each cell, cooler at its rim.
+      canvas.drawRRect(
+        rr,
         Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [Palette.quenchRed.withValues(alpha: 0.55), Palette.molten.withValues(alpha: 0.3)],
-          ).createShader(Rect.fromLTRB(r.left, top, r.right, r.bottom)),
+          ..shader = RadialGradient(
+            radius: 0.75,
+            colors: [
+              heatGlow(min(1, hot + 0.12)).withValues(alpha: a),
+              glow.withValues(alpha: a * 0.85),
+              heatGlow(max(0, hot - 0.2)).withValues(alpha: a * 0.6),
+            ],
+            stops: const [0.0, 0.55, 1.0],
+          ).createShader(r),
       );
-      canvas.restore();
-      canvas
-        ..drawRRect(
-          rr.inflate(r.width * 0.04),
-          Paint()
-            ..color = rim.withValues(alpha: 0.25 + 0.35 * beat)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = r.width * 0.12
-            ..maskFilter = MaskFilter.blur(BlurStyle.normal, r.width * 0.08),
-        )
-        ..drawRRect(
-          rr,
-          Paint()
-            ..color = rim.withValues(alpha: 0.6 + 0.4 * beat)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = max(2, r.width * 0.06),
-        );
+      canvas.drawRRect(
+        rr,
+        Paint()
+          ..color = Color.lerp(glow, Colors.white, 0.25 * beat)!.withValues(alpha: 0.55 + 0.45 * max(beat, hot))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(2, r.width * (0.05 + 0.03 * hot)),
+      );
     }
+    if (hot > 0.55) _embers(canvas, bar, cell, (hot - 0.55) / 0.45, now);
     _badge(canvas, rectOf(heat.cells.first), (left / 1000).ceil(), spent, beat);
+  }
+
+  /// Sparks drifting up off the metal as it nears melting.
+  void _embers(Canvas canvas, Rect bar, double cell, double amount, double now) {
+    final rng = Random(heat.cells.first.x * 31 + heat.cells.first.y);
+    final n = (4 + 10 * amount).round();
+    for (var k = 0; k < n; k++) {
+      final speed = 0.35 + 0.4 * rng.nextDouble();
+      final phase = rng.nextDouble();
+      final x0 = bar.left + bar.width * rng.nextDouble();
+      final t = (now * speed + phase) % 1.0;
+      final y = bar.bottom - (bar.height + cell * 1.2) * t;
+      final x = x0 + sin((now + phase * 7) * 3) * cell * 0.12;
+      canvas.drawCircle(
+        Offset(x, y),
+        cell * (0.035 + 0.03 * rng.nextDouble()),
+        Paint()..color = heatGlow(min(1, 0.7 + 0.3 * rng.nextDouble())).withValues(alpha: amount * (1 - t) * 0.9),
+      );
+    }
   }
 
   void _badge(Canvas canvas, Rect first, int secs, double spent, double beat) {
@@ -465,7 +512,7 @@ class _HeatBarState extends State<HeatBar> with SingleTickerProviderStateMixin {
     final text = Theme.of(context).textTheme;
     final left = heat == null ? 0 : heat.remainingMs().clamp(0, heat.durationMs);
     final f = heat == null ? 0.0 : left / max(1, heat.durationMs);
-    final color = Color.lerp(Palette.quenchRed, Palette.molten, f)!;
+    final color = heatGlow(max(0.35, 1 - f));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Row(

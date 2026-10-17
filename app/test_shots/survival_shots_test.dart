@@ -245,4 +245,30 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/hammer_$ms.png'));
     }
   });
+
+  for (final left in [0.95, 0.7, 0.45, 0.25, 0.1, 0.02]) {
+    testWidgets('heat at $left left', (tester) async {
+      final store = await _store();
+      final puzzle = (await tester.runAsync(Campaign.load))!.puzzle(40);
+      final board = Board(puzzle);
+      final slots = [...puzzle.slots]..sort((a, b) => b.length - a.length);
+      board.submit(slots[1].word);
+      final heated = slots.firstWhere((s) => s.cells.every((c) => !board.isFilled(c)) || s == slots.last);
+      await _frame(
+        tester,
+        store,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 80, 16, 200),
+          child: MoldGrid(
+            mold: BoardMold(board),
+            metal: MetalStyle.forChapter('steel'),
+            cues: MoldCues(),
+            heat: HeatView(cells: heated.cells, remainingMs: () => (20000 * left).round(), durationMs: 20000),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/heat_${(left * 100).round()}.png'));
+    });
+  }
 }
