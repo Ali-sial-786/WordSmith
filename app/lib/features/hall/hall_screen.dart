@@ -104,7 +104,7 @@ class HallScreen extends ConsumerWidget {
                             Expanded(
                               child: PlateButton(
                                 label: 'Chapters',
-                                sublabel: 'Tin to Starmetal',
+                                sublabel: '9 metals',
                                 icon: 'map',
                                 onPressed: () => context.push('/chapters'),
                               ),
@@ -137,7 +137,7 @@ class HallScreen extends ConsumerWidget {
                                     : online
                                     ? 'Sign in first'
                                     : 'Coming soon',
-                                icon: 'anvil',
+                                icon: 'tongs',
                                 onPressed: account.isReady ? () => showCoopEntry(context) : null,
                               ),
                             ),
@@ -146,7 +146,7 @@ class HallScreen extends ConsumerWidget {
                               child: PlateButton(
                                 label: 'Versus',
                                 sublabel: account.isReady
-                                    ? 'Race up to 5 smiths'
+                                    ? 'Up to 5 smiths'
                                     : online
                                     ? 'Sign in first'
                                     : 'Coming soon',

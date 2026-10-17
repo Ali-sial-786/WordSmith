@@ -60,7 +60,7 @@ class DailyGame extends SoloGame {
   @override
   String get title => 'Daily Commission';
   @override
-  String get subtitle => '${Heat.fromValue(info.heat.clamp(1, 6)).title} heat · ${info.date}';
+  String get subtitle => '${Heat.fromValue(info.heat.clamp(1, 6)).title} heat · ${prettyDate(info.date)}';
 
   @override
   WordFeedback submit(String word) {
@@ -149,4 +149,13 @@ class DailyGame extends SoloGame {
       chapterFinished: false,
     );
   }
+}
+
+/// "2026-10-17" → "Sat 17 Oct".
+String prettyDate(String isoDate) {
+  final d = DateTime.tryParse(isoDate);
+  if (d == null) return isoDate;
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
 }

@@ -8,7 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
+import 'package:wordsmith/app.dart';
+import 'package:wordsmith/auth/auth_service.dart';
+import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
+import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/features/coop/lobby_view.dart';
 import 'package:wordsmith/features/vs/vs_results_view.dart';
 import 'package:wordsmith/features/vs/vs_round_view.dart';
@@ -19,6 +24,9 @@ import 'package:wordsmith/net/room_client.dart';
 import 'package:wordsmith/ui/mold/mold_grid.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
 import 'package:wordsmith/ui/widgets/forge_background.dart';
+
+import '../test/fixtures/fake_backend.dart';
+import '../test/fixtures/puzzles.dart';
 
 const _names = ['Ada', 'sam', 'Kit', 'Bo', 'Wren'];
 
@@ -201,4 +209,53 @@ void main() {
       });
     await _shoot(tester, 'vs_podium', VsResultsView(session: s, onLeave: () {}));
   });
+
+  for (final location in ['/', '/daily']) {
+    testWidgets('hall signed in $location', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 420, 'campaignStage': 12}),
+        'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+      });
+      final store = await Store.open();
+      final auth = FakeAuth(signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com'));
+      final server = FakeServer()
+        ..username = 'Ali_Smith'
+        ..avatar = 'avatar_03'
+        ..totalXp = 420
+        ..completed = 11
+        ..dailyPuzzle = (tearJson()..['id'] = 'daily-2026-10-17')
+        ..dailyStreak = 4;
+      final container = ProviderContainer(
+        overrides: [
+          storeProvider.overrideWithValue(store),
+          campaignProvider.overrideWithValue(
+            Campaign.fromJson({
+              'version': 1,
+              'chapters': [
+                {'id': 'tin', 'name': 'Tin', 'first': 1, 'count': 40},
+              ],
+              'puzzles': [for (var i = 0; i < 40; i++) tearJson()..['id'] = 'c-${(i + 1).toString().padLeft(4, '0')}'],
+            }),
+          ),
+          authServiceProvider.overrideWithValue(auth),
+          apiClientProvider.overrideWithValue(server.client(auth)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.binding.setSurfaceSize(const Size(412, 892));
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: WordsmithApp(router: GoRouter(initialLocation: location, routes: appRouter.configuration.routes)),
+        ),
+      );
+      for (var i = 0; i < 4; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/hall${location.replaceAll('/', '_')}.png'));
+    });
+  }
 }
