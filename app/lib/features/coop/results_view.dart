@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../game/coop_session.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -125,7 +126,13 @@ class ResultsView extends StatelessWidget {
         if (session.mold != null)
           SizedBox(
             height: 220,
-            child: MoldGrid(mold: session.mold!, metal: MetalStyle.forChapter('iron'), cues: cues, maxCell: 34),
+            child: MoldGrid(
+              mold: session.mold!,
+              metal: MetalStyle.forChapter('iron'),
+              cues: cues,
+              maxCell: 34,
+              onFilledTap: (c) => showMeanings(context, session.mold!.wordsAt(c)),
+            ),
           ),
         if (!r.completed)
           Padding(

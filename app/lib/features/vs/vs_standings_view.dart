@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -104,7 +105,13 @@ class _VsStandingsViewState extends State<VsStandingsView> {
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
-            child: MoldGrid(mold: s.mold!, metal: MetalStyle.forChapter('steel'), cues: widget.cues, maxCell: 32),
+            child: MoldGrid(
+              mold: s.mold!,
+              metal: MetalStyle.forChapter('steel'),
+              cues: widget.cues,
+              maxCell: 32,
+              onFilledTap: (c) => showMeanings(context, s.mold!.wordsAt(c)),
+            ),
           ),
           Text('Glowing letters are the words you missed.', textAlign: TextAlign.center, style: text.bodySmall),
         ],

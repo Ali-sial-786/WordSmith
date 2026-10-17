@@ -11,6 +11,7 @@ import '../../engine/puzzle.dart';
 import '../../game/coop_session.dart';
 import '../../game/providers.dart';
 import '../../net/room_client.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/anvil/anvil_ring.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
@@ -204,6 +205,7 @@ class _RoundViewState extends ConsumerState<RoundView> {
                       cues: widget.cues,
                       chiselMode: _chisel,
                       onCellTap: _onChiselCell,
+                      onFilledTap: (c) => showMeanings(context, mold.wordsAt(c)),
                     ),
                   ),
                 ),

@@ -9,6 +9,7 @@ import '../../audio/sfx.dart';
 import '../../game/providers.dart';
 import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
+import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/anvil/anvil_ring.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
@@ -186,7 +187,12 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
                   child: _s.racing
                       ? Padding(
                           padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
-                          child: MoldGrid(mold: mold, metal: MetalStyle.forChapter('steel'), cues: widget.cues),
+                          child: MoldGrid(
+                            mold: mold,
+                            metal: MetalStyle.forChapter('steel'),
+                            cues: widget.cues,
+                            onFilledTap: (c) => showMeanings(context, mold.wordsAt(c)),
+                          ),
                         )
                       : _Watching(session: _s),
                 ),

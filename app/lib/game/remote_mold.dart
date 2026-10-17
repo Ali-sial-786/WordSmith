@@ -53,6 +53,12 @@ class RemoteMold implements MoldModel {
 
   RemoteSlot slot(int i) => slots.firstWhere((s) => s.slot == i);
 
+  /// The words through [cell] whose letters are all known, to look up.
+  List<String> wordsAt(CellPos cell) => [
+    for (final i in _slotsAt[cell] ?? const <int>[])
+      if (slot(i).cells.every((c) => (_letters[c] ?? '').isNotEmpty)) slot(i).cells.map((c) => _letters[c]).join(),
+  ];
+
   bool isClaimed(int slot) => _owner.containsKey(slot);
   int get claimedCount => _owner.length;
   bool get complete => _owner.length == slots.length;
