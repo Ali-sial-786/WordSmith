@@ -36,12 +36,14 @@ class SoloController extends ChangeNotifier {
       letters = saved.letters;
       _hintsUsed.addAll(saved.hintsUsed);
       _elapsedBefore = saved.elapsedMs;
+      pickupSeed = saved.pickupSeed.isEmpty ? profile.current.userId : saved.pickupSeed;
     } else {
       final p = profile.current;
+      pickupSeed = p.userId;
       board = Board(
         puzzle,
         pickups: pickupsFor(
-          userId: p.userId,
+          userId: pickupSeed,
           puzzleId: puzzle.id,
           cellCount: puzzle.letterCount,
           level: p.level,
@@ -68,6 +70,9 @@ class SoloController extends ChangeNotifier {
 
   /// Ring position → tile index.
   late List<int> order;
+
+  /// The id this puzzle's pickups were seeded with.
+  late final String pickupSeed;
 
   final Map<String, int> _hintsUsed = {};
   final Stopwatch _clock = Stopwatch();
@@ -156,6 +161,7 @@ class SoloController extends ChangeNotifier {
         hintsUsed: Map.of(_hintsUsed),
         elapsedMs: elapsedMs,
         chapterFinished: stage == chapter.last,
+        pickupSeed: pickupSeed,
       );
       store.clearSavedPuzzle();
     } else if (!isComplete) {
@@ -171,6 +177,7 @@ class SoloController extends ChangeNotifier {
       letters: letters,
       hintsUsed: Map.of(_hintsUsed),
       elapsedMs: elapsedMs,
+      pickupSeed: pickupSeed,
     ),
   );
 

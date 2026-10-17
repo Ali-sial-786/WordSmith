@@ -10,6 +10,7 @@ import '../../engine/board.dart';
 import '../../engine/hints.dart';
 import '../../engine/pickups.dart';
 import '../../engine/puzzle.dart';
+import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../game/solo_controller.dart';
 import '../../ui/anvil/anvil_ring.dart';
@@ -58,7 +59,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       profile: ref.read(profileProvider.notifier),
     )..addListener(_onGameChanged);
     if (_game.isComplete) _finish();
+    _account = ref.read(accountProvider.notifier)..setStatus('solo');
   }
+
+  late final AccountController _account;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -68,6 +72,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _account.setStatus('online');
     _game
       ..pause()
       ..removeListener(_onGameChanged)
@@ -219,6 +224,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       _chisel = false;
     });
     final reward = _game.reward;
+    _account.sync();
     await Future<void>.delayed(const Duration(milliseconds: 1100));
     if (!mounted) return;
     _sfx.play(SfxId.forged);

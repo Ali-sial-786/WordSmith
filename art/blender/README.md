@@ -72,7 +72,7 @@ Single script: `"$BLENDER" -b --factory-startup -P tiles.py -- --samples 128 --r
 | `app/assets/images/bg_tin.webp` | 1080×2340 | scene_tin.py | open hearth with flames, plus a dawn doorway with chickens |
 | `app/assets/images/bg_copper.webp` | 1080×2340 | scene_copper.py | workshop across the river: forge glowing through open doors, water wheel |
 | `art/icon/icon_background.png` | 1024² opaque | post.py | warm forge glow gradient (procedural) |
-| `art/icon/icon_foreground.png` | 1024² RGBA | icon.py | hammer striking a glowing "W" tile on an anvil, sparks; fits the 61 % safe circle |
+| `art/icon/icon_foreground.png` | 1024² RGBA | icon.py | hammer striking a glowing "W" tile on an anvil, sparks; post.py scales it so everything fits inside a 60 % circle (safe zone 61 %) |
 | `art/icon/icon_monochrome.png` | 1024² RGBA | icon.py + post.py | white silhouette with the W knocked out (Android 13 themed icon) |
 | `art/icon/icon_full.png` | 1024² RGBA | post.py | preview: the visible 72/108 of fg over bg, in a rounded square |
 
@@ -90,7 +90,18 @@ Notes for the app:
 Measured on 4 CPU cores (no GPU) with Cycles + OpenImageDenoise at the default settings.
 Every render is logged in `_renders/render_times.log`.
 
-RENDER_TIMES_TABLE
+| Script | Render size | Samples | Time | Notes |
+|---|---|---|---|---|
+| tiles.py | 3 × 768² (→256²) | 128 | ~12 min (205–270 s each) | |
+| anvil_face.py | 2 × 1152² (→768²) | 80 | ~10–13 min (face 380 s, glow 400 s) | measured while another render was running |
+| cells.py | 2 × 512² (→128²) | 128 | ~1.5 min (23 s + 73 s) | |
+| icon.py | 1024² + ID pass | 128 / 16 | ~1.5–2.5 min (85–137 s + 3 s) | |
+| scene_hall.py | 720×1561 (→1080×2340) | 80 | ~8.5 min (509 s) | volumetric haze + flame volumes |
+| scene_tin.py | 720×1561 (→1080×2340) | 80 | ~5.5 min (339 s) | volumetric haze |
+| scene_copper.py | 720×1561 (→1080×2340) | 80 | ~2.5 min (148 s) | |
+| post.py (all) | | | ~30 s | |
+
+Total for `./run_all.sh` is about 45 min. `QUICK=1` previews take 10–60 s per asset.
 
 ## Look and tuning
 

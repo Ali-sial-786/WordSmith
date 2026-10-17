@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_info.dart';
+import '../../auth/auth_service.dart';
+import '../../game/account.dart';
 import '../../game/providers.dart';
+import '../../net/api_client.dart';
+import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -40,6 +44,7 @@ class SettingsScreen extends ConsumerWidget {
             value: s.reducedMotion,
             onChanged: (v) => n.update((s) => s.copyWith(reducedMotion: v)),
           ),
+          const _AccountSection(),
           const Divider(height: 32),
           ListTile(
             title: const Text('Credits'),
@@ -68,5 +73,127 @@ class _Slider extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
     title: Text(label),
     subtitle: Slider(value: value, onChanged: onChanged),
+  );
+}
+
+class _AccountSection extends ConsumerWidget {
+  const _AccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final account = ref.watch(accountProvider);
+    final n = ref.read(accountProvider.notifier);
+    if (account.phase == AccountPhase.unavailable) return const SizedBox.shrink();
+    final signedIn = account.user != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Account', style: Theme.of(context).textTheme.titleMedium),
+        ),
+        if (!signedIn)
+          ListTile(
+            title: const Text('Sign in'),
+            subtitle: const Text('Keep your progress safe and play with friends'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/sign-in'),
+          )
+        else ...[
+          ListTile(
+            title: Text(account.server?.username ?? 'Signed in'),
+            subtitle: Text(account.user?.email ?? ''),
+            trailing: account.syncing
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    tooltip: 'Sync now',
+                    icon: const Icon(Icons.sync),
+                    onPressed: n.sync,
+                  ),
+          ),
+          ListTile(title: const Text('Sign out'), onTap: n.signOut),
+          ListTile(
+            title: const Text('Delete account', style: TextStyle(color: Palette.quenchRed)),
+            subtitle: const Text('Removes your account, progress and friends for good'),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const _DeleteDialog()),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DeleteDialog extends ConsumerStatefulWidget {
+  const _DeleteDialog();
+
+  @override
+  ConsumerState<_DeleteDialog> createState() => _DeleteDialogState();
+}
+
+class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(accountProvider.notifier).deleteAccount(_password.text);
+      if (mounted) Navigator.of(context).pop();
+    } on AuthFailure catch (e) {
+      setState(() => _error = e.message);
+    } on ApiException catch (e) {
+      setState(() => _error = e.friendly);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Delete your account?'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Your smith, progress, hints and friends will be deleted on the '
+          'server and on this phone. This can\'t be undone.',
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _password,
+          obscureText: true,
+          decoration: const InputDecoration(labelText: 'Confirm your password'),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
+          Text(_error!, style: const TextStyle(color: Palette.quenchRed)),
+        ],
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: _busy ? null : () => Navigator.of(context).pop(),
+        child: const Text('Keep it'),
+      ),
+      TextButton(
+        onPressed: _busy ? null : _delete,
+        child: const Text('Delete', style: TextStyle(color: Palette.quenchRed)),
+      ),
+    ],
   );
 }

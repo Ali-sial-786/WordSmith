@@ -75,11 +75,11 @@ def river_material():
     nz.inputs["Detail"].default_value = 8.0
     n.link(mp.outputs[0], nz.inputs["Vector"])
     bump = n.node("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.5
+    bump.inputs["Strength"].default_value = 0.6
     n.link(nz.outputs[0], bump.inputs["Height"])
     p = n.node("ShaderNodeBsdfPrincipled")
     p.inputs["Base Color"].default_value = C.hex_lin("#0A100D")
-    p.inputs["Roughness"].default_value = 0.2
+    p.inputs["Roughness"].default_value = 0.3
     p.inputs["Specular IOR Level"].default_value = 0.6
     n.link(bump.outputs[0], p.inputs["Normal"])
     n.output(p.outputs[0])
@@ -231,7 +231,7 @@ def build(M):
     K.box("LanternBase", (lx, ly, lz - 0.18), (0.2, 0.2, 0.05), M["iron"], bevel=0.01)
     C.point_light("LanternLight", (lx, ly - 0.1, lz), 25, radius=0.1, color=(1.0, 0.6, 0.25))
     # warm glow spilling out of the door onto the yard + water
-    C.area_light("DoorGlow", (BX, BY + 0.3, z0 + 1.6), (BX, BY - 4, z0), 160,
+    C.area_light("DoorGlow", (BX, BY + 0.3, z0 + 1.6), (BX, BY - 4, z0), 110,
                  size=DOOR_W * 0.9, size_y=DOOR_H * 0.8, shape="RECTANGLE",
                  color=(1.0, 0.45, 0.15))
 
@@ -265,8 +265,8 @@ def sky_world():
     n.link(tc.outputs["Generated"], sep.inputs[0])
     # note: for the world, Generated is the raw view direction (z = sin elevation)
     col = n.ramp(sep.outputs[2], [(0.0, C.hex_lin("#F4C27C")), (0.07, C.hex_lin("#EAAE72")),
-                                  (0.2, C.hex_lin("#D49A78")), (0.42, C.hex_lin("#8A7482")),
-                                  (0.75, C.hex_lin("#3E3E5C"))])
+                                  (0.2, C.hex_lin("#C88E72")), (0.4, C.hex_lin("#6A5A6E")),
+                                  (0.7, C.hex_lin("#26283E"))])
     # sun glow
     norm = n.node("ShaderNodeVectorMath", _operation="NORMALIZE")
     n.link(tc.outputs["Generated"], norm.inputs[0])
@@ -289,7 +289,7 @@ def sky_world():
     col = n.mix(col, C.hex_lin("#F2B48A"), n.math("MULTIPLY", n.math("MULTIPLY", cloud, band), 0.5))
     bg = n.node("ShaderNodeBackground")
     n.link(col, bg.inputs[0])
-    bg.inputs[1].default_value = 1.0
+    bg.inputs[1].default_value = 0.55
     out = n.node("ShaderNodeOutputWorld")
     n.link(bg.outputs[0], out.inputs[0])
 
@@ -298,7 +298,7 @@ def main():
     C.reset()
     res = (round(1080 * SCALE), round(2340 * SCALE))
     sc = C.setup_cycles(res, samples=SAMPLES, transparent=False, view="Filmic",
-                        look="High Contrast", exposure=-0.3, bounces=5)
+                        look="High Contrast", exposure=0.0, bounces=5)
     sky_world()
     M = materials()
     build(M)

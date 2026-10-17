@@ -22,6 +22,7 @@ class SavedPuzzle {
     required this.collected,
     required this.hintsUsed,
     required this.elapsedMs,
+    required this.pickupSeed,
   });
 
   factory SavedPuzzle.fromBoard({
@@ -30,6 +31,7 @@ class SavedPuzzle {
     required String letters,
     required Map<String, int> hintsUsed,
     required int elapsedMs,
+    required String pickupSeed,
   }) => SavedPuzzle(
     stage: stage,
     puzzleId: board.puzzle.id,
@@ -42,6 +44,7 @@ class SavedPuzzle {
     collected: board.collectedPickups.toList()..sort(),
     hintsUsed: hintsUsed,
     elapsedMs: elapsedMs,
+    pickupSeed: pickupSeed,
   );
 
   factory SavedPuzzle.fromJson(Map<String, dynamic> json) => SavedPuzzle(
@@ -62,6 +65,7 @@ class SavedPuzzle {
     collected: (json['collected'] as List).cast<int>(),
     hintsUsed: (json['hintsUsed'] as Map).cast<String, int>(),
     elapsedMs: json['elapsedMs'] as int? ?? 0,
+    pickupSeed: json['pickupSeed'] as String? ?? '',
   );
 
   final int stage;
@@ -77,6 +81,12 @@ class SavedPuzzle {
   final List<int> collected;
   final Map<String, int> hintsUsed;
   final int elapsedMs;
+
+  /// The id the pickups were seeded with (install id before sign-in).
+  final String pickupSeed;
+
+  /// Pickups collected so far in this puzzle.
+  List<Pickup> get collectedPickups => [for (final i in collected) pickups[i]];
 
   Board toBoard(Puzzle puzzle) => Board(
     puzzle,
@@ -102,6 +112,7 @@ class SavedPuzzle {
     'collected': collected,
     'hintsUsed': hintsUsed,
     'elapsedMs': elapsedMs,
+    'pickupSeed': pickupSeed,
   };
 }
 
@@ -167,6 +178,20 @@ class Store {
 
   Future<void> enqueueSync(Map<String, Object> entry) =>
       _prefs.setString(_syncKey, jsonEncode([...loadSyncQueue(), entry]));
+
+  /// Drops the first [count] queued entries once the server has them.
+  /// (Entries queued meanwhile stay.)
+  Future<void> dropSynced(int count) {
+    final queue = loadSyncQueue();
+    return _prefs.setString(_syncKey, jsonEncode(queue.skip(count).toList()));
+  }
+
+  /// Forgets everything on this phone (after deleting the account).
+  Future<void> clearAll() async {
+    for (final key in [_profileKey, _savedKey, _syncKey]) {
+      await _prefs.remove(key);
+    }
+  }
 
   static String _randomId() {
     final rng = Random.secure();

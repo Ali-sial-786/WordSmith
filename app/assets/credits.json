@@ -333,6 +333,105 @@
     "changes": "Background removed, recoloured #ffffff"
   },
   {
+    "file": "images/ (3D renders)",
+    "title": "Metal052C",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Metal052C",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Iron roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvil & hammers"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Ground054",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Ground054",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Casting sand of the empty mold cell (cell_empty)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Bricks102",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Bricks102",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Bricks094",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Bricks094",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Planks023A",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Planks023A",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Wood: beams, stumps, barrels, handles, doors, water wheel (icon + all backgrounds)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "PavingStones142",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=PavingStones142",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Flagstone floors (bg_hall, bg_tin, bg_copper interior)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "RoofingTiles014B",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=RoofingTiles014B",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Clay roof tiles (bg_copper workshop, bg_tin cottages)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Ground037",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Ground037",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Grassy ground / river banks (bg_tin outside, bg_copper)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Plaster007",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Plaster007",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Old plaster walls (bg_tin smithy, bg_copper workshop)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "RobotoSlab-wght.ttf",
+    "author": "Christian Robertson (Google Fonts)",
+    "licence": "Apache License 2.0",
+    "url": "https://fonts.google.com/specimen/Roboto+Slab",
+    "licence_url": "https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt",
+    "changes": "Baked into renders: The 3D 'W' on the app icon (static Black instance cut by fetch_assets.py); letters in preview mock-ups. Same font the app uses for tiles."
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "LICENSE-RobotoSlab.txt",
+    "author": "Google Fonts",
+    "licence": "Apache License 2.0 (licence text)",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt",
+    "licence_url": "",
+    "changes": "Baked into renders: Licence text for Roboto Slab"
+  },
+  {
     "file": "audio/tink_1.ogg",
     "title": "Tile touch tink #1 (G5, 784 Hz): struck steel bar",
     "author": "Wordsmith",

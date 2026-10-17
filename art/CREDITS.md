@@ -137,6 +137,22 @@ Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by o
 | `audio/forge_ambience.ogg` | fire.wav (Fireplace Sound loop) | PagDev | CC0 1.0 (public domain) | https://opengameart.org/content/fireplace-sound-loop |
 | `audio/forge_ambience.ogg` | Forge fire crackle, seamless ~27 s stereo loop with one faint bellows breath | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
 
+## Other assets
+
+| File | Built from | Author | Licence | Source |
+|---|---|---|---|---|
+| `images/ (3D renders)` | Metal052C | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Metal052C |
+| `images/ (3D renders)` | Ground054 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Ground054 |
+| `images/ (3D renders)` | Bricks102 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Bricks102 |
+| `images/ (3D renders)` | Bricks094 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Bricks094 |
+| `images/ (3D renders)` | Planks023A | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Planks023A |
+| `images/ (3D renders)` | PavingStones142 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=PavingStones142 |
+| `images/ (3D renders)` | RoofingTiles014B | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=RoofingTiles014B |
+| `images/ (3D renders)` | Ground037 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Ground037 |
+| `images/ (3D renders)` | Plaster007 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Plaster007 |
+| `images/ (3D renders)` | RobotoSlab-wght.ttf | Christian Robertson (Google Fonts) | Apache License 2.0 | https://fonts.google.com/specimen/Roboto+Slab |
+| `images/ (3D renders)` | LICENSE-RobotoSlab.txt | Google Fonts | Apache License 2.0 (licence text) | https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt |
+
 ## Audio file details
 
 | File | Duration | Channels | Loudness | True peak | Size |

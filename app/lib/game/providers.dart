@@ -7,6 +7,7 @@ import '../data/store.dart';
 import '../engine/board.dart';
 import '../engine/hints.dart';
 import '../engine/progression.dart';
+import '../net/models.dart';
 
 /// Overridden in main() once loaded.
 final storeProvider = Provider<Store>((_) => throw UnimplementedError());
@@ -60,6 +61,54 @@ class ProfileNotifier extends Notifier<Profile> {
     _store.saveProfile(next);
   }
 
+  /// Takes the server's profile as the truth after a sync. [pending] is the
+  /// puzzle in progress on this phone: its hint use, pickups and bonus words
+  /// aren't on the server until it's finished, so they're applied on top.
+  void applyServer(ServerProfile server, {SavedPuzzle? pending}) {
+    final hints = {for (final k in HintKind.values) k: server.hints[k] ?? 0};
+    var bin = server.scrapBin;
+    if (pending != null) {
+      for (final e in pending.hintsUsed.entries) {
+        final k = HintKind.byName(e.key);
+        hints[k] = (hints[k]! - e.value).clamp(0, 1 << 30);
+      }
+      for (final p in pending.collectedPickups) {
+        hints[p.kind] = hints[p.kind]! + 1;
+      }
+      bin += pending.bonusFound.length;
+      while (bin >= scrapBinCapacity) {
+        bin -= scrapBinCapacity;
+        hints[HintKind.hammer] = hints[HintKind.hammer]! + 1;
+      }
+    }
+    final local = current;
+    final s = server.stats;
+    _set(
+      local.copyWith(
+        userId: server.id,
+        totalXp: server.totalXp,
+        campaignStage: server.nextStage > local.campaignStage
+            ? server.nextStage
+            : local.campaignStage,
+        scrapBin: bin,
+        hints: hints,
+        stats: local.stats.copyWith(
+          wordsForged: s.wordsForged,
+          longestWord: s.longestWord.length >= local.stats.longestWord.length
+              ? s.longestWord
+              : local.stats.longestWord,
+          soloDone: s.soloDone,
+        ),
+      ),
+    );
+  }
+
+  /// Starts over with a fresh local profile (after deleting the account).
+  Future<void> resetLocal() async {
+    await _store.clearAll();
+    state = _store.loadProfile();
+  }
+
   /// Spends one hint of [kind]; false if the player has none.
   bool spendHint(HintKind kind) {
     if (state.hintCount(kind) <= 0) return false;
@@ -92,6 +141,7 @@ class ProfileNotifier extends Notifier<Profile> {
     required Map<String, int> hintsUsed,
     required int elapsedMs,
     required bool chapterFinished,
+    required String pickupSeed,
   }) {
     final before = state.progress;
     final xp = soloXp(bonusWords: board.bonusFound.length);
@@ -101,7 +151,9 @@ class ProfileNotifier extends Notifier<Profile> {
     for (final e in hints.entries) {
       next = next.withHints(e.key, e.value);
     }
-    final typed = [for (final i in board.foundSlots) board.puzzle.slots[i].word];
+    final typed = [
+      for (final i in board.foundSlots) board.puzzle.slots[i].word,
+    ];
     var longest = state.stats.longestWord;
     for (final w in typed) {
       if (w.length > longest.length) longest = w;
@@ -127,7 +179,7 @@ class ProfileNotifier extends Notifier<Profile> {
         for (final i in board.collectedPickups) board.pickups[i].toJson(),
       ],
       // The id pickups were seeded with (the install id before sign-in).
-      'pickupSeed': state.userId,
+      'pickupSeed': pickupSeed,
       'durationMs': elapsedMs,
       'completedAt': DateTime.now().millisecondsSinceEpoch,
     });

@@ -166,11 +166,13 @@ def build(M):
     # open hearth with live flames (left of centre) ------------------------
     HX, HY = -0.75, 3.15
     K.hearth((HX, HY, 0), w=1.8, d=1.2, h=0.8, brick=M["brick"], hood=M["hood"],
-             coal_strength=6.0, light_energy=250, hood_top=3.3, flue_top=HEIGHT)
+             coal_strength=4.5, light_energy=170, hood_top=3.3, flue_top=HEIGHT)
     K.fire((HX, HY - 0.05, 0.86), spread=(0.45, 0.18), count=9, height=0.85, width=0.17,
-           seed=8, strength=6.5, name="HearthFire")
-    K.flame_volume((HX, HY - 0.05, 1.2), size=(0.6, 0.35, 0.45), strength=4.0,
+           seed=8, strength=4.5, name="HearthFire")
+    K.flame_volume((HX, HY - 0.05, 1.2), size=(0.6, 0.35, 0.45), strength=1.2,
                    name="HearthGlow")
+    # sooty brick fireback on the wall behind the fire, so the flames read
+    K.box("Fireback", (HX, BACK - 0.03, 1.75), (2.0, 0.06, 2.0), M["hood"], bevel=0.01)
 
     # horseshoes on the rail, anvil + stump, barrel -------------------------
     for i in range(5):

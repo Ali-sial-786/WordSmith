@@ -84,13 +84,14 @@ class Profile {
   int hintCount(HintKind kind) => hints[kind] ?? 0;
 
   Profile copyWith({
+    String? userId,
     int? totalXp,
     int? campaignStage,
     int? scrapBin,
     Map<HintKind, int>? hints,
     Stats? stats,
   }) => Profile(
-    userId: userId,
+    userId: userId ?? this.userId,
     totalXp: totalXp ?? this.totalXp,
     campaignStage: campaignStage ?? this.campaignStage,
     scrapBin: scrapBin ?? this.scrapBin,

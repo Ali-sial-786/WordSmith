@@ -212,6 +212,14 @@ def credit_rows() -> list[dict]:
                              licence=LICENCE_NAMES.get(p["licence"], p["licence"]), url=p["page"],
                              licence_url=p["licence_url"], source=p["files"][0]["url"],
                              changes=u.get("changes", ""), retrieved=p["retrieved"]))
+    # Textures (and the icon font) baked into the Blender renders: art/blender/sources.json.
+    blender = json.loads((ART / "blender" / "sources.json").read_text())
+    for a in blender["assets"]:
+        rows.append(dict(file="images/ (3D renders)", title=Path(a.get("unzip_to", a["file"])).name,
+                         author=a["author"], licence=a["licence"], url=a.get("page", a["url"]),
+                         licence_url=a.get("licence_url", ""), source=a["url"],
+                         changes="Baked into renders: " + a.get("used_for", ""),
+                         retrieved=blender.get("retrieved", "")))
     if not AUDIO_MANIFEST.exists():
         sys.exit("art/audio/manifest.json missing - run `python3 art/export.py audio` first")
     for name, a in json.loads(AUDIO_MANIFEST.read_text()).items():
