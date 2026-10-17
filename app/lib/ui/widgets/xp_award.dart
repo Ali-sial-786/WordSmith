@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../engine/progression.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import 'rank_badge.dart';
 
 /// "+45 XP", and a glowing level-up badge, popping in after a match.
 class XpAwardBanner extends StatelessWidget {
@@ -37,7 +38,14 @@ class XpAwardBanner extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Text('LEVEL UP!', style: displayStyle(20, color: Palette.forgeBlack)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      RankBadge(rank: Rank.forLevel(level), size: 24),
+                      const SizedBox(width: 8),
+                      Text('LEVEL UP!', style: displayStyle(20, color: Palette.forgeBlack)),
+                    ],
+                  ),
                   Text(
                     'Smith Level $level · ${Rank.forLevel(level).title}',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Palette.forgeBlack),

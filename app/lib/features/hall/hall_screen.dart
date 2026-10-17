@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_info.dart';
 import '../../engine/hints.dart';
+import '../../engine/progression.dart';
 import '../../game/account.dart';
 import '../../net/hub_client.dart';
 import '../../game/providers.dart';
@@ -13,6 +14,7 @@ import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
+import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/xp_bar.dart';
 import '../coop/coop_entry.dart';
 
@@ -389,9 +391,18 @@ class _ProfileCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name ?? rank, style: displayStyle(18)),
-                      Text(
-                        name == null ? 'Smith Level $level' : '$rank · Smith Level $level',
-                        style: text.bodySmall,
+                      Row(
+                        children: [
+                          RankBadge(rank: Rank.forLevel(level), size: 18),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              name == null ? 'Smith Level $level' : '$rank · Smith Level $level',
+                              overflow: TextOverflow.ellipsis,
+                              style: text.bodySmall,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       XpBar(fraction: fraction),

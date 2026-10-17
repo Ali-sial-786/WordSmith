@@ -50,7 +50,10 @@ Future<void> main() async {
     ),
   );
   // Sounds load after the first frame so startup isn't held up.
-  sfx.preload().then((_) => sfx.startAmbience());
+  sfx.preload().then((_) {
+    sfx.startAmbience();
+    sfx.music('music_hall');
+  });
 }
 
 /// Firebase sign-in when this build has its settings; otherwise solo-only.

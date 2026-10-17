@@ -29,6 +29,11 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) => n.update((s) => s.copyWith(sfxVolume: v)),
           ),
           _Slider(
+            label: 'Music',
+            value: s.musicVolume,
+            onChanged: (v) => n.update((s) => s.copyWith(musicVolume: v)),
+          ),
+          _Slider(
             label: 'Forge ambience',
             value: s.ambienceVolume,
             onChanged: (v) => n.update((s) => s.copyWith(ambienceVolume: v)),

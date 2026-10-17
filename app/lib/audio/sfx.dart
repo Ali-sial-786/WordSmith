@@ -17,7 +17,11 @@ enum SfxId {
   levelUp('levelup'),
   shuffle('shuffle'),
   tap('tap'),
-  tick('tick');
+  tick('tick'),
+  roundWin('round_win'),
+  roundLose('round_lose'),
+  seriesWin('series_win'),
+  rivalFinished('rival_finished');
 
   const SfxId(this.file);
   final String file;
@@ -64,6 +68,8 @@ class Sfx {
   final bool _enabled;
   final Map<String, _Voice> _voices = {};
   AudioPlayer? _ambience;
+  AudioPlayer? _music;
+  String? _track;
   Settings _settings;
 
   /// Loads every sound in the background; sounds play once loaded.
@@ -93,9 +99,28 @@ class Sfx {
   void applySettings(Settings settings) {
     _settings = settings;
     _ambience?.setVolume(_ambienceVolume).ignore();
+    _music?.setVolume(_musicVolume).ignore();
   }
 
   double get _ambienceVolume => _settings.ambienceVolume * 0.6;
+  double get _musicVolume => _settings.musicVolume * 0.45;
+
+  /// Loops a music track from assets/audio (`music_hall`, `music_round`), or
+  /// stops the music with null. Switching to the playing track does nothing.
+  Future<void> music(String? track) async {
+    if (!_enabled || track == _track) return;
+    _track = track;
+    try {
+      final player = _music ??= AudioPlayer();
+      await player.stop();
+      if (track == null) return;
+      await player.setReleaseMode(ReleaseMode.loop);
+      await player.setVolume(_musicVolume);
+      await player.play(AssetSource('audio/$track.ogg'));
+    } on Object catch (e) {
+      debugPrint('music $track unavailable: $e');
+    }
+  }
 
   void play(SfxId id, {double volume = 1}) => _play(id.file, volume);
 

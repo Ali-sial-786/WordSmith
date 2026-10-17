@@ -9,6 +9,7 @@ import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
+import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/xp_bar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -29,6 +30,8 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          Center(child: RankBadge(rank: p.rank, size: 72)),
+          const SizedBox(height: 6),
           Center(child: Text(p.rank.title, style: displayStyle(28, color: Palette.molten))),
           Center(child: Text('Smith Level ${progress.level}', style: text.titleMedium)),
           const SizedBox(height: 14),

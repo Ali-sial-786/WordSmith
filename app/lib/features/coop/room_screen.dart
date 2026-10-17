@@ -42,6 +42,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   RoomSession? _session;
   final _cues = MoldCues();
   late final AccountController _account;
+  late final Sfx _sfx;
   StreamSubscription<RoomEvent>? _sub;
   bool _left = false;
 
@@ -56,6 +57,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   void initState() {
     super.initState();
     _account = ref.read(accountProvider.notifier);
+    _sfx = ref.read(sfxProvider);
     final factory = ref.read(roomClientFactoryProvider);
     final me = ref.read(accountProvider).user?.uid ?? '';
     if (factory != null) {
@@ -70,6 +72,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 
   void _changed() {
     if (!mounted) return;
+    // Round music while racing or forging together; hall music otherwise.
+    final phase = _session?.phase;
+    ref.read(sfxProvider).music(phase == 'countdown' || phase == 'round' ? 'music_round' : 'music_hall');
     // Video joins once the room has seated us.
     if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
       _videoAutoTried = true;
@@ -159,16 +164,19 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           ..fillDelay.clear()
           ..flash.clear();
       case RoundEnd(:final completed, :final xp):
-        sfx.play(completed ? SfxId.forged : SfxId.tick);
+        sfx.play(completed ? SfxId.forged : SfxId.roundLose);
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
         }
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
       case VsRoundEnd(:final winner):
-        sfx.play(winner == _session?.me ? SfxId.forged : SfxId.tick);
+        sfx.play(winner == _session?.me ? SfxId.roundWin : SfxId.roundLose);
       case SeriesEnd(:final winner, :final xp):
-        sfx.play(winner == _session?.me || (xp[_session?.me]?.levelUps ?? 0) > 0 ? SfxId.levelUp : SfxId.tick);
+        sfx.play(winner == _session?.me ? SfxId.seriesWin : SfxId.roundLose);
+        if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
+          Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
+        }
         _account.sync();
       case RoomError(:final code):
         final message = switch (code) {
@@ -229,6 +237,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         ..dispose();
     }
     _account.setStatus('online');
+    _sfx.music('music_hall');
     super.dispose();
   }
 

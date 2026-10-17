@@ -51,6 +51,10 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
   late final StreamSubscription<RoomEvent> _sub;
   late final Timer _tick;
 
+  /// Rivals already sounded as nearly done, per round.
+  final Set<String> _warned = {};
+  int _warnedRound = -1;
+
   VsSession get _s => widget.session;
   Sfx get _sfx => ref.read(sfxProvider);
 
@@ -111,8 +115,16 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
             _preview.currentState?.react(word, PreviewResult.bad);
             _sfx.play(SfxId.invalid);
         }
-      case RacerProgress(:final id, :final filled, :final total) when id != _s.me && filled >= total && total > 0:
-        _haptic(HapticFeedback.heavyImpact);
+      case RacerProgress(:final id) when id != _s.me && e.fraction >= 0.75:
+        final round = _s.round?.round ?? 0;
+        if (round != _warnedRound) {
+          _warned.clear();
+          _warnedRound = round;
+        }
+        if (_warned.add(id)) {
+          _sfx.play(SfxId.rivalFinished, volume: 0.7);
+          _haptic(HapticFeedback.heavyImpact);
+        }
       case RoomError(:final code) when code == 'not_playing':
         _toast.currentState?.show("You're watching this round", color: Palette.steel);
       default:
