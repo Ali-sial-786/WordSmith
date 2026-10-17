@@ -1,6 +1,6 @@
 # Wordsmith — Game Design
 
-> Status: **Plan approved, not yet built.** Decisions are logged in
+> Status: **Built and playable.** Decisions are logged in
 > [DECISIONS.md](DECISIONS.md). For the tech side see [TECH.md](TECH.md), for
 > visuals and sound see [ART_AND_AUDIO.md](ART_AND_AUDIO.md), and for getting
 > it onto friends' phones see [DISTRIBUTION.md](DISTRIBUTION.md).
@@ -339,7 +339,31 @@ titanium).
 
 ---
 
-## 10. Fair play and safety
+## 10. Everyday extras (the genre's daily loop)
+
+Features Wordscapes and Word Trails players expect, in forge clothes. The
+exact rules live in the shared contracts.
+
+| Genre feature | Wordsmith | Contract |
+|---|---|---|
+| Word definitions and pronunciation | **Meanings**: tap any forged word (or a bonus word, or a word on the Forged! card) to see up to three definitions from Open English WordNet, offline, and hear it said | `tools/dictgen` |
+| Daily login reward | **Daily Stoke**: a 7-step track (XP, hints, a Spark Shower on day 7); missing days never resets it | `shared/forge-board.md` |
+| Quests | **Work Orders**: three daily orders (one swap a day) and a chest for all three, plus two weekly orders including a **Letter Hunt** | `shared/forge-board.md` |
+| Weekend tournament | **Weekly Trials**: an XP race among your friends; the top three win prizes | `shared/forge-board.md` |
+| Team help | **Gifts**: send each friend a free Hammer Strike every day | `shared/forge-board.md` |
+| Daily puzzle calendar and monthly awards | **Commission calendar**: play missed days of this month or last (no streak), and earn a bronze, silver or gold trophy each month | `shared/daily.md` |
+| Fun facts with the daily puzzle | **Smith's Lore**: every commission forged adds a page of forge history to the Lore Book | `app/assets/lore` |
+| Gold tiles and picture pieces | **Gilded cells** give **blueprint pieces** that build twelve **Masterworks**, shown in the **Armory** | `shared/masterworks.md` |
+| Level select | **Chapter maps**: replay any forged puzzle for practice | — |
+| Master / expert levels | **Master Forge**: after Starmetal, every puzzle again at full XP | `shared/master-forge.md` |
+| Reminder notifications | **Daily reminder** at an hour you pick, only when the commission is still waiting | `shared/push.md` |
+| Tutorial | A hand traces a word on the first puzzle; one-time tips for embers, gilded cells and meanings | — |
+
+Also: a left-handed layout (hints on the left of the anvil).
+
+---
+
+## 11. Fair play and safety
 
 - The server holds every multiplayer answer and referees every guess. Phones only get the shape of the grid and the letters.
 - **Rate limit:** about 4 guesses per second per player. A burst of invalid guesses triggers a 3-second cool-down, which stops anyone spamming every letter combination.
@@ -348,7 +372,7 @@ titanium).
 
 ---
 
-## 11. About copying the original
+## 12. About copying the original
 
 Game mechanics can't be copyrighted, so the swipe ring, crossword grid, bonus
 words, shuffle and hints can follow the genre closely. The **art, sounds,

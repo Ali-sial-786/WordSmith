@@ -12,7 +12,8 @@
 > - **M5:** mostly done.
 >   - Done: the Daily Commission (live, tested), scenes for all nine chapters, rank badges, music and match sounds, the level-up flourish after matches, the update banner, multiplayer records on the profile, Join-a-friend, the 130%-text accessibility pass, and a code-review pass (rejoining your own room, phase races, offline sign-in, daily rollover).
 >   - Still open: invite notifications are built and live on the server; they start sending once the owner adds the `FCM_SERVICE_ACCOUNT` secret (DISTRIBUTION.md §5).
-> - **Video chat (extra):** live. Tokens verified against LiveKit; needs a two-phone test.
+> - **Video chat (extra):** live, and tested on two phones.
+> - **M6 (genre extras):** built: word meanings, Daily Stoke, Work Orders, Weekly Trials, gifts, the commission calendar and trophies, Smith's Lore, gilded cells and the Armory, chapter maps with replays, the Master Forge, daily reminders, the first-puzzle guide and a left-handed layout (DESIGN.md §10).
 
 ---
 
