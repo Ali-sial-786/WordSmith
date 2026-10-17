@@ -27,6 +27,7 @@ class ChaptersScreen extends ConsumerWidget {
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
         dim: 0.7,
+        fire: 0.5,
         child: SafeArea(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),

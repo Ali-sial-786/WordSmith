@@ -29,6 +29,8 @@ class HallScreen extends ConsumerWidget {
         image: 'assets/images/bg_hall.webp',
         dim: 0.45,
         blur: 1.5,
+        fire: 0.85,
+        fireHeight: 0.45,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(

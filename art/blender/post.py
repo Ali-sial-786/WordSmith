@@ -351,7 +351,59 @@ def icon():
     save_png(full, icon_out("icon_full.png"))
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon}
+# --------------------------------------------------------------------------
+# 5. backgrounds (1080x2340 WebP)
+# --------------------------------------------------------------------------
+BG_SIZE = (1080, 2340)
+BG_BUDGET_KB = 350
+
+
+def bloom_add(rgb, threshold=0.7, radii=(12, 40), gains=(0.35, 0.25)):
+    """Additive glow around the brightest areas (fire, embers)."""
+    lum = rgb.max(-1)
+    hot = np.clip((lum - threshold) / (1 - threshold), 0, 1)[..., None] * rgb
+    out = rgb.copy()
+    for r, g in zip(radii, gains):
+        out += np.stack([blur(hot[..., c], r) for c in range(3)], -1) * g
+    return np.clip(out, 0, 1)
+
+
+def calm_bands(rgb, top=0.45, bottom=0.62, top_dim=0.82, bottom_dim=0.78):
+    """Gently darken the grid zone (top) and the very bottom (app flames)."""
+    h = rgb.shape[0]
+    y = np.linspace(0, 1, h, dtype=np.float32)
+    k = np.ones_like(y)
+    k = np.where(y < top, top_dim + (1 - top_dim) * (y / top) ** 1.5, k)
+    k = np.where(y > bottom, 1 - (1 - bottom_dim) * ((y - bottom) / (1 - bottom)) ** 1.3, k)
+    return rgb * k[:, None, None]
+
+
+def background(name, **kw):
+    src = load(raw("bg", f"{name}.png"))
+    a = np.asarray(Image.fromarray((src[..., :3] * 255 + 0.5).astype(np.uint8))
+                   .resize(BG_SIZE, Image.LANCZOS)).astype(np.float32) / 255
+    a = bloom_add(a, **kw.get("bloom", {}))
+    a = calm_bands(a, **kw.get("bands", {}))
+    im = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
+    path = out(f"{name}.webp")
+    for q in (80, 76, 72, 68, 64, 60):
+        im.save(path, "WEBP", quality=q, method=6)
+        if os.path.getsize(path) <= BG_BUDGET_KB * 1024:
+            break
+    print(f"  wrote {os.path.relpath(path, REPO)}  {im.size[0]}x{im.size[1]}  q{q}  "
+          f"{os.path.getsize(path) / 1024:.1f} KB")
+
+
+def bg():
+    print("backgrounds")
+    for name in ("bg_hall", "bg_tin", "bg_copper"):
+        if os.path.exists(raw("bg", f"{name}.png")):
+            background(name)
+        else:
+            print(f"  (skip {name}: no raw render)")
+
+
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg}
 
 
 def main():

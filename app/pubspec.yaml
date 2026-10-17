@@ -63,6 +63,9 @@ flutter:
     - assets/credits.json
     - assets/licenses/
 
+  shaders:
+    - shaders/forge_fire.frag
+
   # Variable fonts: styles set the weight with FontVariation('wght', …).
   fonts:
     - family: Cinzel

@@ -1,13 +1,15 @@
-"""bg_hall: the Forge Hall (home screen). A stone forge interior at night:
-brick hearth with glowing coals under a sooty hood (left), an anvil on a
-stump catching the firelight (centre), tools on the right wall, a quench
-barrel, smoky haze and a faint cool moonlit window.
+"""bg_hall: the Forge Hall (home screen, and the puzzle background for the
+chapters that have no scene of their own yet). A stone forge interior at
+night, built around one big arched brick forge whose mouth is full of hot
+coals and flames: the clear focal point, sitting ~45-62 % down the frame.
+Tools hang either side, an anvil on its stump and a quench barrel stand in
+silhouette in the foreground; smoke and drifting embers fill the air.
 
-Portrait 1080x2340. Composition keeps the top ~45 % (beams, upper wall in
-smoke) and the bottom ~35 % (floor in shadow) calm; the interest sits in
-the middle band and around the edges.
+Portrait 1080x2340. The top ~45 % (chimney breast, beams, smoke) stays dark
+and calm for the crossword grid; the bottom (floor) is darker too, as the app
+draws animated flames over the bottom 40 %.
 
-    blender -b --factory-startup -P scene_hall.py -- [--samples 96] [--scale 0.75]
+    blender -b --factory-startup -P scene_hall.py -- [--samples 80] [--scale 0.667]
 """
 import math
 import os
@@ -20,24 +22,28 @@ import common as C  # noqa: E402
 import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
-SAMPLES = C.arg("samples", 96)
-SCALE = C.arg("scale", 0.75)          # render scale of 1080x2340
+SAMPLES = C.arg("samples", 80)
+SCALE = C.arg("scale", 0.667)         # render scale of 1080x2340 (post.py upscales)
 NAME = "bg_hall"
 
-W_HALF, BACK, FRONT, HEIGHT = 3.2, 5.0, -6.0, 6.5
+W_HALF, BACK, FRONT, HEIGHT = 3.0, 4.0, -6.0, 6.5
+FORGE_Y = BACK - 1.6          # front face of the forge
 
 
 def materials():
     return dict(
-        wall=K.tex_material("StoneWall", "Bricks102", scale=0.45, value=0.32, sat=0.7,
+        wall=K.tex_material("StoneWall", "Bricks102", scale=0.45, value=0.26, sat=0.7,
                             tint="#8A6A55", tint_fac=0.4, rough=(0.75, 1.0),
-                            soot=0.85, soot_range=(2.0, 5.5)),
-        floor=K.tex_material("Flagstones", "PavingStones142", scale=0.35, value=0.38,
-                             sat=0.6, tint="#7A6252", tint_fac=0.3, rough=(0.5, 0.9)),
-        brick=K.tex_material("HearthBrick", "Bricks094", scale=0.9, value=0.5, sat=0.85,
-                             rough=(0.7, 1.0), soot=0.7, soot_range=(0.3, 1.0)),
-        hood=K.tex_material("Hood", "Bricks094", scale=0.9, value=0.16, sat=0.4,
-                            rough=(0.8, 1.0)),
+                            soot=0.9, soot_range=(2.2, 5.0)),
+        floor=K.tex_material("Flagstones", "PavingStones142", scale=0.8, value=0.2,
+                             sat=0.5, tint="#7A6252", tint_fac=0.3, rough=(0.55, 0.95),
+                             normal=0.6),
+        brick=K.tex_material("ForgeBrick", "Bricks094", scale=1.0, value=0.55, sat=0.9,
+                             rough=(0.7, 1.0), soot=0.75, soot_range=(1.6, 2.4)),
+        chimney=K.tex_material("ChimneyBrick", "Bricks094", scale=1.0, value=0.3, sat=0.6,
+                               rough=(0.7, 1.0), soot=0.9, soot_range=(2.2, 4.5)),
+        stone=K.tex_material("Apron", "Bricks102", scale=1.4, value=0.4, sat=0.6,
+                             rough=(0.6, 0.95)),
         beam=K.tex_material("Beam", "Planks023A", scale=0.6, value=0.28, sat=0.8,
                             rough=(0.7, 0.95)),
         wood=P.wood_material("Wood", value=0.55, scale=1.2),
@@ -60,73 +66,71 @@ def build(M):
           (0.3, BACK - FRONT, HEIGHT), M["wall"], bevel=0)
     K.box("Ceiling", (0, (BACK + FRONT) / 2, HEIGHT + 0.1), (2 * W_HALF + 0.6, BACK - FRONT, 0.2),
           M["beam"], bevel=0)
-    for i, y in enumerate((4.2, 2.2, 0.2, -1.8)):
-        K.box(f"Beam{i}", (0, y, 4.3), (2 * W_HALF, 0.32, 0.36), M["beam"], bevel=0.04)
-    for i, x in enumerate((-W_HALF + 0.2, W_HALF - 0.2)):
-        K.box(f"Post{i}", (x, 2.2, 2.15), (0.3, 0.3, 4.3), M["beam"], bevel=0.04)
+    for i, y in enumerate((3.0, 1.0, -1.0)):
+        K.box(f"Beam{i}", (0, y, 4.4), (2 * W_HALF, 0.34, 0.38), M["beam"], bevel=0.04)
 
-    # hearth (left, against the back wall) ---------------------------------
-    K.hearth((-1.35, 3.85, 0), w=1.9, d=1.3, h=0.82, brick=M["brick"], hood=M["hood"],
-             coal_strength=8.0, light_energy=1100, hood_top=3.6, flue_top=HEIGHT)
+    # the forge: centred on the back wall ----------------------------------
+    K.arched_forge((0, FORGE_Y, 0), w=2.9, d=1.6, h=2.2, mouth_w=1.7, mouth_h=1.22,
+                   mouth_z=0.72, brick=M["brick"], iron=M["iron"], stone=M["stone"],
+                   chimney=M["chimney"], chimney_top=HEIGHT, fire_strength=6.5,
+                   light=190.0, seed=3)
 
-    # anvil on its stump (centre-right, horn towards the fire) -------------
-    K.stump("Stump", (0.55, 1.35, 0), radius=0.36, height=0.45, mat=M["stump"])
-    anv = P.anvil("Anvil", M["iron"], depth=1.15, location=(0.55, 1.35, 0.45),
-                  rot_z=math.radians(-14))
+    # tools hanging either side of the forge, lit by its spill -------------
+    K.tool_rack((-1.95, BACK - 0.05, 2.15), along="X", length=0.9, wood=M["beam"],
+                iron=M["iron"], handle=M["handle"], facing=-1, seed=4)
+    K.tool_rack((1.95, BACK - 0.05, 2.15), along="X", length=0.9, wood=M["beam"],
+                iron=M["iron"], handle=M["handle"], facing=-1, seed=9)
+    # tongs and a poker leaning against the forge's front corners
+    tg = P.tongs("LeanTongs", M["iron"], length=1.15)
+    tg.location = (-1.28, FORGE_Y - 0.28, 0.0)
+    tg.rotation_euler = (math.radians(-12), math.radians(8), math.radians(10))
+    K.cylinder("Poker", (1.3, FORGE_Y - 0.25, 0.6), 0.018, 1.25, M["iron"], verts=12,
+               rot=(-12, -8, 0))
+
+    # anvil on its stump (front right, horn towards the fire) --------------
+    AX, AY = 1.05, 0.55
+    K.stump("Stump", (AX, AY, 0), radius=0.36, height=0.45, mat=M["stump"])
+    anv = P.anvil("Anvil", M["iron"], depth=1.15, location=(AX, AY, 0.45),
+                  rot_z=math.radians(-28))
     anv.scale = (0.28, 0.28, 0.28)
-    # a resting hammer on the anvil face
     hm = P.hammer("AnvilHammer", M["iron"], M["handle"], head_len=0.26, head_w=0.09,
                   handle_len=0.5, pein_axis="z", handle_r=0.02)
-    hm.location = (0.62, 1.30, 0.97)
-    hm.rotation_euler = (math.radians(90), 0, math.radians(-30))
+    hm.location = (AX + 0.05, AY - 0.06, 0.97)
+    hm.rotation_euler = (math.radians(90), 0, math.radians(-40))
 
-    # quench barrel near the hearth ----------------------------------------
-    K.barrel("Barrel", (-2.35, 2.35, 0), radius=0.4, height=0.85, wood=M["wood"],
+    # quench barrel front left ---------------------------------------------
+    K.barrel("Barrel", (-1.45, 0.9, 0), radius=0.4, height=0.85, wood=M["wood"],
              iron=M["iron"], water=M["water"])
 
-    # tools on the right wall ------------------------------------------------
-    K.tool_rack((W_HALF - 0.05, 3.0, 2.05), along="Y", length=2.4, wood=M["beam"],
-                iron=M["iron"], handle=M["handle"], facing=-1)
-
-    # small moonlit window high on the back wall (cool accent) ---------------
-    win = K.plane("Window", (1.55, BACK - 0.01, 3.3), (0.7, 0.9), rot=(90, 0, 0),
-                  mat=K.flat_material("Moon", "#000000", emission=(C.hex_lin("#5E7FB0"), 1.6)))
-    for i, (dx, dz, sx, sz) in enumerate([(0, 0.47, 0.86, 0.08), (0, -0.47, 0.86, 0.08),
-                                          (0.39, 0, 0.08, 1.0), (-0.39, 0, 0.08, 1.0),
-                                          (0, 0, 0.05, 0.9), (0, 0, 0.7, 0.05)]):
-        K.box(f"WinFrame{i}", (1.55 + dx, BACK - 0.03, 3.3 + dz), (sx, 0.08, sz), M["beam"],
-              bevel=0.01)
-    C.spot_light("MoonShaft", (1.55, BACK + 0.6, 3.5), (0.9, 1.5, 0.0), 260, angle=22,
-                 blend=0.6, radius=0.3, color=(0.55, 0.68, 1.0))
-
-    # warm bounce from the fire onto the anvil + rim on the tools ------------
-    C.area_light("FireBounce", (-0.6, 2.6, 1.3), (0.6, 1.3, 0.8), 70, size=1.2,
+    # warm rim on the foreground silhouettes, very faint cool fill -----------
+    C.area_light("RimAnvil", (0.6, 2.2, 1.3), (AX, AY, 0.8), 30, size=0.8,
                  color=(1.0, 0.5, 0.2))
-    C.area_light("ToolRim", (1.0, 3.6, 2.4), (W_HALF, 3.0, 2.0), 60, size=1.0,
-                 color=(1.0, 0.55, 0.25))
+    C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 6, size=3.0,
+                 color=(0.5, 0.6, 0.9))
 
     # smoke + embers -----------------------------------------------------------
-    K.haze((-W_HALF, FRONT + 2, 0), (W_HALF, BACK, HEIGHT), density=0.035,
-           color=(1.0, 0.92, 0.85), anisotropy=0.4)
-    K.embers((-2.0, 3.2, 1.0), (-0.6, 4.4, 3.4), count=26, seed=5, radius=0.01)
+    K.haze((-W_HALF, FRONT + 2, 0), (W_HALF, BACK, HEIGHT), density=0.005,
+           color=(1.0, 0.9, 0.82), anisotropy=0.45)
+    K.embers((-0.8, FORGE_Y - 0.6, 1.6), (0.8, FORGE_Y + 0.2, 3.2), count=22, seed=5,
+             radius=0.012)
 
 
 def main():
     C.reset()
     res = (round(1080 * SCALE), round(2340 * SCALE))
-    sc = C.setup_cycles(res, samples=SAMPLES, transparent=False, view="AgX",
-                        look="AgX - Medium High Contrast", exposure=0.0, bounces=5)
+    sc = C.setup_cycles(res, samples=SAMPLES, transparent=False, view="Filmic",
+                        look="High Contrast", exposure=0.0, bounces=5)
     sc.cycles.volume_step_rate = 4.0
     sc.cycles.volume_max_steps = 256
     sc.cycles.volume_bounces = 0
     C.world_color(C.hex_lin("#020203"), 1.0)
     M = materials()
     build(M)
-    cam = C.persp_camera((0.3, -4.3, 1.55), (-0.15, 4.0, 1.3), lens=26)
+    cam = C.persp_camera((0.15, -2.9, 1.45), (0.0, FORGE_Y, 1.36), lens=26)
     cam.data.sensor_fit = "VERTICAL"
     cam.data.sensor_height = 36
     cam.data.dof.use_dof = True
-    cam.data.dof.focus_distance = 5.7
+    cam.data.dof.focus_distance = 5.4
     cam.data.dof.aperture_fstop = 2.8
     C.render(NAME, "bg")
 

@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/providers.dart';
+import '../effects/forge_fire.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 
-/// A dimmed, softly blurred scene image behind a screen, with drifting
-/// embers. Falls back to a warm gradient while art is missing.
+/// A dimmed, softly blurred scene image behind a screen, with an animated
+/// forge fire along the bottom and drifting embers. Falls back to a warm
+/// gradient while art is missing.
 class ForgeBackground extends ConsumerWidget {
   const ForgeBackground({
     super.key,
@@ -16,6 +18,8 @@ class ForgeBackground extends ConsumerWidget {
     required this.child,
     this.dim = 0.55,
     this.blur = 3,
+    this.fire = 0.8,
+    this.fireHeight = 0.42,
   });
 
   /// Asset path, e.g. `assets/images/bg_tin.webp`.
@@ -23,6 +27,12 @@ class ForgeBackground extends ConsumerWidget {
   final Widget child;
   final double dim;
   final double blur;
+
+  /// Strength (0–1) of the animated forge fire along the bottom; 0 hides it.
+  final double fire;
+
+  /// Fraction of the screen height the fire layer covers.
+  final double fireHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,7 +73,16 @@ class ForgeBackground extends ConsumerWidget {
             ),
           ),
         ),
-        if (!reducedMotion) const EmberDrift(),
+        if (fire > 0)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: fireHeight,
+              widthFactor: 1,
+              child: ForgeFire(intensity: fire, animate: !reducedMotion),
+            ),
+          ),
+        if (!reducedMotion) const EmberDrift(count: 22),
         child,
       ],
     );

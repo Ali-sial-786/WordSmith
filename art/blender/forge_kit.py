@@ -86,16 +86,25 @@ def coals_material(name="Coals", strength=6.0):
     m = C.new_material(name)
     n = C.NT(m)
     tc = n.texcoord()
+    warp = n.node("ShaderNodeTexNoise")
+    warp.inputs["Scale"].default_value = 6.0
+    warp.inputs["Detail"].default_value = 2.0
+    n.link(tc.outputs["Object"], warp.inputs["Vector"])
+    wv = n.node("ShaderNodeVectorMath", _operation="MULTIPLY_ADD")
+    n.link(warp.outputs["Color"], wv.inputs[0])
+    wv.inputs[1].default_value = (0.08, 0.08, 0.08)
+    n.link(tc.outputs["Object"], wv.inputs[2])
     vor = n.node("ShaderNodeTexVoronoi", _feature="DISTANCE_TO_EDGE")
-    vor.inputs["Scale"].default_value = 9.0
-    n.link(tc.outputs["Object"], vor.inputs["Vector"])
+    vor.inputs["Scale"].default_value = 16.0
+    n.link(wv.outputs[0], vor.inputs["Vector"])
     noise = n.node("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 2.5
+    noise.inputs["Scale"].default_value = 3.0
     noise.inputs["Detail"].default_value = 4.0
     n.link(tc.outputs["Object"], noise.inputs["Vector"])
-    crack = n.maprange(vor.outputs["Distance"], 0.0, 0.12, 1.0, 0.0)
-    heat = n.math("ADD", n.math("MULTIPLY", crack, 0.8),
-                  n.maprange(noise.outputs[0], 0.35, 0.75, 0.0, 0.6))
+    crack = n.maprange(vor.outputs["Distance"], 0.0, 0.07, 1.0, 0.0)
+    glowy = n.maprange(noise.outputs[0], 0.4, 0.7, 0.15, 1.0)
+    heat = n.math("ADD", n.math("MULTIPLY", n.math("MULTIPLY", crack, glowy), 0.9),
+                  n.maprange(noise.outputs[0], 0.5, 0.8, 0.0, 0.45))
     # hotter in the middle of the bed
     sep = n.node("ShaderNodeSeparateXYZ")
     n.link(tc.outputs["Object"], sep.inputs[0])
@@ -103,9 +112,9 @@ def coals_material(name="Coals", strength=6.0):
                               n.math("MULTIPLY", sep.outputs[1], sep.outputs[1])))
     centre = n.maprange(r, 0.0, 1.0, 1.0, 0.25)
     heat = n.math("MULTIPLY", heat, centre)
-    col = n.ramp(heat, [(0.0, (0, 0, 0, 1)), (0.25, C.hex_lin("#5A1406")),
-                        (0.5, C.hex_lin("#FF6A13")), (0.8, C.hex_lin("#FFB23F")),
-                        (1.0, C.hex_lin("#FFF1D0"))])
+    col = n.ramp(heat, [(0.0, (0, 0, 0, 1)), (0.25, C.hex_lin("#5A1004")),
+                        (0.5, C.hex_lin("#FF4A0A")), (0.8, C.hex_lin("#FF9A2A")),
+                        (1.0, C.hex_lin("#FFE0A0"))])
     p = n.node("ShaderNodeBsdfPrincipled")
     p.inputs["Base Color"].default_value = C.hex_lin("#141010")
     p.inputs["Roughness"].default_value = 0.9
@@ -223,6 +232,8 @@ def hearth(loc=(0, 0, 0), w=1.9, d=1.3, h=0.85, brick=None, hood=None,
     C.assign(coal, coals_material(strength=coal_strength))
     objs.append(coal)
     # fire light (soft, orange) just above the coals + an upward splash
+    flame_volume((x, y, z + h + 0.32), size=(w * 0.36, d * 0.3, 0.42),
+                 strength=coal_strength * 1.1)
     C.point_light("FireLight", (x, y, z + h + 0.45), light_energy, radius=0.35,
                   color=(1.0, 0.45, 0.14))
     C.point_light("FireLightLow", (x, y - d * 0.3, z + h + 0.2), light_energy * 0.35,
@@ -246,6 +257,44 @@ def hearth(loc=(0, 0, 0), w=1.9, d=1.3, h=0.85, brick=None, hood=None,
     objs.append(box("Flue", (x, y + d * 0.2 + 0.05, (hood_top + flue_top) / 2),
                     (w * 0.44, d * 0.45, flue_top - hood_top), hood, bevel=0.03))
     return objs
+
+
+def flame_volume(loc, size=(0.7, 0.45, 0.5), strength=6.0, name="Flame"):
+    """Soft emissive fire glow (emission-only volume) above a coal bed."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0,
+                                         location=loc)
+    ob = bpy.context.active_object
+    ob.name = name
+    ob.scale = size
+    C.apply_transform(ob)
+    m = C.new_material(name + "Mat")
+    n = C.NT(m)
+    tc = n.texcoord()
+    sep = n.node("ShaderNodeSeparateXYZ")
+    n.link(tc.outputs["Object"], sep.inputs[0])
+    # radial falloff (object space), stronger at the bottom, licking upward
+    lng = n.node("ShaderNodeVectorMath", _operation="LENGTH")
+    n.link(tc.outputs["Object"], lng.inputs[0])
+    fall = n.maprange(lng.outputs["Value"], 0.2, 1.0, 1.0, 0.0, interp="SMOOTHSTEP")
+    up = n.maprange(sep.outputs[2], -size[2], size[2], 1.0, 0.25)
+    nz = n.node("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value = 3.5
+    nz.inputs["Detail"].default_value = 4.0
+    mp = n.node("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (1.0, 1.0, 0.45)      # vertical streaks
+    n.link(tc.outputs["Object"], mp.inputs[0])
+    n.link(mp.outputs[0], nz.inputs["Vector"])
+    lick = n.maprange(nz.outputs[0], 0.35, 0.75, 0.0, 1.0)
+    dens = n.math("MULTIPLY", n.math("MULTIPLY", fall, up), lick)
+    vol = n.node("ShaderNodeVolumePrincipled")
+    vol.inputs["Density"].default_value = 0.0
+    vol.inputs["Emission Color"].default_value = C.hex_lin("#FF5A0E")
+    n.link(n.math("MULTIPLY", dens, strength), vol.inputs["Emission Strength"])
+    out = n.node("ShaderNodeOutputMaterial")
+    n.link(vol.outputs[0], out.inputs["Volume"])
+    C.assign(ob, m)
+    ob.visible_shadow = False
+    return ob
 
 
 def stump(name, loc, radius=0.36, height=0.45, mat=None, top_mat=None):
@@ -312,7 +361,7 @@ def tool_rack(loc, along="Y", length=2.2, wood=None, iron=None, handle=None,
         objs.append(box("RackBoard", (x, y, z), (0.06, length, 0.22), wood, bevel=0.015))
     else:
         objs.append(box("RackBoard", (x, y, z), (length, 0.06, 0.22), wood, bevel=0.015))
-    slots = 6
+    slots = max(2, int(round(length / 0.36)))
     for i in range(slots):
         t = (i + 0.5) / slots - 0.5
         px = x + (0 if along == "Y" else t * length)
@@ -389,3 +438,202 @@ def embers(region_min, region_max, count=40, seed=2, radius=0.008, strength=30.0
         ob.visible_shadow = False
         obs.append(ob)
     return obs
+
+
+# --------------------------------------------------------------------------
+# fire: stylised flame meshes + arched brick forge
+# --------------------------------------------------------------------------
+def flame_material(name="FlameMat", strength=9.0, alpha=0.85):
+    """Emissive flame: white-yellow core at the base -> orange -> red tip,
+    soft (partly transparent) towards the silhouette edges."""
+    m = C.new_material(name)
+    n = C.NT(m)
+    tc = n.texcoord()
+    sep = n.node("ShaderNodeSeparateXYZ")
+    n.link(tc.outputs["Generated"], sep.inputs[0])
+    col = n.ramp(sep.outputs[2], [(0.0, C.hex_lin("#FFE7B0")), (0.18, C.hex_lin("#FFC24A")),
+                                  (0.45, C.hex_lin("#FF8A1E")), (0.75, C.hex_lin("#FF4A0E")),
+                                  (1.0, C.hex_lin("#B8240A"))])
+    stren = n.maprange(sep.outputs[2], 0.0, 1.0, strength, strength * 0.35)
+    e = n.node("ShaderNodeEmission")
+    n.link(col, e.inputs["Color"])
+    n.link(stren, e.inputs["Strength"])
+    lw = n.node("ShaderNodeLayerWeight")
+    lw.inputs["Blend"].default_value = 0.35
+    edge = n.math("POWER", n.math("SUBTRACT", 1.0, lw.outputs["Facing"]), 1.5)
+    a = n.math("MULTIPLY", edge, alpha)
+    tip = n.maprange(sep.outputs[2], 0.6, 1.0, 1.0, 0.4)
+    a = n.math("MULTIPLY", a, tip)
+    tr = n.node("ShaderNodeBsdfTransparent")
+    mix = n.node("ShaderNodeMixShader")
+    n.link(a, mix.inputs[0])
+    n.link(tr.outputs[0], mix.inputs[1])
+    n.link(e.outputs[0], mix.inputs[2])
+    n.output(mix.outputs[0])
+    return m
+
+
+def flame(name, base, height=0.8, width=0.22, seed=1, lean=(0.0, 0.0), mat=None):
+    """One chunky stylised flame tongue (teardrop lathe, swaying upward)."""
+    rnd = random.Random(seed)
+    prof = []
+    rings = 22
+    for i in range(rings + 1):
+        t = i / rings
+        r = width * (math.sin(math.pi * min(1.0, t ** 0.55)) ** 1.1) * (1 - t) ** 0.35
+        prof.append((max(r, 0.0), height * t))
+    prof[0] = (0.0, 0.0)
+    prof[-1] = (0.0, height)
+    ob = C.lathe(name, prof, segments=20)
+    ph, fq = rnd.uniform(0, 6.28), rnd.uniform(5.0, 8.0) / height
+    amp = width * rnd.uniform(0.35, 0.7)
+    for v in ob.data.vertices:
+        t = v.co.z / height
+        v.co.x += amp * math.sin(v.co.z * fq + ph) * t + lean[0] * t * t * height
+        v.co.y += 0.4 * amp * math.cos(v.co.z * fq * 0.7 + ph) * t + lean[1] * t * t * height
+    ob.location = base
+    ob.visible_shadow = False
+    if mat:
+        C.assign(ob, mat)
+    return ob
+
+
+def fire(center, spread=(0.6, 0.3), count=9, height=0.9, width=0.2, seed=3,
+         strength=9.0, name="Fire"):
+    """A cluster of flame tongues: tall in the middle, smaller at the edges."""
+    rnd = random.Random(seed)
+    mat = flame_material(name + "Mat", strength=strength)
+    obs = []
+    for i in range(count):
+        u = (i + 0.5) / count * 2 - 1           # -1..1 across the bed
+        x = center[0] + u * spread[0] + rnd.uniform(-0.05, 0.05)
+        y = center[1] + rnd.uniform(-spread[1], spread[1])
+        k = (1 - 0.65 * abs(u)) * rnd.uniform(0.75, 1.15)
+        obs.append(flame(f"{name}{i}", (x, y, center[2]), height * k, width * (0.7 + 0.5 * k),
+                         seed=seed * 31 + i, lean=(-u * 0.15, 0.0), mat=mat))
+    return obs
+
+
+def hot_bar_material(name="HotBar"):
+    """Iron bar: glowing yellow-orange at the far (+Y) end, cooling to dark."""
+    m = C.new_material(name)
+    n = C.NT(m)
+    tc = n.texcoord()
+    sep = n.node("ShaderNodeSeparateXYZ")
+    n.link(tc.outputs["Generated"], sep.inputs[0])
+    col = n.ramp(sep.outputs[1], [(0.0, (0, 0, 0, 1)), (0.45, (0, 0, 0, 1)),
+                                  (0.6, C.hex_lin("#5A1406")), (0.75, C.hex_lin("#FF5A10")),
+                                  (1.0, C.hex_lin("#FFD27A"))])
+    p = n.node("ShaderNodeBsdfPrincipled")
+    p.inputs["Base Color"].default_value = C.hex_lin("#55575C")
+    p.inputs["Metallic"].default_value = 0.9
+    p.inputs["Roughness"].default_value = 0.45
+    n.link(col, p.inputs["Emission Color"])
+    p.inputs["Emission Strength"].default_value = 6.0
+    n.output(p.outputs[0])
+    return m
+
+
+def coal_heap(name, center, radius=(0.7, 0.45), height=0.22, strength=7.0):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=1.0,
+                                         location=center)
+    ob = bpy.context.active_object
+    ob.name = name
+    ob.scale = (radius[0], radius[1], height)
+    C.apply_transform(ob)
+    tex = bpy.data.textures.new(name + "_lumps", "VORONOI")
+    tex.noise_scale = 0.08
+    d = ob.modifiers.new("Lumps", "DISPLACE")
+    d.texture = tex
+    d.strength = 0.07
+    d.texture_coords = "GLOBAL"
+    C.shade_smooth(ob)
+    C.assign(ob, coals_material(name + "Mat", strength=strength))
+    return ob
+
+
+def arched_forge(loc=(0, 0, 0), w=2.7, d=1.5, h=2.0, mouth_w=1.5, mouth_h=1.05,
+                 mouth_z=0.72, brick=None, iron=None, stone=None, chimney=None,
+                 chimney_top=7.0, fire_strength=9.0, light=900.0, seed=3):
+    """Brick forge with an arched fire mouth: coal heap and flames inside,
+    stone apron in front, iron lintel band, chimney breast above.
+    loc = centre of the front face at floor level; the forge extends +Y."""
+    x, y0, z = loc
+    yc = y0 + d / 2
+    objs = []
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, yc, z + h / 2))
+    blk = bpy.context.active_object
+    blk.name = "ForgeBlock"
+    blk.scale = (w, d, h)
+    C.apply_transform(blk)
+    # cutters: rectangular mouth + round arch on top, 70 % deep
+    depth = d * 0.72
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y0 + depth / 2 - 0.05,
+                                                      z + mouth_z + (mouth_h - mouth_w / 2) / 2))
+    c1 = bpy.context.active_object
+    c1.scale = (mouth_w, depth + 0.1, mouth_h - mouth_w / 2)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=mouth_w / 2, depth=depth + 0.1,
+                                        location=(x, y0 + depth / 2 - 0.05,
+                                                  z + mouth_z + mouth_h - mouth_w / 2),
+                                        rotation=(math.pi / 2, 0, 0))
+    c2 = bpy.context.active_object
+    for c in (c1, c2):
+        mod = blk.modifiers.new("Cut", "BOOLEAN")
+        mod.operation = "DIFFERENCE"
+        mod.object = c
+        mod.solver = "EXACT"
+    bpy.context.view_layer.objects.active = blk
+    for mod in list(blk.modifiers):
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    for c in (c1, c2):
+        bpy.data.objects.remove(c)
+    if brick:
+        C.assign(blk, brick)
+    objs.append(blk)
+    # the arch cylinder also cut below the mouth floor: fill that back in
+    fill_b = z + mouth_z + mouth_h - mouth_w / 2 - mouth_w / 2 - 0.02
+    objs.append(box("ForgeFill", (x, y0 + depth / 2, (fill_b + z + mouth_z) / 2),
+                    (mouth_w + 0.02, depth + 0.02, z + mouth_z - fill_b), brick, bevel=0))
+    # stone apron / ledge in front of the mouth
+    objs.append(box("ForgeApron", (x, y0 - 0.22, z + mouth_z - 0.06), (w * 0.86, 0.5, 0.12),
+                    stone or brick, bevel=0.03))
+    # iron band across the lintel + corner plates
+    if iron:
+        objs.append(box("ForgeBand", (x, y0 - 0.03, z + mouth_z + mouth_h + 0.18),
+                        (w * 1.02, 0.08, 0.16), iron, bevel=0.02))
+    # chimney breast tapering up into the dark
+    cb = z + h
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, yc + 0.1, (cb + chimney_top) / 2))
+    ch = bpy.context.active_object
+    ch.name = "Chimney"
+    ch.scale = (w * 0.9, d * 0.8, chimney_top - cb)
+    C.apply_transform(ch)
+    for v in ch.data.vertices:
+        if v.co.z > 0:
+            v.co.x *= 0.62
+            v.co.y = v.co.y * 0.7 + d * 0.06
+    C.assign(ch, chimney or brick)
+    objs.append(ch)
+    # coals + flames inside the firebox
+    fy = y0 + depth * 0.5
+    objs.append(coal_heap("ForgeCoals", (x, fy, z + mouth_z), radius=(mouth_w * 0.42, depth * 0.36),
+                          height=0.2, strength=fire_strength * 0.8))
+    objs += fire((x, fy - 0.05, z + mouth_z + 0.06), spread=(mouth_w * 0.3, depth * 0.18),
+                 count=9, height=mouth_h * 0.78, width=0.17, seed=seed,
+                 strength=fire_strength)
+    objs.append(flame_volume((x, fy - 0.1, z + mouth_z + 0.4),
+                             size=(mouth_w * 0.45, depth * 0.35, mouth_h * 0.42),
+                             strength=fire_strength * 0.5, name="ForgeGlow"))
+    # an iron bar heating in the coals, its end resting on the apron
+    bar_mat = hot_bar_material("HotBar")
+    bar = box("HotBar", (x + 0.25, fy - depth * 0.15 - 0.35, z + mouth_z + 0.07),
+              (0.05, depth * 0.9 + 0.7, 0.05), bar_mat, bevel=0.01,
+              rot=(-4, 0, -14))
+    objs.append(bar)
+    # lights: inside the firebox and spilling out of the mouth
+    C.point_light("ForgeFire", (x, fy, z + mouth_z + 0.45), light, radius=0.4,
+                  color=(1.0, 0.42, 0.12))
+    C.area_light("ForgeMouth", (x, y0 - 0.05, z + mouth_z + mouth_h * 0.45),
+                 (x, y0 - 4.0, z + 0.4), light * 0.2, size=mouth_w * 0.8,
+                 size_y=mouth_h * 0.6, shape="RECTANGLE", color=(1.0, 0.45, 0.15))
+    return objs
