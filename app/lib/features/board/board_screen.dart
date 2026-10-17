@@ -286,7 +286,7 @@ class _StokeStep extends StatelessWidget {
                     child: Image.asset(
                       today ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
                       fit: BoxFit.fill,
-                      filterQuality: FilterQuality.medium,
+                      filterQuality: FilterQuality.low,
                       errorBuilder: (_, _, _) => DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,

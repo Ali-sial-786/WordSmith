@@ -15,6 +15,7 @@ import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
+import '../../ui/widgets/crash_notice.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
@@ -72,6 +73,7 @@ class HallScreen extends ConsumerWidget {
                           style: text.titleSmall?.copyWith(color: Palette.steel),
                         ),
                         const SizedBox(height: 22),
+                        const CrashNotice(),
                         const _UpdateBanner(),
                         if (online && !account.isReady) ...[_AccountBanner(state: account), const SizedBox(height: 14)],
                         for (final invite in account.invites) ...[

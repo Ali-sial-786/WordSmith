@@ -23,6 +23,7 @@ Future<void> main() async {
   LicenseRegistry.addLicense(_bundledLicences);
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final (store, campaign) = await (Store.open(), Campaign.load()).wait;
+  _recordErrors(store);
   final sfx = Sfx(enabled: true, settings: store.loadSettings());
   final auth = await _startAuth();
   final api = AppConfig.hasServer && auth is FirebaseAuthService
@@ -56,6 +57,32 @@ Future<void> main() async {
     sfx.startAmbience();
     sfx.music('music_hall');
   });
+}
+
+/// Keeps the last few uncaught errors for crash reports. They don't close a
+/// release build but can leave part of a screen blank. Repeats are skipped.
+void _recordErrors(Store store) {
+  String? last;
+  var count = 0;
+  void record(Object error, StackTrace? stack) {
+    final message = '$error';
+    if (message == last || count >= 20) return;
+    last = message;
+    count++;
+    final frames = stack?.toString().split('\n').take(8).join('\n') ?? '';
+    store.addError('${DateTime.now().toUtc().toIso8601String()} $message\n$frames');
+  }
+
+  final previous = FlutterError.onError;
+  FlutterError.onError = (details) {
+    record(details.exception, details.stack);
+    previous?.call(details);
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    record(error, stack);
+    debugPrint('Uncaught: $error\n$stack');
+    return true;
+  };
 }
 
 /// Firebase sign-in when this build has its settings; otherwise solo-only.

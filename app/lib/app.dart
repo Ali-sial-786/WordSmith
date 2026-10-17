@@ -24,6 +24,7 @@ import 'game/account.dart';
 import 'game/providers.dart';
 import 'game/daily_game.dart';
 import 'net/push.dart';
+import 'ui/theme/palette.dart';
 import 'ui/theme/theme.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -159,7 +160,25 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       title: 'Wordsmith',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      scrollBehavior: const ForgeScrollBehavior(),
       routerConfig: _router,
     );
   }
+}
+
+/// Lists glow at their ends instead of stretching. The stretch is drawn with
+/// a GPU shader over the whole list, which crashes some phones' drivers.
+class ForgeScrollBehavior extends MaterialScrollBehavior {
+  const ForgeScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) =>
+      switch (getPlatform(context)) {
+        TargetPlatform.android || TargetPlatform.fuchsia => GlowingOverscrollIndicator(
+          axisDirection: details.direction,
+          color: Palette.ember,
+          child: child,
+        ),
+        _ => super.buildOverscrollIndicator(context, child, details),
+      };
 }

@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_info.dart';
 import '../../auth/auth_service.dart';
+import '../../data/diagnostics.dart';
 import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
+import '../../ui/widgets/crash_notice.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -86,6 +88,7 @@ class SettingsScreen extends ConsumerWidget {
                   : null,
             ),
           const _AccountSection(),
+          const _Troubleshooting(),
           const Divider(height: 32),
           ListTile(
             title: const Text('Credits'),
@@ -99,6 +102,58 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Compatibility graphics and the last crash report, when there's something
+/// to show (Android only).
+class _Troubleshooting extends ConsumerWidget {
+  const _Troubleshooting();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final graphics = ref.watch(graphicsProvider).value;
+    final crash = ref.watch(lastCrashProvider).value;
+    if (graphics == null && crash == null) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 32),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Troubleshooting', style: text.titleSmall?.copyWith(color: Palette.steel)),
+        ),
+        if (graphics != null)
+          SwitchListTile(
+            title: const Text('Compatibility graphics'),
+            subtitle: Text(
+              [
+                'Try this if the game crashes or flickers.',
+                if (graphics.auto) 'Turned on after a crash.',
+                if (graphics.compat != (graphics.active == 'opengles')) 'Takes effect next time you open the game.',
+              ].join(' '),
+            ),
+            value: graphics.compat,
+            onChanged: (on) async {
+              await ref.read(diagnosticsProvider).setCompat(on);
+              ref.invalidate(graphicsProvider);
+            },
+          ),
+        if (crash != null)
+          ListTile(
+            title: const Text('Copy crash report'),
+            subtitle: Text('${crash.title}, ${MaterialLocalizations.of(context).formatMediumDate(crash.at.toLocal())}'),
+            trailing: const Icon(Icons.copy),
+            onTap: () async {
+              await copyCrashReport(ref, crash);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Crash report copied.')));
+              }
+            },
+          ),
+      ],
     );
   }
 }

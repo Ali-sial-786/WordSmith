@@ -123,7 +123,7 @@ class ForgeFrame extends StatelessWidget {
                   centerSlice: kind.slice,
                   fit: BoxFit.fill,
                   scale: 3,
-                  filterQuality: FilterQuality.medium,
+                  filterQuality: FilterQuality.low,
                   gaplessPlayback: true,
                   errorBuilder: (_, _, _) => painted,
                 );
@@ -132,7 +132,10 @@ class ForgeFrame extends StatelessWidget {
           ),
           if (glint)
             Positioned.fill(
-              child: ClipRRect(borderRadius: radius, child: const _Glint()),
+              // Its own layer, so the sweep doesn't repaint what's around it.
+              child: RepaintBoundary(
+                child: ClipRRect(borderRadius: radius, child: const _Glint()),
+              ),
             ),
           Padding(padding: padding, child: child),
         ],

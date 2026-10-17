@@ -19,25 +19,28 @@ class XpBar extends StatelessWidget {
         border: Border.all(color: const Color(0xFF5C4733)),
       ),
       child: LayoutBuilder(
-        builder: (context, c) => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: c.maxWidth * fraction.clamp(0.0, 1.0),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(height),
-              gradient: const LinearGradient(
-                colors: [Palette.ember, Palette.molten, Palette.whiteHeat],
-                stops: [0, 0.8, 1],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Palette.ember.withValues(alpha: 0.6),
-                  blurRadius: height,
+        builder: (context, c) {
+          final width = c.maxWidth * (fraction.isFinite ? fraction.clamp(0.0, 1.0) : 0.0);
+          // Nothing to draw yet: a blurred shadow on an empty box is wasted
+          // work, and some GPU drivers handle it badly.
+          if (width < 1) return const SizedBox.shrink();
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: width,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(height),
+                gradient: const LinearGradient(
+                  colors: [Palette.ember, Palette.molten, Palette.whiteHeat],
+                  stops: [0, 0.8, 1],
                 ),
-              ],
+                boxShadow: [
+                  if (width >= height) BoxShadow(color: Palette.ember.withValues(alpha: 0.6), blurRadius: height),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

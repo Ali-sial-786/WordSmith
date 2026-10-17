@@ -71,7 +71,7 @@ class ForgeBackground extends ConsumerWidget {
             child: Image.asset(
               image,
               fit: BoxFit.cover,
-              filterQuality: FilterQuality.medium,
+              filterQuality: FilterQuality.low,
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           ),

@@ -144,6 +144,21 @@ class Store {
   static const _savedKey = 'saved_puzzle.v1';
   static const _syncKey = 'sync_queue.v1';
   static const _tipsKey = 'tips_seen.v1';
+  static const _errorsKey = 'errors.v1';
+  static const _crashSeenKey = 'crash_seen.v1';
+
+  /// The last few app errors, oldest first, for crash reports.
+  List<String> loadErrors() => _prefs.getStringList(_errorsKey) ?? const [];
+
+  void addError(String error) {
+    final all = [...loadErrors(), error];
+    _prefs.setStringList(_errorsKey, all.sublist(max(0, all.length - 5)));
+  }
+
+  /// When the last crash the player was told about happened (ms).
+  int get crashSeenAt => _prefs.getInt(_crashSeenKey) ?? 0;
+
+  set crashSeenAt(int at) => _prefs.setInt(_crashSeenKey, at);
 
   /// One-time tips the player has already been shown.
   bool seenTip(String id) => _prefs.getStringList(_tipsKey)?.contains(id) ?? false;

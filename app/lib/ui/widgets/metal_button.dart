@@ -55,7 +55,7 @@ class RoundMetalButton extends StatelessWidget {
                 child: Image.asset(
                   active ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
                   fit: BoxFit.fill,
-                  filterQuality: FilterQuality.medium,
+                  filterQuality: FilterQuality.low,
                   gaplessPlayback: true,
                   errorBuilder: (_, _, _) => _PaintedRound(active: active),
                 ),
