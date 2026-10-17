@@ -84,9 +84,9 @@ A player can ask for one reminder a day when the Daily Commission is still
 waiting. The app converts the hour they pick from local time to UTC.
 
 - `PUT /v1/me/reminder` with `{hour}` (an integer 0–23, a UTC hour) or
-  `{hour: null}` (off) → `{ok: true, hour}`. `400 invalid_body` otherwise. It
-  needs a set-up account. The profile gains `reminderHour` (the UTC hour, or
-  `null`).
+  `{hour: null}` (off) → `{ok: true, hour}`. `400 invalid_body` otherwise
+  (`hour` missing included). It needs a set-up account. The profile gains
+  `reminderHour` (the UTC hour, or `null`; `null` for new accounts).
 - A Cron Trigger runs at the start of every hour. For each account whose
   `reminderHour` is the current UTC hour, that has push tokens, hasn't
   completed today's Daily Commission and hasn't been reminded today, it sends
@@ -102,6 +102,10 @@ waiting. The app converts the hour they pick from local time to UTC.
   ```
 
   The body is "Keep your N-day streak going!" when the player's streak
-  (ending yesterday) is at least 1, otherwise "A new puzzle is on the anvil."
+  (ending yesterday, on-time days only, as in `shared/daily.md`) is at least
+  1, otherwise "A new puzzle is on the anvil."
+- The day is recorded just before the notification is sent, so two runs that
+  overlap can't remind anyone twice; a send that fails isn't retried that
+  day. Dead tokens are forgotten as for invites.
 - Up to 500 accounts per run, oldest reminder first. Without an FCM key it
   does nothing.

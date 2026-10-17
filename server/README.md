@@ -8,14 +8,14 @@ contract.
 
 | Path | What it is |
 |---|---|
-| `src/index.ts` | The router: every route, and which need a token |
+| `src/index.ts` | The router (every route, and which need a token), and the hourly Cron Trigger's `scheduled` handler |
 | `src/auth/` | Firebase ID token checks with WebCrypto (`firebase.ts`) and reading the token from a request (`request.ts`) |
 | `src/account/` | Username and avatar rules, and the profanity blocklist |
 | `src/routes/` | The REST and WebSocket handlers |
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
 | `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
-| `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), and the invite and gift messages (`invite.ts`, `gift.ts`) |
+| `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), the invite and gift messages (`invite.ts`, `gift.ts`), and the daily reminders' hourly run (`reminder.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
 | `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql` and `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
@@ -32,7 +32,7 @@ contract.
 | `rewards.ts` | Forge Board and Masterwork rewards: locked hint types become Hammer Strikes, and the XP's level-ups |
 | `orders.ts` | Work Orders: the day's three (the same for everyone), the week's two, the swap, rewards, and what an accepted play counts towards |
 | `board.ts` | ISO weeks, the Daily Stoke, Weekly Trials standings and prizes, gift limits, and the `GET /v1/me/board` body ([shared/forge-board.md](../shared/forge-board.md)) |
-| `campaign.ts` | A campaign puzzle's grid words, bonus words and letter cells, for checking syncs |
+| `campaign.ts` | A campaign puzzle's grid words, bonus words and letter cells, for checking syncs, and which puzzle a Master Forge stage plays |
 | `sync.ts` | Checking and applying offline solo results (see below) |
 | `daily.ts` | The Daily Commission: the day's heat and puzzle pick, which day a completion may be for (on time, or a late catch-up day), streaks, daily XP, checking and applying a completion (with sync.ts's checks and hint arithmetic), and the calendar's trophies |
 | `coop.ts` | Claim decisions, word points, MVP and stars |
@@ -60,6 +60,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 | `DELETE /me` | `{ok: true}`. Deletes all my rows (push tokens too). Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
 | `POST /me/push-token` | `{token}` → `{ok: true}`: this phone's FCM registration token gets invite notifications (below). A token another account had moves here; an account keeps its 5 newest. `400 invalid_push_token` unless `token` is 1–4096 printable ASCII characters without spaces. |
 | `DELETE /me/push-token` | `{token}` → `{ok: true}`: no more notifications to that phone (sign-out, or turned off). Only removes my own token; unknown tokens are fine. `400 invalid_push_token` as above. |
+| `PUT /me/reminder` | `{hour}` (a UTC hour 0–23, or `null`) → `{ok: true, hour}`: a daily reminder while the Daily Commission is waiting (below). `400 invalid_body`. |
 | `GET /users/:username` | `{id, username, avatar, level, rank, campaignCompleted, stats, friendship}`; `friendship` is `self`, `none`, `friends`, `request_sent` or `request_received`. `404 user_not_found`. |
 | `POST /solo/sync` | `{entries: [...]}` → `{profile, results}`; see below |
 | `GET /daily?date=` | `{date, heat, puzzle, completed, streak, best, total}`: today's Daily Commission, or a catch-up day's (below). `400 wrong_day`, `400 invalid_body`. |
@@ -96,7 +97,7 @@ Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board 
   "scrapBin": 4, "hints": {"hammer": 5, "chisel": 1, "sparks": 0},
   "stats": {"wordsForged": 40, "longestWord": "THREAD", "soloDone": 12, "coopRounds": 0,
             "coopMvps": 0, "vsSeries": 0, "vsSeriesWon": 0, "vsRoundsWon": 0},
-  "masterworks": {"pieces": 7},
+  "masterworks": {"pieces": 7}, "reminderHour": 18,
   "createdAt": 1792200000000
 }
 ```
@@ -124,7 +125,8 @@ Every result is final, so the app can drop all the entries it sent and take
 `profile` as the truth. The rules (in `src/rules/sync.ts`):
 
 - Entries are applied in `completedAt` order, so each puzzle's level-up rewards and pickup types use the level the player had when it started.
-- An entry is **rejected** if it's malformed (`invalid_entry`, with `detail`), its stage isn't in the campaign (`unknown_stage`), `puzzleId` isn't that stage's (`puzzle_mismatch`), the stage was already counted (`duplicate`), `completedAt` is more than 10 minutes ahead or before 2026 (`bad_completed_at`), a found word isn't a grid word (`unknown_word`), a bonus word isn't in the bonus list (`unknown_bonus_word`), the cells no found word covers are more than the hints used could have shown (`incomplete`; a Hammer or Chisel shows 1, a Spark Shower 5), or it took under 1 s per found word (`too_fast`).
+- **Master Forge** ([shared/master-forge.md](../shared/master-forge.md)): with `N` the campaign's last stage, a stage `N < s ≤ 10N` plays campaign puzzle `((s − N − 1) mod N) + 1` (`loadCampaignPuzzles` in `src/db/campaign.ts`) and is otherwise exactly a campaign stage, so `campaignCompleted` keeps counting past `N`.
+- An entry is **rejected** if it's malformed (`invalid_entry`, with `detail`), its stage isn't in the campaign or the Master Forge (`unknown_stage`), `puzzleId` isn't that stage's (`puzzle_mismatch`), the stage was already counted (`duplicate`), `completedAt` is more than 10 minutes ahead or before 2026 (`bad_completed_at`), a found word isn't a grid word (`unknown_word`), a bonus word isn't in the bonus list (`unknown_bonus_word`), the cells no found word covers are more than the hints used could have shown (`incomplete`; a Hammer or Chisel shows 1, a Spark Shower 5), or it took under 1 s per found word (`too_fast`).
 - An **accepted** entry gives 10 XP plus 1 per bonus word (up to +5), level-up rewards, and puts its bonus words in the Scrap Bin (each 10 → a Hammer Strike). Hints used are taken off the stock after adding the puzzle's pickups and Scrap Bin hammers, and before level-up rewards. Stock never goes below 0; any overdraw is reported in `hintsClamped`.
 - **Pickups** are checked by recomputing `pickupsFor(seed, puzzleId, cellCount, levelAtStart)`. The seed is `pickupSeed` (the app's install ID from before sign-in) or else the account's uid. A claim on the right cell gets the server's type; other claims are dropped (`pickupsRejected`). An account may use its own uid and up to 5 install IDs (`pickup_seeds` table).
 - **Gilded cells** ([shared/masterworks.md](../shared/masterworks.md)) are checked the same way with `gildedCell(seed, …)`: a right claim is a blueprint piece (`profiles.masterwork_pieces`; the result gets `gilded: [cell]`), a wrong one is ignored. A piece that finishes a Masterwork grants 100 XP, a Chisel and a Spark Shower (locked types as Hammer Strikes) in the same sync: the result gets `masterwork: {id, reward}`, and `xp_events` a `masterwork` row.
@@ -176,7 +178,7 @@ Send the exact text `{"op":"PING"}` as a keep-alive; the runtime answers
 through REST updates both players' presence at once. Deleting an account
 closes its sockets with code 4001.
 
-### Invite notifications
+### Notifications
 
 [shared/push.md](../shared/push.md), in `src/push/` and HubDO. It's off
 until the Worker secret `FCM_SERVICE_ACCOUNT` holds a service account's JSON
@@ -189,6 +191,8 @@ the hub doesn't touch D1 for them. Tokens are stored either way.
 - **Sending:** when the hub relays an `INVITE`, it also reads the friend's tokens (one D1 query) and sends each an HTTP v1 message: title `<username> invited you to Co-op` or `… to Versus`, body `Tap to join room <CODE>`, `data: {type: "invite", code, mode, from: <user id>}`, `android: {priority: "high", ttl: "300s", collapse_key: "invite-<CODE>"}`. It goes out with `ctx.waitUntil`, after the socket relay. Only when the friend has no open socket does the hub wait for the token read, since it decides the reply: `ERROR friend_offline` if they have no tokens either, otherwise nothing (as for a relayed invite).
 - **Google:** the sender signs an RS256 JWT with the key (`iss` = `client_email`, `scope` = `https://www.googleapis.com/auth/firebase.messaging`, `aud` = `https://oauth2.googleapis.com/token`, one hour), trades it for an access token, and keeps that per isolate until 5 minutes before it expires (a 401 from FCM drops it early).
 - **Failures:** a token FCM calls dead (404 or `UNREGISTERED`, or 400 `INVALID_ARGUMENT` about `message.token`) is deleted. Anything else is logged and ignored, so an invite never fails because a notification did.
+- **Gifts** (`POST /friends/:id/gift`) notify the friend's phones the same way, after the answer (`src/push/gift.ts`).
+- **Daily reminders:** a Cron Trigger (`"0 * * * *"` in `wrangler.jsonc`) runs `scheduled` in `src/index.ts` at the start of every hour. `src/push/reminder.ts` finds up to 500 accounts whose `reminder_hour` is that UTC hour, that have a token, haven't done today's Daily Commission and weren't reminded today (`profiles_by_reminder` index; never-reminded first), records today in `reminder_last` (an `UPDATE … RETURNING`, so an overlapping run can't remind twice), and sends "Today's Daily Commission is waiting" with the streak ending yesterday. Without the FCM key it reads nothing.
 
 ### Rooms
 

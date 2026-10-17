@@ -86,11 +86,13 @@ All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1
 |---|---|
 | `GET /version` | Latest app version and minimum supported version (for the update banner and blocking old clients) |
 | `GET /health` | `{ok: true}` liveness check |
-| `GET /me` | My profile, level, XP, hint stock, stats and campaign progress |
+| `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
 | `DELETE /me` | Delete my account data |
+| `POST /me/push-token` · `DELETE /me/push-token` | This phone's FCM token for notifications (`shared/push.md`) |
+| `PUT /me/reminder` | The UTC hour of a daily reminder, or none (`shared/push.md`) |
 | `GET /users/:username` | A player's public profile (any signed-in player, so you can look someone up before adding them) |
-| `POST /solo/sync` | Upload a batch of offline solo results (see §8). Returns the updated profile and any rewards. |
+| `POST /solo/sync` | Upload a batch of offline solo results (see §8), campaign and Master Forge stages (`shared/master-forge.md`). Returns the updated profile and any rewards. |
 | `GET /friends` | My friends and pending requests |
 | `POST /friends/request` · `POST /friends/respond` · `DELETE /friends/:id` | Manage friends |
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
@@ -258,8 +260,10 @@ trial_claims (user_id, week TEXT, claimed_at INT, PRIMARY KEY(user_id, week))
 gifts        (id INTEGER PK, from_user, to_user, sent_date TEXT, sent_at INT, claimed_at INT, UNIQUE(from_user, to_user, sent_date))
 ```
 
-`profiles` also has `stoke_claims` and `stoke_last` (the Daily Stoke) and
-`masterwork_pieces` (blueprint pieces, `shared/masterworks.md`). Every XP
+`profiles` also has `stoke_claims` and `stoke_last` (the Daily Stoke),
+`masterwork_pieces` (blueprint pieces, `shared/masterworks.md`), and
+`reminder_hour` and `reminder_last` (daily reminders, sent by an hourly
+Cron Trigger, `shared/push.md`). Every XP
 grant writes an `xp_events` row (`source`: `solo`, `daily`, `coop`, `vs`,
 `board` or `masterwork`), and a trigger adds it to `weekly_xp` for the
 Weekly Trials.
@@ -272,7 +276,7 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
 
 - The campaign's puzzles are **bundled in the app** (`app/assets/campaign/`), so solo play works with no connection.
 - The phone keeps a **local profile cache** and a **sync queue** of results: `{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups, gilded, pickupSeed, durationMs, completedAt}`. `pickupSeed` is the id the pickups (and the gilded cell) were seeded with: the account id, or the install id (`install-<hex>`) for puzzles played before sign-in. The server accepts up to 5 install ids per account. `gilded` is `[<cell index>]` when the puzzle's gilded cell was collected, else `[]` (optional; `shared/masterworks.md`).
-- `POST /solo/sync` uploads the queue whenever the app is online. For each entry, the server checks:
+- `POST /solo/sync` uploads the queue whenever the app is online. Stages past the campaign's last, `N`, are the **Master Forge** (up to `10 × N`): stage `s` replays campaign puzzle `((s − N − 1) mod N) + 1` and is checked and counted like a campaign stage (`shared/master-forge.md`). For each entry, the server checks:
   - the stage hasn't already been counted (`solo_results` stops duplicates);
   - the found words match that puzzle's answers;
   - the bonus words are in its bonus set;
