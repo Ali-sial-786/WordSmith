@@ -20,10 +20,16 @@
  * A player can have several sockets (two phones, or a reconnect that beats
  * the old socket's close). They're online while any is open; their status
  * is the one set most recently on any of them.
+ *
+ * Once `FCM_SERVICE_ACCOUNT` is set, an invite also goes to the friend's
+ * phones as a notification (shared/push.md, src/push/).
  */
 
 import { DurableObject } from "cloudflare:workers";
+import { pushTokensOf } from "../db/push";
 import type { Env } from "../env";
+import { fcmSender } from "../push/fcm";
+import { pushInvite, type InviteNotice } from "../push/invite";
 import {
   parseClientMessage,
   PING,
@@ -60,6 +66,8 @@ type RoomRow = {
   players: number;
   max: number;
 };
+
+type InviteMessage = Extract<ClientMessage, { op: "INVITE" }>;
 
 /** Messages a socket may send: a burst of 20, then 1 per second. */
 const RATE_BURST = 20;
@@ -194,7 +202,7 @@ export class HubDO extends DurableObject<Env> {
 
     const parsed = parseClientMessage(raw);
     if (!parsed.ok) return this.error(ws, parsed.code);
-    this.handle(ws, me, parsed.message);
+    await this.handle(ws, me, parsed.message);
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
@@ -211,7 +219,7 @@ export class HubDO extends DurableObject<Env> {
     this.gone(ws);
   }
 
-  private handle(ws: WebSocket, me: Attachment, message: ClientMessage): void {
+  private async handle(ws: WebSocket, me: Attachment, message: ClientMessage): Promise<void> {
     switch (message.op) {
       case "SET_STATUS": {
         const before = this.statusOf(me.u);
@@ -220,17 +228,56 @@ export class HubDO extends DurableObject<Env> {
         if (now !== before) this.broadcast(me.u, now);
         return;
       }
-      case "INVITE": {
-        // Only between accepted friends, and without revealing anything
-        // about anyone else.
-        if (message.to === me.u || !this.friendsOf(me.u).includes(message.to)) return this.error(ws, "not_friends");
-        const targets = this.socketsOf(message.to);
-        if (targets.length === 0) return this.error(ws, "friend_offline");
-        for (const target of targets) {
-          send(target, { op: "INVITE", from: me.u, fromUsername: me.n, code: message.code, mode: message.mode });
-        }
-        return;
-      }
+      case "INVITE":
+        return this.invite(ws, me, message);
+    }
+  }
+
+  /**
+   * Relays an invite to the friend's open sockets and, once push is set up
+   * (shared/push.md), to each of their phones as well, online or not.
+   * `friend_offline` only when it can reach them neither way. Without push
+   * there's no D1 read; with it, one (the friend's tokens), which only holds
+   * up the answer when they have no open socket.
+   */
+  private async invite(ws: WebSocket, me: Attachment, message: InviteMessage): Promise<void> {
+    // Only between accepted friends, and without revealing anything
+    // about anyone else.
+    const to = message.to;
+    if (to === me.u || !this.friendsOf(me.u).includes(to)) return this.error(ws, "not_friends");
+    const relay: ServerMessage = { op: "INVITE", from: me.u, fromUsername: me.n, code: message.code, mode: message.mode };
+    const relayed = this.relay(to, relay);
+
+    const push = fcmSender(this.env);
+    if (push === null) {
+      if (relayed === 0) this.error(ws, "friend_offline");
+      return;
+    }
+    const notice: InviteNotice = { from: me.u, fromUsername: me.n, code: message.code, mode: message.mode };
+    if (relayed > 0) {
+      this.ctx.waitUntil(this.tokensOf(to).then((tokens) => pushInvite(push, this.env.DB, tokens, notice)));
+      return;
+    }
+    const tokens = await this.tokensOf(to);
+    // They may have connected while the tokens were being read.
+    if (this.relay(to, relay) === 0 && tokens.length === 0) return this.error(ws, "friend_offline");
+    if (tokens.length > 0) this.ctx.waitUntil(pushInvite(push, this.env.DB, tokens, notice));
+  }
+
+  /** Sends to each of a player's open sockets; returns how many there were. */
+  private relay(uid: string, message: ServerMessage): number {
+    const sockets = this.socketsOf(uid);
+    for (const ws of sockets) send(ws, message);
+    return sockets.length;
+  }
+
+  /** A player's FCM tokens; none if D1 can't be read (a notification is best-effort). */
+  private async tokensOf(uid: string): Promise<string[]> {
+    try {
+      return await pushTokensOf(this.env.DB, uid);
+    } catch (err) {
+      console.error("reading push tokens failed", err);
+      return [];
     }
   }
 

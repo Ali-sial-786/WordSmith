@@ -1,10 +1,14 @@
-/** `GET /v1/me`, `POST /v1/me/setup`, `DELETE /v1/me`, `GET /v1/users/:username`. */
+/**
+ * `GET /v1/me`, `POST /v1/me/setup`, `DELETE /v1/me`, `GET /v1/users/:username`,
+ * and `POST`/`DELETE /v1/me/push-token` (shared/push.md).
+ */
 
 import { checkUsername, isAvatar, looksLikeUsername, AVATARS } from "../account/username";
 import { deleteAccount, ensureAccount, isSetUp, loadAccount, profileBody, publicProfileBody, setupAccount, userIdByUsername } from "../db/accounts";
 import { linkBetween } from "../db/friends";
+import { isPushToken, registerPushToken, unregisterPushToken } from "../db/push";
 import { ApiError, json, readJsonObject } from "../http";
-import { notifyHub, type AuthedContext } from "./context";
+import { notifyHub, requireSetUp, type AuthedContext } from "./context";
 
 /** My profile. Creates the account on first call; `needsSetup` until a username is chosen. */
 export async function getMe(c: AuthedContext): Promise<Response> {
@@ -45,4 +49,31 @@ export async function getUser(c: AuthedContext): Promise<Response> {
   if (account === null || !isSetUp(account)) throw new ApiError(404, "user_not_found");
   const friendship = account.id === c.uid ? "self" : await linkBetween(c.env.DB, c.uid, account.id);
   return json({ ...publicProfileBody(account), friendship });
+}
+
+/** The `{token}` body of the push-token routes: an FCM registration token. */
+async function pushTokenBody(c: AuthedContext): Promise<string> {
+  const body = await readJsonObject(c.request);
+  if (!isPushToken(body.token)) throw new ApiError(400, "invalid_push_token", "Expected {token}: an FCM registration token");
+  return body.token;
+}
+
+/**
+ * `{token}` → `{ok: true}`: this phone gets invite notifications. The token
+ * moves here from any other account that had it; an account keeps its 5
+ * newest. Stored even while push is off on the server.
+ */
+export async function postPushToken(c: AuthedContext): Promise<Response> {
+  await requireSetUp(c);
+  const token = await pushTokenBody(c);
+  await registerPushToken(c.env.DB, c.uid, token, c.now);
+  return json({ ok: true });
+}
+
+/** `{token}` → `{ok: true}`: stops notifications to this phone (sign-out, or turned off). Unknown tokens are fine. */
+export async function deletePushToken(c: AuthedContext): Promise<Response> {
+  await requireSetUp(c);
+  const token = await pushTokenBody(c);
+  await unregisterPushToken(c.env.DB, c.uid, token);
+  return json({ ok: true });
 }

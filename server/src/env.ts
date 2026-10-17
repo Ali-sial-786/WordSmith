@@ -19,4 +19,10 @@ export interface Env {
   LIVEKIT_URL?: string;
   LIVEKIT_API_KEY?: string;
   LIVEKIT_API_SECRET?: string;
+  /**
+   * JSON key of a service account allowed to send FCM messages, for invite
+   * notifications (Worker secret, set by the deploy workflow; shared/push.md).
+   * Notifications are off while it's missing or malformed (src/push/fcm.ts).
+   */
+  FCM_SERVICE_ACCOUNT?: string;
 }

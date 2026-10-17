@@ -12,7 +12,7 @@ import { ApiError, errorResponse, json } from "./http";
 import { Router } from "./router";
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
-import { deleteMe, getMe, getUser, postSetup } from "./routes/me";
+import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, postDailyComplete } from "./routes/daily";
 import { postSync } from "./routes/solo";
@@ -36,6 +36,8 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
   { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
   { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
+  { method: "POST", path: "/v1/me/push-token", handler: authed(postPushToken) },
+  { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },
   { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
 
   { method: "POST", path: "/v1/solo/sync", handler: authed(postSync) },
