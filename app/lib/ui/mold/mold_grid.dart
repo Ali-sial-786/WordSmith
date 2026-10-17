@@ -277,7 +277,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
                 width: s,
                 height: s,
                 fit: BoxFit.fill,
-                color: color,
+                color: _forModulate(color),
                 colorBlendMode: BlendMode.modulate,
                 errorBuilder: (_, _, _) => DecoratedBox(
                   decoration: BoxDecoration(
@@ -373,4 +373,12 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
 CellFill cellFill(Board board, CellPos pos) {
   if (board.puzzle.slotsAt[pos]!.any(board.isSlotComplete)) return CellFill.filled;
   return board.revealed.contains(pos) ? CellFill.revealed : CellFill.empty;
+}
+
+/// cell_metal.png is a mid-grey plate (about 63% brightness), so multiplying
+/// it by the metal colour would come out too dark. Brighten the tint so the
+/// plate's average lands near the intended colour, keeping its shading.
+Color _forModulate(Color c) {
+  int up(double v) => (v * 255 / 0.8).clamp(0, 255).round();
+  return Color.fromARGB(255, up(c.r), up(c.g), up(c.b));
 }

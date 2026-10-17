@@ -45,6 +45,7 @@ describe("D1 schema", () => {
     "inventory",
     "match_players",
     "matches",
+    "pickup_seeds",
     "profiles",
     "puzzle_seen",
     "puzzles",
@@ -54,7 +55,7 @@ describe("D1 schema", () => {
     "xp_events",
   ];
 
-  it("has every table from TECH.md §7", async () => {
+  it("has every table from TECH.md §7, plus pickup_seeds", async () => {
     const { results } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY name",
     ).all<{ name: string }>();

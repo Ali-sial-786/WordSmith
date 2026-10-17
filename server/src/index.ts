@@ -1,38 +1,71 @@
 /**
  * Wordsmith API Worker: the router for the REST routes in docs/TECH.md §4.
+ *
+ * Every route except `/v1/version` and `/v1/health` needs a Firebase ID
+ * token (`Authorization: Bearer <token>`; the WebSocket route reads it from
+ * `Sec-WebSocket-Protocol` instead). Errors are JSON `{error, message?}`.
  */
 
+import { authenticate } from "./auth/request";
 import type { Env } from "./env";
+import { ApiError, errorResponse, json } from "./http";
+import { Router } from "./router";
+import type { AuthedContext, RequestContext } from "./routes/context";
+import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
+import { deleteMe, getMe, getUser, postSetup } from "./routes/me";
+import { postSync } from "./routes/solo";
+import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
 
-type Handler = (request: Request, env: Env, ctx: ExecutionContext) => Response | Promise<Response>;
+export { HubDO } from "./hub/hub";
 
-/** Routes by exact path, then by method. */
-const routes = new Map<string, Map<string, Handler>>([
-  ["/v1/version", new Map([["GET", (_req, env) => json(versionInfo(env))]])],
-  ["/v1/health", new Map([["GET", () => json({ ok: true })]])],
+type Handler =
+  | { readonly auth: false; readonly run: (c: RequestContext) => Response | Promise<Response> }
+  | { readonly auth: true; readonly run: (c: AuthedContext) => Response | Promise<Response> };
+
+const open = (run: (c: RequestContext) => Response | Promise<Response>): Handler => ({ auth: false, run });
+const authed = (run: (c: AuthedContext) => Response | Promise<Response>): Handler => ({ auth: true, run });
+
+const router = new Router<Handler>([
+  { method: "GET", path: "/v1/version", handler: open((c) => json(versionInfo(c.env))) },
+  { method: "GET", path: "/v1/health", handler: open(() => json({ ok: true })) },
+
+  { method: "GET", path: "/v1/me", handler: authed(getMe) },
+  { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
+  { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
+  { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
+
+  { method: "POST", path: "/v1/solo/sync", handler: authed(postSync) },
+
+  { method: "GET", path: "/v1/friends", handler: authed(getFriends) },
+  { method: "POST", path: "/v1/friends/request", handler: authed(postFriendRequest) },
+  { method: "POST", path: "/v1/friends/respond", handler: authed(postFriendRespond) },
+  { method: "DELETE", path: "/v1/friends/:id", handler: authed(deleteFriend) },
+  { method: "GET", path: "/v1/leaderboard", handler: authed(getLeaderboard) },
+
+  // Authenticates itself, from the WebSocket subprotocol header.
+  { method: "GET", path: "/v1/ws/hub", handler: open(getHubSocket) },
 ]);
-
-function json(body: unknown, status = 200, headers?: HeadersInit): Response {
-  return Response.json(body, { status, headers });
-}
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
-    const byMethod = routes.get(pathname);
-    if (byMethod === undefined) return json({ error: "not_found" }, 404);
-
-    const handler = byMethod.get(request.method);
-    if (handler === undefined) {
-      return json({ error: "method_not_allowed" }, 405, { Allow: [...byMethod.keys()].join(", ") });
+    const match = router.match(request.method, pathname);
+    if (match.kind === "not_found") return errorResponse(404, "not_found");
+    if (match.kind === "method_not_allowed") {
+      return errorResponse(405, "method_not_allowed", undefined, { Allow: match.allow.join(", ") });
     }
 
     try {
-      return await handler(request, env, ctx);
+      const c: RequestContext = { request, env, ctx, params: match.params, now: Date.now() };
+      const { handler } = match;
+      if (!handler.auth) return await handler.run(c);
+      const uid = await authenticate(request, env);
+      return await handler.run({ ...c, uid });
     } catch (err) {
+      if (err instanceof ApiError) return errorResponse(err.status, err.code, err.detail);
       console.error(`${request.method} ${pathname} failed`, err);
-      return json({ error: "internal" }, 500);
+      return errorResponse(500, "internal");
     }
   },
 } satisfies ExportedHandler<Env>;

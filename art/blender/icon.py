@@ -28,6 +28,7 @@ ONLY = C.arg("only", "")
 FONT = os.path.join(C.THIRD, "fonts", "RobotoSlab-Black-static.ttf")
 
 ANVIL_YAW = 8.0
+CAM_LOC = (0.76, -7.6, 7.4)
 TILE_R = 0.70
 TILE_R_SIN = 0.70 * math.sin(math.radians(12.0)) - 0.01
 TILE_POS = Vector((0.18, -0.04, 1.62 + TILE_R_SIN))
@@ -97,7 +98,9 @@ def build():
     spk = P.spark_material("Spark", strength=14.0)
     origin = Vector((0.55, -0.15, 1.88))
     # keep the letter clear: no spark may cross the middle of the tile
-    avoid = [(TILE_POS + Vector((0, 0, 0.15)), TILE_R * 0.8)]
+    cam_dir = (Vector(CAM_LOC) - TILE_POS).normalized()
+    avoid = [(TILE_POS + Vector((0, 0, 0.15)) + cam_dir * k, TILE_R * 0.8)
+             for k in (0.0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.5)]
     # main fan: up and to the right/front, away from the letter
     sp = P.sparks(origin, count=22, seed=7, direction=(0.55, -0.45, 0.70),
                   spread=48, length=(0.14, 0.42), dist=(0.55, 1.6),
@@ -130,7 +133,7 @@ def lights():
 
 
 def camera():
-    cam = C.persp_camera((0.76, -7.6, 7.4), (0.06, 0.0, 1.36), lens=50)
+    cam = C.persp_camera(CAM_LOC, (0.06, 0.0, 1.36), lens=50)
     cam.data.shift_y = 0.02
     return cam
 
@@ -138,7 +141,21 @@ def camera():
 def id_pass(anvil, tile, letter, ham, sp):
     def flat(name, rgb):
         return C.emission_material(name, (*rgb, 1), 1.0)
-    C.assign(anvil, flat("IdAnvil", (1, 1, 0)))
+    # anvil split by height: face top yellow, waist cyan, base block magenta
+    # (gives the monochrome icon clean inner outlines)
+    am = C.new_material("IdAnvil")
+    n = C.NT(am)
+    geo = n.node("ShaderNodeNewGeometry")
+    sep = n.node("ShaderNodeSeparateXYZ")
+    n.link(geo.outputs["Position"], sep.inputs[0])
+    up = n.math("GREATER_THAN", sep.outputs[2], 1.575)
+    low = n.math("LESS_THAN", sep.outputs[2], 0.215)
+    col = n.mix((0, 1, 1, 1), (1, 1, 0, 1), up)
+    col = n.mix(col, (1, 0, 1, 1), low)
+    e = n.node("ShaderNodeEmission")
+    n.link(col, e.inputs["Color"])
+    n.output(e.outputs[0])
+    C.assign(anvil, am)
     C.assign(tile, flat("IdTile", (0, 1, 0)))
     letter.data.materials[0] = flat("IdLetter", (0, 0, 1))
     hm = flat("IdHammer", (1, 0, 0))

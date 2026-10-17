@@ -56,9 +56,9 @@ def heightfield(name, fn, extent=0.56):
 
 
 # slot: thin flat lip at the very edge, sloped (drafted) walls, sandy floor
-DEPTH = 0.075
-LIP = 0.018
-WALL = 0.10
+DEPTH = 0.09
+LIP = 0.02
+WALL = 0.085
 
 
 def slot_height(x, y):
@@ -68,8 +68,8 @@ def slot_height(x, y):
     return -DEPTH * smoothstep(LIP, LIP + WALL, d) ** 0.85
 
 
-PLATE_H = 0.06
-BEVEL = 0.075
+PLATE_H = 0.07
+BEVEL = 0.095
 
 
 def plate_height(x, y):
@@ -88,7 +88,7 @@ def sand_material():
     n = C.NT(m)
     tc = n.texcoord()
     mp = n.node("ShaderNodeMapping")
-    mp.inputs["Scale"].default_value = (2.2, 2.2, 2.2)
+    mp.inputs["Scale"].default_value = (4.5, 4.5, 4.5)
     mp.inputs["Location"].default_value = (0.31, 0.17, 0)
     n.link(tc.outputs["Object"], mp.inputs[0])
     col = n.image(t["Color"], mp.outputs[0]).outputs[0]
@@ -96,28 +96,28 @@ def sand_material():
     hsv = n.node("ShaderNodeHueSaturation")
     n.set(hsv, "Color", col)
     hsv.inputs["Saturation"].default_value = 0.45
-    hsv.inputs["Value"].default_value = 0.42
-    tint = n.mix(hsv.outputs[0], C.hex_lin("#3A2F28"), 0.55)
+    hsv.inputs["Value"].default_value = 0.6
+    tint = n.mix(hsv.outputs[0], C.hex_lin("#4A3C32"), 0.55)
     # floor of the slot slightly darker / sootier than the walls and lip
     sep = n.node("ShaderNodeSeparateXYZ")
     n.link(tc.outputs["Object"], sep.inputs[0])
     deep = n.maprange(sep.outputs[2], -DEPTH, -0.01, 1.0, 0.0)
-    tint = n.mix(tint, C.hex_lin("#1E1814"), n.math("MULTIPLY", deep, 0.45))
+    tint = n.mix(tint, C.hex_lin("#2A221C"), n.math("MULTIPLY", deep, 0.35))
     p = n.node("ShaderNodeBsdfPrincipled")
     n.link(tint, p.inputs["Base Color"])
     r = n.image(t["Roughness"], mp.outputs[0], "Non-Color").outputs[0]
     n.link(n.maprange(r, 0, 1, 0.8, 1.0), p.inputs["Roughness"])
     nm = n.node("ShaderNodeNormalMap")
-    nm.inputs["Strength"].default_value = 0.9
+    nm.inputs["Strength"].default_value = 0.45
     n.link(n.image(t["NormalGL"], mp.outputs[0], "Non-Color").outputs[0],
            nm.inputs["Color"])
     # extra fine grain
     grain = n.node("ShaderNodeTexNoise")
-    grain.inputs["Scale"].default_value = 160.0
-    grain.inputs["Detail"].default_value = 2.0
+    grain.inputs["Scale"].default_value = 120.0
+    grain.inputs["Detail"].default_value = 3.0
     n.link(tc.outputs["Object"], grain.inputs["Vector"])
     bump = n.node("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.25
+    bump.inputs["Strength"].default_value = 0.35
     bump.inputs["Distance"].default_value = 0.002
     n.link(grain.outputs[0], bump.inputs["Height"])
     n.link(nm.outputs[0], bump.inputs["Normal"])
@@ -141,7 +141,7 @@ def plate_material():
     vor.inputs["Smoothness"].default_value = 0.8
     n.link(tc.outputs["Object"], vor.inputs["Vector"])
     bump = n.node("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.05
+    bump.inputs["Strength"].default_value = 0.10
     bump.inputs["Distance"].default_value = 0.02
     n.link(vor.outputs["Distance"], bump.inputs["Height"])
     p = n.node("ShaderNodeBsdfPrincipled")
@@ -159,14 +159,14 @@ def lights(kind):
     for ob in [o for o in bpy.data.objects if o.type == "LIGHT"]:
         bpy.data.objects.remove(ob)
     if kind == "empty":
-        C.world_color(C.hex_lin("#120D0A"), 1.0)
-        C.area_light("Key", (-2.2, 2.6, 2.4), (0, 0, 0), 60, size=1.2,
+        C.world_color(C.hex_lin("#1E1610"), 1.0)
+        C.area_light("Key", (-2.4, 2.8, 1.9), (0, 0, 0), 140, size=1.0,
                      color=(1.0, 0.78, 0.58))
-        C.area_light("Fill", (0, 0, 6), (0, 0, 0), 12, size=6, color=(0.9, 0.9, 1.0))
+        C.area_light("Fill", (0, 0, 6), (0, 0, 0), 34, size=6, color=(0.9, 0.9, 1.0))
     else:
-        C.world_color((0.18, 0.18, 0.18, 1), 1.0)
-        C.area_light("Key", (-2.2, 2.6, 2.6), (0, 0, 0), 70, size=2.0)
-        C.area_light("Fill", (0, 0, 6), (0, 0, 0), 55, size=6)
+        C.world_color((0.22, 0.22, 0.22, 1), 1.0)
+        C.area_light("Key", (-2.2, 2.6, 2.0), (0, 0, 0), 120, size=1.6)
+        C.area_light("Fill", (0, 0, 6), (0, 0, 0), 85, size=6)
 
 
 def main():

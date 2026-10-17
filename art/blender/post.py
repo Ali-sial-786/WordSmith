@@ -201,7 +201,138 @@ def cells():
     save_png(metal, out("cell_metal.png"))
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells}
+# --------------------------------------------------------------------------
+# 4. app icon  (-> art/icon/, turned into mipmaps by art/android_icons.py)
+# --------------------------------------------------------------------------
+def icon_out(name):
+    return os.path.join(ICON_OUT, name)
+
+
+def lerp_stops(t, stops):
+    """t array -> RGB from [(pos, (r,g,b)), ...] (0..1 floats)."""
+    t = np.clip(t, 0, 1)
+    out = np.zeros(t.shape + (3,), np.float32)
+    for (p0, c0), (p1, c1) in zip(stops[:-1], stops[1:]):
+        m = (t >= p0) & (t <= p1)
+        k = ((t - p0) / max(p1 - p0, 1e-6))[..., None]
+        out[m] = (np.array(c0) * (1 - k) + np.array(c1) * k)[m]
+    return out
+
+
+def hexf(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def icon_background(size=1024, seed=3):
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float32) / size
+    # main glow behind the anvil/tile, slightly below centre
+    d = np.sqrt((xx - 0.5) ** 2 + ((yy - 0.55) * 1.1) ** 2) / 0.62
+    col = lerp_stops(d, [(0.0, hexf("#7A3212")), (0.22, hexf("#58220F")),
+                         (0.5, hexf("#2E140B")), (0.8, hexf("#1A0D08")),
+                         (1.2, hexf("#120907"))])
+    # faint hearth warmth rising from the bottom edge
+    col += (np.clip(1 - (1 - yy) / 0.35, 0, 1) ** 2)[..., None] * \
+        np.array(hexf("#3A1608"), np.float32) * 0.5
+    # soft smoky mottling + dither noise against banding
+    rng = np.random.default_rng(seed)
+    smoke = blur(rng.random((size, size)).astype(np.float32), 40)
+    smoke = (smoke - smoke.mean()) / (smoke.std() + 1e-6)
+    col *= (1 + 0.05 * smoke)[..., None]
+    col += (rng.random((size, size, 1)).astype(np.float32) - 0.5) / 255.0
+    return np.concatenate([np.clip(col, 0, 1), np.ones((size, size, 1), np.float32)], -1)
+
+
+def bloom_under(fg, threshold=0.75, radius=22, gain=0.9, tint="#FF7A20"):
+    """Soft glow from the brightest (emissive) pixels, placed under fg."""
+    lum = fg[..., :3].max(-1) * fg[..., 3]
+    hot = np.clip((lum - threshold) / (1 - threshold), 0, 1)
+    g = blur(hot, radius) * gain + blur(hot, radius * 3) * gain * 0.6
+    g = np.clip(g, 0, 0.85)
+    glow = np.concatenate([np.broadcast_to(np.array(hexf(tint), np.float32),
+                                           g.shape + (3,)), g[..., None]], -1)
+    return over(fg, glow)
+
+
+def id_masks(ids):
+    """Classify the flat-colour ID render into named masks (0..1)."""
+    a = ids[..., 3]
+    rgb = ids[..., :3]
+    refs = {"anvil": (1, 1, 0), "anvil_side": (0, 1, 1), "anvil_base": (1, 0, 1),
+            "tile": (0, 1, 0),
+            "letter": (0, 0, 1), "hammer": (1, 0, 0), "spark": (1, 1, 1)}
+    d = np.stack([np.sum((rgb - np.array(c)) ** 2, -1) for c in refs.values()], -1)
+    lab = np.argmin(d, -1)
+    return {k: ((lab == i) & (a > 0.5)).astype(np.float32) for i, k in enumerate(refs)}
+
+
+def erode(mask, px):
+    if px <= 0:
+        return mask
+    im = Image.fromarray((mask * 255).astype(np.uint8), "L")
+    return np.asarray(im.filter(ImageFilter.MinFilter(2 * px + 1))).astype(np.float32) / 255
+
+
+def smooth_mask(mask, px):
+    """Opening + closing + blur/threshold: removes specks, fills pinholes."""
+    m = dilate(erode(mask, px), px)
+    m = erode(dilate(m, px), px)
+    return (blur(m, px * 0.6) > 0.5).astype(np.float32)
+
+
+def dilate(mask, px):
+    if px <= 0:
+        return mask
+    im = Image.fromarray((mask * 255).astype(np.uint8), "L")
+    return np.asarray(im.filter(ImageFilter.MaxFilter(2 * px + 1))).astype(np.float32) / 255
+
+
+def icon():
+    print("icon")
+    size = 1024
+    bg = icon_background(size)
+    save_png(bg, icon_out("icon_background.png"), opaque=True)
+
+    fg = resize(load(raw("icon", "icon_fg.png")), (size, size))
+    fg = bloom_under(fg)
+    save_png(fg, icon_out("icon_foreground.png"))
+
+    # monochrome (Android 13 themed icon): one white silhouette, with the
+    # letter knocked out and thin gaps between hammer / tile / anvil
+    ids = load(raw("icon", "icon_ids.png"))
+    m = id_masks(ids)
+    gap = 9
+    # sparks: drop the ones crowding the hammer, fatten the rest
+    near_hammer = dilate(m["hammer"], 26)
+    sparks = m["spark"] * (1 - near_hammer)
+    sparks = dilate(sparks, 3)
+    body = smooth_mask(np.clip(m["anvil"] + m["anvil_side"] + m["anvil_base"] +
+                               m["tile"] + m["letter"], 0, 1), 3)
+    tile = smooth_mask(np.clip(m["tile"] + m["letter"], 0, 1), 3)
+    body = body * (1 - dilate(tile, gap))           # ring gap around the tile
+    tile = tile * (1 - dilate(m["letter"], 1))       # letter knocked out
+    # hammer: fill holes where sparks crossed in front of it
+    hammer = smooth_mask(np.clip(m["hammer"] + m["spark"] * dilate(m["hammer"], 6), 0, 1), 8)
+    rest = np.clip(body + tile + sparks, 0, 1) * (1 - dilate(hammer, gap))
+    sil = np.clip(rest + hammer, 0, 1)
+    sil = blur(sil, 1.0)
+    sil = np.clip((sil - 0.5) * 3 + 0.5, 0, 1)
+    sil = resize(np.concatenate([np.ones(sil.shape + (3,), np.float32), sil[..., None]], -1),
+                 (size, size))
+    sil[..., :3] = 1.0
+    save_png(sil, icon_out("icon_monochrome.png"))
+
+    # full preview: what a launcher shows -- the visible 72/108 of the layers,
+    # in a rounded square
+    full = over(fg, bg)
+    c = size * (1 - 72 / 108) / 2
+    crop = full[int(c):int(size - c), int(c):int(size - c)]
+    full = resize(crop, (size, size))
+    full[..., 3] = rounded_rect_mask(size, size, size * 0.23, soft=1.5)
+    save_png(full, icon_out("icon_full.png"))
+
+
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon}
 
 
 def main():
