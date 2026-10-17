@@ -121,6 +121,91 @@ class FakeServer {
   int dailyStreak = 0;
   final dailyPosts = <Map<String, dynamic>>[];
 
+  /// The Forge Board (shared/forge-board.md), kept simple.
+  int stokeDay = 1;
+
+  /// Claimed by default, so most tests don't get the Hall's Stoke prompt.
+  bool stokeClaimed = true;
+  final orders = <Map<String, Object?>>[
+    {'slot': 'd0', 'kind': 'bonus_words', 'target': 10, 'progress': 10, 'claimed': false},
+    {'slot': 'd1', 'kind': 'solo_puzzles', 'target': 3, 'progress': 1, 'claimed': false},
+    {'slot': 'd2', 'kind': 'coop_rounds', 'target': 1, 'progress': 0, 'claimed': false, 'friends': true},
+    {'slot': 'w0', 'kind': 'letter_hunt', 'target': 40, 'progress': 12, 'claimed': false, 'letter': 'R'},
+    {'slot': 'w1', 'kind': 'solo_puzzles', 'target': 15, 'progress': 4, 'claimed': false},
+  ];
+  bool swapUsed = false;
+  bool chestClaimed = false;
+  final giftsPending = <Map<String, Object?>>[];
+  final giftsSent = <String>{};
+  int giftsClaimed = 0;
+  Map<String, Object?>? lastWeek;
+  bool lastWeekClaimed = false;
+
+  static Map<String, Object> reward(int xp, [Map<String, int> hints = const {}]) => {
+    'xp': xp,
+    'hints': {'hammer': 0, 'chisel': 0, 'sparks': 0, ...hints},
+  };
+
+  Map<String, Object?> board(String uid) => {
+    'date': todayUtc(),
+    'week': '2026-W42',
+    'stoke': {
+      'day': stokeDay,
+      'claimedToday': stokeClaimed,
+      'track': [
+        reward(15),
+        reward(0, {'hammer': 1}),
+        reward(25),
+        reward(0, {'chisel': 1}),
+        reward(35),
+        reward(0, {'hammer': 2}),
+        reward(50, {'sparks': 1}),
+      ],
+    },
+    'orders': {
+      'daily': [for (final o in orders.where((o) => (o['slot'] as String).startsWith('d'))) _order(o)],
+      'weekly': [for (final o in orders.where((o) => (o['slot'] as String).startsWith('w'))) _order(o)],
+      'chest': {
+        'reward': reward(30, {'chisel': 1}),
+        'ready': orders.where((o) => (o['slot'] as String).startsWith('d')).every((o) => o['claimed'] == true),
+        'claimed': chestClaimed,
+      },
+      'swapAvailable': !swapUsed,
+      'dailyEndsAt': DateTime.now().add(const Duration(hours: 5)).millisecondsSinceEpoch,
+      'weeklyEndsAt': DateTime.now().add(const Duration(days: 3)).millisecondsSinceEpoch,
+    },
+    'trials': {
+      'week': '2026-W42',
+      'endsAt': DateTime.now().add(const Duration(days: 3)).millisecondsSinceEpoch,
+      'standings': [
+        {'id': uid, 'username': username ?? 'me', 'avatar': avatar, 'level': 1, 'xp': totalXp, 'me': true},
+        for (final f in friends) {...f, 'xp': 40, 'me': false},
+      ],
+      'lastWeek': lastWeek == null ? null : {...lastWeek!, 'claimed': lastWeekClaimed},
+    },
+    'gifts': {
+      'pending': giftsPending,
+      'sentToday': giftsSent.toList(),
+      'claimedToday': giftsClaimed,
+      'claimLimit': 5,
+    },
+  };
+
+  Map<String, Object?> _order(Map<String, Object?> o) => {
+    'letter': null,
+    'friends': false,
+    ...o,
+    'reward': (o['slot'] as String).startsWith('d') ? reward(20, {'hammer': 1}) : reward(100, {'sparks': 1}),
+  };
+
+  http.Response _claim(String uid, Map<String, Object> got) {
+    totalXp += got['xp'] as int;
+    for (final e in (got['hints'] as Map<String, int>).entries) {
+      hints[e.key] = (hints[e.key] ?? 0) + e.value;
+    }
+    return _json(200, {'profile': profile(uid), 'board': board(uid), 'reward': got});
+  }
+
   /// Push tokens registered for invite notifications.
   final pushTokens = <String>{};
   bool deletedMe = false;
@@ -208,6 +293,43 @@ class FakeServer {
           'streak': dailyStreak,
           'best': dailyStreak > 3 ? dailyStreak : 3,
         });
+      case 'GET /me/board':
+        return _json(200, board(token));
+      case 'POST /me/stoke/claim':
+        if (stokeClaimed) return _json(409, {'error': 'already_claimed'});
+        stokeClaimed = true;
+        return _claim(token, reward(15));
+      case 'POST /me/orders/claim':
+        final slot = body['slot'] as String;
+        if (slot == 'chest') {
+          chestClaimed = true;
+          return _claim(token, reward(30, {'chisel': 1}));
+        }
+        final o = orders.firstWhere((o) => o['slot'] == slot);
+        if ((o['progress'] as int) < (o['target'] as int)) return _json(409, {'error': 'not_done'});
+        if (o['claimed'] == true) return _json(409, {'error': 'already_claimed'});
+        o['claimed'] = true;
+        return _claim(token, reward(20, {'hammer': 1}));
+      case 'POST /me/orders/swap':
+        if (swapUsed) return _json(409, {'error': 'swap_used'});
+        swapUsed = true;
+        final o = orders.firstWhere((o) => o['slot'] == body['slot']);
+        o
+          ..['kind'] = 'long_words'
+          ..['target'] = 3
+          ..['progress'] = 0
+          ..['friends'] = false;
+        return _claim(token, reward(0));
+      case 'POST /me/trials/claim':
+        if (lastWeek == null || lastWeekClaimed) return _json(409, {'error': 'no_prize'});
+        lastWeekClaimed = true;
+        return _claim(token, reward(100, {'sparks': 1}));
+      case 'POST /me/gifts/claim':
+        if (giftsPending.isEmpty) return _json(409, {'error': 'nothing_to_claim'});
+        final n = giftsPending.length;
+        giftsPending.clear();
+        giftsClaimed += n;
+        return _claim(token, reward(0, {'hammer': n}));
       case 'POST /daily/complete':
         dailyPosts.add(body);
         final already = dailyDone;
@@ -223,6 +345,11 @@ class FakeServer {
           'best': dailyStreak > 3 ? dailyStreak : 3,
           'alreadyDone': already,
         });
+    }
+    final gift = RegExp(r'^/friends/([^/]+)/gift$').firstMatch(path);
+    if (req.method == 'POST' && gift != null) {
+      if (!giftsSent.add(gift.group(1)!)) return _json(409, {'error': 'already_sent'});
+      return _json(200, {'ok': true});
     }
     if (req.method == 'GET' && path.startsWith('/rooms/')) {
       final room = rooms[path.substring('/rooms/'.length)];

@@ -188,6 +188,7 @@ class DailyInfo {
     required this.completed,
     required this.streak,
     required this.best,
+    this.total = 0,
   });
 
   factory DailyInfo.fromJson(Map<String, dynamic> j) => DailyInfo(
@@ -197,6 +198,7 @@ class DailyInfo {
     completed: j['completed'] as bool? ?? false,
     streak: (j['streak'] as num?)?.toInt() ?? 0,
     best: (j['best'] as num?)?.toInt() ?? 0,
+    total: (j['total'] as num?)?.toInt() ?? 0,
   );
 
   /// The UTC day, `YYYY-MM-DD`.
@@ -206,6 +208,38 @@ class DailyInfo {
   final bool completed;
   final int streak;
   final int best;
+
+  /// Every commission I've completed, late ones included (Lore Book pages).
+  final int total;
+}
+
+/// One month of the Daily Commission calendar.
+class DailyCalendar {
+  const DailyCalendar({required this.month, required this.days, required this.trophy, required this.trophies});
+
+  factory DailyCalendar.fromJson(Map<String, dynamic> j) {
+    final t = (j['trophies'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return DailyCalendar(
+      month: j['month'] as String? ?? '',
+      days: {...((j['days'] as List?) ?? const []).cast<String>()},
+      trophy: j['trophy'] as String?,
+      trophies: (
+        bronze: (t['bronze'] as num?)?.toInt() ?? 0,
+        silver: (t['silver'] as num?)?.toInt() ?? 0,
+        gold: (t['gold'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
+
+  /// `YYYY-MM`.
+  final String month;
+
+  /// Dates done that month, `YYYY-MM-DD`.
+  final Set<String> days;
+
+  /// "bronze", "silver", "gold" or null.
+  final String? trophy;
+  final ({int bronze, int silver, int gold}) trophies;
 }
 
 class DailyOutcome {

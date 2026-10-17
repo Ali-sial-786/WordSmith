@@ -341,6 +341,13 @@ class AccountController extends Notifier<AccountState> {
     }
   }
 
+  /// Takes a profile the server sent with a reward (Forge Board claims).
+  void applyProfile(ServerProfile server) {
+    if (!state.isReady) return;
+    ref.read(profileProvider.notifier).applyServer(server, pending: ref.read(storeProvider).loadSavedPuzzle());
+    state = state.copyWith(server: server);
+  }
+
   // ---- Friends ----
 
   Future<void> refreshFriends() async {

@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_info.dart';
+import '../../audio/sfx.dart';
 import '../../engine/hints.dart';
 import '../../engine/progression.dart';
 import '../../game/account.dart';
+import '../../game/forge_board.dart';
+import '../../net/api_client.dart';
+import '../../net/board.dart';
 import '../../net/hub_client.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
@@ -15,6 +19,7 @@ import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/rank_badge.dart';
+import '../../ui/widgets/reward_popup.dart';
 import '../../ui/widgets/xp_bar.dart';
 import '../coop/coop_entry.dart';
 
@@ -99,6 +104,8 @@ class HallScreen extends ConsumerWidget {
                         if (account.isReady) ...[
                           const SizedBox(height: 12),
                           const _DailyButton(),
+                          const SizedBox(height: 12),
+                          const _BoardButton(),
                         ],
                         const SizedBox(height: 12),
                         Row(
@@ -240,6 +247,94 @@ class _DailyButton extends ConsumerWidget {
       sublabel: sublabel,
       icon: 'flame',
       onPressed: () => context.push('/daily'),
+    );
+  }
+}
+
+/// The Forge Board, with a badge for rewards waiting. The first time the
+/// Hall sees today's Daily Stoke unclaimed, it offers it.
+class _BoardButton extends ConsumerStatefulWidget {
+  const _BoardButton();
+
+  @override
+  ConsumerState<_BoardButton> createState() => _BoardButtonState();
+}
+
+class _BoardButtonState extends ConsumerState<_BoardButton> {
+  /// The day the Stoke was last offered (once a day per app run).
+  static String? _offered;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(forgeBoardProvider, (_, next) {
+      final board = next.value;
+      if (board == null || board.stoke.claimedToday || _offered == board.date) return;
+      _offered = board.date;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) _offerStoke(board);
+      });
+    }, fireImmediately: true);
+  }
+
+  Future<void> _offerStoke(ForgeBoard board) async {
+    final reward = board.stoke.track[board.stoke.day - 1];
+    final claim = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const GameIcon('stoke', size: 40, color: Palette.molten),
+        title: Text('Stoke the Forge · Day ${board.stoke.day}'),
+        content: Text("Today's reward: ${reward.label}.", textAlign: TextAlign.center),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Later')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Stoke!')),
+        ],
+      ),
+    );
+    if (claim != true || !mounted) return;
+    try {
+      final got = await ref.read(forgeBoardProvider.notifier).claimStoke();
+      if (!mounted) return;
+      ref.read(sfxProvider).play(SfxId.claim);
+      await showRewardPopup(context, got, title: 'The forge roars!');
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.friendly)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final board = ref.watch(forgeBoardProvider).value;
+    final waiting = board?.waiting ?? 0;
+    final orders = board?.orders.daily;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PlateButton(
+          label: 'Forge Board',
+          sublabel: waiting > 0
+              ? '$waiting reward${waiting == 1 ? '' : 's'} waiting'
+              : orders == null
+              ? 'Work orders, gifts and trials'
+              : 'Work orders ${orders.where((o) => o.done).length}/${orders.length} · Weekly Trials',
+          icon: 'scroll',
+          onPressed: () => context.push('/board'),
+        ),
+        if (waiting > 0)
+          Positioned(
+            right: -4,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: Palette.quenchRed,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Palette.whiteHeat, width: 1.5),
+              ),
+              child: Text('$waiting', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white)),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'board.dart';
 import 'models.dart';
 
 /// An error response from the server, or no response at all.
@@ -32,7 +33,16 @@ class ApiException implements Exception {
     'round_in_progress' => "They're mid-round. Try again when it ends.",
     'video_unavailable' => "Video chat isn't set up on the server yet.",
     'not_in_room' => 'Join the room first.',
-    'wrong_day' => "That was yesterday's commission. Today's is waiting!",
+    'wrong_day' => "That day's commission can't be forged any more. Today's is waiting!",
+    'wrong_month' => 'The calendar only goes back to last month.',
+    'already_claimed' => 'Already claimed.',
+    'not_done' => "That order isn't finished yet.",
+    'swap_used' => "You've already swapped an order today.",
+    'order_done' => "A finished order can't be swapped.",
+    'no_prize' => 'No prize from last week.',
+    'nothing_to_claim' => 'No gifts to collect right now.',
+    'already_sent' => 'You already sent them a gift today.',
+    'not_friends' => 'You can only send gifts to friends.',
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
@@ -139,7 +149,36 @@ class ApiClient {
   Future<Map<String, dynamic>> room(String code) =>
       _send('GET', '/rooms/${Uri.encodeComponent(code)}');
 
-  Future<DailyInfo> daily() async => DailyInfo.fromJson(await _send('GET', '/daily'));
+  /// Today's Daily Commission, or an earlier [date] (`YYYY-MM-DD`) to play late.
+  Future<DailyInfo> daily({String? date}) async =>
+      DailyInfo.fromJson(await _send('GET', date == null ? '/daily' : '/daily?date=$date'));
+
+  /// The days I've done in [month] (`YYYY-MM`) and my trophies.
+  Future<DailyCalendar> dailyCalendar(String month) async =>
+      DailyCalendar.fromJson(await _send('GET', '/daily/calendar?month=$month'));
+
+  // ---- The Forge Board (shared/forge-board.md) ----
+
+  Future<ForgeBoard> board() async => ForgeBoard.fromJson(await _send('GET', '/me/board'));
+
+  Future<BoardClaim> claimStoke() async =>
+      BoardClaim.fromJson(await _send('POST', '/me/stoke/claim', body: const {}));
+
+  /// [slot] is `d0`–`d2`, `w0`, `w1` or `chest`.
+  Future<BoardClaim> claimOrder(String slot) async =>
+      BoardClaim.fromJson(await _send('POST', '/me/orders/claim', body: {'slot': slot}));
+
+  Future<BoardClaim> swapOrder(String slot) async =>
+      BoardClaim.fromJson(await _send('POST', '/me/orders/swap', body: {'slot': slot}));
+
+  Future<BoardClaim> claimTrials() async =>
+      BoardClaim.fromJson(await _send('POST', '/me/trials/claim', body: const {}));
+
+  Future<BoardClaim> claimGifts() async =>
+      BoardClaim.fromJson(await _send('POST', '/me/gifts/claim', body: const {}));
+
+  Future<void> sendGift(String friendId) =>
+      _send('POST', '/friends/${Uri.encodeComponent(friendId)}/gift', body: const {});
 
   /// Invite notifications to this phone (shared/push.md).
   Future<void> registerPushToken(String token) => _send('POST', '/me/push-token', body: {'token': token});
