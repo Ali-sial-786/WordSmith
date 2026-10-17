@@ -477,8 +477,13 @@
           requestAnimationFrame(function () { hint.classList.remove('entering'); });
         });
         var timer = setTimeout(close, 20000);
+        // It sits over the bottom of the screen: out of the way once the
+        // player touches the game.
+        var host = document.getElementById('flutter-host');
+        if (host) host.addEventListener('pointerdown', close, { capture: true, once: true });
         function close() {
           clearTimeout(timer);
+          if (host) host.removeEventListener('pointerdown', close, { capture: true });
           hint.classList.add('hiding');
           setTimeout(function () { hint.hidden = true; hint.classList.remove('hiding'); }, 400);
         }

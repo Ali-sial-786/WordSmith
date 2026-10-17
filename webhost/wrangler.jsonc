@@ -12,8 +12,9 @@
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "../app/build/web",
-    // Unknown paths get index.html (the game routes with #/... anyway).
-    "not_found_handling": "single-page-application"
+    // The game routes with #/..., so every page is index.html; a missing
+    // file is a plain 404 (not the page, which Dart would read as data).
+    "not_found_handling": "none"
   },
   "workers_dev": true,
   "preview_urls": false
