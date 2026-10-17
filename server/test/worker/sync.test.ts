@@ -6,7 +6,7 @@ import { loadSoloState, writeSync } from "../../src/db/sync";
 import { campaignPuzzle } from "../../src/rules/campaign";
 import { pickupsFor } from "../../src/rules/pickups";
 import { evaluateSync, MAX_SYNC_ENTRIES } from "../../src/rules/sync";
-import { body, client, request, type Client } from "./helpers";
+import { body, client, request, setUpClient, type Client } from "./helpers";
 
 interface PuzzleJson {
   id: string;
@@ -287,5 +287,57 @@ describe("POST /v1/solo/sync: auth", () => {
   it("needs a token", async () => {
     const res = await request("/v1/solo/sync", { method: "POST", body: JSON.stringify({ entries: [] }) });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /v1/solo/sync: the Master Forge (shared/master-forge.md)", () => {
+  const N = env.TEST_CAMPAIGN.length;
+  /** Master Forge stage `s`, playing campaign stage `b`'s puzzle. */
+  const master = (s: number, b: number, extra: Record<string, unknown> = {}) => ({ ...entry(b), stage: s, completedAt: T0 + (s % 1000) * 1000, ...extra });
+
+  it("loads the campaign puzzle each stage past the last one plays", async () => {
+    const puzzles = await loadCampaignPuzzles(env.DB, [N + 1, 1, 2 * N + 5, 10 * N, 10 * N + 1]);
+    expect([...puzzles.keys()].sort((x, y) => x - y)).toEqual([1, N + 1, 2 * N + 5, 10 * N]);
+    expect(puzzles.get(N + 1)).toMatchObject({ stage: N + 1, id: "c-0001" });
+    expect(puzzles.get(2 * N + 5)!.id).toBe("c-0005");
+    expect(puzzles.get(10 * N)!.id).toBe(puzzle(N).id);
+    expect(puzzles.get(N + 1)!.gridWords).toEqual(puzzles.get(1)!.gridWords);
+  });
+
+  it("counts stages past the last like campaign stages, each once, up to 10 times the campaign", async () => {
+    const c = await setUpClient();
+    const p1 = puzzle(1);
+    const out = await sync(c, [
+      master(N + 1, 1, { bonusWords: p1.bonus.slice(0, 2) }),
+      master(N + 2, 1), // stage N + 2 plays stage 2's puzzle, not stage 1's
+      master(2 * N + 1, 1),
+      master(10 * N, N),
+      master(10 * N + 1, 1),
+    ]);
+    expect(out.results.map((r) => [r.stage, r.accepted, r.reason, r.xp])).toEqual([
+      [N + 1, true, undefined, 12],
+      [N + 2, false, "puzzle_mismatch", 0],
+      [2 * N + 1, true, undefined, 10],
+      [10 * N, true, undefined, 10],
+      [10 * N + 1, false, "unknown_stage", 0],
+    ]);
+    expect(out.profile).toMatchObject({ totalXp: 32, campaignCompleted: 10 * N, nextStage: 10 * N + 1, scrapBin: 2, stats: { soloDone: 3 } });
+    expect((await sync(c, [master(N + 1, 1)])).results[0]).toMatchObject({ accepted: false, reason: "duplicate" });
+
+    // Work Orders count them as campaign puzzles.
+    const board = await body<Record<string, any>>(await c.get("/v1/me/board"));
+    expect(board.orders.weekly[1]).toMatchObject({ kind: "solo_puzzles", progress: 3 });
+    const done = await env.DB.prepare("SELECT stage FROM solo_results WHERE user_id = ?1 ORDER BY stage").bind(c.uid).all();
+    expect(done.results.map((r) => r.stage)).toEqual([N + 1, 2 * N + 1, 10 * N]);
+  });
+
+  it("seeds pickups from the puzzle id, as for the campaign stage", async () => {
+    const c = await client();
+    // Find a campaign puzzle with a pickup for this player, and play it as a Master Forge stage.
+    let b = 1;
+    for (; b <= N; b++) if (pickupsFor(c.uid, puzzle(b).id, campaignPuzzle(b, puzzle(b)).cellCount, 1).length > 0) break;
+    const claims = pickupsFor(c.uid, puzzle(b).id, campaignPuzzle(b, puzzle(b)).cellCount, 1).map((p) => ({ cell: p.index, kind: p.kind }));
+    const out = await sync(c, [master(N + b, b, { pickups: claims })]);
+    expect(out.results[0]).toMatchObject({ accepted: true, pickups: claims, pickupsRejected: 0 });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadCampaignRows } from "../../scripts/build-campaign-sql.mjs";
-import { campaignPuzzle, campaignPuzzleId } from "../../src/rules/campaign";
+import { campaignPuzzle, campaignPuzzleId, MASTER_FORGE_LAPS, puzzleStageFor } from "../../src/rules/campaign";
 
 describe("campaignPuzzleId", () => {
   it("pads the stage to 4 digits", () => {
@@ -49,5 +49,19 @@ describe("campaignPuzzle", () => {
       expect(p.cellCount).toBeGreaterThanOrEqual(3);
       for (const word of p.bonus) expect(p.gridWords.has(word)).toBe(false);
     }
+  });
+});
+
+describe("the Master Forge (shared/master-forge.md)", () => {
+  it("plays the campaign's puzzles again after its last stage, up to 10 times its length", () => {
+    const n = 600;
+    expect(MASTER_FORGE_LAPS).toBe(10);
+    expect([1, 2, 599, 600].map((s) => puzzleStageFor(s, n))).toEqual([1, 2, 599, 600]);
+    // Stage s > N plays b = ((s − N − 1) mod N) + 1.
+    expect([601, 602, 1200, 1201, 1450, 6000].map((s) => puzzleStageFor(s, n))).toEqual([1, 2, 600, 1, 250, 600]);
+    expect([6001, 0, -1, 1.5].map((s) => puzzleStageFor(s, n))).toEqual([null, null, null, null]);
+    // An empty campaign has nothing to play.
+    expect(puzzleStageFor(1, 0)).toBeNull();
+    expect([1, 2, 3, 4, 7, 30, 31].map((s) => puzzleStageFor(s, 3))).toEqual([1, 2, 3, 1, 1, 3, null]);
   });
 });

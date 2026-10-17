@@ -35,6 +35,20 @@ export function campaignPuzzleId(stage: number): string {
   return `c-${String(stage).padStart(4, "0")}`;
 }
 
+/** The Master Forge (shared/master-forge.md) goes on for this many times the campaign's length, all told. */
+export const MASTER_FORGE_LAPS = 10;
+
+/**
+ * The campaign stage whose puzzle `stage` plays, in a campaign of `n`
+ * stages: the stage itself up to `n`, then the Master Forge's
+ * `((stage − n − 1) mod n) + 1` up to `10 × n`. `null` past that (or for
+ * a stage below 1).
+ */
+export function puzzleStageFor(stage: number, n: number): number | null {
+  if (!Number.isInteger(stage) || stage < 1 || n < 1 || stage > MASTER_FORGE_LAPS * n) return null;
+  return stage <= n ? stage : ((stage - n - 1) % n) + 1;
+}
+
 const UPPER_WORD = /^[A-Z]{3,}$/;
 
 function isWord(value: unknown): value is PuzzleWordJson {
