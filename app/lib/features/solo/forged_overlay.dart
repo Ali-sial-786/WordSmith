@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../data/campaign.dart';
+import '../../data/lore.dart';
 import '../../data/masterwork_info.dart';
 import '../../engine/hints.dart';
 import '../../engine/masterworks.dart';
@@ -28,6 +29,8 @@ Future<ForgedAction> showForgedOverlay(
   required int bonusWords,
   List<String> words = const [],
   DailyOutcome? daily,
+  bool dailyLate = false,
+  int? lorePage,
 }) async {
   final result = await showGeneralDialog<ForgedAction>(
     context: context,
@@ -51,6 +54,8 @@ Future<ForgedAction> showForgedOverlay(
       bonusWords: bonusWords,
       words: words,
       daily: daily,
+      dailyLate: dailyLate,
+      lorePage: lorePage,
     ),
   );
   return result ?? ForgedAction.hall;
@@ -65,6 +70,8 @@ class _ForgedCard extends StatefulWidget {
     required this.bonusWords,
     this.words = const [],
     this.daily,
+    this.dailyLate = false,
+    this.lorePage,
   });
 
   final CompletionReward reward;
@@ -80,6 +87,12 @@ class _ForgedCard extends StatefulWidget {
 
   /// The Daily Commission's streak, when that's what was forged.
   final DailyOutcome? daily;
+
+  /// An earlier day's commission, played late (no streak).
+  final bool dailyLate;
+
+  /// The Smith's Lore page (index) this commission unlocked.
+  final int? lorePage;
 
   @override
   State<_ForgedCard> createState() => _ForgedCardState();
@@ -155,7 +168,11 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                 const SizedBox(height: 4),
                 Text(
                   daily != null
-                      ? (daily.alreadyDone ? 'Already forged today' : 'Daily Commission forged')
+                      ? (daily.alreadyDone
+                            ? 'Already forged'
+                            : widget.dailyLate
+                            ? 'Late commission forged'
+                            : 'Daily Commission forged')
                       : chapterDone
                       ? '${widget.chapter!.name} chapter complete!'
                       : '${widget.chapter!.name} puzzle forged',
@@ -163,9 +180,9 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                 ),
                 const SizedBox(height: 20),
                 Text('+${r.xp} XP', style: displayStyle(26)),
-                if (widget.bonusWords > 0)
+                if (widget.bonusWords > 0 && daily == null)
                   Text(
-                    'includes +${r.xp - 10} for bonus words',
+                    'includes +${soloXp(bonusWords: widget.bonusWords) - soloXp(bonusWords: 0)} for bonus words',
                     style: text.bodySmall,
                   ),
                 const SizedBox(height: 14),
@@ -256,7 +273,14 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     style: text.titleMedium?.copyWith(color: Palette.molten),
                   ),
                 ],
-                if (daily != null) ...[
+                if (daily != null && widget.dailyLate) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Played late, so your streak is unchanged.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: Palette.steel),
+                  ),
+                ] else if (daily != null) ...[
                   const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -277,6 +301,10 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     'A new commission arrives at midnight UTC.',
                     style: text.bodySmall,
                   ),
+                ],
+                if (widget.lorePage case final index?) ...[
+                  const SizedBox(height: 14),
+                  _LoreNote(index: index),
                 ],
                 if (campaignDone) ...[
                   const SizedBox(height: 14),
@@ -434,6 +462,46 @@ class _MasterworkNote extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The Smith's Lore page a commission unlocked, once the book has loaded.
+class _LoreNote extends ConsumerWidget {
+  const _LoreNote({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pages = ref.watch(loreProvider).value;
+    if (pages == null || index >= pages.length) return const SizedBox.shrink();
+    final page = pages[index];
+    final text = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E241B),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF8C6B47)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const GameIcon('book', size: 18, color: Palette.molten),
+              const SizedBox(width: 6),
+              Text("New page of Smith's Lore", style: text.labelMedium?.copyWith(color: Palette.molten)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(page.title, style: text.titleMedium),
+          const SizedBox(height: 4),
+          Text(page.text, style: text.bodyMedium),
+        ],
+      ),
     );
   }
 }

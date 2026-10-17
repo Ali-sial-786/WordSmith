@@ -36,6 +36,28 @@ final dailyProvider = FutureProvider<DailyInfo?>(
   retry: (_, _) => null,
 );
 
+/// An earlier day's Daily Commission (`YYYY-MM-DD`), to play late.
+final dailyForDateProvider = FutureProvider.family<DailyInfo?, String>(
+  (ref, date) async {
+    final ready = ref.watch(accountProvider.select((a) => a.isReady));
+    final api = ref.read(apiClientProvider);
+    if (!ready || api == null) return null;
+    return api.daily(date: date);
+  },
+  retry: (_, _) => null,
+);
+
+/// One month (`YYYY-MM`) of the Daily Commission calendar.
+final dailyCalendarProvider = FutureProvider.family<DailyCalendar?, String>(
+  (ref, month) async {
+    final ready = ref.watch(accountProvider.select((a) => a.isReady));
+    final api = ref.read(apiClientProvider);
+    if (!ready || api == null) return null;
+    return api.dailyCalendar(month);
+  },
+  retry: (_, _) => null,
+);
+
 /// The server's `/v1/version`: the newest app version and the oldest one it
 /// still plays online with. Null offline or without a server.
 final serverVersionProvider = FutureProvider<({String latest, String minSupported})?>(

@@ -75,7 +75,12 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                   api: api,
                   store: ref.read(storeProvider),
                   profile: ref.read(profileProvider.notifier),
-                  onForged: () => container.invalidate(dailyProvider),
+                  onForged: () {
+                    container
+                      ..invalidate(dailyProvider)
+                      ..invalidate(dailyForDateProvider(daily.date))
+                      ..invalidate(dailyCalendarProvider);
+                  },
                 )
               : SoloController(
                   stage: widget.stage!,
@@ -302,12 +307,16 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     }
     final campaign = ref.read(campaignProvider);
     final next = (widget.stage ?? 0) + 1;
+
     final action = await showForgedOverlay(
       context,
       reward: reward,
       chapter: game is SoloController ? game.chapter : null,
       nextChapter: game is SoloController && next <= campaign.stageCount ? campaign.chapterFor(next) : null,
       daily: game is DailyGame ? game.outcome : null,
+      dailyLate: game is DailyGame && game.info.date != todayUtc(),
+      // A first completion of a commission unlocks the next Lore page.
+      lorePage: game is DailyGame && game.outcome?.alreadyDone == false ? game.info.total : null,
       pickups: [
         for (final i in _game.board.collectedPickups) _game.board.pickups[i],
       ],

@@ -11,7 +11,9 @@ import 'features/account/sign_in_screen.dart';
 import 'features/campaign/chapters_screen.dart';
 import 'features/coop/room_screen.dart';
 import 'features/credits/credits_screen.dart';
+import 'features/daily/calendar_screen.dart';
 import 'features/daily/daily_screen.dart';
+import 'features/daily/lore_screen.dart';
 import 'features/friends/friends_screen.dart';
 import 'features/hall/hall_screen.dart';
 import 'features/profile/profile_screen.dart';
@@ -41,7 +43,15 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
     GoRoute(path: '/setup', builder: (_, _) => const SetupScreen()),
     GoRoute(path: '/friends', builder: (_, _) => const FriendsScreen()),
-    GoRoute(path: '/daily', builder: (_, _) => const DailyScreen()),
+    GoRoute(
+      path: '/daily',
+      builder: (_, state) => DailyScreen(
+        key: ValueKey(state.uri.queryParameters['date']),
+        date: state.uri.queryParameters['date'],
+      ),
+    ),
+    GoRoute(path: '/daily/calendar', builder: (_, _) => const CalendarScreen()),
+    GoRoute(path: '/lore', builder: (_, _) => const LoreScreen()),
     GoRoute(
       path: '/room/:code',
       builder: (_, state) => RoomScreen(

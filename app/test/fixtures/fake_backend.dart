@@ -119,6 +119,9 @@ class FakeServer {
   Map<String, dynamic>? dailyPuzzle;
   bool dailyDone = false;
   int dailyStreak = 0;
+
+  /// Earlier days done (calendar), and late days played.
+  final dailyDays = <String>{};
   final dailyPosts = <Map<String, dynamic>>[];
 
   /// The Forge Board (shared/forge-board.md), kept simple.
@@ -285,13 +288,24 @@ class FakeServer {
         return _json(200, {'ok': true});
       case 'GET /daily':
         if (dailyPuzzle == null) return _json(404, {'error': 'not_found'});
+        final date = req.url.queryParameters['date'] ?? todayUtc();
         return _json(200, {
-          'date': todayUtc(),
+          'date': date,
           'heat': 1,
           'puzzle': dailyPuzzle,
-          'completed': dailyDone,
+          'completed': date == todayUtc() ? dailyDone : dailyDays.contains(date),
           'streak': dailyStreak,
           'best': dailyStreak > 3 ? dailyStreak : 3,
+          'total': dailyDays.length + (dailyDone ? 1 : 0),
+        });
+      case 'GET /daily/calendar':
+        final month = req.url.queryParameters['month']!;
+        final days = {...dailyDays, if (dailyDone) todayUtc()}.where((d) => d.startsWith(month)).toList()..sort();
+        return _json(200, {
+          'month': month,
+          'days': days,
+          'trophy': days.length >= 7 ? 'bronze' : null,
+          'trophies': {'bronze': 1, 'silver': 0, 'gold': 2},
         });
       case 'GET /me/board':
         return _json(200, board(token));
@@ -332,6 +346,17 @@ class FakeServer {
         return _claim(token, reward(0, {'hammer': n}));
       case 'POST /daily/complete':
         dailyPosts.add(body);
+        if (body['date'] != todayUtc()) {
+          final first = dailyDays.add(body['date'] as String);
+          if (first) totalXp += 15;
+          return _json(200, {
+            'profile': profile(token),
+            'xp': first ? 15 : 0,
+            'streak': dailyStreak,
+            'best': dailyStreak > 3 ? dailyStreak : 3,
+            'alreadyDone': !first,
+          });
+        }
         final already = dailyDone;
         if (!already) {
           dailyDone = true;

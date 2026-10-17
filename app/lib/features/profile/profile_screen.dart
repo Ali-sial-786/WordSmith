@@ -7,6 +7,7 @@ import '../../engine/hints.dart';
 import '../../engine/masterworks.dart';
 import '../../engine/progression.dart';
 import '../../game/account.dart';
+import '../../game/daily_game.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -75,8 +76,26 @@ class ProfileScreen extends ConsumerWidget {
           _Stat('Words forged', '${p.stats.wordsForged}'),
           _Stat('Bonus words', '${p.stats.bonusWords}'),
           _Stat('Longest word', p.stats.longestWord.isEmpty ? '—' : p.stats.longestWord),
-          if (daily != null)
+          if (daily != null) ...[
             _Stat('Daily streak', '${daily.streak} ${daily.streak == 1 ? 'day' : 'days'} (best ${daily.best})'),
+            if (ref.watch(dailyCalendarProvider(todayUtc().substring(0, 7))).value?.trophies case final t?)
+              _Stat('Monthly trophies', '${t.gold} gold · ${t.silver} silver · ${t.bronze} bronze'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const GameIcon('book', color: Palette.molten),
+              title: const Text("Smith's Lore"),
+              subtitle: Text('${daily.total} ${daily.total == 1 ? 'page' : 'pages'} found'),
+              trailing: const Icon(Icons.chevron_right, color: Palette.steel),
+              onTap: () => context.push('/lore'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const GameIcon('calendar', color: Palette.molten),
+              title: const Text('Commission calendar'),
+              trailing: const Icon(Icons.chevron_right, color: Palette.steel),
+              onTap: () => context.push('/daily/calendar'),
+            ),
+          ],
           if (server != null) ...[
             const SizedBox(height: 16),
             Text('With friends', style: text.titleMedium),

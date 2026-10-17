@@ -15,7 +15,10 @@ import '../solo/puzzle_screen.dart';
 
 /// Today's Daily Commission: the puzzle, or a "done for today" card.
 class DailyScreen extends ConsumerStatefulWidget {
-  const DailyScreen({super.key});
+  const DailyScreen({super.key, this.date});
+
+  /// An earlier day (`YYYY-MM-DD`) to play late; null for today's.
+  final String? date;
 
   @override
   ConsumerState<DailyScreen> createState() => _DailyScreenState();
@@ -33,9 +36,10 @@ class _DailyScreenState extends ConsumerState<DailyScreen> {
   @override
   Widget build(BuildContext context) {
     if (_playing != null) return PuzzleScreen.daily(daily: _playing!);
-    final daily = ref.watch(dailyProvider);
+    final late = widget.date != null && widget.date != todayUtc();
+    final daily = late ? ref.watch(dailyForDateProvider(widget.date!)) : ref.watch(dailyProvider);
     // Loaded on an earlier day (the app stayed open past midnight UTC)?
-    if (daily case AsyncData(:final value?) when value.date != todayUtc() && !_refreshedStale) {
+    if (daily case AsyncData(:final value?) when !late && value.date != todayUtc() && !_refreshedStale) {
       _refreshedStale = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ref.invalidate(dailyProvider);
@@ -46,7 +50,7 @@ class _DailyScreenState extends ConsumerState<DailyScreen> {
     }
     return switch (daily) {
       AsyncData(:final value?) when !value.completed => PuzzleScreen.daily(daily: _playing = value),
-      AsyncData(:final value?) => _Frame(child: _Done(info: value)),
+      AsyncData(:final value?) => _Frame(child: _Done(info: value, late: late)),
       AsyncData() => _Frame(
         child: _Message(
           'Sign in to take on the Daily Commission.',
@@ -58,7 +62,7 @@ class _DailyScreenState extends ConsumerState<DailyScreen> {
         child: _Message(
           error is ApiException ? error.friendly : "Can't reach the forge right now.",
           action: 'Try again',
-          onPressed: () => ref.invalidate(dailyProvider),
+          onPressed: () => late ? ref.invalidate(dailyForDateProvider(widget.date!)) : ref.invalidate(dailyProvider),
         ),
       ),
       _ => const _Frame(child: Center(child: CircularProgressIndicator(color: Palette.molten))),
@@ -73,7 +77,22 @@ class _Frame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(backgroundColor: Colors.transparent, title: Text('Daily Commission', style: displayStyle(20))),
+    appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      title: Text('Daily Commission', style: displayStyle(20)),
+      actions: [
+        IconButton(
+          tooltip: 'Calendar',
+          onPressed: () => context.push('/daily/calendar'),
+          icon: const GameIcon('calendar', size: 24),
+        ),
+        IconButton(
+          tooltip: "Smith's Lore",
+          onPressed: () => context.push('/lore'),
+          icon: const GameIcon('book', size: 24),
+        ),
+      ],
+    ),
     extendBodyBehindAppBar: true,
     body: ForgeBackground(
       image: 'assets/images/bg_hall.webp',
@@ -108,9 +127,12 @@ class _Message extends StatelessWidget {
 }
 
 class _Done extends StatelessWidget {
-  const _Done({required this.info});
+  const _Done({required this.info, this.late = false});
 
   final DailyInfo info;
+
+  /// An earlier day's commission, already done.
+  final bool late;
 
   @override
   Widget build(BuildContext context) {
@@ -126,16 +148,30 @@ class _Done extends StatelessWidget {
           children: [
             const GameIcon('flame', size: 64, color: Palette.molten),
             const SizedBox(height: 10),
-            Text('Forged for today!', style: displayStyle(28, color: Palette.molten)),
-            const SizedBox(height: 8),
-            Text('${info.streak}-day streak · best ${info.best}', style: text.titleMedium),
-            const SizedBox(height: 6),
             Text(
-              'The next commission arrives in ${left.inHours} h ${left.inMinutes % 60} min.',
-              textAlign: TextAlign.center,
-              style: text.bodyMedium?.copyWith(color: Palette.steel),
+              late ? 'Forged!' : 'Forged for today!',
+              style: displayStyle(28, color: Palette.molten),
             ),
+            const SizedBox(height: 8),
+            Text(
+              late ? "${prettyDate(info.date)}'s commission is done." : '${info.streak}-day streak · best ${info.best}',
+              style: text.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            if (!late)
+              Text(
+                'The next commission arrives in ${left.inHours} h ${left.inMinutes % 60} min.',
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(color: Palette.steel),
+              ),
             const SizedBox(height: 22),
+            PlateButton(
+              label: 'Calendar',
+              icon: 'calendar',
+              height: 50,
+              onPressed: () => context.push('/daily/calendar'),
+            ),
+            const SizedBox(height: 10),
             PlateButton(label: 'Forge Hall', height: 50, onPressed: () => context.go('/')),
           ],
         ),
