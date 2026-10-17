@@ -292,7 +292,7 @@ class _AnvilFace extends StatelessWidget {
     fit: StackFit.expand,
     children: [
       Image.asset(
-        'assets/images/anvil_face.png',
+        'assets/images/anvil_face.webp',
         fit: BoxFit.contain,
         errorBuilder: (_, _, _) => const DecoratedBox(
           decoration: BoxDecoration(
@@ -309,7 +309,7 @@ class _AnvilFace extends StatelessWidget {
         opacity: active ? 1 : 0,
         duration: const Duration(milliseconds: 250),
         child: Image.asset(
-          'assets/images/anvil_face_glow.png',
+          'assets/images/anvil_face_glow.webp',
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) => DecoratedBox(
             decoration: BoxDecoration(

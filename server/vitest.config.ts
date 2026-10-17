@@ -1,6 +1,5 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
-// @ts-expect-error -- plain .mjs script, no type declarations
 import { loadCampaignRows } from "./scripts/build-campaign-sql.mjs";
 
 export default defineConfig(async () => {

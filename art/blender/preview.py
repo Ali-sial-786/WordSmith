@@ -88,7 +88,7 @@ def add_plus(base, layer, gain=1.0):
 
 
 def anvil():
-    face, glow = img("anvil_face.png"), img("anvil_face_glow.png")
+    face, glow = img("anvil_face.webp"), img("anvil_face_glow.webp")
     cold, hot = img("tile_cold.png"), img("tile_hot.png")
     S = 620
     def board(with_glow):

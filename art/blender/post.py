@@ -43,6 +43,21 @@ def save_png(a, path, opaque=False):
           f"{os.path.getsize(path) / 1024:.1f} KB")
 
 
+def save_webp(a, path, quality=92, opaque=False):
+    """Lossy WebP with lossless alpha (much smaller than PNG for renders)."""
+    a = np.clip(a, 0, 1)
+    if opaque:
+        im = Image.fromarray((a[..., :3] * 255 + 0.5).astype(np.uint8), "RGB")
+        im.save(path, "WEBP", quality=quality, method=6)
+    else:
+        a = a.copy()
+        a[a[..., 3] <= 0.5 / 255] = 0
+        im = Image.fromarray((a * 255 + 0.5).astype(np.uint8), "RGBA")
+        im.save(path, "WEBP", quality=quality, alpha_quality=100, method=6, exact=False)
+    print(f"  wrote {os.path.relpath(path, REPO)}  {im.size[0]}x{im.size[1]}  "
+          f"{os.path.getsize(path) / 1024:.1f} KB")
+
+
 def resize(a, size):
     """High-quality downscale with premultiplied alpha."""
     if a.shape[1] == size[0] and a.shape[0] == size[1]:
@@ -172,11 +187,15 @@ def anvil():
     print("anvil")
     k = ANVIL / 1024.0
     face = resize(load(raw("anvil", "anvil_face.png")), (ANVIL, ANVIL))
-    save_png(drop_shadow(face, offset=(0, round(9 * k)), radius=13 * k, opacity=0.65),
-             out("anvil_face.png"))
+    # WebP (lossy colour, lossless alpha): ~8x smaller than PNG, same look
+    save_webp(drop_shadow(face, offset=(0, round(9 * k)), radius=13 * k, opacity=0.65),
+              out("anvil_face.webp"))
     glow = resize(load(raw("anvil", "anvil_face_glow.png")), (ANVIL, ANVIL))
-    save_png(additive_layer(glow, bloom_radius=14 * k, bloom_gain=0.4),
-             out("anvil_face_glow.png"))
+    save_webp(additive_layer(glow, bloom_radius=14 * k, bloom_gain=0.4),
+              out("anvil_face_glow.webp"))
+    for old in ("anvil_face.png", "anvil_face_glow.png"):   # superseded names
+        if os.path.exists(out(old)):
+            os.remove(out(old))
 
 
 # --------------------------------------------------------------------------
