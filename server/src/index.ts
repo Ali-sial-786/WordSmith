@@ -8,6 +8,7 @@
  */
 
 import { authenticate } from "./auth/request";
+import { allowedOrigin, preflight, withCors } from "./cors";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json } from "./http";
 import { Router } from "./router";
@@ -75,26 +76,34 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/ws/room/:code", handler: open(getRoomSocket) },
 ]);
 
+/** Routes a request, turning thrown {@link ApiError}s into JSON errors. */
+async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const { pathname } = new URL(request.url);
+  const match = router.match(request.method, pathname);
+  if (match.kind === "not_found") return errorResponse(404, "not_found");
+  if (match.kind === "method_not_allowed") {
+    return errorResponse(405, "method_not_allowed", undefined, { Allow: match.allow.join(", ") });
+  }
+
+  try {
+    const c: RequestContext = { request, env, ctx, params: match.params, now: Date.now() };
+    const { handler } = match;
+    if (!handler.auth) return await handler.run(c);
+    const uid = await authenticate(request, env);
+    return await handler.run({ ...c, uid });
+  } catch (err) {
+    if (err instanceof ApiError) return errorResponse(err.status, err.code, err.detail);
+    console.error(`${request.method} ${pathname} failed`, err);
+    return errorResponse(500, "internal");
+  }
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    const { pathname } = new URL(request.url);
-    const match = router.match(request.method, pathname);
-    if (match.kind === "not_found") return errorResponse(404, "not_found");
-    if (match.kind === "method_not_allowed") {
-      return errorResponse(405, "method_not_allowed", undefined, { Allow: match.allow.join(", ") });
-    }
-
-    try {
-      const c: RequestContext = { request, env, ctx, params: match.params, now: Date.now() };
-      const { handler } = match;
-      if (!handler.auth) return await handler.run(c);
-      const uid = await authenticate(request, env);
-      return await handler.run({ ...c, uid });
-    } catch (err) {
-      if (err instanceof ApiError) return errorResponse(err.status, err.code, err.detail);
-      console.error(`${request.method} ${pathname} failed`, err);
-      return errorResponse(500, "internal");
-    }
+    // The browser version calls from its own origin (src/cors.ts).
+    const origin = allowedOrigin(request, env);
+    if (request.method === "OPTIONS") return preflight(origin);
+    return withCors(await handle(request, env, ctx), origin);
   },
 
   /** The hourly Cron Trigger (wrangler.jsonc): today's daily reminders for this UTC hour. */

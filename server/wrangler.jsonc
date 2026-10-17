@@ -17,7 +17,9 @@
     "MIN_SUPPORTED_VERSION": "0.1.0",
     // Firebase ID tokens must have aud = this and
     // iss = https://securetoken.google.com/<this> (docs/TECH.md §3). Not a secret.
-    "FIREBASE_PROJECT_ID": "wordsmith-8f550"
+    "FIREBASE_PROJECT_ID": "wordsmith-8f550",
+    // The browser version's origin(s), comma-separated (src/cors.ts). Local dev servers are always allowed.
+    "WEB_ORIGINS": "https://play.wordsmith-forge.workers.dev"
   },
   "d1_databases": [
     {

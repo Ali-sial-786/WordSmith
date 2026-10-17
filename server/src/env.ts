@@ -13,6 +13,11 @@ export interface Env {
   /** Firebase project whose ID tokens we accept (`aud`, and part of `iss`). */
   FIREBASE_PROJECT_ID: string;
   /**
+   * Origins of the browser version that may call the API from a page,
+   * comma-separated (src/cors.ts). Local dev servers are always allowed.
+   */
+  WEB_ORIGINS?: string;
+  /**
    * LiveKit project for in-room video chat (Worker secrets, set by the deploy
    * workflow). Video is off while any of them is missing.
    */
