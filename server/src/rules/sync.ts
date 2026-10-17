@@ -44,7 +44,7 @@ import { normalizeWord } from "./words";
 export const MAX_SYNC_ENTRIES = 100;
 
 /** Plausibility floor: at least this long per word the player typed. Tunable. */
-export const MIN_MS_PER_FOUND_WORD = 2000;
+export const MIN_MS_PER_FOUND_WORD = 1000;
 
 /** Letters one Spark Shower reveals (DESIGN.md §3.1). */
 export const SPARK_SHOWER_LETTERS = 5;

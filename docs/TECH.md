@@ -80,7 +80,7 @@ that's ever needed.
 
 ## 4. REST API (Worker)
 
-All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1/health`.
+All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1/health`. Friends, leaderboard and the hub return `403 setup_required` until the player has picked a username. The full request and response shapes are in `server/README.md`.
 
 | Method & path | Purpose |
 |---|---|
@@ -89,7 +89,7 @@ All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1
 | `GET /me` | My profile, level, XP, hint stock, stats and campaign progress |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
 | `DELETE /me` | Delete my account data |
-| `GET /users/:username` | A friend's public profile |
+| `GET /users/:username` | A player's public profile (any signed-in player, so you can look someone up before adding them) |
 | `POST /solo/sync` | Upload a batch of offline solo results (see §8). Returns the updated profile and any rewards. |
 | `GET /friends` | My friends and pending requests |
 | `POST /friends/request` · `POST /friends/respond` · `DELETE /friends/:id` | Manage friends |
@@ -97,16 +97,19 @@ All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
 | `GET /ws/hub` | WebSocket upgrade to HubDO |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO |
-| `GET /leaderboard` | Friends leaderboard (level, VS series wins, co-op best score) |
+| `GET /leaderboard` | Friends leaderboard (level, VS series wins; co-op best score arrives with M3) |
 
 ---
 
 ## 5. Real-time protocol
 
 Messages are JSON over WebSocket, in the form `{ "op": "...", ...payload }`.
-They're defined once in `shared/protocol/` (as JSON Schema), and both the Dart
-and the TypeScript types are generated from that, so the app and server can't
-drift apart.
+The plan is to define them once in `shared/protocol/` (as JSON Schema) and
+generate both the Dart and the TypeScript types from it, so the app and server
+can't drift apart. Until that lands (M3), `server/src/hub/protocol.ts` is the
+definition of the hub messages. Two hub details:
+- `{"op":"PING"}` gets an automatic `{"op":"PONG"}` without waking the Durable Object.
+- Errors come back as `ERROR {code}`.
 
 ### Hub (HubDO)
 
@@ -200,7 +203,7 @@ the rules unit-testable and easy to tweak.
 
 ```sql
 users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT)
-profiles     (user_id PK, xp INT /*lifetime total*/, level INT, campaign_stage INT /*highest completed*/, scrap_bin INT, updated_at INT)
+profiles     (user_id PK, xp INT /*lifetime total*/, level INT, campaign_stage INT /*highest completed; the app's campaignStage = this + 1*/, scrap_bin INT, updated_at INT)
 inventory    (user_id, item TEXT /*hammer|chisel|sparks*/, count INT, PRIMARY KEY(user_id, item))
 stats        (user_id PK, words_forged INT, longest_word TEXT, solo_done INT,
               coop_rounds INT, coop_mvps INT, vs_series INT, vs_series_won INT, vs_rounds_won INT)
@@ -213,6 +216,7 @@ matches      (id TEXT PK, mode TEXT, code TEXT, started_at INT, ended_at INT, su
 match_players(match_id, user_id, placement INT, points INT, rounds_won INT, xp INT)
 xp_events    (id INTEGER PK, user_id, source TEXT, amount INT, ref TEXT, created_at INT)
 solo_results (user_id, stage INT, completed_at INT, PRIMARY KEY(user_id, stage))  -- dedupes syncs
+pickup_seeds (user_id, seed TEXT, PRIMARY KEY(user_id, seed))  -- install ids used before sign-in (max 5)
 ```
 
 Migrations live in `server/migrations/` and are applied with `wrangler d1 migrations apply`.
@@ -222,7 +226,7 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
 ## 8. Solo, offline play and sync
 
 - The campaign's puzzles are **bundled in the app** (`app/assets/campaign/`), so solo play works with no connection.
-- The phone keeps a **local profile cache** and a **sync queue** of results: `{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickupsCollected, durationMs, completedAt}`.
+- The phone keeps a **local profile cache** and a **sync queue** of results: `{stage, puzzleId, foundWords, bonusWords, hintsUsed, pickups, pickupSeed, durationMs, completedAt}`. `pickupSeed` is the id the pickups were seeded with: the account id, or the install id (`install-<hex>`) for puzzles played before sign-in. The server accepts up to 5 install ids per account.
 - `POST /solo/sync` uploads the queue whenever the app is online. For each entry, the server checks:
   - the stage hasn't already been counted (`solo_results` stops duplicates);
   - the found words match that puzzle's answers;
@@ -230,7 +234,7 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
   - the time taken is plausible.
 
   It then grants XP, applies hint use and pickups (the inventory can't go below 0), handles level-ups and their rewards, and returns the updated profile.
-- **Campaign pickups** are worked out the same way on the phone and on the server: `seed = hash(userId + puzzleId)` decides whether a puzzle has a pickup, which cell it's in, and which type it is. The server can therefore check claimed pickups without them being stored in advance.
+- **Campaign pickups** are worked out the same way on the phone and on the server, from `pickupSeed + ":" + puzzleId` (see `shared/pickups.md`). That decides whether a puzzle has a pickup, which cell it's in, and which type it is. The server can therefore check claimed pickups without them being stored in advance.
 - **Server wins conflicts.** For example, if the same account played offline on two phones, the server's numbers are kept after the sync.
 
 ---
@@ -269,12 +273,15 @@ WordSmith/
 │  ├─ assets/                  images/, audio/, fonts/, shaders/, campaign/
 │  └─ test/                    unit, widget, golden tests
 ├─ server/                     Cloudflare Worker + Durable Objects (TypeScript)
-│  ├─ src/index.ts             router
+│  ├─ src/index.ts, router.ts  entry point and routing
 │  ├─ src/auth/                Firebase token verification
-│  ├─ src/hub/                 HubDO
-│  ├─ src/room/                RoomDO (lobby, co-op, versus)
-│  ├─ src/rules/               pure game rules (unit-tested)
+│  ├─ src/account/             username rules, profanity filter
+│  ├─ src/routes/              REST and WebSocket route handlers
+│  ├─ src/hub/                 HubDO (presence, invites)
+│  ├─ src/room/                RoomDO (lobby, co-op, versus) (M3)
+│  ├─ src/rules/               pure game rules, incl. sync validation (unit-tested)
 │  ├─ src/db/                  D1 queries
+│  ├─ scripts/                 campaign.json → D1 seed SQL
 │  ├─ migrations/              D1 SQL
 │  ├─ test/
 │  └─ wrangler.jsonc
