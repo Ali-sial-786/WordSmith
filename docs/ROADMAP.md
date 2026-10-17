@@ -10,8 +10,8 @@
 > - **M3:** live. A two-player round passed against the real server; waiting on a real-phones test.
 > - **M4:** live. Versus app and server are built; a best-of-3 series passed against the real server (podium, XP, stats). Waiting on a real-phones test.
 > - **M5:** mostly done.
->   - Done: the Daily Commission (live, tested), rank badges, music and match sounds, the level-up flourish after matches, the update banner, multiplayer records on the profile, Join-a-friend, and the 130%-text accessibility pass.
->   - Still open: chapter art for the remaining metals (in progress), invite notifications are built and switch on once the owner adds the `FCM_SERVICE_ACCOUNT` secret (DISTRIBUTION.md §5).
+>   - Done: the Daily Commission (live, tested), scenes for all nine chapters, rank badges, music and match sounds, the level-up flourish after matches, the update banner, multiplayer records on the profile, Join-a-friend, the 130%-text accessibility pass, and a code-review pass (rejoining your own room, phase races, offline sign-in, daily rollover).
+>   - Still open: invite notifications are built and live on the server; they start sending once the owner adds the `FCM_SERVICE_ACCOUNT` secret (DISTRIBUTION.md §5).
 > - **Video chat (extra):** live. Tokens verified against LiveKit; needs a two-phone test.
 
 ---
