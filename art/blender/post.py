@@ -306,6 +306,28 @@ def dilate(mask, px):
     return np.asarray(im.filter(ImageFilter.MaxFilter(2 * px + 1))).astype(np.float32) / 255
 
 
+SAFE_FRAC = 0.60      # adaptive-icon safe circle is 66/108 = 0.611 of the layer
+
+
+def fit_safe(a, frac=SAFE_FRAC, thr=0.08, scale=None):
+    """Shrink a centred RGBA layer so its content fits a circle of diameter
+    frac * size. Returns (layer, scale used)."""
+    h, w = a.shape[:2]
+    if scale is None:
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        d = np.sqrt((xx - (w - 1) / 2) ** 2 + (yy - (h - 1) / 2) ** 2) / w
+        r = float(d[a[..., 3] > thr].max()) * 2
+        scale = min(1.0, frac / r)
+    if scale >= 0.999:
+        return a, 1.0
+    n = int(round(w * scale))
+    small = resize(a, (n, n))
+    outa = np.zeros_like(a)
+    o = (w - n) // 2
+    outa[o:o + n, o:o + n] = small
+    return outa, scale
+
+
 def icon():
     print("icon")
     size = 1024
@@ -313,6 +335,8 @@ def icon():
     save_png(bg, icon_out("icon_background.png"), opaque=True)
 
     fg = resize(load(raw("icon", "icon_fg.png")), (size, size))
+    fg, k = fit_safe(fg, thr=0.3)
+    print(f"  foreground scaled x{k:.3f} to fit the safe circle")
     fg = bloom_under(fg)
     save_png(fg, icon_out("icon_foreground.png"))
 
@@ -338,6 +362,7 @@ def icon():
     sil = np.clip((sil - 0.5) * 3 + 0.5, 0, 1)
     sil = resize(np.concatenate([np.ones(sil.shape + (3,), np.float32), sil[..., None]], -1),
                  (size, size))
+    sil, _ = fit_safe(sil, scale=k)          # same scale as the foreground
     sil[..., :3] = 1.0
     save_png(sil, icon_out("icon_monochrome.png"))
 
@@ -373,8 +398,10 @@ def calm_bands(rgb, top=0.45, bottom=0.62, top_dim=0.82, bottom_dim=0.78):
     h = rgb.shape[0]
     y = np.linspace(0, 1, h, dtype=np.float32)
     k = np.ones_like(y)
-    k = np.where(y < top, top_dim + (1 - top_dim) * (y / top) ** 1.5, k)
-    k = np.where(y > bottom, 1 - (1 - bottom_dim) * ((y - bottom) / (1 - bottom)) ** 1.3, k)
+    t_top = np.clip(y / top, 0, 1)
+    t_bot = np.clip((y - bottom) / (1 - bottom), 0, 1)
+    k = np.where(y < top, top_dim + (1 - top_dim) * t_top ** 1.5, k)
+    k = np.where(y > bottom, 1 - (1 - bottom_dim) * t_bot ** 1.3, k)
     return rgb * k[:, None, None]
 
 
@@ -394,11 +421,18 @@ def background(name, **kw):
           f"{os.path.getsize(path) / 1024:.1f} KB")
 
 
+BG_SETTINGS = {
+    "bg_hall": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.85, bottom_dim=0.5)),
+    "bg_tin": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.85, bottom_dim=0.55)),
+    "bg_copper": dict(bands=dict(top=0.45, bottom=0.66, top_dim=0.72, bottom_dim=0.55)),
+}
+
+
 def bg():
     print("backgrounds")
     for name in ("bg_hall", "bg_tin", "bg_copper"):
         if os.path.exists(raw("bg", f"{name}.png")):
-            background(name)
+            background(name, **BG_SETTINGS.get(name, {}))
         else:
             print(f"  (skip {name}: no raw render)")
 

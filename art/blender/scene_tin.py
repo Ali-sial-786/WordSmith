@@ -166,7 +166,7 @@ def build(M):
     # open hearth with live flames (left of centre) ------------------------
     HX, HY = -0.75, 3.15
     K.hearth((HX, HY, 0), w=1.8, d=1.2, h=0.8, brick=M["brick"], hood=M["hood"],
-             coal_strength=6.0, light_energy=330, hood_top=3.3, flue_top=HEIGHT)
+             coal_strength=6.0, light_energy=250, hood_top=3.3, flue_top=HEIGHT)
     K.fire((HX, HY - 0.05, 0.86), spread=(0.45, 0.18), count=9, height=0.85, width=0.17,
            seed=8, strength=6.5, name="HearthFire")
     K.flame_volume((HX, HY - 0.05, 1.2), size=(0.6, 0.35, 0.45), strength=4.0,
@@ -209,7 +209,7 @@ def build(M):
     chicken("Hen3", (0.95, 6.0, 0), rot_z=math.radians(-30), white=True)
 
     # dawn light: low warm sun through the door, sky fill -------------------
-    sun = C.sun_light("Sun", (-70.7, 0, -57.9), 6.0, angle=3, color=(1.0, 0.6, 0.45))
+    sun = C.sun_light("Sun", (-64.5, 0, -70.3), 4.0, angle=3, color=(1.0, 0.6, 0.45))
     C.area_light("DoorSky", ((DOOR_X0 + DOOR_X1) / 2, BACK + 0.4, 1.4),
                  ((DOOR_X0 + DOOR_X1) / 2 - 0.6, 2.0, 1.2), 12, size=1.1, size_y=2.2,
                  shape="RECTANGLE", color=(0.75, 0.7, 0.95))
@@ -217,7 +217,7 @@ def build(M):
                  color=(1.0, 0.5, 0.2))
 
     # haze (indoors only, so the sun shaft shows) + embers over the fire ----
-    K.haze((-W_HALF, FRONT + 1.5, 0), (W_HALF, BACK, HEIGHT), density=0.008,
+    K.haze((-W_HALF + 0.02, FRONT + 1.5, 0.03), (W_HALF - 0.02, BACK - 0.02, HEIGHT - 0.02), density=0.008,
            color=(1.0, 0.92, 0.88), anisotropy=0.5)
     K.embers((HX - 0.5, HY - 0.5, 1.4), (HX + 0.5, HY + 0.1, 2.6), count=16, seed=7,
              radius=0.011)
@@ -229,12 +229,13 @@ def dawn_world():
     tc = n.node("ShaderNodeTexCoord")
     sep = n.node("ShaderNodeSeparateXYZ")
     n.link(tc.outputs["Generated"], sep.inputs[0])
-    col = n.ramp(sep.outputs[2], [(0.0, C.hex_lin("#3A2A30")), (0.5, C.hex_lin("#F2A276")),
-                                  (0.54, C.hex_lin("#E8907C")), (0.62, C.hex_lin("#A879A6")),
-                                  (0.78, C.hex_lin("#40507E")), (1.0, C.hex_lin("#1C2444"))])
+    # note: for the world, Generated is the raw view direction (z = sin elevation)
+    col = n.ramp(sep.outputs[2], [(0.0, C.hex_lin("#F2A276")), (0.05, C.hex_lin("#E8907C")),
+                                  (0.16, C.hex_lin("#A879A6")), (0.38, C.hex_lin("#40507E")),
+                                  (0.75, C.hex_lin("#1C2444"))])
     bg = n.node("ShaderNodeBackground")
     n.link(col, bg.inputs[0])
-    bg.inputs[1].default_value = 2.6
+    bg.inputs[1].default_value = 2.0
     out = n.node("ShaderNodeOutputWorld")
     n.link(bg.outputs[0], out.inputs[0])
 

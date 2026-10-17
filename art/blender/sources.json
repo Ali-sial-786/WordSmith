@@ -1,0 +1,134 @@
+{
+  "_comment": "Third-party inputs of the Blender render pipeline (art/blender). Fetched by fetch_assets.py into art/third_party/blender/ (git-ignored). Only CC0 / Apache-2.0 material. Nothing here is shipped as-is in the app: textures are baked into renders; the font is used for the icon render.",
+  "retrieved": "2026-10-17",
+  "assets": [
+    {
+      "file": "ambientcg/Metal052C_1K-JPG.zip",
+      "unzip_to": "ambientcg/Metal052C",
+      "url": "https://ambientcg.com/get?file=Metal052C_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Metal052C",
+      "sha256": "d8480374be0c4580d111e491221fecedd9d1f6ace36a13bb130279dafd61a74c",
+      "bytes": 5094841,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Iron roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvil & hammers"
+    },
+    {
+      "file": "ambientcg/Ground054_1K-JPG.zip",
+      "unzip_to": "ambientcg/Ground054",
+      "url": "https://ambientcg.com/get?file=Ground054_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Ground054",
+      "sha256": "b325ec2f167dce95a0fabc61a2104641288cf20915419578c3efdb46200c563e",
+      "bytes": 8674949,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Casting sand of the empty mold cell (cell_empty)"
+    },
+    {
+      "file": "ambientcg/Bricks102_1K-JPG.zip",
+      "unzip_to": "ambientcg/Bricks102",
+      "url": "https://ambientcg.com/get?file=Bricks102_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Bricks102",
+      "sha256": "503f1153a595bdf181015e369ae1b3406dd1a5640e38fd34d52899e919119f09",
+      "bytes": 4888684,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper)"
+    },
+    {
+      "file": "ambientcg/Bricks094_1K-JPG.zip",
+      "unzip_to": "ambientcg/Bricks094",
+      "url": "https://ambientcg.com/get?file=Bricks094_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Bricks094",
+      "sha256": "e64dacbaaf7820340807e1dd1e6d7e24e9ffbc893ce4e7e88e0aebcc0c99d0ec",
+      "bytes": 5147642,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper)"
+    },
+    {
+      "file": "ambientcg/Planks023A_1K-JPG.zip",
+      "unzip_to": "ambientcg/Planks023A",
+      "url": "https://ambientcg.com/get?file=Planks023A_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Planks023A",
+      "sha256": "0d3e5649dcfd41239c9d34c3214c410faec32175d7d77e7de53fba450e33f669",
+      "bytes": 6793089,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Wood: beams, stumps, barrels, handles, doors, water wheel (icon + all backgrounds)"
+    },
+    {
+      "file": "ambientcg/PavingStones142_1K-JPG.zip",
+      "unzip_to": "ambientcg/PavingStones142",
+      "url": "https://ambientcg.com/get?file=PavingStones142_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=PavingStones142",
+      "sha256": "13f354afee9eb22c73257610ca0cf2b4fe24db97f990b524c36bcdc7202c2ead",
+      "bytes": 8528952,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Flagstone floors (bg_hall, bg_tin, bg_copper interior)"
+    },
+    {
+      "file": "ambientcg/RoofingTiles014B_1K-JPG.zip",
+      "unzip_to": "ambientcg/RoofingTiles014B",
+      "url": "https://ambientcg.com/get?file=RoofingTiles014B_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=RoofingTiles014B",
+      "sha256": "62a52cd30b95a91b159fedf3b7f056f88316f16ec479daae285937052fe181f9",
+      "bytes": 6481693,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Clay roof tiles (bg_copper workshop, bg_tin cottages)"
+    },
+    {
+      "file": "ambientcg/Ground037_1K-JPG.zip",
+      "unzip_to": "ambientcg/Ground037",
+      "url": "https://ambientcg.com/get?file=Ground037_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Ground037",
+      "sha256": "4e69db2b7251b1736fa70fe6fe4ab80d64bd220117dd5dd4c7caaead51c2574e",
+      "bytes": 10574958,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Grassy ground / river banks (bg_tin outside, bg_copper)"
+    },
+    {
+      "file": "ambientcg/Plaster007_1K-JPG.zip",
+      "unzip_to": "ambientcg/Plaster007",
+      "url": "https://ambientcg.com/get?file=Plaster007_1K-JPG.zip",
+      "page": "https://ambientcg.com/view?id=Plaster007",
+      "sha256": "75c7d96a8e60c4c5073767508e34e88c73677a3641e40bb8aaa0f1d6674391c0",
+      "bytes": 8071422,
+      "author": "ambientCG (Lennart Demes)",
+      "licence": "CC0 1.0 Universal",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "used_for": "Old plaster walls (bg_tin smithy, bg_copper workshop)"
+    },
+    {
+      "file": "fonts/RobotoSlab-wght.ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/RobotoSlab%5Bwght%5D.ttf",
+      "page": "https://fonts.google.com/specimen/Roboto+Slab",
+      "sha256": "786ae192477447d33c6672c3055fba7cbfe45184c9a79e77a14f15716ca05b16",
+      "bytes": 251880,
+      "author": "Christian Robertson (Google Fonts)",
+      "licence": "Apache License 2.0",
+      "licence_url": "https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt",
+      "used_for": "The 3D 'W' on the app icon (static Black instance cut by fetch_assets.py); letters in preview mock-ups. Same font the app uses for tiles."
+    },
+    {
+      "file": "fonts/LICENSE-RobotoSlab.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358,
+      "author": "Google Fonts",
+      "licence": "Apache License 2.0 (licence text)",
+      "used_for": "Licence text for Roboto Slab"
+    }
+  ]
+}

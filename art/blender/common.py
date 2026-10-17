@@ -76,10 +76,6 @@ def hex_lin(h, a=1.0):
     return (srgb_to_lin(r), srgb_to_lin(g), srgb_to_lin(b), a)
 
 
-def mix_lin(c1, c2, t):
-    return tuple(a * (1 - t) + b * t for a, b in zip(c1, c2))
-
-
 # --------------------------------------------------------------------------
 # scene setup
 # --------------------------------------------------------------------------
@@ -214,21 +210,6 @@ def point_light(name, loc, energy, radius=0.1, color=(1, 1, 1)):
     return ob
 
 
-def spot_light(name, loc, target, energy, angle=45, blend=0.5, radius=0.1,
-               color=(1, 1, 1)):
-    li = bpy.data.lights.new(name, "SPOT")
-    li.energy = energy
-    li.spot_size = math.radians(angle)
-    li.spot_blend = blend
-    li.shadow_soft_size = radius
-    li.color = color[:3]
-    ob = bpy.data.objects.new(name, li)
-    bpy.context.scene.collection.objects.link(ob)
-    ob.location = loc
-    look_at(ob, target)
-    return ob
-
-
 def sun_light(name, rot, energy, angle=2.0, color=(1, 1, 1)):
     li = bpy.data.lights.new(name, "SUN")
     li.energy = energy
@@ -310,24 +291,6 @@ def lathe(name, profile, segments=256, smooth=True, coll=None, cap_center=True):
     return mesh_object(name, verts, faces, smooth, coll)
 
 
-def add_modifier_subsurf(ob, levels=2):
-    m = ob.modifiers.new("Subsurf", "SUBSURF")
-    m.levels = levels
-    m.render_levels = levels
-    return m
-
-
-def add_bevel(ob, width=0.02, segments=3, limit="ANGLE", angle=30):
-    m = ob.modifiers.new("Bevel", "BEVEL")
-    m.width = width
-    m.segments = segments
-    m.limit_method = limit
-    if limit == "ANGLE":
-        m.angle_limit = math.radians(angle)
-    m.harden_normals = False
-    return m
-
-
 def shade_smooth(ob, auto_angle=None):
     for p in ob.data.polygons:
         p.use_smooth = True
@@ -339,23 +302,6 @@ def shade_smooth(ob, auto_angle=None):
             ob.select_set(False)
         except Exception:
             pass
-
-
-def primitive(kind, name, loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), **kw):
-    fn = {
-        "cube": bpy.ops.mesh.primitive_cube_add,
-        "cyl": bpy.ops.mesh.primitive_cylinder_add,
-        "uvsphere": bpy.ops.mesh.primitive_uv_sphere_add,
-        "ico": bpy.ops.mesh.primitive_ico_sphere_add,
-        "plane": bpy.ops.mesh.primitive_plane_add,
-        "cone": bpy.ops.mesh.primitive_cone_add,
-        "torus": bpy.ops.mesh.primitive_torus_add,
-    }[kind]
-    fn(location=loc, rotation=[math.radians(a) for a in rot], **kw)
-    ob = bpy.context.active_object
-    ob.name = name
-    ob.scale = scale
-    return ob
 
 
 def apply_transform(ob):
@@ -496,52 +442,6 @@ def tex_set(asset_id, res="1K"):
     return out
 
 
-def pbr_material(name, asset_id, scale=1.0, tint=None, tint_mix=0.0,
-                 rough_mul=1.0, rough_add=0.0, normal_strength=1.0,
-                 metallic=None, value_mul=1.0, proj="BOX", coord="Object",
-                 bump_disp=0.0, emission=None):
-    """Principled material from an ambientCG set, with optional tint/darkening."""
-    t = tex_set(asset_id)
-    m = new_material(name)
-    n = NT(m)
-    tc = n.texcoord()
-    mp = n.node("ShaderNodeMapping")
-    mp.inputs["Scale"].default_value = (scale, scale, scale)
-    n.link(tc.outputs[coord], mp.inputs["Vector"])
-    vec = mp.outputs[0]
-    p = n.node("ShaderNodeBsdfPrincipled")
-    col = n.image(t["Color"], vec, "sRGB", proj).outputs[0]
-    if tint is not None:
-        col = n.mix(col, tint, tint_mix, blend="MULTIPLY" if tint_mix < 0 else "MIX") \
-            if tint_mix >= 0 else col
-    if value_mul != 1.0:
-        hsv = n.node("ShaderNodeHueSaturation")
-        n.set(hsv, "Color", col)
-        hsv.inputs["Value"].default_value = value_mul
-        col = hsv.outputs[0]
-    n.link(col, p.inputs["Base Color"])
-    if "Roughness" in t:
-        r = n.image(t["Roughness"], vec, "Non-Color", proj).outputs[0]
-        r = n.maprange(r, 0, 1, rough_add, rough_add + rough_mul, clamp=True)
-        n.link(r, p.inputs["Roughness"])
-    if metallic is not None:
-        p.inputs["Metallic"].default_value = metallic
-    elif "Metalness" in t:
-        n.link(n.image(t["Metalness"], vec, "Non-Color", proj).outputs[0],
-               p.inputs["Metallic"])
-    if "NormalGL" in t and normal_strength > 0:
-        nm = n.node("ShaderNodeNormalMap")
-        nm.inputs["Strength"].default_value = normal_strength
-        n.link(n.image(t["NormalGL"], vec, "Non-Color", proj).outputs[0],
-               nm.inputs["Color"])
-        n.link(nm.outputs[0], p.inputs["Normal"])
-    if emission is not None:
-        p.inputs["Emission Color"].default_value = emission[0]
-        p.inputs["Emission Strength"].default_value = emission[1]
-    n.output(p.outputs[0])
-    return m
-
-
 def emission_material(name, color_lin, strength=1.0):
     m = new_material(name)
     n = NT(m)
@@ -549,14 +449,6 @@ def emission_material(name, color_lin, strength=1.0):
     e.inputs[0].default_value = color_lin
     e.inputs[1].default_value = strength
     n.output(e.outputs[0])
-    return m
-
-
-def holdout_material(name="Holdout"):
-    m = new_material(name)
-    n = NT(m)
-    h = n.node("ShaderNodeHoldout")
-    n.output(h.outputs[0])
     return m
 
 
@@ -608,6 +500,3 @@ def ring_light(name, radius, z, color, peak, base, focus=2.0,
     return ob
 
 
-
-def log(*a):
-    print("[wordsmith]", *a, flush=True)

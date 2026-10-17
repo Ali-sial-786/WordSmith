@@ -160,7 +160,45 @@ def cells():
     print("preview cells")
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells}
+def bg():
+    """Backgrounds side by side: raw (zones marked) and app-like (dim + blur
+    with a mock grid, ring and flame band)."""
+    names = [n for n in ("bg_hall", "bg_tin", "bg_copper")
+             if os.path.exists(os.path.join(IMG, n + ".webp"))]
+    if not names:
+        return
+    W, H = 360, 780
+    sheet = Image.new("RGBA", (len(names) * (W + 10) * 2, H + 30), FORGE_BLACK + (255,))
+    d0 = ImageDraw.Draw(sheet)
+    face = img("anvil_face.webp")
+    empty = img("cell_empty.png")
+    for i, n in enumerate(names):
+        im = img(n + ".webp").resize((W, H), Image.LANCZOS)
+        raw_ = im.copy()
+        d = ImageDraw.Draw(raw_)
+        for frac, col in ((0.45, (80, 200, 255, 255)), (0.60, (255, 120, 40, 255))):
+            d.line([(0, H * frac), (W, H * frac)], fill=col, width=2)
+        sheet.alpha_composite(raw_, (i * 2 * (W + 10), 30))
+        app = im.filter(ImageFilter.GaussianBlur(3))
+        dark = Image.new("RGBA", app.size, (0, 0, 0, 90))
+        app.alpha_composite(dark)
+        # mock grid in the top 45 %
+        cs = 34
+        for r in range(5):
+            for c in range(6):
+                if (r + c) % 3 == 0 or r == 2:
+                    app.alpha_composite(empty.resize((cs, cs), Image.LANCZOS),
+                                        (60 + c * (cs + 4), 120 + r * (cs + 4)))
+        # mock anvil ring at the bottom
+        fs = 250
+        app.alpha_composite(face.resize((fs, fs), Image.LANCZOS), ((W - fs) // 2, H - fs - 40))
+        sheet.alpha_composite(app, (i * 2 * (W + 10) + W + 5, 30))
+        d0.text((i * 2 * (W + 10) + 4, 8), n + "  (raw, zones)  |  app-like", fill=WHITE_HEAT)
+    sheet.save(os.path.join(PV, "backgrounds.png"))
+    print("preview bg")
+
+
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "bg": bg}
 
 if __name__ == "__main__":
     for k in (sys.argv[1:] or list(STEPS)):

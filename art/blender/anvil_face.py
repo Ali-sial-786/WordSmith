@@ -235,11 +235,6 @@ def rivet_mat(heat=False):
     return m
 
 
-def black_emitter(src_builder):
-    """Material for the glow pass: emission from src, no reflections."""
-    return src_builder
-
-
 # --------------------------------------------------------------------------
 def lights():
     C.world_gradient(C.hex_lin("#080706"), C.hex_lin("#2A211B"),
@@ -260,8 +255,7 @@ def lights():
 
 def glow_materials(plate, band, rivets):
     """Emission-only versions (black, non-reflective bodies)."""
-    def emit_only(name, builder_heat):
-        m = builder_heat
+    def emit_only(m):
         # strip reflections: make the BSDF black & rough
         for nd in m.node_tree.nodes:
             if nd.type == "BSDF_PRINCIPLED":
@@ -273,9 +267,9 @@ def glow_materials(plate, band, rivets):
                     m.node_tree.links.remove(lk)
                 nd.inputs["Roughness"].default_value = 1.0
         return m
-    C.assign(plate, emit_only("PlateGlow", iron_face(heat=True)))
-    C.assign(band, emit_only("BandGlow", bronze(heat=True)))
-    rm = emit_only("RivetGlow", rivet_mat(heat=True))
+    C.assign(plate, emit_only(iron_face(heat=True)))
+    C.assign(band, emit_only(bronze(heat=True)))
+    rm = emit_only(rivet_mat(heat=True))
     for rv in rivets:
         C.assign(rv, rm)
 

@@ -54,10 +54,19 @@ class ForgeBackground extends ConsumerWidget {
         ),
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Image.asset(
-            image,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          // Warm grade: dimmed yellow firelight otherwise drifts olive.
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.matrix([
+              1.06, 0, 0, 0, 0, //
+              0, 0.86, 0, 0, 0, //
+              0, 0, 0.7, 0, 0, //
+              0, 0, 0, 1, 0, //
+            ]),
+            child: Image.asset(
+              image,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           ),
         ),
         DecoratedBox(

@@ -111,7 +111,7 @@ def build(M):
                  color=(0.5, 0.6, 0.9))
 
     # smoke + embers -----------------------------------------------------------
-    K.haze((-W_HALF, FRONT + 2, 0), (W_HALF, BACK, HEIGHT), density=0.005,
+    K.haze((-W_HALF + 0.02, FRONT + 2, 0.03), (W_HALF - 0.02, BACK - 0.02, HEIGHT - 0.02), density=0.005,
            color=(1.0, 0.9, 0.82), anisotropy=0.45)
     K.embers((-0.8, FORGE_Y - 0.6, 1.6), (0.8, FORGE_Y + 0.2, 3.2), count=22, seed=5,
              radius=0.012)
