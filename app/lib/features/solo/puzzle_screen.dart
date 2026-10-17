@@ -318,6 +318,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     return Scaffold(
       body: ForgeBackground(
         image: chapterBackground(_game.look),
+        warmth: chapterWarmth(_game.look),
         fire: 1,
         fireHeight: 0.5,
         child: SparkField(

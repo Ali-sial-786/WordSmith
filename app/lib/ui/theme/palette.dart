@@ -69,12 +69,26 @@ class MetalStyle {
   );
 }
 
-/// Chapters that have their own scene so far (docs/ART_AND_AUDIO.md §4);
-/// the rest use the Forge Hall until their art lands.
-const _chapterScenes = {'tin', 'copper', 'bronze'};
+/// Chapters with their own scene (docs/ART_AND_AUDIO.md §4); anything else
+/// uses the Forge Hall.
+const _chapterScenes = {
+  'tin',
+  'copper',
+  'bronze',
+  'iron',
+  'steel',
+  'silver',
+  'gold',
+  'damascus',
+  'starmetal',
+};
+
+/// Moonlit and cool scenes keep most of their blue under the warm grade.
+const _coolScenes = {'iron', 'steel', 'silver', 'starmetal'};
+
+double chapterWarmth(String chapterId) => _coolScenes.contains(chapterId) ? 0.3 : 1;
 
 bool hasChapterScene(String chapterId) => _chapterScenes.contains(chapterId);
 
-String chapterBackground(String chapterId) => _chapterScenes.contains(chapterId)
-    ? 'assets/images/bg_$chapterId.webp'
-    : 'assets/images/bg_hall.webp';
+String chapterBackground(String chapterId) =>
+    _chapterScenes.contains(chapterId) ? 'assets/images/bg_$chapterId.webp' : 'assets/images/bg_hall.webp';

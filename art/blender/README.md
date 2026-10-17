@@ -118,9 +118,17 @@ Every render is logged in `_renders/render_times.log`.
 | scene_hall.py | 720×1561 (→1080×2340) | 80 | ~8.5 min (509 s) | volumetric haze + flame volumes |
 | scene_tin.py | 720×1561 (→1080×2340) | 80 | ~5.5 min (339 s) | volumetric haze |
 | scene_copper.py | 720×1561 (→1080×2340) | 80 | ~2.5 min (148 s) | |
+| scene_bronze.py | 720×1561 (→1080×2340) | 80 | ~7.5 min (448 s) | volumetric haze, torches |
+| scene_iron.py | 720×1561 (→1080×2340) | 64 | ~5 min (309 s) | haze (volume step rate 8) for the moon shaft |
+| scene_steel.py | 720×1561 (→1080×2340) | 64 | ~5 min (295 s) | haze |
+| scene_silver.py | 720×1561 (→1080×2340) | 64 | ~4.5 min (265 s) | haze |
+| scene_gold.py | 720×1561 (→1080×2340) | 64 | ~5.5 min (328 s) | ~500 objects (coins are instances) |
+| scene_damascus.py | 720×1561 (→1080×2340) | 64 | ~6 min (373 s) | haze |
+| scene_starmetal.py | 720×1561 (→1080×2340) | 64 | ~7 min (419 s) | haze, emissive sky, displaced ground |
 | post.py (all) | | | ~30 s | |
 
-Total for `./run_all.sh` is about 45 min. `QUICK=1` previews take 10–60 s per asset.
+Total for `./run_all.sh` is about 1.5–2 h. `QUICK=1` previews take 10–60 s per asset. The chapter scenes from bronze
+on default to 64 samples and a volume step rate of 8 (bronze: 80 / 4), which keeps each under ~8 min.
 
 ## Look and tuning
 
@@ -137,3 +145,11 @@ Total for `./run_all.sh` is about 45 min. `QUICK=1` previews take 10–60 s per 
   the elevation), not a 0..1 value. Place sky ramp stops with the horizon at 0.
 * Keep a volume box (haze) slightly inside the walls and floor. If its faces are coplanar
   with the floor, the floor turns into a bright, washed-out plane.
+* The frame is narrow (about 35° across), so props only show within about ±1.1 m of the centre
+  line at the anvil's depth, and side walls are never seen. Check placement with a `QUICK=1` render.
+* Openings in flat walls (windows, arches): `K.wall_with_openings` with `K.arch_outline` cuts them
+  with an exact boolean. For a displaced rock wall (bg_iron) delete grid faces before displacing
+  instead: a boolean on a displaced, solidified slab comes out empty.
+* An emissive "sky" plane behind a window blocks the sun unless it has `visible_shadow = False`.
+* Thin planes lying just above the floor (sand patches) cast a dark outline under low light:
+  turn their shadows off.

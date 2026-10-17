@@ -176,16 +176,16 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           ..fillDelay.clear()
           ..flash.clear();
       case RoundEnd(:final completed, :final xp):
-        sfx.play(completed ? SfxId.forged : SfxId.roundLose);
+        completed ? sfx.play(SfxId.forged) : sfx.play(SfxId.roundLose, volume: 0.8);
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
         }
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
       case VsRoundEnd(:final winner):
-        sfx.play(winner == _session?.me ? SfxId.roundWin : SfxId.roundLose);
+        winner == _session?.me ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
       case SeriesEnd(:final winner, :final xp):
-        sfx.play(winner == _session?.me ? SfxId.seriesWin : SfxId.roundLose);
+        winner == _session?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
         }

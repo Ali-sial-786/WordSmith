@@ -122,7 +122,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
           _warnedRound = round;
         }
         if (_warned.add(id)) {
-          _sfx.play(SfxId.rivalFinished, volume: 0.7);
+          _sfx.play(SfxId.rivalFinished, volume: 0.85);
           _haptic(HapticFeedback.heavyImpact);
         }
       case RoomError(:final code) when code == 'not_playing':

@@ -103,6 +103,7 @@ def sand_patch(name, center, rx, ry, mat, seed=3):
         verts.append((center[0] + rx * k * math.cos(a), center[1] + ry * k * math.sin(a), 0.004))
     faces = [(0, 1 + i, 1 + (i + 1) % n) for i in range(n)]
     ob = C.mesh_object(name, verts, faces, smooth=False)
+    ob.visible_shadow = False             # its 4 mm edge would cast a thin dark outline
     C.assign(ob, mat)
     return ob
 

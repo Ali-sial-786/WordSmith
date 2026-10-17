@@ -289,4 +289,43 @@ void main() {
     s.feed.add(const FeedLine('sam forged SEAT  +30', Color(0xFFE1B53B)));
     await _shoot(tester, 'coop_round', RoundView(session: s, cues: MoldCues(), onLeave: () {}));
   });
+
+  for (final chapter in ['silver', 'starmetal', 'gold', 'damascus']) {
+    testWidgets('puzzle in $chapter', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 900, 'campaignStage': 1}),
+        'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+      });
+      final store = await Store.open();
+      final container = ProviderContainer(
+        overrides: [
+          storeProvider.overrideWithValue(store),
+          campaignProvider.overrideWithValue(
+            Campaign.fromJson({
+              'version': 1,
+              'chapters': [
+                {'id': chapter, 'name': chapter[0].toUpperCase() + chapter.substring(1), 'first': 1, 'count': 70},
+              ],
+              'puzzles': [tearJson()],
+            }),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.binding.setSurfaceSize(const Size(412, 892));
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: WordsmithApp(router: GoRouter(initialLocation: '/play/1', routes: appRouter.configuration.routes)),
+        ),
+      );
+      for (var i = 0; i < 4; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/puzzle_$chapter.png'));
+    });
+  }
 }

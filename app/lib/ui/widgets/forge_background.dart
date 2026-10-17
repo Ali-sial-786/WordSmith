@@ -20,6 +20,7 @@ class ForgeBackground extends ConsumerWidget {
     this.blur = 3,
     this.fire = 0.8,
     this.fireHeight = 0.42,
+    this.warmth = 1,
   });
 
   /// Asset path, e.g. `assets/images/bg_tin.webp`.
@@ -33,6 +34,10 @@ class ForgeBackground extends ConsumerWidget {
 
   /// Fraction of the screen height the fire layer covers.
   final double fireHeight;
+
+  /// How strongly to warm the picture (0 leaves it as rendered). Moonlit and
+  /// cool chapters use less, so their blues survive.
+  final double warmth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,10 +61,10 @@ class ForgeBackground extends ConsumerWidget {
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           // Warm grade: dimmed yellow firelight otherwise drifts olive.
           child: ColorFiltered(
-            colorFilter: const ColorFilter.matrix([
-              1.06, 0, 0, 0, 0, //
-              0, 0.86, 0, 0, 0, //
-              0, 0, 0.7, 0, 0, //
+            colorFilter: ColorFilter.matrix([
+              1 + 0.06 * warmth, 0, 0, 0, 0, //
+              0, 1 - 0.14 * warmth, 0, 0, 0, //
+              0, 0, 1 - 0.3 * warmth, 0, 0, //
               0, 0, 0, 1, 0, //
             ]),
             child: Image.asset(

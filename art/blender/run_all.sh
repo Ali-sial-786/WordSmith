@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Re-render every Wordsmith 3D asset from scratch, reproducibly.
 #
-#   ./run_all.sh                 # everything (~2.5 h on 4 CPU cores)
+#   ./run_all.sh                 # everything (~2 h on 4 CPU cores)
 #   ./run_all.sh tiles icon      # only some: tiles anvil cells icon hall tin copper bronze iron
 #                                #   steel silver gold damascus starmetal
 #   QUICK=1 ./run_all.sh hall    # fast low-res/low-sample preview render
