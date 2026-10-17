@@ -203,3 +203,46 @@ class PlateButton extends StatelessWidget {
     );
   }
 }
+
+/// A small forged plate for actions inside cards ("Claim", "Send").
+class ForgeChipButton extends StatelessWidget {
+  const ForgeChipButton({super.key, required this.label, required this.onPressed, this.primary = true, this.icon});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool primary;
+  final String? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final fg = primary ? Palette.darkLetter : Palette.whiteHeat;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: SizedBox(
+        height: 42,
+        child: ForgeFrame(
+          kind: primary ? ForgeFrameKind.platePrimary : ForgeFrameKind.plate,
+          glint: primary && enabled,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[GameIcon(icon!, size: 16, color: fg), const SizedBox(width: 6)],
+                    Text(label, style: displayStyle(14, color: fg)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

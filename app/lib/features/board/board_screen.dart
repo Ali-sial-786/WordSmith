@@ -270,30 +270,46 @@ class _StokeStep extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: big ? 42 : 36,
-            height: big ? 42 : 36,
+            width: big ? 44 : 38,
+            height: big ? 44 : 38,
             margin: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: done
-                  ? Palette.ash
-                  : today
-                  ? Palette.ember.withValues(alpha: 0.25)
-                  : Palette.forgeBlack,
-              border: Border.all(
-                color: today
-                    ? Palette.molten
-                    : big
-                    ? Palette.gold
-                    : Palette.ash,
-                width: today ? 2.5 : 1.5,
-              ),
-              boxShadow: [if (today) BoxShadow(color: Palette.ember.withValues(alpha: 0.6), blurRadius: 12)],
+              boxShadow: [if (today) BoxShadow(color: Palette.ember.withValues(alpha: 0.7), blurRadius: 14)],
             ),
-            child: Center(
-              child: done
-                  ? const Icon(Icons.check, size: 18, color: Palette.verdigris)
-                  : GameIcon(icon, size: big ? 22 : 18, color: big ? Palette.gold : Palette.molten),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: done ? 0.55 : 1,
+                    child: Image.asset(
+                      today ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.medium,
+                      errorBuilder: (_, _, _) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: today ? Palette.ember.withValues(alpha: 0.25) : Palette.forgeBlack,
+                          border: Border.all(color: today ? Palette.molten : Palette.ash, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (done)
+                  const Icon(Icons.check, size: 20, color: Palette.verdigris)
+                else
+                  GameIcon(
+                    icon,
+                    size: big ? 20 : 16,
+                    color: today
+                        ? Palette.darkLetter
+                        : big
+                        ? Palette.gold
+                        : Palette.molten,
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -351,9 +367,9 @@ class _OrdersCard extends StatelessWidget {
                 if (orders.chestClaimed)
                   const Icon(Icons.check_circle, color: Palette.verdigris)
                 else
-                  FilledButton(
+                  ForgeChipButton(
                     onPressed: orders.chestReady && busy == null ? () => onClaim('chest') : null,
-                    child: Text(allClaimed ? 'Open' : '${orders.daily.where((o) => o.claimed).length}/3'),
+                    label: allClaimed ? 'Open' : '${orders.daily.where((o) => o.claimed).length}/3',
                   ),
               ],
             ),
@@ -436,7 +452,7 @@ class _OrderTile extends StatelessWidget {
           if (o.claimed)
             const Icon(Icons.check_circle, color: Palette.verdigris)
           else if (o.done)
-            FilledButton(onPressed: busy ? null : onClaim, child: const Text('Claim'))
+            ForgeChipButton(onPressed: busy ? null : onClaim, label: 'Claim')
           else if (canSwap)
             IconButton(
               tooltip: 'Swap this order',
@@ -480,9 +496,9 @@ class _GiftsCard extends ConsumerWidget {
                 style: text.bodyMedium,
               ),
             ),
-            FilledButton(
+            ForgeChipButton(
               onPressed: gifts.canClaim && busy == null ? onClaim : null,
-              child: Text(left <= 0 && gifts.pending.isNotEmpty ? 'Tomorrow' : 'Collect'),
+              label: left <= 0 && gifts.pending.isNotEmpty ? 'Tomorrow' : 'Collect',
             ),
           ],
         ),
@@ -509,10 +525,11 @@ class _GiftsCard extends ConsumerWidget {
                   if (gifts.sentToday.contains(f.id))
                     Text('Sent', style: text.labelMedium?.copyWith(color: Palette.verdigris))
                   else
-                    OutlinedButton.icon(
+                    ForgeChipButton(
                       onPressed: busy == null ? () => onSend(f.id) : null,
-                      icon: const GameIcon('hammer', size: 16, color: Palette.molten),
-                      label: Text(busy == 'send:${f.id}' ? 'Sending…' : 'Send'),
+                      primary: false,
+                      icon: 'hammer',
+                      label: busy == 'send:${f.id}' ? 'Sending…' : 'Send',
                     ),
                 ],
               ),
@@ -568,7 +585,7 @@ class _TrialsCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  FilledButton(onPressed: busy ? null : onClaim, child: const Text('Claim')),
+                  ForgeChipButton(onPressed: busy ? null : onClaim, label: 'Claim'),
                 ],
               ),
             ),

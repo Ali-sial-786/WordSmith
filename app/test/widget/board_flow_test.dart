@@ -12,6 +12,7 @@ import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/engine/hints.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/game/providers.dart';
+import 'package:wordsmith/ui/widgets/metal_button.dart';
 
 import '../fixtures/fake_backend.dart';
 import '../fixtures/puzzles.dart';
@@ -86,7 +87,7 @@ void main() {
 
     // Claim the finished order.
     expect(find.text('Find 10 bonus words'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Claim').first);
+    await tester.tap(find.widgetWithText(ForgeChipButton, 'Claim').first);
     await popupGone();
     expect(container.read(profileProvider).hintCount(HintKind.hammer), 4);
 
@@ -114,7 +115,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Last week: 1st of 2!'), 200);
     await tester.ensureVisible(find.text('Last week: 1st of 2!'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Claim').last);
+    await tester.tap(find.widgetWithText(ForgeChipButton, 'Claim').last);
     await popupGone();
     expect(find.text('Last week: 1st of 2!'), findsNothing);
     expect(find.text('Ali (you)'), findsOneWidget);

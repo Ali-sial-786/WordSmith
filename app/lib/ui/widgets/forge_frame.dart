@@ -11,29 +11,35 @@ import '../theme/palette.dart';
 /// can't be loaded.
 enum ForgeFrameKind {
   /// A dark forged-iron menu button with a polished bronze rim.
-  plate('assets/ui/plate.png', Rect.fromLTRB(20, 20, 140, 44), 14),
+  plate('assets/ui/plate.png', Size(160, 64), Rect.fromLTRB(20, 20, 140, 44), 14),
 
   /// The glowing hot-metal button with a gold rim.
-  platePrimary('assets/ui/plate_primary.png', Rect.fromLTRB(20, 20, 140, 44), 14),
+  platePrimary('assets/ui/plate_primary.png', Size(160, 64), Rect.fromLTRB(20, 20, 140, 44), 14),
 
   /// A card: dark brushed iron in a riveted steel-and-bronze frame.
-  panel('assets/ui/panel.png', Rect.fromLTRB(24, 24, 72, 72), 18),
+  panel('assets/ui/panel.png', Size(96, 96), Rect.fromLTRB(24, 24, 72, 72), 18),
 
   /// A card with a gold frame, for rewards waiting.
-  panelGold('assets/ui/panel_gold.png', Rect.fromLTRB(24, 24, 72, 72), 18),
+  panelGold('assets/ui/panel_gold.png', Size(96, 96), Rect.fromLTRB(24, 24, 72, 72), 18),
 
   /// A small pill for chips and badges.
-  tab('assets/ui/tab.png', Rect.fromLTRB(12, 10, 36, 14), 12);
+  tab('assets/ui/tab.png', Size(48, 24), Rect.fromLTRB(12, 10, 36, 14), 12);
 
-  const ForgeFrameKind(this.asset, this.slice, this.radius);
+  const ForgeFrameKind(this.asset, this.size, this.slice, this.radius);
 
   final String asset;
+
+  /// The image's size in logical pixels.
+  final Size size;
 
   /// The stretchable middle, in logical pixels (image pixels / 3).
   final Rect slice;
 
   /// Corner radius, for shadows, ink and the painted fallback.
   final double radius;
+
+  /// The smallest box the nine slices fit in: the corners can't shrink.
+  Size get minSize => Size(slice.left + size.width - slice.right, slice.top + size.height - slice.bottom);
 
   BoxDecoration get fallback => switch (this) {
     plate => BoxDecoration(
@@ -102,16 +108,26 @@ class ForgeFrame extends StatelessWidget {
         ],
       ),
       child: Stack(
+        // The child gets the frame's own constraints, so a fixed-height
+        // button's ink fills the whole plate.
+        fit: StackFit.passthrough,
         children: [
           Positioned.fill(
-            child: Image.asset(
-              kind.asset,
-              centerSlice: kind.slice,
-              fit: BoxFit.fill,
-              scale: 3,
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => DecoratedBox(decoration: kind.fallback),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final painted = DecoratedBox(decoration: kind.fallback);
+                // Smaller than the corners (mid-animation, say): paint it.
+                if (c.maxWidth < kind.minSize.width || c.maxHeight < kind.minSize.height) return painted;
+                return Image.asset(
+                  kind.asset,
+                  centerSlice: kind.slice,
+                  fit: BoxFit.fill,
+                  scale: 3,
+                  filterQuality: FilterQuality.medium,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => painted,
+                );
+              },
             ),
           ),
           if (glint)
