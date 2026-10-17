@@ -368,3 +368,56 @@ describe("invite notifications", () => {
     expect(google.seen).toEqual([]);
   });
 });
+
+describe("gift notifications (shared/forge-board.md, \"Gifts\")", () => {
+  let google: ReturnType<typeof fakeGoogle>;
+
+  beforeEach(() => {
+    google = fakeGoogle((token) => (token.startsWith("dead") ? { status: 404, body: { error: { status: "NOT_FOUND" } } } : { status: 200, body: { name: "m" } }));
+    setFcmFetcher(google.fetch);
+    setFcmServiceAccount(serviceAccount);
+  });
+
+  afterEach(() => {
+    setFcmFetcher(null);
+    setFcmServiceAccount(null);
+  });
+
+  it("tell the friend about the gift on each of their phones, and forget dead tokens", async () => {
+    const a = await setUpClient();
+    const b = await setUpClient();
+    await befriend(a, b);
+    const phone = fcmToken("phone");
+    const dead = fcmToken("dead");
+    await register(b, phone);
+    await register(b, dead);
+
+    const res = await a.post(`/v1/friends/${b.uid}/gift`, {});
+    expect(res.status, await res.clone().text()).toBe(200);
+    await until("two sends", () => google.sends().length === 2);
+    const expected = (token: string) => ({
+      token,
+      notification: { title: `${a.username} sent you a gift`, body: "A free Hammer Strike is waiting in the Forge Hall" },
+      data: { type: "gift", from: a.uid },
+      android: { priority: "normal", ttl: "86400s", collapse_key: `gift-${a.uid}` },
+    });
+    expect(google.messages()).toEqual(expect.arrayContaining([expected(phone), expected(dead)]));
+    await until("the dead token forgotten", async () => (await tokensOf(b.uid)).length === 1);
+    expect(await tokensOf(b.uid)).toEqual([phone]);
+
+    // A gift that isn't sent (already sent today) notifies nobody.
+    expect((await a.post(`/v1/friends/${b.uid}/gift`, {})).status).toBe(409);
+    await sleep(100);
+    expect(google.sends()).toHaveLength(2);
+  });
+
+  it("send nothing to a friend with no phones, and the gift still goes", async () => {
+    const a = await setUpClient();
+    const b = await setUpClient();
+    await befriend(a, b);
+    expect((await a.post(`/v1/friends/${b.uid}/gift`, {})).status).toBe(200);
+    await sleep(100);
+    expect(google.sends()).toHaveLength(0);
+    expect((await body<{ gifts: { pending: unknown[] } }>(await b.get("/v1/me/board"))).gifts.pending).toHaveLength(1);
+  });
+});

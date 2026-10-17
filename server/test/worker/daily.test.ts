@@ -211,3 +211,89 @@ describe("POST /v1/daily/complete", () => {
     expect((await body<Message>(await a.get("/v1/me"))).totalXp).toBe(0);
   });
 });
+
+describe("catch-up days (shared/daily.md, \"Calendar and catch-up\")", () => {
+  it("serves any day from the 1st of last month, and says how many I've done", async () => {
+    let a: Client = await setUpClient();
+    a = await at("2026-10-17T15:00:00Z", a);
+    const old = await body<Message>(await a.get("/v1/daily?date=2026-09-01"));
+    const bank = expectedPuzzle("2026-09-01", 2); // a Tuesday
+    expect(old).toMatchObject({ date: "2026-09-01", heat: 2, completed: false, streak: 0, best: 0, total: 0 });
+    expect(old.puzzle).toMatchObject({ id: "daily-2026-09-01", letters: bank.letters, words: bank.words });
+    expect((await body<Message>(await a.get("/v1/daily?date=2026-10-17"))).date).toBe("2026-10-17");
+    for (const date of ["2026-08-31", "2026-10-18"]) {
+      expect(await body(await a.get(`/v1/daily?date=${date}`))).toMatchObject({ error: "wrong_day" });
+    }
+    for (const date of ["yesterday", "2026-02-30", ""]) {
+      const res = await a.get(`/v1/daily?date=${date}`);
+      expect(res.status).toBe(400);
+      expect(await body(res)).toMatchObject({ error: "invalid_body" });
+    }
+  });
+
+  it("pays a flat 15 XP for a late day, which never touches the streak", async () => {
+    let a: Client = await setUpClient();
+    // On time on the 15th and 16th: a streak of 2.
+    a = await at("2026-10-15T10:00:00Z", a);
+    await complete(a, solved(await daily(a)));
+    a = await at("2026-10-16T10:00:00Z", a);
+    expect((await complete(a, solved(await daily(a)))).body).toMatchObject({ xp: 30, streak: 2 });
+
+    // The 14th, late: 15 XP, the streak stays at 2 (it can't be repaired backwards).
+    const missed = await body<Message>(await a.get("/v1/daily?date=2026-10-14"));
+    const late = await complete(a, solved(missed));
+    expect(late.status, JSON.stringify(late.body)).toBe(200);
+    expect(late.body).toMatchObject({ xp: 15, late: true, streak: 2, best: 2, total: 3, alreadyDone: false });
+    expect((await complete(a, solved(missed))).body).toMatchObject({ xp: 0, late: true, alreadyDone: true, total: 3 });
+    expect(await body<Message>(await a.get("/v1/daily?date=2026-10-14"))).toMatchObject({ completed: true, streak: 2, best: 2, total: 3 });
+
+    // Yesterday, two hours into today, is late too.
+    a = await at("2026-10-18T02:00:00Z", a);
+    const yesterday = await body<Message>(await a.get("/v1/daily?date=2026-10-17"));
+    expect((await complete(a, solved(yesterday))).body).toMatchObject({ xp: 15, late: true, streak: 0, best: 2 });
+    // Today's, on time: the late 17th doesn't join it to the 16th.
+    expect((await complete(a, solved(await daily(a)))).body).toMatchObject({ xp: 25, late: false, streak: 1, best: 2, total: 5 });
+
+    const rows = await env.DB.prepare("SELECT date, xp, late FROM daily_completions WHERE user_id = ?1 ORDER BY date").bind(a.uid).all();
+    expect(rows.results).toEqual([
+      { date: "2026-10-14", xp: 15, late: 1 },
+      { date: "2026-10-15", xp: 25, late: 0 },
+      { date: "2026-10-16", xp: 30, late: 0 },
+      { date: "2026-10-17", xp: 15, late: 1 },
+      { date: "2026-10-18", xp: 25, late: 0 },
+    ]);
+    const me = await body<Message>(await a.get("/v1/me"));
+    expect(me.totalXp).toBe(25 + 30 + 15 + 15 + 25);
+  });
+
+  it("shows this month's and last month's calendar with trophies", async () => {
+    let a: Client = await setUpClient();
+    const insert = env.DB.prepare("INSERT INTO daily_completions (user_id, date, completed_at, xp, late) VALUES (?1, ?2, 0, 0, ?3)");
+    const days = (month: string, n: number) => Array.from({ length: n }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+    // February in full (gold), all but one day of March (silver), 7 days of September (bronze), a few of October.
+    await env.DB.batch([
+      ...days("2026-02", 28).map((d) => insert.bind(a.uid, d, 0)),
+      ...days("2026-03", 30).map((d) => insert.bind(a.uid, d, 0)),
+      ...days("2026-09", 7).map((d, i) => insert.bind(a.uid, d, i % 2)),
+      ...["2026-10-03", "2026-10-01"].map((d) => insert.bind(a.uid, d, 0)),
+    ]);
+    a = await at("2026-10-17T15:00:00Z", a);
+    const trophies = { bronze: 1, silver: 1, gold: 1 };
+    expect(await body(await a.get("/v1/daily/calendar"))).toEqual({ month: "2026-10", days: ["2026-10-01", "2026-10-03"], trophy: null, trophies });
+    expect(await body(await a.get("/v1/daily/calendar?month=2026-09"))).toEqual({ month: "2026-09", days: days("2026-09", 7), trophy: "bronze", trophies });
+    for (const month of ["2026-08", "2026-11", "2026-02"]) {
+      const res = await a.get(`/v1/daily/calendar?month=${month}`);
+      expect(res.status).toBe(400);
+      expect(await body(res)).toMatchObject({ error: "wrong_month" });
+    }
+    for (const month of ["2026-13", "Oct", "2026-10-01"]) {
+      expect(await body(await a.get(`/v1/daily/calendar?month=${month}`))).toMatchObject({ error: "invalid_body" });
+    }
+    // A late day counts for the calendar.
+    const late = await complete(a, solved(await body<Message>(await a.get("/v1/daily?date=2026-10-02"))));
+    expect(late.body).toMatchObject({ late: true, total: 68 });
+    expect(await body(await a.get("/v1/daily/calendar"))).toMatchObject({ days: ["2026-10-01", "2026-10-02", "2026-10-03"] });
+    // Needs a set-up account, like the rest.
+    expect((await (await client()).get("/v1/daily/calendar")).status).toBe(403);
+  });
+});
