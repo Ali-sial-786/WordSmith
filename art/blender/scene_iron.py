@@ -171,8 +171,8 @@ def build(M):
            seed=21, strength=5.5, name="HearthFire")
     K.flame_volume((HX, HY - 0.05, 1.2), size=(0.55, 0.32, 0.45), strength=1.4, name="HearthGlow")
     K.box("Fireback", (HX, BACK - 0.12, 1.6), (1.7, 0.1, 1.8), M["hood"], bevel=0.01)
-    bar = K.box("HotBar", (HX + 0.35, HY - 0.45, 0.9), (0.04, 1.0, 0.04), K.hot_bar_material("HotBar"),
-                bevel=0.006, rot=(-6, 0, -22))
+    K.box("HotBar", (HX + 0.35, HY - 0.45, 0.9), (0.04, 1.0, 0.04), K.hot_bar_material("HotBar"),
+          bevel=0.006, rot=(-6, 0, -22))
 
     # outside: snowy peaks under the night sky ----------------------------------
     K.plane("Ledge", (1.5, 14, 0.1), (40, 20), mat=M["ledge"])

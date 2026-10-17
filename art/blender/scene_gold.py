@@ -183,7 +183,7 @@ def build(M):
     K.coal_heap("HearthCoals", (HX, HY, 0.86), radius=(0.48, 0.42), height=0.12, strength=6.5)
     K.fire((HX, HY + 0.12, 0.9), spread=(0.36, 0.1), count=7, height=0.55, width=0.13, seed=31,
            strength=6.5, name="HearthFire")
-    cr = K.turned("Crucible", "crucible", (HX - 0.05, HY - 0.08, 0.88), 0.34, M["crucible"], segments=48)
+    K.turned("Crucible", "crucible", (HX - 0.05, HY - 0.08, 0.88), 0.34, M["crucible"], segments=48)
     K.turned("Melt", [(0.0, 0.0), (0.13, 0.0), (0.0, 0.004)], (HX - 0.05, HY - 0.08, 0.88 + 0.34 * 0.66), 1.0,
              M["molten"], segments=32)
     K.flame_volume((HX, HY, 1.15), size=(0.5, 0.4, 0.35), strength=2.0, name="HearthGlow")
@@ -209,7 +209,7 @@ def build(M):
     # foreground: open chest spilling coins, stacked bars --------------------------
     CX, CY = -0.85, 0.55
     K.box("Chest", (CX, CY, 0.2), (0.7, 0.45, 0.4), M["chest"], 0.02, rot=(0, 0, 12))
-    lid = K.box("ChestLid", (CX + 0.03, CY + 0.32, 0.55), (0.7, 0.08, 0.4), M["chest"], 0.02, rot=(-20, 0, 12))
+    K.box("ChestLid", (CX + 0.03, CY + 0.32, 0.55), (0.7, 0.08, 0.4), M["chest"], 0.02, rot=(-20, 0, 12))
     for i, dz in enumerate((0.08, 0.32)):
         K.box(f"ChestBand{i}", (CX, CY, dz), (0.72, 0.47, 0.04), M["trim"], 0.005, rot=(0, 0, 12))
     K.coin_pile("ChestCoins", (CX, CY, 0.36), 0.28, 0.14, 160, M["gold"], seed=3)

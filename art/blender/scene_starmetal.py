@@ -48,7 +48,7 @@ def starmetal_material(name="Starmetal", glow=4.0):
     n.link(tc.outputs["Object"], vor.inputs["Vector"])
     cell = n.node("ShaderNodeSeparateColor")
     n.link(vor.outputs["Color"], cell.inputs[0])
-    base = n.mix(C.hex_lin("#1E1A3C"), C.hex_lin("#4B3F86"), cell.outputs[0])
+    base = n.mix(C.hex_lin("#120F22"), C.hex_lin("#2E2856"), cell.outputs[0])
     p = n.node("ShaderNodeBsdfPrincipled")
     n.link(base, p.inputs["Base Color"])
     p.inputs["Metallic"].default_value = 0.85
@@ -62,7 +62,7 @@ def starmetal_material(name="Starmetal", glow=4.0):
     nz.inputs["Scale"].default_value = 4.0
     nz.inputs["Detail"].default_value = 6.0
     n.link(tc.outputs["Object"], nz.inputs["Vector"])
-    ridge = n.maprange(n.math("ABSOLUTE", n.math("SUBTRACT", nz.outputs[0], 0.5)), 0.0, 0.03, 1.0, 0.0)
+    ridge = n.maprange(n.math("ABSOLUTE", n.math("SUBTRACT", nz.outputs[0], 0.5)), 0.0, 0.006, 0.6, 0.0)
     # glints: a sparse scatter of tiny bright cells
     g = n.node("ShaderNodeTexVoronoi", _feature="F1")
     g.inputs["Scale"].default_value = 60.0
@@ -72,14 +72,14 @@ def starmetal_material(name="Starmetal", glow=4.0):
     glint = n.math("MULTIPLY", n.maprange(g.outputs["Distance"], 0.0, 0.12, 1.0, 0.0),
                    n.maprange(gs.outputs[0], 0.9, 1.0, 0.0, 1.0))
     emit = n.mix(C.hex_lin("#000000"), C.hex_lin("#9C7CFF"), ridge, blend="ADD")
-    emit = n.mix(emit, C.hex_lin("#F2ECFF"), n.math("MULTIPLY", glint, 3.0), blend="ADD")
+    emit = n.mix(emit, C.hex_lin("#F2ECFF"), n.math("MULTIPLY", glint, 6.0), blend="ADD")
     n.link(emit, p.inputs["Emission Color"])
     p.inputs["Emission Strength"].default_value = glow
     n.output(p.outputs[0])
     return m
 
 
-def lava_rock_material(name="LavaRock", lava=3.0):
+def lava_rock_material(name="LavaRock", lava=1.8):
     """Black volcanic rock (Rock035) with sparse glowing cracks, fading out
     toward the camera so the near ground stays dark."""
     m = K.tex_material(name, "Rock035", scale=0.25, value=0.35, sat=0.6, rough=(0.6, 1.0), normal=1.0)
@@ -97,7 +97,7 @@ def lava_rock_material(name="LavaRock", lava=3.0):
     geo = n.node("ShaderNodeNewGeometry")
     sep = n.node("ShaderNodeSeparateXYZ")
     n.link(geo.outputs["Position"], sep.inputs[0])
-    far = n.maprange(sep.outputs[1], 2.0, 6.0, 0.0, 1.0)
+    far = n.maprange(sep.outputs[1], 4.0, 9.0, 0.0, 1.0)
     heat = n.math("MULTIPLY", n.math("MULTIPLY", crack, patchy), far)
     col = n.ramp(heat, [(0.0, (0, 0, 0, 1)), (0.4, C.hex_lin("#8A1E06")), (1.0, C.hex_lin("#FF7A1E"))])
     n.link(col, p.inputs["Emission Color"])
@@ -110,14 +110,13 @@ def materials():
         rock=K.tex_material("Rock", "Rock035", scale=0.3, value=0.32, sat=0.6, rough=(0.6, 1.0),
                             normal=1.2),
         ground=lava_rock_material(),
-        far=K.tex_material("FarRock", "Rock035", scale=0.04, value=0.18, sat=0.5, rough=(0.7, 1.0)),
+        far=K.tex_material("FarRock", "Rock035", scale=0.04, value=0.1, sat=0.5, rough=(0.7, 1.0)),
         hearth=K.tex_material("HearthRock", "Rock035", scale=0.7, value=0.4, sat=0.6, rough=(0.6, 1.0),
                               soot=0.6, soot_range=(1.2, 2.6)),
         iron=P.iron_material("Iron", base="#565866", rough=(0.3, 0.5), bump=0.12),
-        star=starmetal_material(),
+        star=starmetal_material(glow=2.2),
         star_big=starmetal_material("StarmetalBig", glow=2.5),
         crater=K.glow_material("Crater", "#FF6A13", 14.0),
-        lava_flow=K.glow_material("LavaFlow", "#E0480E", 6.0),
         handle=P.wood_material("Handle", value=0.5, scale=3.0),
     )
 
@@ -177,7 +176,7 @@ def build(M):
     slab("PillarR", (2.45, 2.2, 2.2), (1.4, 2.0, 4.6), M["rock"], strength=0.4)
     slab("BackL", (-3.0, 3.2, 1.2), (2.4, 1.2, 2.6), M["rock"], strength=0.4)
 
-    # far volcano with a glowing crater and lava flows ----------------------------------
+    # far volcano with a glowing crater ----------------------------------
     vx, vy = VOLCANO
     bpy.ops.mesh.primitive_cone_add(vertices=48, radius1=42, radius2=4.0, depth=17, location=(vx, vy, 1.5))
     vol = bpy.context.active_object
@@ -193,21 +192,18 @@ def build(M):
     C.assign(vol, M["far"])
     bpy.ops.mesh.primitive_circle_add(vertices=32, radius=3.6, fill_type="NGON", location=(vx, vy, 10.05))
     C.assign(bpy.context.active_object, M["crater"])
-    for k, (dx, ln) in enumerate(((-1.0, 9), (1.5, 7))):
-        fl = K.box(f"Flow{k}", (vx + dx - 2.0, vy - 6, 6.0), (0.5, ln * 1.6, 0.2), M["lava_flow"], 0,
-                   rot=(-28, 0, 8 - 12 * k))
-    C.point_light("CraterGlow", (vx, vy - 8, 14), 60000, radius=4.0, color=(1.0, 0.4, 0.12))
+    C.point_light("CraterGlow", (vx, vy - 8, 14), 15000, radius=4.0, color=(1.0, 0.4, 0.12))
 
     # meteors streaking across the sky ---------------------------------------------------
     rnd = random.Random(12)
     streaks = []
-    for i in range(7):
+    for i in range(8):
         az = math.radians(rnd.uniform(-15, 14))
-        el = math.radians(rnd.uniform(6, 18))
+        el = math.radians(rnd.uniform(5, 18))
         D = 220
         head = (D * math.sin(az), D * math.cos(az), 1.45 + D * math.tan(el))
-        streaks.append((head, (-0.75 + rnd.uniform(-0.1, 0.1), 0.0, -0.5), rnd.uniform(14, 34)))
-    K.meteors(streaks, K.meteor_material("Meteor", strength=16.0), radius=0.28)
+        streaks.append((head, (-0.75 + rnd.uniform(-0.1, 0.1), 0.0, -0.5), rnd.uniform(8, 26)))
+    K.meteors(streaks, K.meteor_material("Meteor", strength=9.0), radius=0.11)
 
     # the hearth under the overhang (left) ---------------------------------------------
     HX, HY = -1.0, 2.7
@@ -220,11 +216,11 @@ def build(M):
 
     # the anvil on a rock with the starmetal chunk ---------------------------------------
     AX, AY = 0.7, 1.15
-    rock_lump("AnvilRock", (AX, AY, 0.18), 0.42, M["rock"], seed=3, squash=0.55)
+    rock_lump("AnvilRock", (AX, AY, 0.16), 0.5, M["rock"], seed=3, squash=0.36)
     anv = P.anvil("Anvil", M["iron"], depth=1.15, location=(AX, AY, 0.34), rot_z=math.radians(-25))
     anv.scale = (0.28, 0.28, 0.28)
-    chunk = rock_lump("StarChunk", (AX + 0.02, AY - 0.02, 0.84), 0.11, M["star"], seed=7, squash=0.6)
-    C.point_light("ChunkGlow", (AX, AY - 0.2, 1.0), 12, radius=0.08, color=(0.62, 0.48, 1.0))
+    rock_lump("StarChunk", (AX + 0.02, AY - 0.02, 0.83), 0.085, M["star"], seed=7, squash=0.55)
+    C.point_light("ChunkGlow", (AX, AY - 0.25, 1.05), 5, radius=0.08, color=(0.62, 0.48, 1.0))
     hm = P.hammer("AnvilHammer", M["iron"], M["handle"], head_len=0.26, head_w=0.09, handle_len=0.5,
                   pein_axis="z", handle_r=0.02)
     hm.location = (AX - 0.25, AY + 0.05, 0.84)
@@ -263,10 +259,10 @@ def main():
     sc.cycles.volume_step_rate = 8.0
     sc.cycles.volume_max_steps = 256
     vx, vy = VOLCANO
-    K.night_world(zenith="#0A0618", horizon="#2A1640", ground="#040306", strength=1.0,
-                  stars=1.0, star_scale=230.0, star_tint="#E8E0FF", nebula="#7A3CC8",
-                  nebula_strength=0.35, glow_color="#C04A18", glow_dir=(vx, vy, 0.0),
-                  glow_power=40.0, glow_strength=0.9)
+    K.night_world(zenith="#070412", horizon="#1C0E30", ground="#040306", strength=1.0,
+                  stars=1.0, star_scale=230.0, star_tint="#E8E0FF", nebula="#6A34B8",
+                  nebula_strength=0.3, glow_color="#B04016", glow_dir=(vx, vy, 0.0),
+                  glow_power=120.0, glow_strength=0.5)
     M = materials()
     build(M)
     cam = C.persp_camera((0.15, -2.9, 1.45), (0.1, 3.0, 1.45), lens=26)
