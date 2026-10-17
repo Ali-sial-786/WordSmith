@@ -9,6 +9,7 @@ import {
   canRace,
   endVsRound,
   markOut,
+  MAX_HISTORY,
   mineOf,
   newVsRound,
   newVsSeries,
@@ -24,6 +25,7 @@ import {
   vsRoundStartFields,
   vsSeriesResults,
   type VsRound,
+  type VsRoundEnd,
   type VsSeries,
 } from "../../src/rules/vs-round";
 import { CROSSED, EXAMPLE, playback } from "./fixtures";
@@ -397,6 +399,135 @@ describe("endVsRound", () => {
     const end = endVsRound(s, r, "timeout", T0, true);
     expect(end.fields).toMatchObject({ winner: "a", how: "timeout" });
     expect(end.fields.molds).toEqual({ a: [1], b: [0, 2] });
+  });
+});
+
+describe("the series' history", () => {
+  /** EXAMPLE's shape: TEAR across the top, EAT and RATE down. */
+  const shape = {
+    cols: 4,
+    rows: 4,
+    slots: [
+      { slot: 0, x: 0, y: 0, d: "a", len: 4 },
+      { slot: 1, x: 1, y: 0, d: "d", len: 3 },
+      { slot: 2, x: 3, y: 0, d: "d", len: 4 },
+    ],
+  };
+
+  /** Ends the next round on time: `winner` (if any) forges TEAR, nobody else anything. */
+  function finish(s: VsSeries, winner: string | null, players = activeRacers(s)): VsRoundEnd {
+    const sudden = s.played >= s.length;
+    const r = round(players, { n: s.played + 1, suddenDeath: sudden });
+    if (winner !== null) applyVsSubmit(r, winner, "TEAR");
+    return endVsRound(s, r, "timeout", T0);
+  }
+
+  it("sums up every round of a best of 3, in order, with each racer's mold and its shape", () => {
+    const s = series(["a", "b", "c"]);
+    expect(s.history).toBeUndefined();
+    // Round 1: a fills the mold; b has EAT.
+    const r1 = round(["a", "b", "c"]);
+    applyVsSubmit(r1, "b", "EAT");
+    for (const w of ["TEAR", "EAT", "RATE"]) applyVsSubmit(r1, "a", w);
+    endVsRound(s, r1, "finished", T0);
+    // Round 2: b has the most letters when time runs out.
+    const r2 = round(["a", "b", "c"], { n: 2 });
+    applyVsSubmit(r2, "b", "RATE");
+    applyVsSubmit(r2, "c", "EAT");
+    endVsRound(s, r2, "timeout", T0);
+    // Round 3: a again, which decides it.
+    const third = finish(s, "a");
+    expect(third.outcome).toEqual({ winner: "a", early: false, forfeit: false });
+
+    const progress = (filled: Record<string, number>) => ["a", "b", "c"].map((id) => ({ id, filled: filled[id] ?? 0, total: 9 }));
+    expect(s.history).toEqual([
+      {
+        round: 1,
+        suddenDeath: false,
+        reason: "finished",
+        winner: "a",
+        how: "finished",
+        ...shape,
+        progress: progress({ a: 9, b: 3 }),
+        molds: { a: [0, 1, 2], b: [1], c: [] },
+      },
+      {
+        round: 2,
+        suddenDeath: false,
+        reason: "timeout",
+        winner: "b",
+        how: "timeout",
+        ...shape,
+        progress: progress({ b: 4, c: 3 }),
+        molds: { a: [], b: [2], c: [1] },
+      },
+      { round: 3, suddenDeath: false, reason: "timeout", winner: "a", how: "timeout", ...shape, progress: progress({ a: 4 }), molds: { a: [0], b: [], c: [] } },
+    ]);
+    // Never the words.
+    const text = JSON.stringify(s.history);
+    for (const w of [...EXAMPLE.words.map((w) => w.w), ...EXAMPLE.bonus]) expect(text).not.toContain(w);
+  });
+
+  it("marks sudden death and lists only its racers, a round with no winner included", () => {
+    const s = series(["a", "b", "c"]);
+    finish(s, "a");
+    finish(s, "b");
+    expect(finish(s, null).fields.next).toEqual({ round: 4, suddenDeath: true, players: ["a", "b"] });
+    finish(s, null, ["a", "b"]);
+    expect(finish(s, "b", ["a", "b"]).outcome).toEqual({ winner: "b", early: false, forfeit: false });
+    expect(s.history!.map((h) => [h.round, h.suddenDeath, h.winner, h.how])).toEqual([
+      [1, false, "a", "timeout"],
+      [2, false, "b", "timeout"],
+      [3, false, null, "none"],
+      [4, true, null, "none"],
+      [5, true, "b", "timeout"],
+    ]);
+    expect(s.history![4]).toMatchObject({
+      progress: [
+        { id: "a", filled: 0, total: 9 },
+        { id: "b", filled: 4, total: 9 },
+      ],
+      molds: { a: [], b: [0] },
+    });
+  });
+
+  it("keeps the round a forfeit ended, racers who left included, and adds nothing for one decided between rounds", () => {
+    const s = series(["a", "b", "c"], 5);
+    finish(s, "c");
+    // Round 2: b and c leave mid-round, so a wins it and the series.
+    const r2 = round(["a", "b", "c"], { n: 2 });
+    applyVsSubmit(r2, "a", "EAT");
+    applyVsSubmit(r2, "b", "TEAR");
+    markOut(s, "b");
+    markOut(s, "c");
+    const end = endVsRound(s, r2, "timeout", T0, true);
+    expect(end.outcome).toEqual({ winner: "a", early: false, forfeit: true });
+    expect(s.history).toHaveLength(2);
+    expect(s.history![1]).toEqual({
+      round: 2,
+      suddenDeath: false,
+      reason: "timeout",
+      winner: "a",
+      how: "timeout",
+      ...shape,
+      progress: end.fields.progress,
+      molds: { a: [1], b: [0], c: [] },
+    });
+
+    // Decided in the standings: the rounds played, and no more.
+    const t = series(["a", "b"]);
+    finish(t, "b");
+    markOut(t, "b");
+    expect(seriesDecision(t)).toMatchObject({ over: true, forfeit: true });
+    expect(t.history!.map((h) => h.round)).toEqual([1]);
+  });
+
+  it(`keeps the latest ${MAX_HISTORY} rounds`, () => {
+    const s = series(["a", "b"]);
+    for (let i = 0; i < MAX_HISTORY + 2; i++) finish(s, null);
+    expect(s.played).toBe(MAX_HISTORY + 2);
+    expect(s.history).toHaveLength(MAX_HISTORY);
+    expect([s.history![0]!.round, s.history!.at(-1)!.round]).toEqual([3, MAX_HISTORY + 2]);
   });
 });
 

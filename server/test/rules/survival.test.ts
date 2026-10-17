@@ -319,6 +319,10 @@ describe("Versus survival rounds", () => {
     });
     // Everyone's mold as it was when a melted, theirs included.
     expect(end.fields.molds).toEqual({ a: [0, 2], b: [1], c: [1] });
+    // The series' history has the melt too.
+    expect(s.history).toEqual([
+      expect.objectContaining({ reason: "melted", winner: "c", how: "survived", melted: { id: "a", slot: 1 }, molds: end.fields.molds }),
+    ]);
 
     // Nobody else has a letter: no winner.
     const s2 = newVsSeries({ matchId: "s2", length: 3, heat: 1, racerIds: ["a", "b"], startedAt: T0, variant: "survival" });

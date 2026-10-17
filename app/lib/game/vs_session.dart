@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../net/room_client.dart';
 import '../ui/mold/mold_model.dart';
 import 'remote_mold.dart';
@@ -29,6 +31,20 @@ class VsSession extends RoomSession {
 
   /// Rivals already announced as nearly done this round.
   final Set<String> _closeCalls = {};
+
+  /// How long the round that decides the series stays up before the podium,
+  /// once any melt has played: time to look at everyone's mold.
+  static const finalRoundHold = Duration(milliseconds: 3500);
+
+  /// Until when the round that decided the series shows (this phone's clock).
+  DateTime? finalRoundUntil;
+  Timer? _finalRoundDone;
+
+  /// The round that decided the series is still showing: the podium waits.
+  bool get showingFinalRound => finalRoundUntil != null && DateTime.now().isBefore(finalRoundUntil!);
+
+  /// How long until the podium shows.
+  Duration get finalRoundLeft => showingFinalRound ? finalRoundUntil!.difference(DateTime.now()) : Duration.zero;
 
   /// Best of this many rounds.
   int get series => round?.series ?? lobby?.series ?? 3;
@@ -62,6 +78,7 @@ class VsSession extends RoomSession {
     round = start;
     standings = null;
     seriesEnd = null;
+    _endFinalRound();
     bonusWords = 0;
     _closeCalls.clear();
     feed.clear();
@@ -73,6 +90,19 @@ class VsSession extends RoomSession {
   }
 
   void _claim(int slot, String word) => mold?.claim(slot, word, me);
+
+  /// The series was decided by this round: keep it up, after any melt still
+  /// playing, before the podium.
+  void _holdFinalRound() {
+    finalRoundUntil = (melting ? melt!.until : DateTime.now()).add(finalRoundHold);
+    _finalRoundDone?.cancel();
+    _finalRoundDone = Timer(finalRoundLeft + const Duration(milliseconds: 50), notifyListeners);
+  }
+
+  void _endFinalRound() {
+    finalRoundUntil = null;
+    _finalRoundDone?.cancel();
+  }
 
   @override
   void handle(RoomEvent e) {
@@ -91,13 +121,15 @@ class VsSession extends RoomSession {
         if (id != me && e.fraction >= 0.75 && e.filled < e.total && _closeCalls.add(id)) {
           say('${nameOf(id)} is nearly done!', colorOf(id));
         }
-      case VsRoundEnd(:final answers):
+      case VsRoundEnd(:final answers, :final next):
         standings = e;
         tally = {...e.tally};
         for (final p in e.progress) {
           progress[p.id] = p;
         }
         mold?.showAnswers(answers);
+        // No next round: this one decided the series.
+        if (next == null) _holdFinalRound();
       case SeriesEnd():
         seriesEnd = e;
       case RoomSnapshot():
@@ -109,6 +141,8 @@ class VsSession extends RoomSession {
 
   void _applySnapshot(RoomSnapshot s) {
     lobby = s.lobby;
+    // Back in the room: straight to wherever it is now.
+    _endFinalRound();
     if (s.round != null) {
       _beginRound(s.round!);
       for (final (slot, word) in s.mine) {
@@ -143,4 +177,10 @@ class VsSession extends RoomSession {
 
   /// Sends a word; the result arrives as a [WordResult] effect.
   void submit(String word) => client.submit(word);
+
+  @override
+  void dispose() {
+    _finalRoundDone?.cancel();
+    super.dispose();
+  }
 }

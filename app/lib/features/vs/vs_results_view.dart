@@ -9,9 +9,12 @@ import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
+import 'rival_molds.dart';
+import 'series_summary.dart';
 import 'vs_widgets.dart';
 
-/// The end of a Versus series: the podium, my XP and embers, and a rematch.
+/// The end of a Versus series: the podium, my XP and embers, the series round
+/// by round with everyone's molds, and a rematch.
 class VsResultsView extends StatelessWidget {
   const VsResultsView({super.key, required this.session, required this.onLeave});
 
@@ -27,62 +30,82 @@ class VsResultsView extends StatelessWidget {
     // The podium holds three; anyone sharing a place beyond that is listed.
     final top = r.podium.take(3).toList();
     final rest = r.podium.skip(3).toList();
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+    // An older server sends no history: the last round's molds, if this phone saw it start.
+    final end = session.standings;
+    final round = session.round?.round;
+    final last =
+        r.history.isEmpty && end != null && end.molds.isNotEmpty && round != null && (end.round ?? round) == round
+        ? end
+        : null;
+    return Column(
       children: [
-        Text(
-          r.winner == null
-              ? 'Series over'
-              : iWon
-              ? 'YOU WIN THE SERIES!'
-              : '${session.nameOf(r.winner)} wins the series!',
-          textAlign: TextAlign.center,
-          style: displayStyle(26, color: iWon ? Palette.molten : Palette.whiteHeat).copyWith(
-            shadows: iWon ? const [Shadow(color: Palette.ember, blurRadius: 24)] : null,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
+            children: [
+              Text(
+                r.winner == null
+                    ? 'Series over'
+                    : iWon
+                    ? 'YOU WIN THE SERIES!'
+                    : '${session.nameOf(r.winner)} wins the series!',
+                textAlign: TextAlign.center,
+                style: displayStyle(
+                  26,
+                  color: iWon ? Palette.molten : Palette.whiteHeat,
+                ).copyWith(shadows: iWon ? const [Shadow(color: Palette.ember, blurRadius: 24)] : null),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                [
+                  '${r.rounds} ${r.rounds == 1 ? 'round' : 'rounds'}',
+                  if (r.early) 'clinched early',
+                  if (r.forfeit) 'everyone else left',
+                ].join(' · '),
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(color: Palette.steel),
+              ),
+              const SizedBox(height: 20),
+              _Podium(session: session, places: top),
+              for (final p in rest)
+                ListTile(
+                  dense: true,
+                  leading: Text('${p.place}', style: displayStyle(18)),
+                  title: Text(session.nameOf(p.id)),
+                  trailing: Text('${p.wins} ${p.wins == 1 ? 'win' : 'wins'}'),
+                ),
+              if (mine != null) ...[
+                const SizedBox(height: 14),
+                XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
+                for (final line in _extras(mine))
+                  Text(
+                    line,
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: Palette.verdigris),
+                  ),
+              ],
+              if (r.history.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                Text(
+                  'Round by round',
+                  textAlign: TextAlign.center,
+                  style: displayStyle(18, color: Palette.molten),
+                ),
+                const SizedBox(height: 10),
+                SeriesSummary(session: session, series: r),
+              ] else if (last != null) ...[
+                const SizedBox(height: 26),
+                Text(
+                  'Final round',
+                  textAlign: TextAlign.center,
+                  style: displayStyle(18, color: Palette.molten),
+                ),
+                RivalMolds(session: session, end: last, padding: const EdgeInsets.only(top: 18)),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          [
-            '${r.rounds} ${r.rounds == 1 ? 'round' : 'rounds'}',
-            if (r.early) 'clinched early',
-            if (r.forfeit) 'everyone else left',
-          ].join(' · '),
-          textAlign: TextAlign.center,
-          style: text.bodyMedium?.copyWith(color: Palette.steel),
-        ),
-        const SizedBox(height: 20),
-        _Podium(session: session, places: top),
-        for (final p in rest)
-          ListTile(
-            dense: true,
-            leading: Text('${p.place}', style: displayStyle(18)),
-            title: Text(session.nameOf(p.id)),
-            trailing: Text('${p.wins} ${p.wins == 1 ? 'win' : 'wins'}'),
-          ),
-        if (mine != null) ...[
-          const SizedBox(height: 14),
-          XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
-          for (final line in _extras(mine))
-            Text(line, textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: Palette.verdigris)),
-        ],
-        const SizedBox(height: 20),
-        if (session.isHost)
-          PlateButton(
-            label: 'Rematch',
-            sublabel: 'A new best of ${session.series}',
-            icon: 'trophy',
-            primary: true,
-            onPressed: session.again,
-          )
-        else
-          Text(
-            'Waiting for ${session.nameOf(session.lobby?.hostId)} to start a rematch…',
-            textAlign: TextAlign.center,
-            style: text.bodyMedium?.copyWith(color: Palette.steel),
-          ),
-        const SizedBox(height: 10),
-        OutlinedButton(onPressed: onLeave, child: const Text('Leave the forge')),
+        _Actions(session: session, onLeave: onLeave),
       ],
     );
   }
@@ -92,6 +115,56 @@ class VsResultsView extends StatelessWidget {
       if (e.value > 0) 'Embers: +${e.value} ${HintKind.byName(e.key).title}${e.value == 1 ? '' : 's'}',
     if (a.scrapHammers > 0) 'Scrap Bin: +${a.scrapHammers} Hammer Strike${a.scrapHammers == 1 ? '' : 's'}',
   ];
+}
+
+/// Leave, and the host's rematch, kept in reach below however long the
+/// series was.
+class _Actions extends StatelessWidget {
+  const _Actions({required this.session, required this.onLeave});
+
+  final VsSession session;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Palette.forgeBlack.withValues(alpha: 0.55), Palette.forgeBlack.withValues(alpha: 0.9)],
+        ),
+        border: const Border(top: BorderSide(color: Palette.ash)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+        child: Row(
+          children: [
+            OutlinedButton(onPressed: onLeave, child: const Text('Leave')),
+            const SizedBox(width: 12),
+            Expanded(
+              child: session.isHost
+                  ? PlateButton(
+                      label: 'Rematch',
+                      sublabel: 'A new best of ${session.series}',
+                      icon: 'trophy',
+                      primary: true,
+                      onPressed: session.again,
+                    )
+                  : Text(
+                      'Waiting for ${session.nameOf(session.lobby?.hostId)} to start a rematch…',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium?.copyWith(color: Palette.steel),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// First in the middle on the tallest plinth, second left, third right.
@@ -112,7 +185,11 @@ class _Podium extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           for (var i = 0; i < 3; i++)
-            Expanded(child: order[i] == null ? const SizedBox() : _Step(session: session, place: order[i]!, height: heights[i])),
+            Expanded(
+              child: order[i] == null
+                  ? const SizedBox()
+                  : _Step(session: session, place: order[i]!, height: heights[i]),
+            ),
         ],
       ),
     );

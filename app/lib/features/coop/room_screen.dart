@@ -251,9 +251,14 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           winner == _session?.me ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
         });
       case SeriesEnd(:final winner, :final xp):
-        winner == _session?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
+        // When the podium shows, after the last round's molds.
+        final s = _session;
+        final podium = s is VsSession ? s.finalRoundLeft : Duration.zero;
+        Future.delayed(podium, () {
+          winner == _session?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
+        });
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
-          Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
+          Future.delayed(podium + const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
         }
         _account.sync();
       case RoomError(:final code):
@@ -379,16 +384,13 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           video: _roomVideo,
         ),
         'results' when s.results != null => ResultsView(session: s, cues: _cues, onLeave: _leave),
-        'countdown' || 'round' when s.round != null => RoundView(
-          session: s,
-          cues: _cues,
-          onLeave: _leave,
-          video: _roomVideo,
-        ),
+        'countdown' ||
+        'round' when s.round != null => RoundView(session: s, cues: _cues, onLeave: _leave, video: _roomVideo),
         _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
       },
       VsSession() => switch (s.phase) {
-        _ when s.melting && s.round != null && s.mold != null => VsRoundView(
+        // A melt plays out, and the round that decided the series stays up a moment, before the podium.
+        _ when (s.melting || s.showingFinalRound) && s.round != null && s.mold != null => VsRoundView(
           session: s,
           cues: _cues,
           onLeave: _leave,
@@ -396,12 +398,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         ),
         'results' when s.seriesEnd != null => VsResultsView(session: s, onLeave: _leave),
         'standings' || 'results' when s.standings != null => VsStandingsView(session: s, cues: _cues, onLeave: _leave),
-        'countdown' || 'round' when s.round != null => VsRoundView(
-          session: s,
-          cues: _cues,
-          onLeave: _leave,
-          video: _roomVideo,
-        ),
+        'countdown' ||
+        'round' when s.round != null => VsRoundView(session: s, cues: _cues, onLeave: _leave, video: _roomVideo),
         _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
       },
       _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),

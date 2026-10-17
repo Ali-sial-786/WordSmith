@@ -67,6 +67,187 @@ final _slots = [
   {'slot': 4, 'x': 2, 'y': 2, 'd': 'a', 'len': 3},
 ];
 
+/// Letter cells in [slots] of the shots' 5×5 mold (16 in all).
+int _filledOf(List<int> slots) => {
+  for (final i in slots)
+    for (var k = 0; k < (_slots[i]['len'] as int); k++)
+      _slots[i]['d'] == 'a'
+          ? ((_slots[i]['x'] as int) + k, _slots[i]['y'] as int)
+          : (_slots[i]['x'] as int, (_slots[i]['y'] as int) + k),
+}.length;
+
+/// One round of `SERIES_END.history` on the shots' mold; letters follow the molds.
+Map<String, dynamic> _past(
+  int round,
+  String? winner,
+  String how,
+  Map<String, List<int>> molds, {
+  bool sudden = false,
+  Map<String, Object>? melted,
+}) => {
+  'round': round,
+  'suddenDeath': sudden,
+  'reason': how == 'finished' ? 'finished' : (melted != null ? 'melted' : 'timeout'),
+  'winner': winner,
+  'how': how,
+  'cols': 5,
+  'rows': 5,
+  'slots': _slots,
+  'progress': [
+    for (final e in molds.entries) {'id': e.key, 'filled': _filledOf(e.value), 'total': 16},
+  ],
+  'molds': molds,
+  'melted': ?melted,
+};
+
+/// A survival best of 5 that Ada clinched in four.
+final _podiumHistory = [
+  _past(1, 'u1', 'finished', {
+    'u1': [0, 1, 2, 3, 4],
+    'u2': [0, 3],
+    'u3': [1],
+    'u4': [0, 2],
+  }),
+  _past(
+    2,
+    'u2',
+    'survived',
+    {
+      'u1': [0],
+      'u2': [0, 1, 3],
+      'u3': [3],
+      'u4': [0, 1, 2],
+    },
+    melted: {'id': 'u4', 'slot': 4},
+  ),
+  _past(
+    3,
+    'u1',
+    'survived',
+    {
+      'u1': [0, 1, 2],
+      'u2': [1, 3],
+      'u3': [],
+      'u4': [2],
+    },
+    melted: {'id': 'u3', 'slot': 0},
+  ),
+  _past(4, 'u1', 'finished', {
+    'u1': [0, 1, 2, 3, 4],
+    'u2': [0, 2, 4],
+    'u3': [0, 1],
+    'u4': [1, 3],
+  }),
+];
+
+/// A best of 10 among five that went to two sudden deaths; Wren left after round 6.
+final _longHistory = [
+  for (final (i, (winner, how, molds)) in <(String?, String, Map<String, List<int>>)>[
+    (
+      'u2',
+      'finished',
+      {
+        'u1': [0, 1],
+        'u2': [0, 1, 2, 3, 4],
+        'u3': [0],
+        'u4': [2, 4],
+        'u5': [1],
+      },
+    ),
+    (
+      'u1',
+      'timeout',
+      {
+        'u1': [0, 1, 2],
+        'u2': [0, 3],
+        'u3': [2],
+        'u4': [],
+        'u5': [0],
+      },
+    ),
+    (
+      'u3',
+      'finished',
+      {
+        'u1': [1, 3],
+        'u2': [0],
+        'u3': [0, 1, 2, 3, 4],
+        'u4': [0, 2],
+        'u5': [3],
+      },
+    ),
+    (null, 'none', {'u1': [], 'u2': [], 'u3': [], 'u4': [], 'u5': []}),
+    (
+      'u4',
+      'timeout',
+      {
+        'u1': [0],
+        'u2': [2],
+        'u3': [3],
+        'u4': [0, 1, 2],
+        'u5': [4],
+      },
+    ),
+    (
+      'u1',
+      'finished',
+      {
+        'u1': [0, 1, 2, 3, 4],
+        'u2': [0, 1, 4],
+        'u3': [2],
+        'u4': [0],
+        'u5': [],
+      },
+    ),
+    (
+      'u2',
+      'timeout',
+      {
+        'u1': [0, 2],
+        'u2': [0, 1, 2],
+        'u3': [1],
+        'u4': [3],
+      },
+    ),
+    (
+      'u3',
+      'timeout',
+      {
+        'u1': [4],
+        'u2': [0],
+        'u3': [0, 2, 4],
+        'u4': [1],
+      },
+    ),
+    (
+      'u1',
+      'finished',
+      {
+        'u1': [0, 1, 2, 3, 4],
+        'u2': [1, 2],
+        'u3': [0, 3],
+        'u4': [2],
+      },
+    ),
+    (
+      'u2',
+      'timeout',
+      {
+        'u1': [0, 3],
+        'u2': [0, 1, 2, 4],
+        'u3': [],
+        'u4': [0],
+      },
+    ),
+  ].indexed)
+    _past(i + 1, winner, how, molds),
+  _past(11, null, 'none', {'u1': [], 'u2': []}, sudden: true),
+  _past(12, 'u1', 'timeout', {
+    'u1': [0, 1, 2],
+    'u2': [1, 3],
+  }, sudden: true),
+];
+
 const _answers = [
   {'slot': 0, 'word': 'STONE'},
   {'slot': 1, 'word': 'SEAT'},
@@ -193,7 +374,13 @@ Future<void> _font(String family, Future<ByteData> data) async {
   await loader.load();
 }
 
-Future<void> _shoot(WidgetTester tester, String name, Widget child, {Size size = const Size(412, 892)}) async {
+Future<void> _shoot(
+  WidgetTester tester,
+  String name,
+  Widget child, {
+  Size size = const Size(412, 892),
+  double scroll = 0,
+}) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -220,6 +407,12 @@ Future<void> _shoot(WidgetTester tester, String name, Widget child, {Size size =
   );
   await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 600)));
   await tester.pump(const Duration(milliseconds: 1200));
+  // Further down a long page.
+  if (scroll > 0) {
+    final position = tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    position.jumpTo(scroll.clamp(0, position.maxScrollExtent));
+    await tester.pump(const Duration(milliseconds: 100));
+  }
   await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
   await tester.pump(const Duration(milliseconds: 100));
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/$name.png'));
@@ -454,32 +647,86 @@ void main() {
     );
   });
 
-  testWidgets('vs podium', (tester) async {
-    final s = _session('results')
-      ..seriesEnd = SeriesEnd.fromJson({
-        'winner': 'u1',
-        'early': true,
-        'forfeit': false,
-        'rounds': 4,
-        'podium': [
-          {'id': 'u1', 'username': 'Ada', 'wins': 3, 'place': 1},
-          {'id': 'u2', 'username': 'sam', 'wins': 1, 'place': 2},
-          {'id': 'u4', 'username': 'Bo', 'wins': 0, 'place': 3},
-          {'id': 'u3', 'username': 'Kit', 'wins': 0, 'place': 3},
-        ],
-        'xp': {
-          'u1': {
-            'xp': 70,
-            'level': 6,
-            'levelUps': 1,
-            'rewards': {'hammer': 1},
-            'scrapHammers': 1,
-            'pickups': {'chisel': 1},
+  // Survival, so the summary has melts in it; the second shot is further down.
+  for (final (name, scroll) in [('vs_podium', 0.0), ('vs_podium_rounds', 640.0)]) {
+    testWidgets(name.replaceAll('_', ' '), (tester) async {
+      final s = _session('results')
+        ..seriesEnd = SeriesEnd.fromJson({
+          'winner': 'u1',
+          'early': true,
+          'forfeit': false,
+          'rounds': 4,
+          'podium': [
+            {'id': 'u1', 'username': 'Ada', 'wins': 3, 'place': 1},
+            {'id': 'u2', 'username': 'sam', 'wins': 1, 'place': 2},
+            {'id': 'u4', 'username': 'Bo', 'wins': 0, 'place': 3},
+            {'id': 'u3', 'username': 'Kit', 'wins': 0, 'place': 3},
+          ],
+          'history': _podiumHistory,
+          'xp': {
+            'u1': {
+              'xp': 70,
+              'level': 6,
+              'levelUps': 1,
+              'rewards': {'hammer': 1},
+              'scrapHammers': 1,
+              'pickups': {'chisel': 1},
+            },
           },
-        },
-      });
-    await _shoot(tester, 'vs_podium', VsResultsView(session: s, onLeave: () {}));
-  });
+        });
+      await _shoot(
+        tester,
+        name,
+        VsResultsView(session: s, onLeave: () {}),
+        scroll: scroll,
+      );
+    });
+  }
+
+  // A small phone, five smiths and twelve rounds: the top, and the summary from its last rounds down.
+  for (final (name, scroll) in [('vs_podium_five', 0.0), ('vs_podium_five_rounds', 1500.0)]) {
+    testWidgets(name.replaceAll('_', ' '), (tester) async {
+      // sam hosts; Wren has gone.
+      final all = _lobby('results', players: 5);
+      final s = _session('results', players: 5)
+        ..lobby = RoomLobby(
+          code: all.code,
+          mode: all.mode,
+          phase: all.phase,
+          hostId: 'u2',
+          heat: all.heat,
+          series: 10,
+          players: [
+            for (final p in all.players)
+              if (p.id != 'u5') p,
+          ],
+        )
+        ..seriesEnd = SeriesEnd.fromJson({
+          'winner': 'u1',
+          'early': false,
+          'forfeit': false,
+          'rounds': 12,
+          'podium': [
+            {'id': 'u1', 'username': 'Ada', 'wins': 4, 'place': 1},
+            {'id': 'u2', 'username': 'sam', 'wins': 3, 'place': 2},
+            {'id': 'u3', 'username': 'Kit', 'wins': 2, 'place': 3},
+            {'id': 'u4', 'username': 'Bo', 'wins': 1, 'place': 4},
+            {'id': 'u5', 'username': 'Wren', 'wins': 0, 'place': 5},
+          ],
+          'history': _longHistory,
+          'xp': {
+            'u1': {'xp': 140, 'level': 9, 'levelUps': 0, 'rewards': {}, 'scrapHammers': 0, 'pickups': {}},
+          },
+        });
+      await _shoot(
+        tester,
+        name,
+        VsResultsView(session: s, onLeave: () {}),
+        size: _small,
+        scroll: scroll,
+      );
+    });
+  }
 
   for (final location in [
     '/',

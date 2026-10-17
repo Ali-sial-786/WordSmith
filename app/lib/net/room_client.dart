@@ -170,7 +170,19 @@ class RemoteSlot {
   List<CellPos> get cells => [for (var i = 0; i < length; i++) across ? (x: x + i, y: y) : (x: x, y: y + i)];
 }
 
-class RoundStart extends RoomEvent {
+List<RemoteSlot> _remoteSlots(List<dynamic> j) => [
+  for (final s in j.cast<Map<String, dynamic>>())
+    RemoteSlot(s['slot'] as int, s['x'] as int, s['y'] as int, s['d'] == 'a', s['len'] as int),
+];
+
+/// A mold's shape: its grid and slots, never the words.
+abstract interface class MoldShape {
+  int get cols;
+  int get rows;
+  List<RemoteSlot> get slots;
+}
+
+class RoundStart extends RoomEvent implements MoldShape {
   const RoundStart({
     required this.round,
     required this.heat,
@@ -200,10 +212,7 @@ class RoundStart extends RoomEvent {
     letters: j['letters'] as String,
     cols: j['cols'] as int,
     rows: j['rows'] as int,
-    slots: [
-      for (final s in (j['slots'] as List).cast<Map<String, dynamic>>())
-        RemoteSlot(s['slot'] as int, s['x'] as int, s['y'] as int, s['d'] == 'a', s['len'] as int),
-    ],
+    slots: _remoteSlots(j['slots'] as List),
     pickups: [
       for (final p in ((j['pickups'] as List?) ?? const []).cast<Map<String, dynamic>>())
         (x: p['x'] as int, y: p['y'] as int),
@@ -223,8 +232,11 @@ class RoundStart extends RoomEvent {
   final int endsAt;
   final int serverNow;
   final String letters;
+  @override
   final int cols;
+  @override
   final int rows;
+  @override
   final List<RemoteSlot> slots;
   final List<CellPos> pickups;
 
@@ -324,6 +336,18 @@ class RacerProgress extends RoomEvent {
   double get fraction => total == 0 ? 0 : filled / total;
 }
 
+List<RacerProgress> _progress(Object? j) => [
+  for (final p in ((j as List?) ?? const []).cast<Map<String, dynamic>>()) RacerProgress.fromJson(p),
+];
+
+Map<String, List<int>> _molds(Object? j) => {
+  for (final e in ((j as Map?) ?? const {}).entries)
+    e.key as String: [for (final s in (e.value as List?) ?? const []) (s as num).toInt()],
+};
+
+({String id, int slot})? _melted(Object? j) =>
+    j is Map ? (id: j['id'] as String, slot: (j['slot'] as num).toInt()) : null;
+
 /// Versus: the round after this one's standings.
 class NextRound {
   const NextRound(this.round, this.suddenDeath, this.racers);
@@ -350,14 +374,11 @@ class VsRoundEnd extends RoomEvent {
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
     final next = j['next'] as Map<String, dynamic>?;
-    final melted = j['melted'] as Map<String, dynamic>?;
     return VsRoundEnd(
       reason: j['reason'] as String? ?? 'timeout',
       winner: j['winner'] as String?,
       how: j['how'] as String? ?? 'none',
-      progress: [
-        for (final p in ((j['progress'] as List?) ?? const []).cast<Map<String, dynamic>>()) RacerProgress.fromJson(p),
-      ],
+      progress: _progress(j['progress']),
       tally: _scores(j['tally']),
       answers: _slotWords(j['answers']),
       next: next == null
@@ -367,11 +388,8 @@ class VsRoundEnd extends RoomEvent {
             ]),
       standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
       round: (j['round'] as num?)?.toInt(),
-      melted: melted == null ? null : (id: melted['id'] as String, slot: (melted['slot'] as num).toInt()),
-      molds: {
-        for (final e in ((j['molds'] as Map?) ?? const {}).entries)
-          e.key as String: [for (final s in (e.value as List?) ?? const []) (s as num).toInt()],
-      },
+      melted: _melted(j['melted']),
+      molds: _molds(j['molds']),
     );
   }
 
@@ -407,6 +425,64 @@ class PodiumPlace {
   final int place;
 }
 
+/// Versus: one round of a finished series, as `SERIES_END.history` sums it
+/// up: how it went and every racer's mold, with the mold's shape, so it can
+/// be drawn without having seen that round start.
+class SeriesRound implements MoldShape {
+  const SeriesRound({
+    required this.round,
+    required this.suddenDeath,
+    required this.reason,
+    required this.winner,
+    required this.how,
+    required this.cols,
+    required this.rows,
+    required this.slots,
+    required this.progress,
+    required this.molds,
+    this.melted,
+  });
+
+  factory SeriesRound.fromJson(Map<String, dynamic> j) => SeriesRound(
+    round: (j['round'] as num?)?.toInt() ?? 0,
+    suddenDeath: j['suddenDeath'] as bool? ?? false,
+    reason: j['reason'] as String? ?? 'timeout',
+    winner: j['winner'] as String?,
+    how: j['how'] as String? ?? 'none',
+    cols: (j['cols'] as num?)?.toInt() ?? 0,
+    rows: (j['rows'] as num?)?.toInt() ?? 0,
+    slots: _remoteSlots((j['slots'] as List?) ?? const []),
+    progress: _progress(j['progress']),
+    molds: _molds(j['molds']),
+    melted: _melted(j['melted']),
+  );
+
+  final int round;
+  final bool suddenDeath;
+
+  /// `finished`, `timeout` or `melted` (Survival).
+  final String reason;
+  final String? winner;
+
+  /// `finished`, `timeout`, `survived` (someone else melted) or `none`.
+  final String how;
+  @override
+  final int cols;
+  @override
+  final int rows;
+  @override
+  final List<RemoteSlot> slots;
+
+  /// The racers of the round (just the tied leaders in sudden death).
+  final List<RacerProgress> progress;
+
+  /// Each racer's complete slots, as in that round's [VsRoundEnd.molds].
+  final Map<String, List<int>> molds;
+
+  /// Survival: whose word melted, ending the round.
+  final ({String id, int slot})? melted;
+}
+
 class SeriesEnd extends RoomEvent {
   const SeriesEnd({
     required this.winner,
@@ -415,6 +491,7 @@ class SeriesEnd extends RoomEvent {
     required this.rounds,
     required this.podium,
     required this.xp,
+    this.history = const [],
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -432,6 +509,9 @@ class SeriesEnd extends RoomEvent {
         ),
     ],
     xp: _xpAwards(j['xp']),
+    history: [
+      for (final r in ((j['history'] as List?) ?? const []).cast<Map<String, dynamic>>()) SeriesRound.fromJson(r),
+    ],
   );
 
   final String? winner;
@@ -440,6 +520,20 @@ class SeriesEnd extends RoomEvent {
   final int rounds;
   final List<PodiumPlace> podium;
   final Map<String, XpAward> xp;
+
+  /// Every round played, in order. Empty from a server that doesn't send it.
+  final List<SeriesRound> history;
+
+  /// Letters each racer filled over the rounds they raced.
+  Map<String, int> get letters {
+    final total = <String, int>{};
+    for (final r in history) {
+      for (final p in r.progress) {
+        total[p.id] = (total[p.id] ?? 0) + p.filled;
+      }
+    }
+    return total;
+  }
 }
 
 class WordClaimed extends RoomEvent {

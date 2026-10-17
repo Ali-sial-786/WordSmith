@@ -119,6 +119,7 @@ import {
   type VsRound,
   type VsRoundEndFields,
   type VsRoundEndReason,
+  type VsRoundSummary,
   type VsSeries,
   type VsSeriesOutcome,
 } from "../rules/vs-round";
@@ -237,6 +238,8 @@ interface VsPendingAward extends AwardProgress {
   readonly kind: "vs";
   readonly record: VsSeriesRecord;
   readonly usernames: Readonly<Record<string, string>>;
+  /** The series' rounds, for SERIES_END (D1 doesn't keep them). Absent in awards stored before it. */
+  readonly history?: readonly VsRoundSummary[];
 }
 
 type PendingAward = CoopPendingAward | VsPendingAward;
@@ -1090,6 +1093,7 @@ export class RoomDO extends DurableObject<Env> {
         ...(series.variant === undefined ? {} : { variant: series.variant }),
       },
       usernames,
+      history: series.history ?? [],
       attempts: 0,
       // Written straight away by announceResults(); this is only for a write cut off by a restart.
       retryAt: now + AWARD_RETRY_MS,
@@ -1563,6 +1567,7 @@ export class RoomDO extends DurableObject<Env> {
       forfeit,
       rounds,
       podium: players.map((p) => ({ id: p.id, username: award.usernames[p.id] ?? "", wins: p.wins, place: p.place })),
+      history: award.history ?? [],
       xp,
     };
   }

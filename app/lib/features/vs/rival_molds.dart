@@ -17,12 +17,48 @@ import '../../ui/widgets/game_icon.dart';
 /// rivals in the round's order, filled cells in each racer's colour, with
 /// their letter count and the winner crowned. Drawn from the round's slots
 /// and `ROUND_END.molds`, so nothing shows without both (an older server, or
-/// back in the forge without that round's start).
+/// back in the forge without that round's start); a round from
+/// `SERIES_END.history` brings both.
 class RivalMolds extends ConsumerStatefulWidget {
-  const RivalMolds({super.key, required this.session, required this.end, this.padding = EdgeInsets.zero});
+  /// The round [end] closed, on this phone's [VsSession.round].
+  RivalMolds({super.key, required this.session, required VsRoundEnd end, this.padding = EdgeInsets.zero})
+    : source = end,
+      round = end.round,
+      winner = end.winner,
+      molds = end.molds,
+      melted = end.melted,
+      shape = null,
+      order = null;
+
+  /// A round from the series' history, which brings its own shape; [order]
+  /// lines the tiles up with a summary's columns.
+  RivalMolds.past({
+    super.key,
+    required this.session,
+    required SeriesRound past,
+    this.order,
+    this.padding = EdgeInsets.zero,
+  }) : source = past,
+       round = past.round,
+       winner = past.winner,
+       molds = past.molds,
+       melted = past.melted,
+       shape = past;
 
   final VsSession session;
-  final VsRoundEnd end;
+
+  /// What the row is drawn from: it rises in again when this changes.
+  final Object source;
+  final int? round;
+  final String? winner;
+  final Map<String, List<int>> molds;
+  final ({String id, int slot})? melted;
+
+  /// The mold's shape, when it isn't the session's round.
+  final MoldShape? shape;
+
+  /// Racers in this order, rather than mine first and then the round's.
+  final List<String>? order;
 
   /// Around the row, only when there is one to show.
   final EdgeInsets padding;
@@ -49,7 +85,7 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
   @override
   void didUpdateWidget(RivalMolds old) {
     super.didUpdateWidget(old);
-    if (!identical(old.end, widget.end)) _start();
+    if (!identical(old.source, widget.source)) _start();
   }
 
   @override
@@ -59,7 +95,7 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
   }
 
   void _start() {
-    final n = max(1, widget.end.molds.length);
+    final n = max(1, widget.molds.length);
     _in.duration = Duration(milliseconds: _stagger * (n - 1) + _rise + _cool);
     if (ref.read(settingsProvider).reducedMotion) {
       _in.value = 1;
@@ -75,21 +111,21 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final end = widget.end;
-    final round = s.round;
-    if (round == null || end.molds.isEmpty || (end.round != null && end.round != round.round)) {
-      return const SizedBox.shrink();
-    }
+    final molds = widget.molds;
+    final live = s.round;
+    final round = widget.shape ?? (live == null || (widget.round != null && widget.round != live.round) ? null : live);
+    if (round == null || molds.isEmpty) return const SizedBox.shrink();
     final slotCells = {for (final slot in round.slots) slot.slot: slot.cells};
     final cells = {for (final slot in round.slots) ...slot.cells}.toList();
-    final melt = end.melted;
+    final melt = widget.melted;
+    final order = widget.order;
     final racers = [
-      for (final id in [
-        if (end.molds.containsKey(s.me)) s.me,
-        for (final id in end.molds.keys)
-          if (id != s.me) id,
-      ])
-        (id: id, filled: {for (final slot in end.molds[id]!) ...?slotCells[slot]}),
+      for (final id in <String>{
+        if (order != null) ...order.where(molds.containsKey),
+        if (molds.containsKey(s.me)) s.me,
+        ...molds.keys,
+      })
+        (id: id, filled: {for (final slot in molds[id]!) ...?slotCells[slot]}),
     ];
     return Padding(
       padding: widget.padding,
@@ -125,7 +161,7 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
                         name: r.id == s.me ? 'You' : s.nameOf(r.id),
                         player: s.lobby?.player(r.id),
                         mine: r.id == s.me,
-                        winner: r.id == end.winner,
+                        winner: r.id == widget.winner,
                         cool: Curves.easeOut.transform(_phase(i, ms).$2),
                       ),
                     ),

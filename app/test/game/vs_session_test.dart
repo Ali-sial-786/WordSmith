@@ -261,6 +261,175 @@ void main() {
     expect(end.podium.map((p) => p.place), [1, 2, 2]);
     expect(end.xp['u1']!.pickups, {'hammer': 1});
     expect(end.xp['u1']!.scrapHammers, 1);
+    expect(end.history, isEmpty, reason: 'an older server sends none');
+    expect(end.letters, isEmpty);
+    expect(session.showingFinalRound, isFalse, reason: 'no ROUND_END decided it here');
+  });
+
+  test('the series end sums up every round, for a rejoin too', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final slots = (_roundStart(now)['slots'] as List).cast<Map<String, Object?>>();
+    final seriesEnd = {
+      'winner': 'u2',
+      'early': false,
+      'forfeit': false,
+      'rounds': 2,
+      'podium': [
+        {'id': 'u2', 'username': 'sam', 'wins': 1, 'place': 1},
+        {'id': 'u1', 'username': 'Ada', 'wins': 0, 'place': 2},
+        {'id': 'u3', 'username': 'Kit', 'wins': 0, 'place': 2},
+      ],
+      'history': [
+        {
+          'round': 1,
+          'suddenDeath': false,
+          'reason': 'melted',
+          'winner': null,
+          'how': 'none',
+          'cols': 3,
+          'rows': 3,
+          'slots': slots,
+          'progress': [
+            {'id': 'u1', 'filled': 0, 'total': 7},
+            {'id': 'u2', 'filled': 3, 'total': 7},
+            {'id': 'u3', 'filled': 0, 'total': 7},
+          ],
+          'molds': {
+            'u1': [],
+            'u2': [2],
+            'u3': [],
+          },
+          'melted': {'id': 'u2', 'slot': 0},
+        },
+        {
+          'round': 2,
+          'suddenDeath': true,
+          'reason': 'finished',
+          'winner': 'u2',
+          'how': 'finished',
+          'cols': 3,
+          'rows': 3,
+          'slots': slots,
+          'progress': [
+            {'id': 'u1', 'filled': 5, 'total': 7},
+            {'id': 'u2', 'filled': 7, 'total': 7},
+          ],
+          'molds': {
+            'u1': [0, 1],
+            'u2': [0, 1, 2],
+          },
+        },
+      ],
+      'xp': {},
+    };
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send({'op': 'SERIES_END', ...seriesEnd});
+    await until(() => session.seriesEnd != null);
+    final end = session.seriesEnd!;
+    expect(end.rounds, 2, reason: 'the count is still there');
+    expect(end.history.map((r) => (r.round, r.suddenDeath, r.reason, r.winner, r.how)), [
+      (1, false, 'melted', null, 'none'),
+      (2, true, 'finished', 'u2', 'finished'),
+    ]);
+    final first = end.history.first;
+    expect((first.cols, first.rows), (3, 3));
+    expect(first.slots.map((s) => s.cells), [
+      [(x: 0, y: 0), (x: 1, y: 0), (x: 2, y: 0)],
+      [(x: 0, y: 0), (x: 0, y: 1), (x: 0, y: 2)],
+      [(x: 2, y: 0), (x: 2, y: 1), (x: 2, y: 2)],
+    ]);
+    expect(first.progress.map((p) => (p.id, p.filled, p.total)), [('u1', 0, 7), ('u2', 3, 7), ('u3', 0, 7)]);
+    expect(first.molds, {
+      'u1': <int>[],
+      'u2': [2],
+      'u3': <int>[],
+    });
+    expect(first.melted, (id: 'u2', slot: 0));
+    expect(end.history.last.melted, isNull);
+    expect(end.history.last.progress.map((p) => p.id), ['u1', 'u2'], reason: 'sudden death lists its racers only');
+    expect(end.letters, {'u1': 5, 'u2': 10, 'u3': 0});
+
+    // Back in the room during results: the same summary, from the SNAPSHOT.
+    room.send({'op': 'SNAPSHOT', 'lobby': _lobby('results'), 'results': seriesEnd});
+    await until(() => !identical(session.seriesEnd, end));
+    expect(session.seriesEnd!.history, hasLength(2));
+    expect(session.seriesEnd!.history.last.molds['u2'], [0, 1, 2]);
+  });
+
+  test('the round that decides the series stays up a moment, after any melt, before the podium', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    Map<String, Object?> roundEnd(int round, {Map<String, Object?>? next}) => {
+      'op': 'ROUND_END',
+      'round': round,
+      'reason': 'finished',
+      'winner': 'u2',
+      'how': 'finished',
+      'progress': [],
+      'molds': {
+        'u1': [0],
+        'u2': [0, 1, 2],
+      },
+      'tally': {'u2': round},
+      'answers': [],
+      'next': next,
+      'standingsEndsAt': next == null ? null : now + 10000,
+    };
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send(_lobby('round'))
+      ..send(_roundStart(now))
+      ..send(
+        roundEnd(
+          1,
+          next: {
+            'round': 2,
+            'suddenDeath': false,
+            'players': ['u1', 'u2', 'u3'],
+          },
+        ),
+      );
+    await until(() => session.standings != null);
+    expect(session.showingFinalRound, isFalse, reason: 'the series goes on: the standings, as ever');
+
+    // Round 2 decides it: its molds stay up 3.5 s, SERIES_END or not.
+    final before = DateTime.now();
+    room
+      ..send({..._roundStart(now), 'round': 2})
+      ..send(roundEnd(2))
+      ..send({'op': 'SERIES_END', 'winner': 'u2', 'early': true, 'forfeit': false, 'rounds': 2, 'podium': [], 'xp': {}})
+      ..send(_lobby('results'));
+    await until(() => session.seriesEnd != null && session.phase == 'results');
+    expect(session.showingFinalRound, isTrue);
+    expect(session.finalRoundUntil!.isBefore(before.add(VsSession.finalRoundHold)), isFalse);
+    expect(session.finalRoundLeft, greaterThan(const Duration(seconds: 3)));
+    expect(session.round!.round, 2, reason: 'so the round view can show it');
+    expect(session.mold, isNotNull);
+
+    // Back in the room: straight to the podium.
+    room.send({'op': 'SNAPSHOT', 'lobby': _lobby('results'), 'standings': roundEnd(2)..remove('op')});
+    await until(() => !session.showingFinalRound);
+    expect(session.finalRoundLeft, Duration.zero);
+
+    // A survival round that a melt decides: the melt plays first, then the hold.
+    room
+      ..send({..._roundStart(now), 'round': 1, 'variant': 'survival'})
+      ..send({'op': 'MELT', 'slot': 1, 'id': 'u1'})
+      ..send({
+        ...roundEnd(1),
+        'reason': 'melted',
+        'how': 'survived',
+        'melted': {'id': 'u1', 'slot': 1},
+      });
+    await until(() => session.showingFinalRound);
+    expect(session.melting, isTrue);
+    expect(session.finalRoundUntil, session.melt!.until.add(VsSession.finalRoundHold));
+
+    // A new series clears it.
+    room.send({..._roundStart(now), 'round': 1});
+    await until(() => !session.showingFinalRound);
   });
 
   test('a rejoin snapshot restores my mold, progress and the tally', () async {

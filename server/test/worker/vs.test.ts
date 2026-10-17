@@ -343,7 +343,7 @@ describe("Versus rooms", () => {
       expect(end2.molds).toEqual(Object.fromEntries(ids.map((id) => [id, id === b.uid || id === c.uid ? [w2.slot] : []])));
 
       // Round 3: nobody forges anything, so nobody wins; A and B are tied on top.
-      await nextRound(code, sockets);
+      const start3 = await nextRound(code, sockets);
       await setEmbers(code, []);
       expect(await runDurableObjectAlarm(stub(code))).toBe(true);
       const end3 = await sa.next({ op: "ROUND_END" });
@@ -389,6 +389,29 @@ describe("Versus rooms", () => {
         [d.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
         [e.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
       });
+      // Every round, sudden death included: how it went and everyone's mold, with its shape.
+      expect(series.history).toEqual(
+        (
+          [
+            [start1, end1],
+            [start2, end2],
+            [start3, end3],
+            [start4, end4],
+          ] as const
+        ).map(([s, e]) => ({
+          round: e.round,
+          suddenDeath: s.suddenDeath,
+          reason: e.reason,
+          winner: e.winner,
+          how: e.how,
+          cols: s.cols,
+          rows: s.rows,
+          slots: s.slots,
+          progress: e.progress,
+          molds: e.molds,
+        })),
+      );
+      expect(series.history.map((h: Message) => h.suddenDeath)).toEqual([false, false, false, true]);
       for (const s of sockets) {
         if (s !== sb) expect(await s.next({ op: "SERIES_END" })).toEqual(series);
         const lobby = await s.next({ op: "LOBBY", phase: "results" });
@@ -518,6 +541,65 @@ describe("Versus rooms", () => {
   );
 
   it(
+    "sums up every round in SERIES_END, for someone back during results too, and AGAIN starts afresh",
+    async () => {
+      const a = await setUpClient();
+      const b = await setUpClient();
+      const code = await createVsRoom(a);
+      const sa = await join(a, code);
+      let sb = await join(b, code);
+      // A best of 3 that goes the distance: A, B, then A each forge one word and win on time.
+      const winners = [a, b, a];
+      const starts: Message[] = [];
+      const ends: Message[] = [];
+      for (const [i, winner] of winners.entries()) {
+        starts.push(i === 0 ? await start(sa, code, [sa, sb]) : await nextRound(code, [sa, sb]));
+        await setEmbers(code, []);
+        const { puzzle } = await roundOf(code);
+        await forge(winner === a ? sa : sb, puzzle.slots[0]!.word, 10 * i + 1);
+        expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+        ends.push(await sa.next({ op: "ROUND_END", round: i + 1 }));
+      }
+      const series = await sb.next({ op: "SERIES_END" });
+      expect(series).toMatchObject({ winner: a.uid, early: false, forfeit: false, rounds: 3 });
+      expect(series.history).toEqual(
+        starts.map((s, i) => ({
+          round: i + 1,
+          suddenDeath: false,
+          reason: "timeout",
+          winner: winners[i]!.uid,
+          how: "timeout",
+          cols: s.cols,
+          rows: s.rows,
+          slots: s.slots,
+          progress: ends[i]!.progress,
+          molds: { [a.uid]: winners[i] === a ? [0] : [], [b.uid]: winners[i] === b ? [0] : [] },
+        })),
+      );
+      await sa.next({ op: "SERIES_END" });
+      await sa.next({ op: "LOBBY", phase: "results" });
+
+      // Back during results: the same summary, from the SNAPSHOT.
+      sb.ws.close();
+      await lobbyWhere(sa, b.uid, false);
+      sb = await connect(b, `/v1/ws/room/${code}`);
+      const snap = await sb.next({ op: "SNAPSHOT" });
+      expect(snap.results).toEqual({ ...series, op: undefined });
+      expect(snap.results.history).toHaveLength(3);
+
+      // A new series keeps nothing of the last one.
+      await start(sa, code, [sa, sb], "AGAIN");
+      expect((await seriesOf(code)).history).toBeUndefined();
+      expect(await runDurableObjectAlarm(stub(code))).toBe(true); // its timer
+      const next = await sa.next({ op: "ROUND_END" });
+      expect(next).toMatchObject({ round: 1, how: "none" });
+      expect((await seriesOf(code)).history!.map((h) => h.round)).toEqual([1]);
+      await closeAll(sa, sb);
+    },
+    30_000,
+  );
+
+  it(
     "keeps a dropped racer's mold, goes on without one who runs out of time, and is a forfeit when only one is left",
     async () => {
       const [a, b, c] = (await Promise.all([0, 1, 2].map(() => setUpClient()))) as [Smith, Smith, Smith];
@@ -593,6 +675,21 @@ describe("Versus rooms", () => {
         [b.uid]: 5,
         [c.uid]: 5,
       });
+      // The round the forfeit ended is in the history, with the molds of those who left.
+      expect(series.history).toEqual([
+        {
+          round: 1,
+          suddenDeath: false,
+          reason: "timeout",
+          winner: a.uid,
+          how: "timeout",
+          cols: round.puzzle.cols,
+          rows: round.puzzle.rows,
+          slots: round.puzzle.slots.map(({ slot, x, y, d, len }) => ({ slot, x, y, d, len })),
+          progress: end.progress,
+          molds: end.molds,
+        },
+      ]);
       const results = await sa.next({ op: "LOBBY", phase: "results" });
       expect(results.players.map((p: Message) => p.id)).toEqual([a.uid]);
       expect((await me(c)).stats).toMatchObject({ vsSeries: 1, vsSeriesWon: 0 });
@@ -602,6 +699,7 @@ describe("Versus rooms", () => {
       const again = await sc2.next({ op: "SNAPSHOT" });
       expect(again.lobby.phase).toBe("results");
       expect(again.results).toMatchObject({ forfeit: true, winner: a.uid });
+      expect(again.results.history).toEqual(series.history);
       expect(again.standings).toMatchObject({ round: 1, winner: a.uid });
       await closeAll(sa, sc2);
     },
@@ -650,6 +748,8 @@ describe("Versus rooms", () => {
     await sb.closed;
     const series = await sa.next({ op: "SERIES_END" });
     expect(series).toMatchObject({ winner: a.uid, forfeit: true, rounds: 1 });
+    // Just the round played: leaving during the standings adds none.
+    expect(series.history.map((h: Message) => [h.round, h.winner, h.how])).toEqual([[1, b.uid, "timeout"]]);
     // B won the round, but left: they keep the win on the podium.
     expect(series.podium.map((p: Message) => [p.id, p.wins, p.place])).toEqual([
       [b.uid, 1, 1],

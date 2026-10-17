@@ -46,6 +46,13 @@ import { podium, resolveVsRound, seriesStatus, type SeriesLength, type VsRoundHo
 export const DEFAULT_SERIES: SeriesLength = 3;
 /** How long the standings show between rounds before the next countdown starts by itself. */
 export const STANDINGS_MS = 10_000;
+/**
+ * Round summaries a series keeps for `SERIES_END.history`: the latest this
+ * many. Each is 2 KB at most (5 racers, a 10×10 mold), so the series, the
+ * award and the results stay far below the 2 MB a storage value may hold.
+ * A series of 10 with a few sudden deaths never gets near it.
+ */
+export const MAX_HISTORY = 50;
 
 // ---------------------------------------------------------------------------
 // A round
@@ -353,6 +360,12 @@ export interface VsSeries {
    * until the first round is recorded.
    */
   forged?: Record<string, string[]>;
+  /**
+   * Every round ended so far, in order ({@link MAX_HISTORY} at most), for
+   * `SERIES_END`. Absent in series stored before it, and until the first
+   * round ends.
+   */
+  history?: VsRoundSummary[];
   /** Survival: every round of the series is one (fixed at the start). Absent for classic. */
   readonly variant?: "survival";
 }
@@ -574,10 +587,49 @@ export interface VsRoundEnd {
 }
 
 /**
+ * One ended round as `SERIES_END.history` lists it: how it went, and every
+ * racer's mold with its shape (as in `ROUND_START`, never the words), so it
+ * can be drawn by someone who never saw the round start.
+ */
+export interface VsRoundSummary {
+  readonly round: number;
+  readonly suddenDeath: boolean;
+  readonly reason: VsRoundEndReason;
+  readonly winner: string | null;
+  readonly how: VsRoundEndHow;
+  readonly cols: number;
+  readonly rows: number;
+  readonly slots: RoundStartFields["slots"];
+  readonly progress: readonly VsProgress[];
+  readonly molds: Readonly<Record<string, readonly number[]>>;
+  /** Survival only: who melted which slot (`null` if nobody did). */
+  readonly melted?: { readonly id: string; readonly slot: number } | null;
+}
+
+/** Adds the round that `end` closed to the series' history, dropping the oldest past {@link MAX_HISTORY}. */
+function recordHistory(s: VsSeries, r: VsRound, end: VsRoundEndFields): void {
+  const history = (s.history ??= []);
+  history.push({
+    round: r.round,
+    suddenDeath: r.regular === null,
+    reason: end.reason,
+    winner: end.winner,
+    how: end.how,
+    cols: r.puzzle.cols,
+    rows: r.puzzle.rows,
+    slots: r.puzzle.slots.map(({ slot, x, y, d, len }) => ({ slot, x, y, d, len })),
+    progress: end.progress,
+    molds: end.molds,
+    ...(end.melted === undefined ? {} : { melted: end.melted }),
+  });
+  if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
+}
+
+/**
  * Ends the round now: resolves it among the racers still in the series,
- * adds it to the series, and decides what comes next. With `stop` the
- * series ends here whatever the tally (the room is closing). The standings
- * would run until `now + STANDINGS_MS`.
+ * adds it to the series (and to its history), and decides what comes next.
+ * With `stop` the series ends here whatever the tally (the room is
+ * closing). The standings would run until `now + STANDINGS_MS`.
  *
  * A melt (`melted`, after {@link applyVsMelt}) is resolved among the
  * others: the most letters wins, a tie going to whoever got there first
@@ -591,7 +643,7 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
   const how: VsRoundEndHow = melter !== undefined && result.how === "timeout" ? "survived" : result.how;
   const decision = seriesDecision(s);
   const outcome = decision.over ? { winner: decision.winner, early: decision.early, forfeit: decision.forfeit } : stop ? stopSeries(s) : null;
-  return {
+  const end: VsRoundEnd = {
     fields: {
       round: r.round,
       reason,
@@ -613,6 +665,8 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
     },
     outcome,
   };
+  recordHistory(s, r, end.fields);
+  return end;
 }
 
 // ---------------------------------------------------------------------------

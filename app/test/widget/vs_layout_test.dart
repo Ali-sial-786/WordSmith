@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/features/coop/lobby_view.dart';
 import 'package:wordsmith/features/coop/room_video.dart';
+import 'package:wordsmith/features/vs/rival_molds.dart';
 import 'package:wordsmith/features/vs/vs_results_view.dart';
 import 'package:wordsmith/features/vs/vs_round_view.dart';
 import 'package:wordsmith/features/vs/vs_standings_view.dart';
@@ -108,6 +109,63 @@ final _seriesEnd = SeriesEnd.fromJson({
     },
   },
 });
+
+/// A best of 10 among five that went to two sudden deaths, the last one won by
+/// me; Wren melted in round 2 and left after round 6. 3x3 mold, 7 letters.
+SeriesEnd _longSeries() {
+  // CAT across the top, COT down the left, TOE down the right.
+  const cells = {
+    0: [(0, 0), (1, 0), (2, 0)],
+    1: [(0, 0), (0, 1), (0, 2)],
+    2: [(2, 0), (2, 1), (2, 2)],
+  };
+  Map<String, Object?> past(int n, String? winner, String how, Map<String, List<int>> molds, {bool sudden = false}) => {
+    'round': n,
+    'suddenDeath': sudden,
+    'reason': n == 2 ? 'melted' : 'timeout',
+    'winner': winner,
+    'how': how,
+    'cols': 3,
+    'rows': 3,
+    'slots': [
+      {'slot': 0, 'x': 0, 'y': 0, 'd': 'a', 'len': 3},
+      {'slot': 1, 'x': 0, 'y': 0, 'd': 'd', 'len': 3},
+      {'slot': 2, 'x': 2, 'y': 0, 'd': 'd', 'len': 3},
+    ],
+    'progress': [
+      for (final e in molds.entries)
+        {
+          'id': e.key,
+          'filled': {for (final s in e.value) ...cells[s]!}.length,
+          'total': 7,
+        },
+    ],
+    'molds': molds,
+    if (n == 2) 'melted': {'id': 'u5', 'slot': 1},
+  };
+  return SeriesEnd.fromJson({
+    'winner': 'u1',
+    'early': false,
+    'forfeit': false,
+    'rounds': 12,
+    'podium': [
+      for (final (i, wins) in [4, 3, 2, 1, 0].indexed)
+        {'id': 'u${i + 1}', 'username': _names[i], 'wins': wins, 'place': i + 1},
+    ],
+    'history': [
+      for (var n = 1; n <= 10; n++)
+        past(n, n == 4 ? null : 'u${n % 4 + 1}', n == 4 ? 'none' : (n.isEven ? 'survived' : 'finished'), {
+          for (var i = 1; i <= (n <= 6 ? 5 : 4); i++) 'u$i': n == 4 ? [] : [for (var s = 0; s < (i + n) % 4; s++) s],
+        }),
+      past(11, null, 'none', {'u1': [], 'u2': []}, sudden: true),
+      past(12, 'u1', 'timeout', {
+        'u1': [0, 1],
+        'u2': [2],
+      }, sudden: true),
+    ],
+    'xp': {},
+  });
+}
 
 VsSession _session(String phase) {
   final s = VsSession(
@@ -279,6 +337,81 @@ void main() {
     expect(find.text('YOU WIN THE SERIES!'), findsOneWidget);
     expect(find.text('Embers: +1 Chisel'), findsOneWidget);
     expect(find.text('Rematch'), findsOneWidget);
+  });
+
+  testWidgets('the podium sums up twelve rounds among five on a small phone', (tester) async {
+    for (final scale in [1.0, 1.3]) {
+      final s = _session('results')..seriesEnd = _longSeries();
+      await _pump(
+        tester,
+        VsResultsView(session: s, onLeave: () {}),
+        textScale: scale,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Round by round'), findsOneWidget);
+      expect(find.text('Rematch'), findsOneWidget, reason: 'the actions stay in reach below');
+
+      // Down to the last rounds and the totals.
+      await tester.drag(find.byType(ListView), const Offset(0, -4000));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Sudden death', findRichText: true), findsNWidgets(2));
+      expect(find.textContaining('most letters on time', findRichText: true), findsOneWidget);
+      expect(find.text('Letters'), findsOneWidget);
+      // The last round starts open, with its two racers' molds: mine (CAT, COT) and sam's (TOE).
+      expect(find.byType(RivalMolds), findsOneWidget);
+      final tiles = find.byType(RivalMolds);
+      expect(find.descendant(of: tiles, matching: find.text('5/7')), findsOneWidget);
+      expect(find.descendant(of: tiles, matching: find.text('3/7')), findsOneWidget);
+      expect(find.descendant(of: tiles, matching: find.text('You')), findsOneWidget);
+
+      // Rounds open and close with a tap.
+      await tester.tap(find.text('11').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(RivalMolds), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('12').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(RivalMolds), findsOneWidget);
+      // From the top again for the next text size.
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('a podium from an older server shows the last round\'s molds, if this phone saw it', (tester) async {
+    final start = _start();
+    final end = VsRoundEnd.fromJson({
+      'round': 3,
+      'reason': 'finished',
+      'winner': 'u1',
+      'how': 'finished',
+      'progress': [],
+      'molds': {
+        'u1': [0, 1, 2],
+        'u2': [0],
+      },
+      'tally': {},
+      'answers': [],
+      'next': null,
+    });
+    final s = _session('results')
+      ..round = start
+      ..standings = end
+      ..seriesEnd = _seriesEnd;
+    await _pump(tester, VsResultsView(session: s, onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(_seriesEnd.history, isEmpty);
+    expect(find.text('Round by round'), findsNothing);
+    await tester.drag(find.byType(ListView), const Offset(0, -2000));
+    await tester.pump();
+    expect(find.text('Final round'), findsOneWidget);
+    expect(find.text('7/7'), findsOneWidget);
+
+    // Back in the forge during results: no round to draw it on.
+    s.round = null;
+    await _pump(tester, VsResultsView(session: s, onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Final round'), findsNothing);
   });
 
   testWidgets('the lobby and a round still fit with 130% text', (tester) async {

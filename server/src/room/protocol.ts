@@ -22,7 +22,7 @@ import type { HintCounts, HintKind } from "../rules/progression";
 import type { RoomMode, RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isSeriesLength, type SeriesLength } from "../rules/vs";
-import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields } from "../rules/vs-round";
+import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields, VsRoundSummary } from "../rules/vs-round";
 
 export { PING, PONG } from "../hub/protocol";
 
@@ -197,6 +197,8 @@ export interface SeriesEndFields {
   readonly forfeit: boolean;
   readonly rounds: number;
   readonly podium: readonly PodiumEntry[];
+  /** Every round played, in order: how it went and everyone's mold (`[]` for a series stored before it). */
+  readonly history: readonly VsRoundSummary[];
   /** `{}` until the results are written to D1. */
   readonly xp: Readonly<Record<string, VsXpBody>>;
 }
