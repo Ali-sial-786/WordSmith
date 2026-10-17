@@ -72,10 +72,10 @@ ratio.
 | 2 | **Letter tiles** | **Blender** render of a **blank** round iron tile in 3 states: cold, hot (selected) and dim (used). | Same textures as the anvil | The **letters are drawn live** in Flutter with an emboss and glow, so any letter works with only 3 images. |
 | 3 | **Molten trail** | **Code**: a gradient stroke with a glow blur, plus spark particles | — | An optional heat-shimmer fragment shader. |
 | 4 | **Mold cells** | Empty: a recessed sand-cast slot (**Blender** bake or a CC0 sand texture). Filled: a **code**-drawn bevelled metal plate tinted by the metal or player colour. | ambientCG sand and stone (CC0) | The pour-and-cool animation is code (a shader drives the colour change). |
-| 5 | **9 chapter backgrounds** | **Blender** scenes built from CC0 3D kits, lit with CC0 HDRIs | Quaternius (CC0), Kenney 3D kits (CC0), Poly Haven models and HDRIs (CC0) | Portrait 1080×2340 WebP, dark and softly blurred behind play. The scenes are listed in §4. |
+| 5 | **9 chapter backgrounds** | **Blender** scenes built from CC0 3D kits, lit with CC0 HDRIs | Quaternius (CC0), Kenney 3D kits (CC0), Poly Haven models and HDRIs (CC0) | Portrait 1080×2340 WebP (quality 90), rendered at that native size with no upscaling; dark and softly blurred behind play. The scenes are listed in §4. |
 | 6 | **Forge Hall (home) hero art** | **Blender**: a forge interior with the hearth glowing | Same kits | Slow-drifting embers on top (code). |
 | 7 | **Icons** (hammer, chisel, sparks, anvil, tongs, scrap bucket, crown, friends, etc.) | Free icon set, tinted in the app | **game-icons.net** (CC BY 3.0, credit each author; some icons are CC0) | Generic UI icons (back, settings, close) come from **Material Symbols** (Apache 2.0). |
-| 8 | **UI panels and buttons** | **Inkscape** 9-slice SVGs: riveted iron plates, brass trim, leather straps | Placeholder or fallback: **Kenney UI Pack – RPG Expansion** (CC0) | Kept as vectors so they stay sharp at any size. |
+| 8 | **UI panels and buttons** | **Blender** (`art/blender/ui_kit.py`): a metal 9-slice kit rendered with Cycles in a procedural studio light: polished bronze / gold / steel rims and riveted brackets around dark forged-iron or molten faces. `plate` / `plate_primary` (menu buttons), `panel` / `panel_gold` (cards), `round` / `round_active` (round controls), `tab` (chips and badges) | — (all procedural, no third-party input) | PNG at 3× in `app/assets/ui/`, drawn with `centerSlice` (rects in `art/blender/README.md`); flat centres, so they stretch cleanly. No baked shadows. |
 | 9 | **Avatars** | 16 emblem avatars (hammer, tongs, anvil, flame, helm, …) on metal badge backgrounds | game-icons.net emblems + our own badge frames | More can be unlocked later as level rewards. |
 | 10 | **App icon** | **Blender**: a hammer striking a glowing tile on an anvil, with sparks | — | Android adaptive icon (separate foreground and background layers) plus a **monochrome** version for themed icons. |
 | 11 | **"Forged!" and level-up moments** | **Code** particle bursts plus a short **Blender** hammer-strike sprite sequence (about 12 frames) | — | Short and skippable. |
@@ -198,6 +198,7 @@ art/
 - **Only the final, optimised assets** are committed under `app/assets/`.
 - **Size budget:**
   - APK under about 60 MB.
-  - Each background about 150–300 KB (WebP, quality 80).
+  - Each background at most 600 KB (WebP, quality 90, native 1080×2340); all ten under 6 MB.
+  - The UI kit (seven 9-slice PNGs) about 0.4 MB.
   - All audio together under 8 MB.
 - **Placeholders first:** early builds use simple code-drawn stand-ins, swapped for the real assets one at a time as they're made. Gameplay is never blocked waiting for art.

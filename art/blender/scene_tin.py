@@ -9,7 +9,7 @@ hang on the wall, an anvil stands in silhouette in the foreground.
 
 Top ~45 % (beams, hood, upper wall) and the bottom (floor) stay calm.
 
-    blender -b --factory-startup -P scene_tin.py -- [--samples 80] [--scale 0.667]
+    blender -b --factory-startup -P scene_tin.py -- [--samples 80] [--scale 1.0]
 """
 import math
 import os
@@ -24,7 +24,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 80)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_tin"
 
 W_HALF, BACK, FRONT, HEIGHT = 2.6, 4.0, -5.0, 4.6

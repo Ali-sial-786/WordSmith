@@ -8,7 +8,7 @@ statuette stands on the bench, and two wall torches flank the furnace. Clay moul
 
 Top ~45 % (beams, bell, sooty wall) and the bottom (floor) stay dark and calm.
 
-    blender -b --factory-startup -P scene_bronze.py -- [--samples 80] [--scale 0.667]
+    blender -b --factory-startup -P scene_bronze.py -- [--samples 80] [--scale 1.0]
 """
 import math
 import os
@@ -22,7 +22,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 80)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_bronze"
 
 W_HALF, BACK, FRONT, HEIGHT = 3.0, 4.0, -6.0, 6.0

@@ -2,9 +2,9 @@
 """Post-process raw Blender renders into the final app assets.
 
 Plain Python 3 + Pillow + numpy (no bpy). Reads art/blender/_renders/,
-writes app/assets/images/.
+writes app/assets/images/ (and the UI kit to app/assets/ui/).
 
-    python3 post.py [tiles] [anvil] [cells] [icon] [bg]     (default: all)
+    python3 post.py [tiles] [anvil] [cells] [icon] [bg] [ui]   (default: all)
     python3 post.py bg bg_iron bg_gold                      (only these backgrounds)
 """
 import os
@@ -381,7 +381,8 @@ def icon():
 # 5. backgrounds (1080x2340 WebP)
 # --------------------------------------------------------------------------
 BG_SIZE = (1080, 2340)
-BG_BUDGET_KB = 350
+BG_QUALITY = 90          # WebP quality; stepped down only if a file would exceed the budget
+BG_BUDGET_KB = 600       # per file: the ten backgrounds stay <= 6 MB in the app
 
 
 def bloom_add(rgb, threshold=0.7, radii=(12, 40), gains=(0.35, 0.25)):
@@ -408,13 +409,24 @@ def calm_bands(rgb, top=0.45, bottom=0.62, top_dim=0.82, bottom_dim=0.78):
 
 def background(name, **kw):
     src = load(raw("bg", f"{name}.png"))
-    a = np.asarray(Image.fromarray((src[..., :3] * 255 + 0.5).astype(np.uint8))
-                   .resize(BG_SIZE, Image.LANCZOS)).astype(np.float32) / 255
+    size = (src.shape[1], src.shape[0])
+    img = Image.fromarray((src[..., :3] * 255 + 0.5).astype(np.uint8))
+    if size != BG_SIZE:
+        if size[0] > BG_SIZE[0]:                  # supersampled render: downscale
+            img = img.resize(BG_SIZE, Image.LANCZOS)
+        elif "--allow-upscale" in sys.argv:       # QUICK=1 previews only
+            print(f"  NOTE {name}: raw is {size[0]}x{size[1]}, upscaled for a preview only")
+            img = img.resize(BG_SIZE, Image.LANCZOS)
+        else:
+            print(f"  (skip {name}: raw is {size[0]}x{size[1]}, not native "
+                  f"{BG_SIZE[0]}x{BG_SIZE[1]}; re-render with --scale 1.0)")
+            return
+    a = np.asarray(img).astype(np.float32) / 255
     a = bloom_add(a, **kw.get("bloom", {}))
     a = calm_bands(a, **kw.get("bands", {}))
     im = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
     path = out(f"{name}.webp")
-    for q in (80, 76, 72, 68, 64, 60):
+    for q in range(BG_QUALITY, 69, -2):
         im.save(path, "WEBP", quality=q, method=6)
         if os.path.getsize(path) <= BG_BUDGET_KB * 1024:
             break
@@ -448,7 +460,78 @@ def bg():
             print(f"  (skip {name}: no raw render)")
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg}
+# --------------------------------------------------------------------------
+# 6. metal UI kit (9-slice PNGs at 3x) -> app/assets/ui/
+# --------------------------------------------------------------------------
+UI_OUT = os.path.join(REPO, "app", "assets", "ui")
+UI_PANEL_FACE_ALPHA = 0.94
+# share of the fine grain kept where the app stretches the image (1 = all)
+UI_GRAIN_KEEP = {"plate": 0.5, "plate_primary": 0.5, "tab": 0.4, "panel": 0.0, "panel_gold": 0.0}
+
+
+def _blur_axis(ch, sigma, axis):
+    """1-D Gaussian-ish blur (3 box passes) along one axis of a 2-D array."""
+    r = max(1, int(round((np.sqrt(4 * sigma * sigma + 1) - 1) / 2)))
+    out = ch.astype(np.float32)
+    for _ in range(3):
+        out = _box(out, r, axis)
+    return out
+
+
+def _slice_weight(n, lo, hi, feather):
+    """1 inside [lo, hi), smoothly 0 within `feather` px outside it."""
+    i = np.arange(n, dtype=np.float32) + 0.5
+    t = np.clip(np.minimum(i - (lo - feather), (hi + feather) - i) / feather, 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def nine_slice_safe(rgb, rect, grain_keep=0.0, feather=10, ysigma=6.0, grain_mask=None):
+    """Make an image stretch cleanly with Flutter's centerSlice.
+
+    Columns L..R are stretched horizontally: there every row is made exactly
+    uniform along x (its mean over L..R). Rows T..B are stretched vertically:
+    there the image is smoothed along y only. Both steps work along the stretch
+    direction alone, so the crisp bevel profiles across an edge stay intact.
+    Fine grain along the stretch direction is put back at `grain_keep` (times
+    `grain_mask`, e.g. only on the face: grain on a bright polished rim would
+    streak). The corners stay as rendered and blend in over `feather` px."""
+    L, T, R, B = rect
+    h, w = rgb.shape[:2]
+    g = grain_keep if grain_mask is None else grain_keep * grain_mask[..., None]
+    wx = _slice_weight(w, L, R, feather)[None, :, None]
+    wy = _slice_weight(h, T, B, feather)[:, None, None]
+    # horizontal stretch: uniform rows (+ x-only grain)
+    fine_x = rgb - np.stack([_blur_axis(rgb[..., c], 1.2, 1) for c in range(3)], -1)
+    rowmean = rgb[:, L:R].mean(axis=1, keepdims=True)
+    out = rgb * (1 - wx) + (rowmean + g * fine_x) * wx
+    # vertical stretch: smooth along y (+ y-only grain)
+    smooth = np.stack([_blur_axis(out[..., c], ysigma, 0) for c in range(3)], -1)
+    fine_y = out - np.stack([_blur_axis(out[..., c], 1.2, 0) for c in range(3)], -1)
+    return out * (1 - wy) + (smooth + g * fine_y) * wy
+
+
+def ui():
+    print("ui kit")
+    import ui_geom as G
+    os.makedirs(UI_OUT, exist_ok=True)
+    for name, spec in G.PIECES.items():
+        src = raw("ui", f"{name}.png")
+        if not os.path.exists(src):
+            print(f"  (skip {name}: no raw render)")
+            continue
+        a = resize(load(src), spec["size"])
+        alpha = G.alpha_mask(name)
+        rgb = a[..., :3]
+        if spec["slice"]:
+            rgb = nine_slice_safe(rgb, spec["slice"], UI_GRAIN_KEEP.get(name, 0.0),
+                                  grain_mask=G.field(name, "w_face"))
+        if spec["kind"] == "panel":       # face reads solid but lets a hint through
+            alpha = alpha * (1 - (1 - UI_PANEL_FACE_ALPHA) * G.field(name, "w_face"))
+        save_png(np.concatenate([np.clip(rgb, 0, 1), alpha[..., None]], -1),
+                 os.path.join(UI_OUT, f"{name}.png"))
+
+
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg, "ui": ui}
 
 
 def main():

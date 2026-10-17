@@ -10,7 +10,7 @@ foreground.
 
 Top ~45 % (upper shelves, banners, vault) and the bottom (floor) stay calm.
 
-    blender -b --factory-startup -P scene_gold.py -- [--samples 64] [--scale 0.667]
+    blender -b --factory-startup -P scene_gold.py -- [--samples 64] [--scale 1.0]
 """
 import math
 import os
@@ -25,7 +25,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 64)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_gold"
 
 W_HALF, BACK, FRONT, HEIGHT = 3.0, 4.2, -6.0, 5.6

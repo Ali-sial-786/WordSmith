@@ -9,7 +9,7 @@ A silversmith's stake anvil and hammers sit in the foreground.
 
 Top ~45 % (upper wall, arch, the moon's sky) and the bottom (floor) stay calm.
 
-    blender -b --factory-startup -P scene_silver.py -- [--samples 64] [--scale 0.667]
+    blender -b --factory-startup -P scene_silver.py -- [--samples 64] [--scale 1.0]
 """
 import math
 import os
@@ -25,7 +25,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 64)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_silver"
 
 W_HALF, BACK, FRONT, HEIGHT = 3.0, 4.2, -6.0, 5.4

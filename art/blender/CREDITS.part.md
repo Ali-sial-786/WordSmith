@@ -1,10 +1,11 @@
 <!-- Fragment for art/CREDITS.md: third-party inputs of the Blender renders
      (art/blender/). Pinned URLs + sha256 are in art/blender/sources.json. -->
 
-### Blender renders (tiles, anvil face, mold cells, app icon, backgrounds)
+### Blender renders (tiles, anvil face, mold cells, UI kit, app icon, backgrounds)
 
 All 3D models, scenes, lighting and shaders are original work made with the bpy scripts in
 `art/blender/`. Textures are baked into the rendered images; nothing below ships in the app as-is.
+The metal UI kit (`app/assets/ui/`, `ui_kit.py`) is fully procedural and uses no third-party input.
 
 | File(s) | Source | Author | Licence | Used for | Retrieved |
 |---|---|---|---|---|---|

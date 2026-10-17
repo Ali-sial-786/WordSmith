@@ -9,7 +9,7 @@ Portrait 1080x2340. The top ~45 % (chimney breast, beams, smoke) stays dark
 and calm for the crossword grid; the bottom (floor) is darker too, as the app
 draws animated flames over the bottom 40 %.
 
-    blender -b --factory-startup -P scene_hall.py -- [--samples 80] [--scale 0.667]
+    blender -b --factory-startup -P scene_hall.py -- [--samples 80] [--scale 1.0]
 """
 import math
 import os
@@ -23,7 +23,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 80)
-SCALE = C.arg("scale", 0.667)         # render scale of 1080x2340 (post.py upscales)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_hall"
 
 W_HALF, BACK, FRONT, HEIGHT = 3.0, 4.0, -6.0, 6.5
@@ -36,7 +36,7 @@ def materials():
                             tint="#8A6A55", tint_fac=0.4, rough=(0.75, 1.0),
                             soot=0.9, soot_range=(2.2, 5.0)),
         floor=K.tex_material("Flagstones", "PavingStones142", scale=0.8, value=0.2,
-                             sat=0.5, tint="#7A6252", tint_fac=0.3, rough=(0.55, 0.95),
+                             sat=0.5, tint="#7A6252", tint_fac=0.3, rough=(0.38, 0.9),
                              normal=0.6),
         brick=K.tex_material("ForgeBrick", "Bricks094", scale=1.0, value=0.55, sat=0.9,
                              rough=(0.7, 1.0), soot=0.75, soot_range=(1.6, 2.4)),
@@ -50,6 +50,10 @@ def materials():
         stump=K.tex_material("Stump", "Planks023A", scale=1.4, value=0.42, sat=1.0,
                              tint="#8A5A38", tint_fac=0.5),
         iron=P.iron_material("Iron", base="#62646A", rough=(0.3, 0.5), bump=0.12),
+        # worn-bright working iron (anvil face, hammer heads, hoops, hung tools):
+        # low roughness so it throws crisp warm glints of the fire
+        polished=P.iron_material("PolishedIron", base="#9A9CA2", rough=(0.1, 0.24), bump=0.05,
+                                 facet_scale=6.0),
         handle=P.wood_material("Handle", value=0.8, scale=3.0),
         water=K.water_material("Water"),
     )
@@ -79,34 +83,43 @@ def build(M):
 
     # tools hanging either side of the forge, lit by its spill -------------
     K.tool_rack((-1.95, BACK - 0.05, 2.15), along="X", length=0.9, wood=M["beam"],
-                iron=M["iron"], handle=M["handle"], facing=-1, seed=4)
+                iron=M["polished"], handle=M["handle"], facing=-1, seed=4)
     K.tool_rack((1.95, BACK - 0.05, 2.15), along="X", length=0.9, wood=M["beam"],
-                iron=M["iron"], handle=M["handle"], facing=-1, seed=9)
+                iron=M["polished"], handle=M["handle"], facing=-1, seed=9)
     # tongs and a poker leaning against the forge's front corners
-    tg = P.tongs("LeanTongs", M["iron"], length=1.15)
+    tg = P.tongs("LeanTongs", M["polished"], length=1.15)
     tg.location = (-1.28, FORGE_Y - 0.28, 0.0)
     tg.rotation_euler = (math.radians(-12), math.radians(8), math.radians(10))
-    K.cylinder("Poker", (1.3, FORGE_Y - 0.25, 0.6), 0.018, 1.25, M["iron"], verts=12,
+    K.cylinder("Poker", (1.3, FORGE_Y - 0.25, 0.6), 0.018, 1.25, M["polished"], verts=12,
                rot=(-12, -8, 0))
 
     # anvil on its stump (front right, horn towards the fire) --------------
     AX, AY = 1.05, 0.55
     K.stump("Stump", (AX, AY, 0), radius=0.36, height=0.45, mat=M["stump"])
-    anv = P.anvil("Anvil", M["iron"], depth=1.15, location=(AX, AY, 0.45),
+    anv = P.anvil("Anvil", M["polished"], depth=1.15, location=(AX, AY, 0.45),
                   rot_z=math.radians(-28))
     anv.scale = (0.28, 0.28, 0.28)
-    hm = P.hammer("AnvilHammer", M["iron"], M["handle"], head_len=0.26, head_w=0.09,
+    hm = P.hammer("AnvilHammer", M["polished"], M["handle"], head_len=0.26, head_w=0.09,
                   handle_len=0.5, pein_axis="z", handle_r=0.02)
     hm.location = (AX + 0.05, AY - 0.06, 0.97)
     hm.rotation_euler = (math.radians(90), 0, math.radians(-40))
 
     # quench barrel front left ---------------------------------------------
     K.barrel("Barrel", (-1.45, 0.9, 0), radius=0.4, height=0.85, wood=M["wood"],
-             iron=M["iron"], water=M["water"])
+             iron=M["polished"], water=M["water"])
 
     # warm rim on the foreground silhouettes, very faint cool fill -----------
-    C.area_light("RimAnvil", (0.6, 2.2, 1.3), (AX, AY, 0.8), 30, size=0.8,
+    C.area_light("RimAnvil", (0.6, 2.2, 1.3), (AX, AY, 0.8), 55, size=0.45,
+                 color=(1.0, 0.52, 0.2))
+    # warm bounce card right of the forge: what the polished anvil face mirrors
+    C.area_light("AnvilBounce", (1.6, 2.3, 1.25), (AX, AY, 0.9), 40, size=1.0,
+                 color=(1.0, 0.55, 0.25))
+    C.area_light("RimBarrel", (-0.75, 2.1, 1.45), (-1.45, 0.9, 0.6), 30, size=0.45,
                  color=(1.0, 0.5, 0.2))
+    # the forge's spill grazing the hung tools either side of it
+    for sx in (-1, 1):
+        C.area_light(f"RackSpill{sx}", (sx * 1.15, BACK - 0.9, 1.7), (sx * 1.95, BACK, 2.1),
+                     14, size=0.5, color=(1.0, 0.5, 0.2))
     C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 6, size=3.0,
                  color=(0.5, 0.6, 0.9))
 
@@ -133,7 +146,7 @@ def main():
     cam.data.sensor_height = 36
     cam.data.dof.use_dof = True
     cam.data.dof.focus_distance = 5.4
-    cam.data.dof.aperture_fstop = 2.8
+    cam.data.dof.aperture_fstop = 5.0      # crisper props; the fire still sits in focus
     C.render(NAME, "bg")
 
 

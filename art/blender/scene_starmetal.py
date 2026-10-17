@@ -11,7 +11,7 @@ cracks thread the far ground.
 
 Top ~45 % (overhang, sky) and the bottom (near rock) stay dark and calm.
 
-    blender -b --factory-startup -P scene_starmetal.py -- [--samples 64] [--scale 0.667]
+    blender -b --factory-startup -P scene_starmetal.py -- [--samples 64] [--scale 1.0]
 """
 import math
 import os
@@ -27,7 +27,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 64)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_starmetal"
 
 VOLCANO = (24.0, 120.0)        # x, y of the far volcano

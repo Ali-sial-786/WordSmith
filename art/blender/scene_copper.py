@@ -10,7 +10,7 @@ golden afternoon sun from behind-right, rim-lighting roof, wheel and trees.
 Top ~45 % = soft golden sky + tiled roof (calm); bottom = dark river with
 warm reflections (the app draws its flame band over the bottom 40 %).
 
-    blender -b --factory-startup -P scene_copper.py -- [--samples 80] [--scale 0.667]
+    blender -b --factory-startup -P scene_copper.py -- [--samples 80] [--scale 1.0]
 """
 import math
 import os
@@ -25,7 +25,7 @@ import forge_kit as K  # noqa: E402
 import props as P  # noqa: E402
 
 SAMPLES = C.arg("samples", 80)
-SCALE = C.arg("scale", 0.667)
+SCALE = C.arg("scale", 1.0)           # 1.0 = native 1080x2340 (post.py never upscales)
 NAME = "bg_copper"
 
 BANK_Z = 0.5          # bank height above the water
