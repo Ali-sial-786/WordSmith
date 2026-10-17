@@ -1,0 +1,20 @@
+// The browser version of Wordsmith: a Worker with no code that serves the
+// Flutter web build (app/build/web) at https://play.wordsmith-forge.workers.dev.
+// The API is a separate Worker (server/, wordsmith-api).
+//
+// Build the app first (cd app && flutter build web --release --no-web-resources-cdn),
+// then: npx wrangler@4.151.1 deploy   (from this folder).
+// .github/workflows/deploy-web.yml does both. Caching headers live in
+// app/web/_headers; files left out of the upload in app/web/.assetsignore.
+{
+  "name": "play",
+  // Same as server/wrangler.jsonc.
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../app/build/web",
+    // Unknown paths get index.html (the game routes with #/... anyway).
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}

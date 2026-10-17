@@ -6,7 +6,8 @@
 > **GitHub Releases** page, and the owner sends it to friends directly (chat,
 > email, Drive). That means no $25 fee and none of the Play rules (closed
 > testing, data safety form, store listing). Firebase App Distribution was
-> dropped on 2026-10-17 (DECISIONS.md).
+> dropped on 2026-10-17 (DECISIONS.md). iPhone friends play the browser
+> version at https://play.wordsmith-forge.workers.dev (§6).
 
 ---
 
@@ -54,7 +55,8 @@ bump `version:` in app/pubspec.yaml, then: git tag v0.3.0 && git push --tags
    └─► .github/workflows/release.yml: tests → build signed release APK
           ├─► GitHub Release "Wordsmith 0.3.0" with wordsmith-0.3.0.apk attached
           └─► the same APK as a workflow artifact (30 days)
-   (the server deploys separately: .github/workflows/deploy-server.yml)
+   (the server deploys separately: .github/workflows/deploy-server.yml,
+    and the browser version on every app change: deploy-web.yml, §6)
 ```
 
 Where tags can't be pushed (Claude's cloud sessions can only push their
@@ -135,8 +137,46 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
 `flutter build apk --dart-define-from-file=dart_defines.json`.
 
-## 6. iPhone (not in v1)
+## 6. Browser and iPhone
 
-Android only for now. Flutter can build iOS or browser versions later without
-a rewrite. iPhone sideloading isn't practical for free, so a **browser version**
-would be the cheapest way to add iPhone friends later.
+iPhone sideloading isn't practical for free, so iPhone friends play the
+**browser version**: the same Flutter app built for the web, tuned for iOS
+Safari and for installing to the Home Screen.
+
+**URL:** **https://play.wordsmith-forge.workers.dev** (it also works in
+Chrome on Android and on a computer).
+
+### How it deploys
+
+```
+push to the default branch touching app/ (not app/android/) or webhost/
+   └─► .github/workflows/deploy-web.yml: flutter test → flutter build web
+          → check Cloudflare's limits → npx wrangler deploy (webhost/)
+          → wait until the live version.json shows the new version
+```
+
+- **Hosting:** a second Cloudflare Worker, **`play`**, next to the API Worker (`wordsmith-api`). It has no code: `webhost/wrangler.jsonc` serves `app/build/web` with Workers Static Assets (free plan: up to 20,000 files and 25 MiB per file; the build is about 210 files and 42 MiB, the biggest file 7 MiB, and the workflow checks this on every run).
+- **Secrets:** nothing new. It uses the same `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as the server (§5), plus `FIREBASE_ANDROID_API_KEY` for accounts, and the optional `API_BASE_URL` variable. Without the Cloudflare secrets it skips with a notice. The first run creates the `play` Worker.
+- **By hand:** **Actions → Deploy web → Run workflow**. The run's summary shows the URL and the version.
+- **Updates reach players** on their next start: the page, `flutter_bootstrap.js`, `main.dart.js`, `version.json` and `manifest.json` are served `no-cache`, so the browser checks for a new copy every time. The renderer (`canvaskit/`), images, sounds, fonts and word lists are cached for a day (`app/web/_headers`). There's no service worker, so nothing can keep an old build alive. A Home Screen app that's reopened after 15 minutes or more away reloads itself if a newer build is live.
+- **The web shell** is `app/web/`: `index.html` (loading screen, safe areas, Home Screen settings, the install hint), `flutter_bootstrap.js` (starts the game inside the safe area), `manifest.json`, `_headers` and `.assetsignore` (for Cloudflare). `python3 art/web_icons.py` rebuilds the icons and the iPhone launch images from `art/icon/`.
+- **Locally:** `cd app && flutter build web --release --no-web-resources-cdn --dart-define-from-file=dart_defines.json`, then `cd ../webhost && npx wrangler@4.151.1 dev` (the same headers as Cloudflare) or `python3 -m http.server -d ../app/build/web`.
+
+### How friends install it on an iPhone
+
+1. Open **https://play.wordsmith-forge.workers.dev** in **Safari**.
+2. Tap **Share** (on iOS 26 and later, tap **⋯** first, then **Share**), then **Add to Home Screen**, then **Add**. On iOS 26, leave **Open as Web App** switched on.
+3. Wordsmith now has its own icon. It opens full screen like an app, without Safari's bars.
+4. **Sign in** with the same account as on Android: progress lives on the server. The Home Screen app doesn't share Safari's storage, so sign in again there if you first played in Safari.
+
+The game shows a one-time hint with these steps the first time it's opened in
+Safari. Updates need nothing: the next start loads the latest version.
+
+### Limits on iPhone
+
+- **Sound needs a first tap**, as on every website. After that it plays even with the ring/silent switch on (iOS 17 and later).
+- **No sound in the background.** Music and voice chat stop when Safari or the Home Screen app is closed or in the background, unlike the Android app.
+- **No push notifications** (invites) in Safari. iOS only allows web notifications for apps added to the Home Screen on **iOS 16.4 or later**, and the browser version doesn't support them yet, so invites only show while the game is open.
+- **Storage:** Safari can clear a website's saved data after about 7 days without a visit (not for Home Screen apps). Signed-in progress is safe on the server; settings and a signed-out player's progress may be lost.
+- **First start** downloads about 6 MB (the renderer, the game and its pictures) and takes a few seconds; later starts use the cache.
+- No vibration, and the screen can rotate if the iPhone's rotation lock is off (iOS ignores the portrait setting for web apps).

@@ -1,0 +1,134 @@
+name: Deploy web
+
+# Builds the browser version (Flutter web, app/web/ is its shell) and deploys
+# it to the Cloudflare Worker "play" (webhost/), which serves only these
+# static files: https://play.wordsmith-forge.workers.dev. Runs on demand
+# (Actions → Deploy web → Run workflow) and when the app or webhost/ changes
+# on the default branch.
+#
+# Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+# (docs/DISTRIBUTION.md §5); without them it skips. Also needs
+# FIREBASE_ANDROID_API_KEY for accounts, like release.yml. The optional
+# repository variable API_BASE_URL overrides the built-in server URL.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'app/**'
+      - '!app/android/**'
+      - '!app/test_shots/**'
+      - 'webhost/**'
+      - '.github/workflows/deploy-web.yml'
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  WRANGLER_VERSION: 4.151.1 # same as server/package.json
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash # -eo pipefail, so a failed deploy isn't hidden by tee
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+      API_BASE: ${{ vars.API_BASE_URL }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Cloudflare secrets are not set yet; skipping the web deploy (docs/DISTRIBUTION.md §5)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$FIREBASE_API_KEY" ]; then
+            echo "::error::FIREBASE_ANDROID_API_KEY is not set, so this build would have no accounts; see docs/DISTRIBUTION.md"; exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.ready == 'true'
+      - uses: subosito/flutter-action@v2
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Test
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Build the web app
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app
+        run: |
+          defines=(--dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY")
+          # An empty define would override the built-in server URL.
+          if [ -n "$API_BASE" ]; then defines+=(--dart-define=API_BASE="$API_BASE"); fi
+          flutter build web --release --no-web-resources-cdn "${defines[@]}"
+
+      # Workers Static Assets: at most 20,000 files and 25 MiB per file.
+      - name: Check Cloudflare's static asset limits
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app/build/web
+        run: |
+          # Leave out what app/web/.assetsignore keeps from being uploaded.
+          files=$(find . -type f ! -name '*.symbols' ! -name '.last_build_id' ! -name '.assetsignore' ! -name '_headers' -printf '%s %p\n')
+          count=$(echo "$files" | wc -l)
+          read -r size largest < <(echo "$files" | sort -rn | head -1)
+          total=$(echo "$files" | awk '{ s += $1 } END { printf "%.1f", s / 1048576 }')
+          echo "$count files, $total MiB; largest: $largest ($(( size / 1024 )) KiB)"
+          if [ "$count" -gt 20000 ]; then echo "::error::$count files is over Cloudflare's 20,000-file limit"; exit 1; fi
+          if [ "$size" -gt 26214400 ]; then echo "::error::$largest is over Cloudflare's 25 MiB per-file limit"; exit 1; fi
+          echo "FILE_COUNT=$count" >> "$GITHUB_ENV"
+          echo "TOTAL_MIB=$total" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloudflare
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: webhost
+        run: |
+          npx --yes "wrangler@$WRANGLER_VERSION" deploy 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1 || true)
+          [ -n "$url" ] || url="https://play.wordsmith-forge.workers.dev"
+          version=$(node -p 'const v = require("../app/build/web/version.json"); `${v.version}+${v.build_number}`')
+          {
+            echo "### Web version deployed"
+            echo ""
+            echo "URL: $url"
+            echo ""
+            echo "Version $version: $FILE_COUNT files, $TOTAL_MIB MiB."
+            echo ""
+            echo "On an iPhone, open it in Safari, then Share → Add to Home Screen (docs/DISTRIBUTION.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "URL=$url" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Check the live site
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          # A brand-new workers.dev address can take a minute to answer.
+          for i in $(seq 1 18); do
+            live=$(curl -fsS "$URL/version.json" | node -p 'const v = JSON.parse(require("fs").readFileSync(0, "utf8")); `${v.version}+${v.build_number}`' 2>/dev/null || true)
+            if [ "$live" = "$VERSION" ]; then echo "$URL is serving $live"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::$URL/version.json did not show version $VERSION within 3 minutes"
+          exit 1

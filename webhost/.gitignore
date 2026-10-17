@@ -1,0 +1,3 @@
+# wrangler dev state and the deploy workflow's log
+.wrangler/
+deploy.log

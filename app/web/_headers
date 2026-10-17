@@ -1,0 +1,70 @@
+# Response headers for the browser version on Cloudflare (webhost/), from
+# https://developers.cloudflare.com/workers/static-assets/headers/
+# `flutter build web` copies this file into build/web; it isn't served itself.
+#
+# When several rules match a path, their headers are combined and repeated
+# values are joined with commas, so no path may match two Cache-Control rules.
+# Paths not listed here get Cloudflare's default
+# "public, max-age=0, must-revalidate" with an ETag: the browser keeps them
+# but checks for a newer copy each time (a 304 when unchanged). That covers
+# the small data files (campaign, lore, asset manifests), which must stay in
+# step with main.dart.js.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# The page and the code. None of these have a hash in their names, so they
+# must be checked on every start or players would mix two builds.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/flutter_bootstrap.js
+  Cache-Control: no-cache
+/flutter.js
+  Cache-Control: no-cache
+/main.dart.js
+  Cache-Control: no-cache
+/version.json
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache
+/flutter_service_worker.js
+  Cache-Control: no-cache
+
+# Flutter's renderer: big, and only changes with the Flutter version.
+/canvaskit/*
+  Cache-Control: public, max-age=86400
+/canvaskit/*.wasm
+  Content-Type: application/wasm
+
+# Big media and word lists: a day is plenty for an update to reach everyone.
+/assets/assets/audio/*
+  Cache-Control: public, max-age=86400
+/assets/assets/images/*
+  Cache-Control: public, max-age=86400
+/assets/assets/icons/*
+  Cache-Control: public, max-age=86400
+/assets/assets/ui/*
+  Cache-Control: public, max-age=86400
+/assets/assets/fonts/*
+  Cache-Control: public, max-age=86400
+/assets/assets/dict/*
+  Cache-Control: public, max-age=86400
+/assets/fonts/*
+  Cache-Control: public, max-age=86400
+/assets/shaders/*
+  Cache-Control: public, max-age=86400
+/assets/packages/*
+  Cache-Control: public, max-age=86400
+/assets/NOTICES
+  Cache-Control: public, max-age=86400
+/audio/*
+  Cache-Control: public, max-age=86400
+/icons/*
+  Cache-Control: public, max-age=86400
+/splash/*
+  Cache-Control: public, max-age=86400
+/favicon.png
+  Cache-Control: public, max-age=86400

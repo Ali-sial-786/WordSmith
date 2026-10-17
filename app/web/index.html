@@ -1,46 +1,516 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
+  <!-- Replaced by `flutter build web --base-href`; "/" when served from the root. -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Wordsmith — a blacksmith-themed word puzzle.">
+  <!-- The page never zooms or scrolls: Flutter draws everything. viewport-fit=cover
+       lets the forge colour run under the notch and home indicator, and
+       #flutter-host keeps the game inside the safe area. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Wordsmith: forge words from glowing letters on the anvil. A blacksmith-themed word puzzle with a campaign, daily molds and co-op and versus play with friends.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#120C09">
+  <meta name="format-detection" content="telephone=no">
 
-  <!-- iOS meta tags & icons -->
+  <!-- Home Screen app (iOS and Android) -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="wordsmith">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>wordsmith</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wordsmith">
+  <meta name="application-name" content="Wordsmith">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
+
+  <!-- What an iPhone shows while a Home Screen launch loads this page. Built by
+       art/web_icons.py to line up with #forge-loading below. -->
+  <link rel="apple-touch-startup-image" href="splash/launch-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+
+  <!-- The game's display font, for the loading screen. Flutter fetches the same
+       file later, so this warms its cache too. -->
+  <link rel="preload" href="assets/assets/fonts/Cinzel-Variable.ttf" as="font" type="font/ttf" crossorigin>
+
+  <title>Wordsmith</title>
+
+  <style>
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      --forge-black: #120C09;
+      --soot: #241B16;
+      --ember: #FF6A13;
+      --molten: #FFB23F;
+      --white-heat: #FFF1D0;
+      /* Flutter web doesn't apply the iPhone's safe areas itself, so the game
+         is embedded in a box inside them. Tests override these variables. */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --display-font: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", "Times New Roman", Georgia, serif;
+      --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html, body {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: var(--forge-black);
+      color: var(--white-heat);
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Flutter's hidden text fields still need to take typing and pasting. */
+    input, textarea, [contenteditable="true"] {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+
+    #flutter-host {
+      position: fixed;
+      top: var(--safe-top);
+      right: var(--safe-right);
+      bottom: var(--safe-bottom);
+      left: var(--safe-left);
+      overflow: hidden;
+      background: var(--forge-black);
+    }
+
+    /* Loading screen. The anvil and title sit where art/web_icons.py draws
+       them in the launch images (ANVIL_* and TITLE_*), so a Home Screen
+       launch goes from the launch image to this without a jump. */
+    #forge-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      overflow: hidden;
+      background: var(--forge-black);
+      transition: opacity 0.45s ease;
+    }
+    #forge-loading.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .forge-glow {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle 300px at 50% calc(50% - 40px), rgba(255, 106, 19, 0.20), rgba(255, 106, 19, 0.06) 55%, rgba(255, 106, 19, 0) 100%),
+        radial-gradient(ellipse 80% 45% at 50% 100%, rgba(140, 42, 6, 0.22), rgba(140, 42, 6, 0) 100%);
+      opacity: 0;
+      animation: forge-fade-in 1.2s ease-out 0.15s forwards, forge-breathe 3.6s ease-in-out 1.4s infinite;
+    }
+    .forge-heat {
+      position: absolute;
+      left: 50%;
+      top: calc(50% - 50px);
+      width: 150px;
+      height: 110px;
+      margin: -55px 0 0 -75px;
+      border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255, 140, 40, 0.55), rgba(255, 106, 19, 0.18) 60%, rgba(255, 106, 19, 0) 100%);
+      opacity: 0;
+      animation: forge-pulse 2.4s ease-in-out 0.6s infinite;
+    }
+    .forge-anvil {
+      position: absolute;
+      left: 50%;
+      top: calc(50% - 56px);
+      width: 176px;
+      height: auto;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .forge-title-glow {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(50% + 44px);
+      filter: drop-shadow(0 0 12px rgba(255, 106, 19, 0.45));
+    }
+    .forge-title {
+      margin: 0;
+      height: 36px;
+      padding-left: 0.2em; /* balances the letter-spacing after the last letter */
+      font: 700 30px/36px var(--display-font);
+      letter-spacing: 0.2em;
+      text-align: center;
+      white-space: nowrap;
+      color: var(--molten);
+      background: linear-gradient(180deg, var(--white-heat) 0%, var(--molten) 45%, var(--ember) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .forge-bar {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 104px);
+      width: 148px;
+      height: 3px;
+      margin-left: -74px;
+      border-radius: 2px;
+      overflow: hidden;
+      background: rgba(255, 178, 63, 0.14);
+      opacity: 0;
+      animation: forge-fade-in 0.6s ease-out 0.5s forwards;
+    }
+    .forge-bar span {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 40%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, rgba(255, 106, 19, 0), var(--molten) 50%, rgba(255, 106, 19, 0));
+      animation: forge-sweep 1.5s ease-in-out infinite;
+    }
+    .forge-status {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: calc(50% + 120px);
+      margin: 0;
+      padding-left: 0.16em;
+      font: 600 11px/16px var(--display-font);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      text-align: center;
+      color: rgba(255, 241, 208, 0.55);
+      opacity: 0;
+      animation: forge-fade-in 0.6s ease-out 0.5s forwards;
+    }
+    .forge-retry {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 168px);
+      transform: translateX(-50%);
+      padding: 10px 22px;
+      border: 1px solid rgba(255, 178, 63, 0.5);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #3A2618, #24170F);
+      color: var(--white-heat);
+      font: 700 13px/16px var(--display-font);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #forge-loading.failed .forge-retry { display: block; }
+    #forge-loading.failed .forge-bar { visibility: hidden; }
+    #forge-loading.failed .forge-status { color: rgba(255, 241, 208, 0.8); }
+    .forge-embers i {
+      position: absolute;
+      bottom: calc(50% - 30px);
+      left: 50%;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--molten);
+      box-shadow: 0 0 6px 1px rgba(255, 106, 19, 0.8);
+      opacity: 0;
+      animation: forge-ember 3.2s ease-out infinite;
+    }
+    .forge-embers i:nth-child(1) { margin-left: -46px; animation-delay: 0.7s; }
+    .forge-embers i:nth-child(2) { margin-left: 30px; animation-delay: 1.5s; animation-duration: 2.8s; }
+    .forge-embers i:nth-child(3) { margin-left: -12px; animation-delay: 2.3s; }
+    .forge-embers i:nth-child(4) { margin-left: 52px; animation-delay: 1.1s; animation-duration: 3.6s; }
+    .forge-embers i:nth-child(5) { margin-left: 8px; animation-delay: 2.9s; animation-duration: 2.6s; }
+    .forge-embers i:nth-child(6) { margin-left: -30px; animation-delay: 3.6s; animation-duration: 3.4s; }
+
+    @keyframes forge-fade-in { to { opacity: 1; } }
+    @keyframes forge-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    @keyframes forge-pulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.85; } }
+    @keyframes forge-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+    @keyframes forge-ember {
+      0% { opacity: 0; transform: translate(0, 0) scale(1); }
+      12% { opacity: 1; }
+      100% { opacity: 0; transform: translate(14px, -150px) scale(0.4); }
+    }
+
+    /* "Add to Home Screen" hint (iOS Safari only, once). */
+    #forge-install {
+      position: fixed;
+      z-index: 20;
+      left: calc(var(--safe-left) + 12px);
+      right: calc(var(--safe-right) + 12px);
+      bottom: calc(var(--safe-bottom) + 12px);
+      max-width: 420px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px 10px 10px;
+      border: 1px solid rgba(255, 178, 63, 0.38);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #302016, #1A120D);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 220, 160, 0.12), 0 0 22px rgba(255, 106, 19, 0.18);
+      color: var(--white-heat);
+      font: 400 14px/1.3 var(--ui-font);
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform 0.35s ease, opacity 0.35s ease;
+      touch-action: manipulation;
+    }
+    #forge-install[hidden] { display: none; }
+    #forge-install.hiding { transform: translateY(24px); opacity: 0; }
+    #forge-install.entering { transform: translateY(24px); opacity: 0; }
+    #forge-install img {
+      flex: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+    }
+    #forge-install .text { flex: 1; min-width: 0; }
+    #forge-install strong {
+      display: block;
+      font: 700 14px/18px var(--display-font);
+      letter-spacing: 0.06em;
+      color: var(--molten);
+    }
+    #forge-install .share {
+      display: inline-block;
+      width: 15px;
+      height: 18px;
+      margin: 0 2px -3px;
+      color: #5AA9FF;
+    }
+    #forge-install b { font-weight: 600; }
+    #forge-install button {
+      flex: none;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 241, 208, 0.08);
+      color: rgba(255, 241, 208, 0.75);
+      font: 400 22px/36px var(--ui-font);
+      cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .forge-glow { animation: none; opacity: 1; }
+      .forge-heat, .forge-embers { display: none; }
+      .forge-bar span { animation-duration: 3s; }
+      #forge-install { transition: none; }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="flutter-host"></div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <div id="forge-loading" aria-busy="true">
+    <div class="forge-glow"></div>
+    <div class="forge-heat"></div>
+    <div class="forge-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <img class="forge-anvil" src="icons/anvil.webp" alt="" width="176" height="136" decoding="async" fetchpriority="high">
+    <div class="forge-title-glow"><h1 class="forge-title" aria-label="Wordsmith">WORDSMITH</h1></div>
+    <div class="forge-bar"><span></span></div>
+    <p class="forge-status" aria-live="polite">Lighting the forge</p>
+    <button class="forge-retry" type="button">Try again</button>
+  </div>
+
+  <div id="forge-install" role="dialog" aria-label="Install Wordsmith" hidden>
+    <img src="icons/apple-touch-icon.png" alt="">
+    <div class="text">
+      <strong>Install Wordsmith</strong>
+      Tap
+      <svg class="share" viewBox="0 0 15 18" aria-label="Share" role="img"><path d="M7.5 1v10.5M4 4.5 7.5 1 11 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7H2.5A1.5 1.5 0 0 0 1 8.5v7A1.5 1.5 0 0 0 2.5 17h10a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12.5 7H10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Share, then <b>Add to Home Screen</b>
+    </div>
+    <button type="button" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <noscript><p style="position:fixed;top:40%;width:100%;text-align:center">Wordsmith needs JavaScript.</p></noscript>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // iOS 17+: play the game's sounds even with the ring/silent switch on.
+      // (Unlocking audio on the first tap is done by the Dart side.)
+      try {
+        if (navigator.audioSession) navigator.audioSession.type = 'playback';
+      } catch (e) {}
+
+      // Safari ignores user-scalable=no, so stop pinch and double-tap zoom here.
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) {
+        document.addEventListener(type, function (e) { e.preventDefault(); }, { passive: false });
+      });
+      document.addEventListener('touchmove', function (e) {
+        if (e.touches.length > 1 || (typeof e.scale === 'number' && e.scale !== 1)) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+      document.addEventListener('contextmenu', function (e) {
+        var t = e.target;
+        if (!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable))) e.preventDefault();
+      });
+      // The on-screen keyboard can leave iOS scrolled off the fixed page.
+      document.addEventListener('focusout', function () {
+        setTimeout(function () {
+          var a = document.activeElement;
+          if (!a || (a.tagName !== 'INPUT' && a.tagName !== 'TEXTAREA')) window.scrollTo(0, 0);
+        }, 60);
+      });
+
+      function storage(key, value) {
+        try {
+          if (value === undefined) return window.localStorage.getItem(key);
+          window.localStorage.setItem(key, value);
+        } catch (e) {}
+        return null;
+      }
+
+      var standalone = navigator.standalone === true ||
+        (window.matchMedia && (matchMedia('(display-mode: standalone)').matches ||
+                               matchMedia('(display-mode: fullscreen)').matches));
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // Safari itself, not another browser or an app's built-in browser.
+      var isIOSSafari = isIOS && /Safari\//.test(ua) &&
+        !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedInApp|WhatsApp/.test(ua);
+
+      // ---- Loading screen ------------------------------------------------
+      var loading = document.getElementById('forge-loading');
+      var status = loading.querySelector('.forge-status');
+      var firstFrame = false;
+      var fallbackTimer = 0;
+
+      function hideLoading() {
+        if (!loading || loading.classList.contains('done')) return;
+        loading.classList.add('done');
+        loading.setAttribute('aria-busy', 'false');
+        var el = loading;
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
+      }
+
+      function onFirstFrame() {
+        if (firstFrame) return;
+        firstFrame = true;
+        clearTimeout(fallbackTimer);
+        hideLoading();
+        maybeShowInstallHint();
+      }
+      window.addEventListener('flutter-first-frame', onFirstFrame, { once: true });
+
+      loading.querySelector('.forge-retry').addEventListener('click', function () {
+        window.location.reload();
+      });
+
+      // Called from flutter_bootstrap.js as the game starts up.
+      window.wordsmithShell = {
+        stage: function (text) {
+          if (status && !loading.classList.contains('failed')) status.textContent = text;
+        },
+        // Dart's main() is running. Its first frame normally follows within a
+        // second or two; if the event is somehow missed, don't hide the game
+        // behind the loading screen forever.
+        started: function () {
+          fallbackTimer = setTimeout(onFirstFrame, 12000);
+        },
+        fail: function (error) {
+          console.error('Wordsmith failed to start:', error);
+          if (firstFrame || !loading) return;
+          loading.classList.add('failed');
+          if (status) status.textContent = 'The forge went cold. Check your connection.';
+        },
+        get firstFrame() { return firstFrame; },
+        isIOSSafari: isIOSSafari,
+        standalone: standalone,
+      };
+
+      // ---- "Add to Home Screen" hint (iOS Safari, once) -------------------
+      var HINT_KEY = 'wordsmith.installHintShown';
+
+      function maybeShowInstallHint() {
+        if (!isIOSSafari || standalone || storage(HINT_KEY)) return;
+        setTimeout(showInstallHint, 1500);
+      }
+
+      function showInstallHint() {
+        var hint = document.getElementById('forge-install');
+        if (!hint || !hint.hidden) return;
+        storage(HINT_KEY, String(Date.now()));
+        hint.classList.add('entering');
+        hint.hidden = false;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { hint.classList.remove('entering'); });
+        });
+        var timer = setTimeout(close, 20000);
+        function close() {
+          clearTimeout(timer);
+          hint.classList.add('hiding');
+          setTimeout(function () { hint.hidden = true; hint.classList.remove('hiding'); }, 400);
+        }
+        hint.querySelector('button').addEventListener('click', close, { once: true });
+      }
+
+      // ---- Updates ---------------------------------------------------------
+      // index.html, flutter_bootstrap.js and main.dart.js are served no-cache,
+      // so a fresh start always gets the latest build. A Home Screen app can
+      // stay open for days, though: when it comes back after a while and a
+      // newer build is live, reload into it.
+      var RELOAD_AFTER_MS = 15 * 60 * 1000;
+      var loadedBuild = null;
+      var hiddenAt = 0;
+
+      function fetchBuild() {
+        return fetch('version.json', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (v) { return v ? v.version + '+' + v.build_number : null; })
+          .catch(function () { return null; });
+      }
+      fetchBuild().then(function (b) { loadedBuild = b; });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) { hiddenAt = Date.now(); return; }
+        if (!loadedBuild || !hiddenAt || Date.now() - hiddenAt < RELOAD_AFTER_MS) return;
+        fetchBuild().then(function (b) {
+          if (b && b !== loadedBuild) window.location.reload();
+        });
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

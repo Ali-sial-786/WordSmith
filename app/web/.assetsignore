@@ -1,0 +1,5 @@
+# Files in build/web that Cloudflare shouldn't serve (webhost/wrangler.jsonc).
+# `flutter build web` copies this file there.
+.last_build_id
+# Debug symbols for the renderer's stack traces; never loaded by the game.
+*.symbols
