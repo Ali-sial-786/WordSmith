@@ -4,7 +4,9 @@ name: Release (friends build)
 # git tag v0.1.0 && git push --tags) to build a signed APK and attach it to a
 # GitHub Release. Download it from the repo's Releases page and send it to
 # friends. Running the workflow by hand builds the same APK as a workflow
-# artifact instead.
+# artifact instead, or, with "publish" ticked, also publishes the release
+# for pubspec's version, tagging the commit it ran on (for when tags can't
+# be pushed).
 #
 # Secrets (repo Settings → Secrets and variables → Actions):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
@@ -18,6 +20,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a GitHub Release for pubspec's version, tagging this commit
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -56,7 +63,7 @@ jobs:
           fi
 
       - name: Check online settings
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
         run: |
           if [ -z "$FIREBASE_API_KEY" ]; then
             echo "::error::FIREBASE_ANDROID_API_KEY is not set, so this build would have no accounts; see docs/DISTRIBUTION.md"; exit 1
@@ -100,12 +107,19 @@ jobs:
           retention-days: 30
 
       - name: Publish the GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$APK" \
-            --title "Wordsmith ${GITHUB_REF_NAME#v}" \
+          tag="$GITHUB_REF_NAME"
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            tag="v$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "::error::Release $tag already exists; bump the version in pubspec.yaml"; exit 1
+            fi
+          fi
+          gh release create "$tag" "$APK" --target "$GITHUB_SHA" \
+            --title "Wordsmith ${tag#v}" \
             --notes "Download **$APK** on your phone and open it to install. Updates install over the previous version."
 
       - name: Remove the signing key

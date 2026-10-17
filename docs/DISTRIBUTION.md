@@ -57,6 +57,12 @@ bump `version:` in app/pubspec.yaml, then: git tag v0.3.0 && git push --tags
    (the server deploys separately: .github/workflows/deploy-server.yml)
 ```
 
+Where tags can't be pushed (Claude's cloud sessions can only push their
+branch), run **Actions → Release (friends build) → Run workflow** with
+**publish** ticked instead: it builds the same APK and publishes the release
+for pubspec's version, tagging the commit it ran on. The latest APK is always
+at `https://github.com/Ali-sial-786/WordSmith/releases/latest`.
+
 **The GitHub repository is public**, so anyone who finds the Releases page
 can download the APK. It holds nothing secret (the Firebase API key and
 server URL ship in every APK anyway), but strangers could install it and make
