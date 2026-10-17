@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -231,7 +232,11 @@ class _UpdateBanner extends ConsumerWidget {
       ),
       child: Text(
         tooOld
-            ? 'This version is too old for online play. Install Wordsmith ${v.latest} to play with friends.'
+            ? kIsWeb
+                  ? 'This version is too old for online play. Close the game and open it again to update.'
+                  : 'This version is too old for online play. Install Wordsmith ${v.latest} to play with friends.'
+            : kIsWeb
+            ? 'Wordsmith ${v.latest} is out! Close the game and open it again to update.'
             : 'Wordsmith ${v.latest} is out! Get the new APK from whoever shares it, or the GitHub Releases page.',
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium,
