@@ -44,6 +44,15 @@ async function roundOf(code: string): Promise<CoopRound> {
   return runInDurableObject(stub(code), (_instance, state) => state.storage.kv.get<CoopRound>("round")!);
 }
 
+/** Puts embers exactly where a test wants them (rounds get random ones 1 time in 5). */
+async function setEmbers(code: string, embers: { x: number; y: number }[]): Promise<void> {
+  await runInDurableObject(stub(code), (_instance, state) => {
+    state.storage.kv.put("round", { ...state.storage.kv.get<CoopRound>("round")!, embers });
+  });
+  // So the room reads it back from storage.
+  await evictDurableObject(stub(code));
+}
+
 /**
  * Makes the room pick a known puzzle: every other bank puzzle at this heat
  * and size is marked as seen by `uid` just now.
@@ -227,6 +236,7 @@ describe("a co-op round", () => {
     expect(await runDurableObjectAlarm(stub(code))).toBe(true);
     await sa.next({ op: "LOBBY", phase: "round" });
     await sb.next({ op: "LOBBY", phase: "round" });
+    await setEmbers(code, []);
     const round = await roundOf(code);
     expect(round.puzzle.id).toBe(target.id);
     const slots = round.puzzle.slots;
@@ -352,9 +362,7 @@ describe("a co-op round", () => {
       const xpEvents = await env.DB.prepare("SELECT source, amount, ref FROM xp_events WHERE user_id = ?1").bind(id).all();
       expect(xpEvents.results).toEqual([{ source: "coop", amount: roundEnd.xp[id].xp, ref: final.matchId }]);
     }
-    // B's stock: the 3 they started with, plus level-up rewards and any embers that happened to be on their words.
-    const embers = final.collected.filter((e) => e.by === b.uid).length;
-    expect((await hints(b.uid)).hammer).toBe(3 + roundEnd.xp[b.uid].rewards.hammer + embers);
+    expect((await hints(b.uid)).hammer).toBe(3 + roundEnd.xp[b.uid].rewards.hammer);
 
     // Words after the end are too late; AGAIN is the host's.
     sb.send({ op: "SUBMIT", word: first.word, seq: 99 });
@@ -408,11 +416,7 @@ describe("a co-op round", () => {
     await startRound(sa, code);
     const round = await roundOf(code);
     const slot = round.puzzle.slots[0]!;
-    const cell = slotCells(slot)[0]!;
-    await runInDurableObject(stub(code), (_instance, state) => {
-      state.storage.kv.put("round", { ...round, embers: [cell] });
-    });
-    await evictDurableObject(stub(code));
+    await setEmbers(code, [slotCells(slot)[0]!]);
 
     const before = (await hints(a.uid)).hammer!;
     sa.send({ op: "SUBMIT", word: slot.word, seq: 1 });
