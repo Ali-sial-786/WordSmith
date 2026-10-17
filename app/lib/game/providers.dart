@@ -126,6 +126,8 @@ class ProfileNotifier extends Notifier<Profile> {
       'pickups': [
         for (final i in board.collectedPickups) board.pickups[i].toJson(),
       ],
+      // The id pickups were seeded with (the install id before sign-in).
+      'pickupSeed': state.userId,
       'durationMs': elapsedMs,
       'completedAt': DateTime.now().millisecondsSinceEpoch,
     });

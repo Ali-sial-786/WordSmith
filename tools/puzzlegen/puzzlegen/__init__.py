@@ -1,0 +1,1 @@
+"""Wordsmith offline puzzle generator."""

@@ -1,0 +1,76 @@
+# Words that are fine as bonus words but should never be grid answers:
+# interjections, letter names and plurals of function words, archaic or
+# dialect forms, abbreviation-like words, and words that are crude or
+# awkward in a family game. One lowercase word per line; '#' starts a comment.
+# (Grid answers must also be in ENABLE, which already drops things like
+# "gonna" or "dunno".)
+
+# Interjections and noises
+aah aha ahem ahh bah brr eek feh gee hah heh hey hmm huh nah ooh oho ohs
+pah pfft phew psst rah shh tsk tut ugh umm whew yah yeah yep yow yuk yum
+yup hiya gosh golly whoa
+
+# Plurals of letters / function words, and other odd inflections
+ands ays ayes bis buts cis dos ems ens fas hes hims hows ifs ins mas mus
+nays noes nus offs ohms oms ors pas pis sis shes tis twos ups whys xis yeas
+yeses mads sics drys wees weer thous hided flied payed routs rends vends pends
+evens unset inter
+
+# Archaic, dialect or poetic
+doth ere fie hast hath hie mien nae oft shalt tho thee thine thou thy wist
+wot yon hap ope eke eked ekes hove hews lade mete
+# British/regional slang
+bap biz bod bub guv kip loo mum mums nob pom pud sod sods wee yob git fug
+naff tum fiver
+
+# Abbreviation-like, Greek letters, units and other obscure short words
+alb bey cay chi cox deb doc ecu ell erg eta gar haj hep hob hod jib lac lam
+lea lei lox mac mic mil mod mot nth nub obi pic pix pol poi pyx qua rho phi
+sic sim ska sol sot sou tam tau tat ted til tog tom tor tun ump vac veg wen
+yaw yea yin yip zed calk bani geed gees peon dun fob fop gad haw nib orc pip
+lib fer dis ref rep tic baa ism ens awn alp ova
+
+# Crude, gross or awkward as an answer
+bum bums dike dikes fart farts farted farting hell hells lewd pee pees peed
+poop poops pooped puke puked pukes puss pimp pimps slag slags teat teats
+whiz hump humps
+
+# Sensitive, violent or unpleasant for a family game (still valid as bonus)
+abuse abused abuses abusing addict addicted addicts assault assaults
+bigot bigots corpse corpses kidnap kidnaps kidnaped kidnapped murder murders
+murdered racism racist racists sexism sexist screw screws screwed screwing
+moron morons weirdo weirdos lust lusts obese herpes sperm uteri uterus cyst
+cysts lesion lesions barf barfed snot pus retch gringo groin testes enema
+crotch buttock buttocks pubic urine urinal
+
+# Odd inflections and rare forms seen in generated grids
+bogging cabling debug debugger derange destine anorak anoraks visaed treeing
+reefing duded rared rares reals haves inters griefs peaces laded staling
+ricing viced boded lamed muter curter naivest vainest sprier drabs okras
+tings ting gilts tangs stater oared copping blued nabs gabs sup sop sops fro
+aye hark ken wive cant exec exes oops anted bated tads tics temping umping
+ulnae limn emend gamin ides impugn inapt inures inuring lamas niter oaten
+quire reeve serer sere sloes souse spoors steins votary wales anion coif
+creel curie docent ecru sades
+apter codded coked cokes conned corned dandier direr doming eviler ginned
+haling hatted horsed inaner liker nattier nudest offed rifer sager sizer
+trues noised outed robing sopped fowling lades lamer hared genii privy louse
+lushes lusty prude prudes uric semi nous girt iamb loge ester ewer trig serf
+pica fiefs doyen cloy conked beaus apses anodyne animus micron noggin oafish
+owlet riffed romper dang gits lido dace magi opes nope narc wino icky achier
+simper synced roves elates melded leggy graffito leaved parses assort assorts
+metros porting ported pedants encodes situate impairs tacking keyword neural
+binary decoded gays hays dabs baud
+# Dark or sensitive seeds (fine as bonus words)
+hanged killer killers abusive atheism atheist poisoned lethal slaves slave
+# Second review pass (inflections SCOWL ranks as very common, jargon, rare)
+grosses bogged boggles dooming leaded mucked muddling pended rending ringed
+spitted teared biasing basing compiler parsing parsed loader handler encoded
+naked thru sises isms ids hobs tats cote curer dint lees lire loci prig roil
+spoor suet throe tony urea veep inure inured inmost laity scion moire serge
+ducat ducats espies dinged artier dacha secs togs chit mintier tromp tromps
+lien
+# Third pass (seeds and answers in the full campaign + bank)
+bigoted suicide suicides lunatic lunatics bombing bombings drunk drunken
+drunks death deaths bung opuses impends terming costed evened keying trouser
+whoops mucks mucking nuder deader
