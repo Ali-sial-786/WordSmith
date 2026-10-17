@@ -1,0 +1,4 @@
+# Downloaded third-party packs (re-create with: python3 art/fetch.py)
+third_party/
+__pycache__/
+*.pyc

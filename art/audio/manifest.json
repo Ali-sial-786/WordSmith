@@ -1,0 +1,527 @@
+{
+  "tink_1": {
+    "file": "audio/tink_1.ogg",
+    "description": "Tile touch tink #1 (G5, 784 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4497,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -22.0,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -5.2,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_2": {
+    "file": "audio/tink_2.ogg",
+    "description": "Tile touch tink #2 (A5, 880 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4459,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -21.1,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -5.1,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_3": {
+    "file": "audio/tink_3.ogg",
+    "description": "Tile touch tink #3 (B5, 988 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4529,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -21.1,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -4.7,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_4": {
+    "file": "audio/tink_4.ogg",
+    "description": "Tile touch tink #4 (D6, 1175 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4489,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -21.1,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -5.4,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_5": {
+    "file": "audio/tink_5.ogg",
+    "description": "Tile touch tink #5 (E6, 1319 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4478,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -21.1,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -5.4,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_6": {
+    "file": "audio/tink_6.ogg",
+    "description": "Tile touch tink #6 (G6, 1568 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4445,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -21.1,
+    "lufs_momentary_max": -21.1,
+    "true_peak_dbtp": -6.1,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_7": {
+    "file": "audio/tink_7.ogg",
+    "description": "Tile touch tink #7 (A6, 1760 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4444,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -22.1,
+    "lufs_momentary_max": -21.1,
+    "true_peak_dbtp": -5.9,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tink_8": {
+    "file": "audio/tink_8.ogg",
+    "description": "Tile touch tink #8 (B6, 1976 Hz): struck steel bar",
+    "duration_s": 0.217,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4373,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -22.0,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -5.9,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "clang": {
+    "file": "audio/clang.ogg",
+    "description": "Valid word: anvil clang + short sizzle",
+    "duration_s": 0.915,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 11786,
+    "loudness_metric": "max momentary",
+    "target_lufs": -14,
+    "lufs_integrated": -17.3,
+    "lufs_momentary_max": -14.0,
+    "true_peak_dbtp": -2.2,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_heavy_001.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "clang_light": {
+    "file": "audio/clang_light.ogg",
+    "description": "Teammate claimed a word: lighter, higher clang (a fourth up, no sizzle)",
+    "duration_s": 0.571,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 6560,
+    "loudness_metric": "max momentary",
+    "target_lufs": -17.5,
+    "lufs_integrated": -19.8,
+    "lufs_momentary_max": -17.5,
+    "true_peak_dbtp": -5.6,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_000.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "bonus": {
+    "file": "audio/bonus.ogg",
+    "description": "Bonus word: scrap metal clinking into a bucket",
+    "duration_s": 0.755,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 10432,
+    "loudness_metric": "max momentary",
+    "target_lufs": -16.5,
+    "lufs_integrated": -19.5,
+    "lufs_momentary_max": -17.2,
+    "true_peak_dbtp": -1.6,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_004.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactTin_medium_003.ogg"
+      },
+      {
+        "pack": "kenney-rpg-audio",
+        "file": "Audio/metalPot2.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_001.ogg"
+      }
+    ],
+    "notes": [
+      "limited 3.8 dB"
+    ]
+  },
+  "already": {
+    "file": "audio/already.ogg",
+    "description": "Word already found: soft, dull tap",
+    "duration_s": 0.121,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4334,
+    "loudness_metric": "max momentary",
+    "target_lufs": -26,
+    "lufs_integrated": -27.1,
+    "lufs_momentary_max": -27.1,
+    "true_peak_dbtp": -1.7,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactGeneric_light_001.ogg"
+      }
+    ],
+    "notes": [
+      "limited 1.1 dB"
+    ]
+  },
+  "invalid": {
+    "file": "audio/invalid.ogg",
+    "description": "Not a word: dull 'cold metal' thunk",
+    "duration_s": 0.329,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 5553,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -22.0,
+    "lufs_momentary_max": -21.0,
+    "true_peak_dbtp": -3.5,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactPlate_heavy_001.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "hint_hammer": {
+    "file": "audio/hint_hammer.ogg",
+    "description": "Hammer Strike hint: heavy hammer blow with a short ring",
+    "duration_s": 0.577,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 6933,
+    "loudness_metric": "max momentary",
+    "target_lufs": -17,
+    "lufs_integrated": -19.5,
+    "lufs_momentary_max": -17.1,
+    "true_peak_dbtp": -1.5,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMining_000.ogg"
+      }
+    ],
+    "notes": [
+      "limited 0.6 dB"
+    ]
+  },
+  "hint_chisel": {
+    "file": "audio/hint_chisel.ogg",
+    "description": "Chisel hint: sharp, bright metal tap",
+    "duration_s": 0.233,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4901,
+    "loudness_metric": "max momentary",
+    "target_lufs": -19,
+    "lufs_integrated": -19.5,
+    "lufs_momentary_max": -19.5,
+    "true_peak_dbtp": -1.3,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_002.ogg"
+      }
+    ],
+    "notes": [
+      "limited 0.6 dB"
+    ]
+  },
+  "hint_sparks": {
+    "file": "audio/hint_sparks.ogg",
+    "description": "Spark Shower hint: crackling, fizzing sparks",
+    "duration_s": 0.789,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 14962,
+    "loudness_metric": "max momentary",
+    "target_lufs": -17,
+    "lufs_integrated": -20.3,
+    "lufs_momentary_max": -17.3,
+    "true_peak_dbtp": -3.5,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "pickup": {
+    "file": "audio/pickup.ogg",
+    "description": "Pickup collected: ember whoosh + small chime",
+    "duration_s": 0.677,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 8725,
+    "loudness_metric": "max momentary",
+    "target_lufs": -17,
+    "lufs_integrated": -19.5,
+    "lufs_momentary_max": -17.2,
+    "true_peak_dbtp": -5.3,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "forged": {
+    "file": "audio/forged.ogg",
+    "description": "Puzzle complete ('Forged!'): big anvil hit + quench hiss + spark whoosh",
+    "duration_s": 2.243,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 26399,
+    "loudness_metric": "max momentary",
+    "target_lufs": -12,
+    "lufs_integrated": -15.5,
+    "lufs_momentary_max": -12.1,
+    "true_peak_dbtp": -1.4,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_heavy_001.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactBell_heavy_002.ogg"
+      }
+    ],
+    "notes": [
+      "limited 2.0 dB"
+    ]
+  },
+  "levelup": {
+    "file": "audio/levelup.ogg",
+    "description": "Level up / rank up: rising bell arpeggio into a bell + anvil chord",
+    "duration_s": 1.626,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 15528,
+    "loudness_metric": "max momentary",
+    "target_lufs": -13,
+    "lufs_integrated": -17.1,
+    "lufs_momentary_max": -13.0,
+    "true_peak_dbtp": -2.0,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "shuffle": {
+    "file": "audio/shuffle.ogg",
+    "description": "Shuffle: letter tiles flipping over in quick succession, metallic rattle",
+    "duration_s": 0.572,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 9859,
+    "loudness_metric": "max momentary",
+    "target_lufs": -19,
+    "lufs_integrated": -20.9,
+    "lufs_momentary_max": -19.1,
+    "true_peak_dbtp": -5.0,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_000.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_002.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactTin_medium_001.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_003.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_004.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactTin_medium_004.ogg"
+      },
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_light_001.ogg"
+      },
+      {
+        "pack": "kenney-rpg-audio",
+        "file": "Audio/handleCoins.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "tap": {
+    "file": "audio/tap.ogg",
+    "description": "Generic UI button tap",
+    "duration_s": 0.042,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4086,
+    "loudness_metric": "max momentary",
+    "target_lufs": -25,
+    "lufs_integrated": -25.4,
+    "lufs_momentary_max": -25.4,
+    "true_peak_dbtp": -1.9,
+    "synthesized": false,
+    "sources": [
+      {
+        "pack": "kenney-interface-sounds",
+        "file": "Audio/select_001.ogg"
+      }
+    ],
+    "notes": [
+      "limited 0.3 dB"
+    ]
+  },
+  "countdown": {
+    "file": "audio/countdown.ogg",
+    "description": "Multiplayer countdown beat: bellows puff + tick",
+    "duration_s": 0.301,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 6429,
+    "loudness_metric": "max momentary",
+    "target_lufs": -20,
+    "lufs_integrated": -21.2,
+    "lufs_momentary_max": -20.3,
+    "true_peak_dbtp": -3.0,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-interface-sounds",
+        "file": "Audio/tick_002.ogg"
+      }
+    ],
+    "notes": [
+      "limited 0.3 dB"
+    ]
+  },
+  "go": {
+    "file": "audio/go.ogg",
+    "description": "Multiplayer 'go': bright anvil-bell ding",
+    "duration_s": 0.955,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 8496,
+    "loudness_metric": "max momentary",
+    "target_lufs": -16,
+    "lufs_integrated": -19.1,
+    "lufs_momentary_max": -16.0,
+    "true_peak_dbtp": -7.4,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "tick": {
+    "file": "audio/tick.ogg",
+    "description": "Last 10 seconds: hammer 'heartbeat' tick",
+    "duration_s": 0.15,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 4485,
+    "loudness_metric": "max momentary",
+    "target_lufs": -22,
+    "lufs_integrated": -24.7,
+    "lufs_momentary_max": -24.7,
+    "true_peak_dbtp": -1.7,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactMetal_medium_002.ogg"
+      }
+    ],
+    "notes": [
+      "limited 3.9 dB"
+    ]
+  },
+  "forge_ambience": {
+    "file": "audio/forge_ambience.ogg",
+    "description": "Forge fire crackle, seamless ~27 s stereo loop with one faint bellows breath",
+    "duration_s": 27.264,
+    "channels": 2,
+    "sample_rate": 44100,
+    "bytes": 423822,
+    "loudness_metric": "integrated",
+    "target_lufs": -30,
+    "lufs_integrated": -30.0,
+    "lufs_momentary_max": -26.9,
+    "true_peak_dbtp": -4.6,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "oga-fireplace-loop",
+        "file": "fire.wav"
+      }
+    ],
+    "notes": []
+  }
+}

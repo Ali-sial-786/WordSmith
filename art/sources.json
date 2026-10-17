@@ -1,0 +1,512 @@
+{
+  "_comment": "Pinned third-party sources for Wordsmith art/audio/fonts. Consumed by art/fetch.py (download + verify) and art/export.py (credits). Every URL is pinned (commit SHA or fixed file) and verified by SHA-256.",
+  "packs": [
+    {
+      "id": "font-cinzel",
+      "title": "Cinzel",
+      "author": "Natanael Gama (The Cinzel Project Authors)",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Cinzel",
+      "copyright": "Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel)",
+      "files": [
+        {
+          "name": "Cinzel[wght].ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/cinzel/Cinzel%5Bwght%5D.ttf",
+          "sha256": "f4d83d34d1f6c741193e4acf4b3dff9531e5a67b6aa65228d00a7db72a4e0f34",
+          "size": 125468
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/cinzel/OFL.txt",
+          "licence_text": true,
+          "sha256": "f2b3029aba64c378bf0963b62945eee15e564fe4330b934c8f2eb058282b5e83",
+          "size": 4383
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "font-roboto-slab",
+      "title": "Roboto Slab",
+      "author": "Christian Robertson (The Roboto Slab Project Authors)",
+      "licence": "Apache-2.0",
+      "licence_url": "https://www.apache.org/licenses/LICENSE-2.0",
+      "page": "https://fonts.google.com/specimen/Roboto+Slab",
+      "copyright": "Copyright 2018 The Roboto Slab Project Authors (https://github.com/googlefonts/robotoslab)",
+      "files": [
+        {
+          "name": "RobotoSlab[wght].ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/apache/robotoslab/RobotoSlab%5Bwght%5D.ttf",
+          "sha256": "786ae192477447d33c6672c3055fba7cbfe45184c9a79e77a14f15716ca05b16",
+          "size": 251880
+        },
+        {
+          "name": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/apache/robotoslab/LICENSE.txt",
+          "licence_text": true,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "size": 11358
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "font-nunito-sans",
+      "title": "Nunito Sans",
+      "author": "Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin (The Nunito Sans Project Authors)",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Nunito+Sans",
+      "copyright": "Copyright 2016 The Nunito Sans Project Authors (https://github.com/Fonthausen/NunitoSans)",
+      "files": [
+        {
+          "name": "NunitoSans[YTLC,opsz,wdth,wght].ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/nunitosans/NunitoSans%5BYTLC,opsz,wdth,wght%5D.ttf",
+          "sha256": "f934d7142fb4784bf828da485b7dcbd90c0c80d514e9d49a5da0ed3a1ae2491d",
+          "size": 571240
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/nunitosans/OFL.txt",
+          "licence_text": true,
+          "sha256": "efbb0c9e864cef973982d9a17567e6be5c3d1759695574586f3f18c7ecca064b",
+          "size": 4393
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "kenney-impact-sounds",
+      "title": "Kenney Impact Sounds",
+      "author": "Kenney (www.kenney.nl)",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "licence_member": "License.txt",
+      "files": [
+        {
+          "name": "kenney_impact-sounds.zip",
+          "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+          "extract": true,
+          "discover_from": "https://kenney.nl/assets/impact-sounds",
+          "sha256": "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+          "size": 800850
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "kenney-interface-sounds",
+      "title": "Kenney Interface Sounds",
+      "author": "Kenney (www.kenney.nl)",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://kenney.nl/assets/interface-sounds",
+      "licence_member": "License.txt",
+      "files": [
+        {
+          "name": "kenney_interface-sounds.zip",
+          "url": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+          "extract": true,
+          "discover_from": "https://kenney.nl/assets/interface-sounds",
+          "sha256": "f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232",
+          "size": 834536
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "kenney-rpg-audio",
+      "title": "Kenney RPG Audio",
+      "author": "Kenney (www.kenney.nl)",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://kenney.nl/assets/rpg-audio",
+      "licence_member": "License.txt",
+      "files": [
+        {
+          "name": "kenney_rpg-audio.zip",
+          "url": "https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip",
+          "extract": true,
+          "discover_from": "https://kenney.nl/assets/rpg-audio",
+          "sha256": "6dbeaf8544da958d8f2adcb4a4a4b76c1ade34a05f8ab9edccd327da7375f38b",
+          "size": 964837
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "oga-fireplace-loop",
+      "title": "Fireplace Sound loop",
+      "author": "PagDev",
+      "licence": "CC0 1.0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://opengameart.org/content/fireplace-sound-loop",
+      "files": [
+        {
+          "name": "fire.wav",
+          "url": "https://opengameart.org/sites/default/files/fire.wav",
+          "sha256": "85ca0cc60d0c037fff8b185e31ad1fcdbda6ce45eee17c3ee1318d1b8f59e330",
+          "size": 10324410
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
+          "licence_text": true,
+          "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+          "size": 7048
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "game-icons",
+      "title": "Game-icons.net",
+      "author": "(per icon)",
+      "licence": "CC BY 3.0",
+      "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+      "page": "https://game-icons.net",
+      "files": [
+        {
+          "name": "lorc/flat-hammer.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/flat-hammer.svg",
+          "author": "Lorc",
+          "title": "Flat hammer",
+          "page": "https://game-icons.net/1x1/lorc/flat-hammer.html",
+          "sha256": "2f4d819f49de2297a805bd3296ee0395bbca7e8784452162ba718fce0ab5b2b3",
+          "size": 664
+        },
+        {
+          "name": "delapouite/chisel.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/chisel.svg",
+          "author": "Delapouite",
+          "title": "Chisel",
+          "page": "https://game-icons.net/1x1/delapouite/chisel.html",
+          "sha256": "dccb7bfb45ee2bdc39ab21f9fb1b206a05545a0acef9ea56284dd12c7eec4d52",
+          "size": 1073
+        },
+        {
+          "name": "lorc/laser-sparks.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/laser-sparks.svg",
+          "author": "Lorc",
+          "title": "Laser sparks",
+          "page": "https://game-icons.net/1x1/lorc/laser-sparks.html",
+          "sha256": "70a2396b949f9781ab0f8d4d71fb79451c8d1d9be81b7cf2badcd5cf5aa1a856",
+          "size": 1239
+        },
+        {
+          "name": "lorc/cycle.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/cycle.svg",
+          "author": "Lorc",
+          "title": "Cycle",
+          "page": "https://game-icons.net/1x1/lorc/cycle.html",
+          "sha256": "aff4fbc1a709801828efca786b51b8d9f39b040f199f303dd0769b6fe9ac9f4c",
+          "size": 1031
+        },
+        {
+          "name": "lorc/anvil.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/anvil.svg",
+          "author": "Lorc",
+          "title": "Anvil",
+          "page": "https://game-icons.net/1x1/lorc/anvil.html",
+          "sha256": "8f1b9ce7c512d167719dcd77fc169c811eb69b25e30ed1ae5610d161ce9007a4",
+          "size": 489
+        },
+        {
+          "name": "delapouite/full-metal-bucket-handle.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/full-metal-bucket-handle.svg",
+          "author": "Delapouite",
+          "title": "Full metal bucket handle",
+          "page": "https://game-icons.net/1x1/delapouite/full-metal-bucket-handle.html",
+          "sha256": "0f2afdb16eefb0cbc6b81ba15fb203e5cead4eb6a780fe7e9838295944b84c0d",
+          "size": 2356
+        },
+        {
+          "name": "lorc/ember-shot.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/ember-shot.svg",
+          "author": "Lorc",
+          "title": "Ember shot",
+          "page": "https://game-icons.net/1x1/lorc/ember-shot.html",
+          "sha256": "3970ccb34debe8274069251b46ba5e2e83ca7b358ed3fa54a1f825722c3be5fe",
+          "size": 1813
+        },
+        {
+          "name": "lorc/pincers.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/pincers.svg",
+          "author": "Lorc",
+          "title": "Pincers",
+          "page": "https://game-icons.net/1x1/lorc/pincers.html",
+          "sha256": "da4e3ccb28512204d9980b367bcbbcd1019f56b1c59acbc160a4db49f4f31a50",
+          "size": 1292
+        },
+        {
+          "name": "lorc/queen-crown.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/queen-crown.svg",
+          "author": "Lorc",
+          "title": "Queen crown",
+          "page": "https://game-icons.net/1x1/lorc/queen-crown.html",
+          "sha256": "9754d784a293fee1bc0134c9e8f560029ed874a093769b04766687153f5fa982",
+          "size": 1428
+        },
+        {
+          "name": "delapouite/three-friends.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/three-friends.svg",
+          "author": "Delapouite",
+          "title": "Three friends",
+          "page": "https://game-icons.net/1x1/delapouite/three-friends.html",
+          "sha256": "f01a57f0999c2e1369be610e30a75efad8c4b84463adf046d50f3c04128fe167",
+          "size": 912
+        },
+        {
+          "name": "lorc/cog.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/cog.svg",
+          "author": "Lorc",
+          "title": "Cog",
+          "page": "https://game-icons.net/1x1/lorc/cog.html",
+          "sha256": "79adb133e3bc3a9a38a0db715ecd1cb08d55bc012c70157a7bb9d650fb7cea6e",
+          "size": 1651
+        },
+        {
+          "name": "lorc/padlock.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/padlock.svg",
+          "author": "Lorc",
+          "title": "Padlock",
+          "page": "https://game-icons.net/1x1/lorc/padlock.html",
+          "sha256": "6357f13cc4d14f535a47a8fe2635ea34def7c4b21e205a5c34c8f5fdba3c8cd3",
+          "size": 686
+        },
+        {
+          "name": "delapouite/round-star.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/round-star.svg",
+          "author": "Delapouite",
+          "title": "Round star",
+          "page": "https://game-icons.net/1x1/delapouite/round-star.html",
+          "sha256": "2bdaea5b81b0dd8c87728490b0b8f71df0213327e2d29669a54bfa6941a9bb28",
+          "size": 529
+        },
+        {
+          "name": "delapouite/trophy-cup.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/trophy-cup.svg",
+          "author": "Delapouite",
+          "title": "Trophy cup",
+          "page": "https://game-icons.net/1x1/delapouite/trophy-cup.html",
+          "sha256": "2619f5ec65f879e5aa9d16a6afd012be16f307bb56ed2f553149fa0d37edd076",
+          "size": 1751
+        },
+        {
+          "name": "carl-olsen/flame.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/carl-olsen/flame.svg",
+          "author": "Carl Olsen",
+          "title": "Flame",
+          "page": "https://game-icons.net/1x1/carl-olsen/flame.html",
+          "sha256": "49e7468e3d989f6130242d024eb1f4f42686ccfc5792db6dceac2ee13edcf727",
+          "size": 802
+        },
+        {
+          "name": "lorc/treasure-map.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/treasure-map.svg",
+          "author": "Lorc",
+          "title": "Treasure map",
+          "page": "https://game-icons.net/1x1/lorc/treasure-map.html",
+          "sha256": "514ec6a9b97e74f10cbb212357819b44feaac26e0e2d461862d59b58f67ffa52",
+          "size": 2145
+        },
+        {
+          "name": "delapouite/character.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/character.svg",
+          "author": "Delapouite",
+          "title": "Character",
+          "page": "https://game-icons.net/1x1/delapouite/character.html",
+          "sha256": "ab9b15ccf5791ee28e1b59400193d2ad3b8388976aea2f112a3971cddb7a41ac",
+          "size": 454
+        },
+        {
+          "name": "delapouite/thor-hammer.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/thor-hammer.svg",
+          "author": "Delapouite",
+          "title": "Thor hammer",
+          "page": "https://game-icons.net/1x1/delapouite/thor-hammer.html",
+          "sha256": "786f6aba15b6e64cd49114b0309b81a63c0c9d271b458c5e5b66262055b25f85",
+          "size": 752
+        },
+        {
+          "name": "lorc/anvil-impact.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/anvil-impact.svg",
+          "author": "Lorc",
+          "title": "Anvil impact",
+          "page": "https://game-icons.net/1x1/lorc/anvil-impact.html",
+          "sha256": "4c3292e20c806e539209c06d3c80e1f4480ec15af0e131a379bc4fbc80da075e",
+          "size": 708
+        },
+        {
+          "name": "delapouite/blacksmith.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/blacksmith.svg",
+          "author": "Delapouite",
+          "title": "Blacksmith",
+          "page": "https://game-icons.net/1x1/delapouite/blacksmith.html",
+          "sha256": "322aa486166f75dbace27c2c8e188c06951e04e111139b986f09524b0022349d",
+          "size": 1429
+        },
+        {
+          "name": "lorc/fluffy-flame.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/fluffy-flame.svg",
+          "author": "Lorc",
+          "title": "Fluffy flame",
+          "page": "https://game-icons.net/1x1/lorc/fluffy-flame.html",
+          "sha256": "3520436a18b8c64355b7b90a93ff3712265f4849afd3aa91b0ffa4873b1e4313",
+          "size": 1519
+        },
+        {
+          "name": "kier-heyl/dwarf-helmet.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/kier-heyl/dwarf-helmet.svg",
+          "author": "Kier Heyl",
+          "title": "Dwarf helmet",
+          "page": "https://game-icons.net/1x1/kier-heyl/dwarf-helmet.html",
+          "sha256": "60561ca3113332feabd3b8465c2c22aac38217a124795cd2aa17a198cfed735b",
+          "size": 1346
+        },
+        {
+          "name": "lorc/checked-shield.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/checked-shield.svg",
+          "author": "Lorc",
+          "title": "Checked shield",
+          "page": "https://game-icons.net/1x1/lorc/checked-shield.html",
+          "sha256": "9bbb465f5272eae12dfa536a31f0204eb6d65259607db5e86618d55881c945a0",
+          "size": 631
+        },
+        {
+          "name": "lorc/battle-axe.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/battle-axe.svg",
+          "author": "Lorc",
+          "title": "Battle axe",
+          "page": "https://game-icons.net/1x1/lorc/battle-axe.html",
+          "sha256": "c0c9c2359cc1fb66976fed317df7e5329ee5b2f0c7463f89b7aaebdb28d19834",
+          "size": 1279
+        },
+        {
+          "name": "lorc/sword-smithing.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/sword-smithing.svg",
+          "author": "Lorc",
+          "title": "Sword smithing",
+          "page": "https://game-icons.net/1x1/lorc/sword-smithing.html",
+          "sha256": "64c0bb0a933d13fad0ea022574da7d0da663f257ec1182e669af1f5080cd4be0",
+          "size": 1371
+        },
+        {
+          "name": "delapouite/horseshoe.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/horseshoe.svg",
+          "author": "Delapouite",
+          "title": "Horseshoe",
+          "page": "https://game-icons.net/1x1/delapouite/horseshoe.html",
+          "sha256": "d771c6e7e2bd807dd2112419ca9624098f9374474870eb5acc2accc100f60030",
+          "size": 1668
+        },
+        {
+          "name": "lorc/gears.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/gears.svg",
+          "author": "Lorc",
+          "title": "Gears",
+          "page": "https://game-icons.net/1x1/lorc/gears.html",
+          "sha256": "260ff96e39b1804e74072658cfa6cd382062826f6e8d40cb106fc530a6d38548",
+          "size": 1315
+        },
+        {
+          "name": "delapouite/imperial-crown.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/imperial-crown.svg",
+          "author": "Delapouite",
+          "title": "Imperial crown",
+          "page": "https://game-icons.net/1x1/delapouite/imperial-crown.html",
+          "sha256": "d3a75a9ec67bceacd2679bb0c8ae2eb8e41793d7a22d22eeb8de7d8bd35d1508",
+          "size": 1725
+        },
+        {
+          "name": "lorc/dragon-head.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/dragon-head.svg",
+          "author": "Lorc",
+          "title": "Dragon head",
+          "page": "https://game-icons.net/1x1/lorc/dragon-head.html",
+          "sha256": "c14ad5d895d7fcc96859fac0e1a2878210f8da42293f1231aca2490a6e7f2177",
+          "size": 2846
+        },
+        {
+          "name": "lorc/wolf-head.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/wolf-head.svg",
+          "author": "Lorc",
+          "title": "Wolf head",
+          "page": "https://game-icons.net/1x1/lorc/wolf-head.html",
+          "sha256": "773c6ebd829164fc73adc33b68a36fb2045c86864db7438643dea48b7aa47e16",
+          "size": 1138
+        },
+        {
+          "name": "delapouite/bear-head.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/bear-head.svg",
+          "author": "Delapouite",
+          "title": "Bear head",
+          "page": "https://game-icons.net/1x1/delapouite/bear-head.html",
+          "sha256": "1cfd94b90db3350a3f3868c3ddf5e6880d020aaa244f9070f13b2819485cbb05",
+          "size": 2641
+        },
+        {
+          "name": "lorc/owl.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/owl.svg",
+          "author": "Lorc",
+          "title": "Owl",
+          "page": "https://game-icons.net/1x1/lorc/owl.html",
+          "sha256": "4cbb02da89fa5fac6ef53132585e722f404aa78722bb65c9c8fcc3ce29019128",
+          "size": 3350
+        },
+        {
+          "name": "lorc/mountains.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/mountains.svg",
+          "author": "Lorc",
+          "title": "Mountains",
+          "page": "https://game-icons.net/1x1/lorc/mountains.html",
+          "sha256": "4eb8f5e862ec08551e403a6ab8b9ac768c8c39e024d1c16f1b924fb6207927ca",
+          "size": 1338
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/license.txt",
+          "licence_text": true,
+          "sha256": "fac95252798668fab5ea2cb08338f2ebc6bf894a72b19a15af1ca62f0a6d2e79",
+          "size": 1421
+        },
+        {
+          "name": "LICENSE-CC-BY-3.0.txt",
+          "url": "https://creativecommons.org/licenses/by/3.0/legalcode.txt",
+          "licence_text": true,
+          "sha256": "e6bc9e9c474700b708f568bac9e5a8a9bcb2b1dad53442f5ba449fcb848b8e76",
+          "size": 19467
+        }
+      ],
+      "retrieved": "2026-10-17"
+    },
+    {
+      "id": "material-symbols",
+      "title": "Material Symbols (Rounded)",
+      "author": "Google",
+      "licence": "Apache-2.0",
+      "licence_url": "https://www.apache.org/licenses/LICENSE-2.0",
+      "page": "https://fonts.google.com/icons",
+      "files": [
+        {
+          "name": "arrow_back_wght600_24px.svg",
+          "title": "arrow_back (Rounded, weight 600)",
+          "page": "https://fonts.google.com/icons?selected=Material+Symbols+Rounded:arrow_back",
+          "url": "https://raw.githubusercontent.com/google/material-design-icons/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/arrow_back/materialsymbolsrounded/arrow_back_wght600_24px.svg",
+          "sha256": "35b321da6379bc207d437380bf1d92d0374db209515e6ddcc27f65acf0d73641",
+          "size": 505
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://raw.githubusercontent.com/google/material-design-icons/49d4db35df873165d6bd6ba09b063c7dafbac2f4/LICENSE",
+          "licence_text": true,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "size": 11357
+        }
+      ],
+      "retrieved": "2026-10-17"
+    }
+  ]
+}

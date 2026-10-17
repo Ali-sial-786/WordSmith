@@ -80,11 +80,12 @@ that's ever needed.
 
 ## 4. REST API (Worker)
 
-All routes are under `/v1` and need a valid token, except `/v1/version`.
+All routes are under `/v1` and need a valid token, except `/v1/version` and `/v1/health`.
 
 | Method & path | Purpose |
 |---|---|
 | `GET /version` | Latest app version and minimum supported version (for the update banner and blocking old clients) |
+| `GET /health` | `{ok: true}` liveness check |
 | `GET /me` | My profile, level, XP, hint stock, stats and campaign progress |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
 | `DELETE /me` | Delete my account data |
@@ -199,7 +200,7 @@ the rules unit-testable and easy to tweak.
 
 ```sql
 users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT)
-profiles     (user_id PK, xp INT, level INT, campaign_stage INT, scrap_bin INT, updated_at INT)
+profiles     (user_id PK, xp INT /*lifetime total*/, level INT, campaign_stage INT /*highest completed*/, scrap_bin INT, updated_at INT)
 inventory    (user_id, item TEXT /*hammer|chisel|sparks*/, count INT, PRIMARY KEY(user_id, item))
 stats        (user_id PK, words_forged INT, longest_word TEXT, solo_done INT,
               coop_rounds INT, coop_mvps INT, vs_series INT, vs_series_won INT, vs_rounds_won INT)
@@ -236,10 +237,10 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
 
 ## 9. App structure (Flutter)
 
-- **State:** Riverpod.
+- **State:** Riverpod for app-wide state (profile, settings, campaign, sound). Each puzzle screen owns a plain `ChangeNotifier` controller (`SoloController`), which keeps the animation-heavy game screen simple.
 - **Navigation:** go_router.
-- **Local storage:** drift (SQLite) for the profile cache and sync queue.
-- **Networking:** `http` + `web_socket_channel`, behind small typed client classes.
+- **Local storage:** `shared_preferences` with small JSON blobs (profile, settings, the puzzle in progress, the sync queue). That's enough for M1. A database (drift) can replace it if the sync queue or caches grow.
+- **Networking (M2+):** `http` + `web_socket_channel`, behind small typed client classes.
 - **Engine** (`lib/engine/`) is pure Dart with no Flutter imports. It covers the puzzle and board model, word validation, scoring and hint effects, and is fully unit-tested.
 - **The anvil:** a `CustomPainter` plus a gesture detector.
   - Tiles are hit-tested with a radius check against each tile centre.
@@ -250,7 +251,8 @@ Migrations live in `server/migrations/` and are applied with `wrangler d1 migrat
   - Sparks and embers use a small custom particle system.
   - Heat shimmer and molten glow use Flutter **fragment shaders** (`FragmentProgram`).
   - Haptics through `HapticFeedback`.
-- **Audio:** `audioplayers` or `flame_audio` for low-latency sound effects, plus a music player with separate volume settings.
+- **Audio:** `audioplayers` with a pool per sound effect. The tile "tink" uses eight pre-pitched files that rise in pitch with each letter. Ambience is a looping player, sounds mix with the user's own music rather than taking audio focus, and each has its own volume setting.
+- **Web build:** used **only** to take automated screenshots during development (there's no Android emulator in the build environment). The product is Android-only.
 - **Real-time client:** reconnects automatically with backoff, re-sends `READY` and rebuilds the screen from the `SNAPSHOT`. Words are sent with increasing `seq` numbers, and results are matched back by `seq`.
 
 ---
@@ -275,7 +277,7 @@ WordSmith/
 │  ├─ src/db/                  D1 queries
 │  ├─ migrations/              D1 SQL
 │  ├─ test/
-│  └─ wrangler.toml
+│  └─ wrangler.jsonc
 ├─ shared/protocol/            message schema → generated Dart + TS types
 ├─ tools/puzzlegen/            Python: word lists → campaign packs + multiplayer bank
 ├─ art/                        asset sources and render scripts (see ART_AND_AUDIO.md)
@@ -292,7 +294,7 @@ WordSmith/
 | Dart engine | Unit tests: board state, word validation, scoring, hint effects, pickup seeding (which must match the server) |
 | Flutter UI | Widget tests and **golden screenshots** of key screens; anvil gesture tests with simulated swipe paths |
 | Server rules | Vitest unit tests for every pure rule: claims, scoring, VS resolution, clinch, sudden death, XP and level-ups, hint grants |
-| Worker + Durable Objects + D1 | `@cloudflare/vitest-pool-workers` runs the real Workers runtime locally. Includes **scripted bot clients**, e.g. 4 bots sending the same word in the same instant (exactly one gets it) and a 5-player best-of-3 with a timed-out round and a sudden-death round. |
+| Worker + Durable Objects + D1 | `@cloudflare/vitest-plugin` runs the real Workers runtime (workerd) locally. Includes **scripted bot clients**, e.g. 4 bots sending the same word in the same instant (exactly one gets it) and a 5-player best-of-3 with a timed-out round and a sudden-death round. |
 | Puzzle generator | Every word is reachable from the letters, the crossword is connected with no stray adjacent letters, it fits within 10×10, a word uses all the letters, the output is the same every run for the same seed, and no blocked words appear |
 | CI (GitHub Actions) | On every PR: `flutter analyze` + tests, server typecheck + tests, generator tests. When a release is tagged: build a signed APK, upload it to Firebase App Distribution, and deploy the Worker. |
 

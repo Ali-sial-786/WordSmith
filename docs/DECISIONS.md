@@ -20,3 +20,4 @@ update the relevant plan document too.
 | 2026-10-17 | **Assets:** free, properly licensed assets first (CC0 preferred). Our own in Blender, Inkscape or code where those don't fit. | Rules in [ART_AND_AUDIO.md](ART_AND_AUDIO.md). |
 | 2026-10-17 | **English only. No free-text chat** (preset emotes instead). | — |
 | 2026-10-17 | **App ID (package name):** `com.wordsmithforge.game`. | No personal username in it. Confirmed when it's registered in the limited distribution account. |
+| 2026-10-17 | **Firebase project:** `wordsmith-8f550` (Spark, free plan), owned by the project owner's Google account. | Used for sign-in (M2) and App Distribution. The project ID is not a secret; service-account keys are, and they go only in GitHub secrets. |

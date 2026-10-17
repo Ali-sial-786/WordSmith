@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wordsmith-api",
+  "main": "src/index.ts",
+  // Must not be newer than the workerd bundled with the installed wrangler.
+  "compatibility_date": "2026-10-01",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
+    "LATEST_VERSION": "0.1.0",
+    "MIN_SUPPORTED_VERSION": "0.1.0"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wordsmith",
+      // PLACEHOLDER. Local dev and tests don't need a real ID. When the real
+      // database is created (`npx wrangler d1 create wordsmith`), paste the
+      // database_id it prints here before the first deploy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+  // Durable Object bindings (HubDO, RoomDO) arrive in M2/M3.
+}

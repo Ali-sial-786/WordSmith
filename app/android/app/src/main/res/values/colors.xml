@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Forge Black from docs/ART_AND_AUDIO.md -->
+    <color name="forge_black">#17110E</color>
+</resources>

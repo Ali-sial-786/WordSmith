@@ -1,0 +1,740 @@
+[
+  {
+    "file": "fonts/Cinzel-Variable.ttf",
+    "title": "Cinzel",
+    "author": "Natanael Gama (The Cinzel Project Authors)",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Cinzel",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as Cinzel-OFL.txt"
+  },
+  {
+    "file": "fonts/RobotoSlab-Variable.ttf",
+    "title": "Roboto Slab",
+    "author": "Christian Robertson (The Roboto Slab Project Authors)",
+    "licence": "Apache License 2.0",
+    "url": "https://fonts.google.com/specimen/Roboto+Slab",
+    "licence_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "changes": "Renamed file; licence shipped alongside as RobotoSlab-LICENSE.txt"
+  },
+  {
+    "file": "fonts/NunitoSans-Variable.ttf",
+    "title": "Nunito Sans",
+    "author": "Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin (The Nunito Sans Project Authors)",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Nunito+Sans",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as NunitoSans-OFL.txt"
+  },
+  {
+    "file": "icons/hammer.svg",
+    "title": "Flat hammer",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/flat-hammer.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/chisel.svg",
+    "title": "Chisel",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/chisel.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/sparks.svg",
+    "title": "Laser sparks",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/laser-sparks.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/turn.svg",
+    "title": "Cycle",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/cycle.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/anvil.svg",
+    "title": "Anvil",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/anvil.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/scrap_bucket.svg",
+    "title": "Full metal bucket handle",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/full-metal-bucket-handle.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/ember.svg",
+    "title": "Ember shot",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/ember-shot.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/tongs.svg",
+    "title": "Pincers",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/pincers.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/crown.svg",
+    "title": "Queen crown",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/queen-crown.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/friends.svg",
+    "title": "Three friends",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/three-friends.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/settings.svg",
+    "title": "Cog",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/cog.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/back.svg",
+    "title": "arrow_back (Rounded, weight 600)",
+    "author": "Google",
+    "licence": "Apache License 2.0",
+    "url": "https://fonts.google.com/icons?selected=Material+Symbols+Rounded:arrow_back",
+    "licence_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "changes": "Recoloured #ffffff"
+  },
+  {
+    "file": "icons/lock.svg",
+    "title": "Padlock",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/padlock.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/star.svg",
+    "title": "Round star",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/round-star.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/trophy.svg",
+    "title": "Trophy cup",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/trophy-cup.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/flame.svg",
+    "title": "Flame",
+    "author": "Carl Olsen",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/carl-olsen/flame.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/map.svg",
+    "title": "Treasure map",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/treasure-map.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/user.svg",
+    "title": "Character",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/character.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_01.svg",
+    "title": "Thor hammer",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/thor-hammer.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_02.svg",
+    "title": "Anvil impact",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/anvil-impact.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_03.svg",
+    "title": "Blacksmith",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/blacksmith.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_04.svg",
+    "title": "Fluffy flame",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/fluffy-flame.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_05.svg",
+    "title": "Dwarf helmet",
+    "author": "Kier Heyl",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/kier-heyl/dwarf-helmet.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_06.svg",
+    "title": "Checked shield",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/checked-shield.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_07.svg",
+    "title": "Battle axe",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/battle-axe.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_08.svg",
+    "title": "Sword smithing",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/sword-smithing.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_09.svg",
+    "title": "Horseshoe",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/horseshoe.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_10.svg",
+    "title": "Gears",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/gears.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_11.svg",
+    "title": "Imperial crown",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/imperial-crown.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_12.svg",
+    "title": "Dragon head",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/dragon-head.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_13.svg",
+    "title": "Wolf head",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/wolf-head.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_14.svg",
+    "title": "Bear head",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/bear-head.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_15.svg",
+    "title": "Owl",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/owl.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/avatar_16.svg",
+    "title": "Mountains",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/mountains.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "audio/tink_1.ogg",
+    "title": "Tile touch tink #1 (G5, 784 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_2.ogg",
+    "title": "Tile touch tink #2 (A5, 880 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_3.ogg",
+    "title": "Tile touch tink #3 (B5, 988 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_4.ogg",
+    "title": "Tile touch tink #4 (D6, 1175 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_5.ogg",
+    "title": "Tile touch tink #5 (E6, 1319 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_6.ogg",
+    "title": "Tile touch tink #6 (G6, 1568 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_7.ogg",
+    "title": "Tile touch tink #7 (A6, 1760 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tink_8.ogg",
+    "title": "Tile touch tink #8 (B6, 1976 Hz): struck steel bar",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/clang.ogg",
+    "title": "impactMetal_heavy_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/clang.ogg",
+    "title": "Valid word: anvil clang + short sizzle",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/clang_light.ogg",
+    "title": "impactMetal_light_000.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/clang_light.ogg",
+    "title": "Teammate claimed a word: lighter, higher clang (a fourth up, no sizzle)",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/bonus.ogg",
+    "title": "impactMetal_light_004.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/bonus.ogg",
+    "title": "impactTin_medium_003.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/bonus.ogg",
+    "title": "metalPot2.ogg (Kenney RPG Audio)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/rpg-audio",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/bonus.ogg",
+    "title": "impactMetal_light_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/already.ogg",
+    "title": "impactGeneric_light_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/invalid.ogg",
+    "title": "impactPlate_heavy_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/invalid.ogg",
+    "title": "Not a word: dull 'cold metal' thunk",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/hint_hammer.ogg",
+    "title": "impactMining_000.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/hint_hammer.ogg",
+    "title": "Hammer Strike hint: heavy hammer blow with a short ring",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/hint_chisel.ogg",
+    "title": "impactMetal_light_002.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/hint_chisel.ogg",
+    "title": "Chisel hint: sharp, bright metal tap",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/hint_sparks.ogg",
+    "title": "Spark Shower hint: crackling, fizzing sparks",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/pickup.ogg",
+    "title": "Pickup collected: ember whoosh + small chime",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/forged.ogg",
+    "title": "impactMetal_heavy_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/forged.ogg",
+    "title": "impactBell_heavy_002.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/forged.ogg",
+    "title": "Puzzle complete ('Forged!'): big anvil hit + quench hiss + spark whoosh",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/levelup.ogg",
+    "title": "Level up / rank up: rising bell arpeggio into a bell + anvil chord",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactMetal_light_000.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactMetal_light_002.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactTin_medium_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactMetal_light_003.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactMetal_light_004.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactTin_medium_004.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "impactMetal_light_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/shuffle.ogg",
+    "title": "handleCoins.ogg (Kenney RPG Audio)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/rpg-audio",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/tap.ogg",
+    "title": "select_001.ogg (Kenney Interface Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/interface-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/countdown.ogg",
+    "title": "tick_002.ogg (Kenney Interface Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/interface-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/countdown.ogg",
+    "title": "Multiplayer countdown beat: bellows puff + tick",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/go.ogg",
+    "title": "Multiplayer 'go': bright anvil-bell ding",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/tick.ogg",
+    "title": "impactMetal_medium_002.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/tick.ogg",
+    "title": "Last 10 seconds: hammer 'heartbeat' tick",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/forge_ambience.ogg",
+    "title": "fire.wav (Fireplace Sound loop)",
+    "author": "PagDev",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://opengameart.org/content/fireplace-sound-loop",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/forge_ambience.ogg",
+    "title": "Forge fire crackle, seamless ~27 s stereo loop with one faint bellows breath",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  }
+]
