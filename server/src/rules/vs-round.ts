@@ -17,15 +17,29 @@
  * - A racer who leaves or runs out of rejoin time is **out**: they keep
  *   their wins (and the podium shows them) but can't win any more rounds,
  *   and the series is decided among the racers still in it.
+ * - **Survival** (shared/survival.md): each racer has their own heated word
+ *   on their own mold, all from the same order ({@link VsSurvival}). The
+ *   first melt by anyone ends the round, and whoever melted can't win it.
  *
  * Functions named `apply…`, `record…` and `mark…` change what they're given in place.
  */
 
 import { decideClaim } from "./coop";
-import { roundStartFields, type RoundStartFields, type SlotWord } from "./coop-round";
+import { lenOf, roundStartFields, type RoundStartFields, type SlotWord } from "./coop-round";
 import { vsRoundTimerMs, type HeatTier } from "./heat";
 import { cellKey, indexMold, newlyComplete, placeEmbers, shuffleLetters, type CellKey, type MoldIndex, type MpPuzzle, type Pos, type Rand } from "./mold";
 import { addToScrapBin, applyXp, HINT_KINDS, noHints, vsSeriesXp, type HintCounts, type HintKind, type ScrapBinResult, type XpAward } from "./progression";
+import {
+  applyHeatProgress,
+  firstClock,
+  heatedFields,
+  heatOrder,
+  meltAt,
+  SURVIVAL_CAP_MS,
+  type HeatClock,
+  type HeatedFields,
+  type Variant,
+} from "./survival";
 import { podium, resolveVsRound, seriesStatus, type SeriesLength, type VsRoundHow, type VsRoundResult } from "./vs";
 
 /** Series length until the host picks one (CONFIG). */
@@ -57,6 +71,16 @@ export interface VsMold {
   reachedAt: number;
 }
 
+/** Survival: every racer's heated word, from one order for the round. */
+export interface VsSurvival {
+  /** The order slots heat up in, the same for every racer (survival.ts `heatOrder`). */
+  readonly order: readonly number[];
+  /** Each racer's countdown on their own mold. */
+  readonly clocks: Record<string, HeatClock>;
+  /** Who melted first, and which slot, ending the round. */
+  melted: { readonly id: string; readonly slot: number } | null;
+}
+
 /** Everything about a Versus round. Plain JSON, so it goes straight into storage. */
 export interface VsRound {
   /** 1, 2, … within the series, sudden death included. */
@@ -78,6 +102,8 @@ export interface VsRound {
   readonly molds: Record<string, VsMold>;
   /** The last value handed out as a `reachedAt`. */
   n: number;
+  /** Survival only (absent in a classic round). */
+  readonly survival?: VsSurvival;
 }
 
 export interface NewVsRoundInput {
@@ -88,17 +114,25 @@ export interface NewVsRoundInput {
   readonly playerIds: readonly string[];
   readonly startsAt: number;
   readonly rand: Rand;
+  /** Classic unless given. */
+  readonly variant?: Variant;
 }
 
 function emptyMold(): VsMold {
   return { claims: [], auto: [], bonus: [], pickups: [], filled: 0, reachedAt: 0 };
 }
 
-/** Sets up a round: one shuffled anvil and one set of embers for everyone, and the VS clock from `startsAt`. */
+/**
+ * Sets up a round: one shuffled anvil and one set of embers for everyone,
+ * and the VS clock from `startsAt`. In survival the clock is only a
+ * 10-minute safety cap, and every racer's first countdown starts at
+ * `startsAt` on the same slot.
+ */
 export function newVsRound(input: NewVsRoundInput): VsRound {
   const { puzzle, rand } = input;
   const index = indexMold(puzzle);
   const fullLength = new Set(puzzle.slots.filter((s) => s.len === puzzle.letters.length).map((s) => s.word));
+  const survival = input.variant === "survival";
   return {
     round: input.round,
     regular: input.suddenDeath ? null : input.round,
@@ -106,13 +140,21 @@ export function newVsRound(input: NewVsRoundInput): VsRound {
     puzzle,
     letters: shuffleLetters(puzzle.letters, rand, fullLength),
     startsAt: input.startsAt,
-    endsAt: input.startsAt + vsRoundTimerMs(input.heat),
+    endsAt: input.startsAt + (survival ? SURVIVAL_CAP_MS : vsRoundTimerMs(input.heat)),
     total: index.cells.size,
     playerIds: [...input.playerIds],
     embers: placeEmbers(index, rand),
     molds: Object.fromEntries(input.playerIds.map((id) => [id, emptyMold()])),
     n: 0,
+    // Last, so a classic round uses `rand` exactly as before.
+    ...(survival ? { survival: newVsSurvival(puzzle, input.heat, input.playerIds, input.startsAt, rand) } : {}),
   };
+}
+
+function newVsSurvival(puzzle: MpPuzzle, heat: HeatTier, playerIds: readonly string[], startsAt: number, rand: Rand): VsSurvival {
+  const order = heatOrder(puzzle.slots, rand);
+  const clocks = Object.fromEntries(playerIds.map((id) => [id, firstClock(order, lenOf(puzzle), heat, startsAt)]));
+  return { order, clocks, melted: null };
 }
 
 function moldCells(mold: VsMold, index: MoldIndex): Set<CellKey> {
@@ -195,6 +237,45 @@ export function applyVsSubmit(r: VsRound, by: string, raw: string): VsSubmitOutc
   }
 }
 
+// ---------------------------------------------------------------------------
+// Survival (shared/survival.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * After `id`'s claim at `now`: if their heated slot is now complete on
+ * their mold (forged, or filled in by crossings), it counts as saved and
+ * the next one heats up for them. True if their heated slot changed; the
+ * caller then sends them HEATED, unless their mold is full.
+ */
+export function applyVsHeat(r: VsRound, id: string, now: number): boolean {
+  const clock = r.survival?.clocks[id];
+  const mold = r.molds[id];
+  if (r.survival === undefined || r.survival.melted !== null || clock === undefined || mold === undefined) return false;
+  const done = new Set([...mold.claims, ...mold.auto].map((s) => s.slot));
+  return applyHeatProgress(clock, r.survival.order, done, lenOf(r.puzzle), r.heat, now);
+}
+
+/** The next melt among `contenders` (the racers still in the series): the earliest, a tie going to the earlier racer. */
+export function vsNextMelt(r: VsRound, contenders: readonly string[]): { readonly id: string; readonly slot: number; readonly at: number } | null {
+  if (r.survival === undefined || r.survival.melted !== null) return null;
+  let next: { id: string; slot: number; at: number } | null = null;
+  for (const id of r.playerIds) {
+    const clock = r.survival.clocks[id];
+    if (!contenders.includes(id) || clock === undefined || clock.slot === null) continue;
+    const at = meltAt(clock);
+    if (at !== null && (next === null || at < next.at)) next = { id, slot: clock.slot, at };
+  }
+  return next;
+}
+
+/** `id`'s heated slot melted: notes it (the round then ends, `melted`). False if nothing of theirs was heated. */
+export function applyVsMelt(r: VsRound, id: string): boolean {
+  const slot = r.survival?.clocks[id]?.slot;
+  if (r.survival === undefined || slot === undefined || slot === null) return false;
+  r.survival.melted = { id, slot };
+  return true;
+}
+
 /** Notes that `by` collected the ember at `ember` as a `kind` hint (granted after the series). */
 export function applyVsPickup(r: VsRound, by: string, ember: Pos, kind: HintKind): void {
   r.molds[by]?.pickups.push({ x: ember.x, y: ember.y, kind });
@@ -263,6 +344,8 @@ export interface VsSeries {
    * until the first round is recorded.
    */
   forged?: Record<string, string[]>;
+  /** Survival: every round of the series is one (fixed at the start). Absent for classic. */
+  readonly variant?: "survival";
 }
 
 export interface NewVsSeriesInput {
@@ -271,6 +354,8 @@ export interface NewVsSeriesInput {
   readonly heat: HeatTier;
   readonly racerIds: readonly string[];
   readonly startedAt: number;
+  /** Classic unless given. */
+  readonly variant?: Variant;
 }
 
 export function newVsSeries(input: NewVsSeriesInput): VsSeries {
@@ -282,6 +367,7 @@ export function newVsSeries(input: NewVsSeriesInput): VsSeries {
     racers: input.racerIds.map((id) => ({ id, wins: 0, rounds: 0, words: 0, longest: "", bonus: 0, pickups: noHints(), out: false })),
     played: 0,
     standingsEndsAt: null,
+    ...(input.variant === "survival" ? { variant: "survival" as const } : {}),
   };
 }
 
@@ -413,17 +499,43 @@ export function mineOf(r: VsRound, id: string): VsMine {
   };
 }
 
-/** The `round` part of a Versus `SNAPSHOT`: `mine` is empty for someone watching. */
+/**
+ * The `round` part of a Versus `SNAPSHOT`: `mine` is empty for someone
+ * watching. Survival: `heated` is the receiver's own (`null` for someone
+ * watching, a racer out of the series included, or when nothing of theirs
+ * glows) and `saved` theirs (0 for someone who didn't race).
+ */
 export interface VsRoundSnapshot extends VsRoundStartFields {
   readonly mine: VsMine;
   readonly progress: readonly VsProgress[];
+  readonly saved?: number;
 }
 
 export function vsRoundSnapshot(r: VsRound, s: VsSeries, receiver: string, serverNow: number): VsRoundSnapshot {
-  return { ...vsRoundStartFields(r, s, serverNow), mine: mineOf(r, receiver), progress: progressOf(r) };
+  const clock = r.survival?.clocks[receiver];
+  return {
+    ...vsRoundStartFields(r, s, serverNow),
+    mine: mineOf(r, receiver),
+    progress: progressOf(r),
+    ...(r.survival === undefined
+      ? {}
+      : {
+          heated: clock === undefined || r.survival.melted !== null || !canRace(s, receiver) ? null : heatedFields(clock, serverNow),
+          saved: clock?.saved ?? 0,
+        }),
+  };
 }
 
-export type VsRoundEndReason = "finished" | "timeout";
+/** `HEATED` for `id`'s own mold, or `null` (not racing, or nothing of theirs glows). */
+export function vsHeatedFor(r: VsRound, id: string, serverNow: number): HeatedFields | null {
+  const clock = r.survival?.clocks[id];
+  return clock === undefined ? null : heatedFields(clock, serverNow);
+}
+
+export type VsRoundEndReason = "finished" | "timeout" | "melted";
+
+/** How a round was won, as sent in `ROUND_END`: survival adds `survived` (a melt, won by the most letters among the others). */
+export type VsRoundEndHow = VsRoundHow | "survived";
 
 /** `ROUND_END` in Versus. */
 export interface VsRoundEndFields {
@@ -431,13 +543,17 @@ export interface VsRoundEndFields {
   readonly round: number;
   readonly reason: VsRoundEndReason;
   readonly winner: string | null;
-  readonly how: VsRoundHow;
+  readonly how: VsRoundEndHow;
   readonly progress: readonly VsProgress[];
   /** Wins after this round, for everyone in the series. */
   readonly tally: Readonly<Record<string, number>>;
   readonly answers: readonly SlotWord[];
   readonly next: VsNextRound | null;
   readonly standingsEndsAt: number | null;
+  /** Survival only: `"survival"`, each racer's words saved, and who melted which slot (`null` if nobody did). */
+  readonly variant?: Variant;
+  readonly saved?: Readonly<Record<string, number>>;
+  readonly melted?: { readonly id: string; readonly slot: number } | null;
 }
 
 export interface VsRoundEnd {
@@ -451,10 +567,17 @@ export interface VsRoundEnd {
  * adds it to the series, and decides what comes next. With `stop` the
  * series ends here whatever the tally (the room is closing). The standings
  * would run until `now + STANDINGS_MS`.
+ *
+ * A melt (`melted`, after {@link applyVsMelt}) is resolved among the
+ * others: the most letters wins, a tie going to whoever got there first
+ * (`survived`); nobody with a letter is no winner (`none`).
  */
 export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, now: number, stop = false): VsRoundEnd {
-  const result = resolveRound(r, activeRacers(s));
+  const melter = reason === "melted" ? r.survival?.melted?.id : undefined;
+  const result = resolveRound(r, activeRacers(s).filter((id) => id !== melter));
   recordRound(s, r, result);
+  // Nobody can have filled their mold, so a melt is won on letters, or not at all.
+  const how: VsRoundEndHow = melter !== undefined && result.how === "timeout" ? "survived" : result.how;
   const decision = seriesDecision(s);
   const outcome = decision.over ? { winner: decision.winner, early: decision.early, forfeit: decision.forfeit } : stop ? stopSeries(s) : null;
   return {
@@ -462,12 +585,19 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
       round: r.round,
       reason,
       winner: result.winner,
-      how: result.how,
+      how,
       progress: progressOf(r),
       tally: tallyOf(s),
       answers: r.puzzle.slots.map(({ slot, word }) => ({ slot, word })),
       next: outcome === null && !decision.over ? decision.next : null,
       standingsEndsAt: outcome === null ? now + STANDINGS_MS : null,
+      ...(r.survival === undefined
+        ? {}
+        : {
+            variant: "survival" as const,
+            saved: Object.fromEntries(r.playerIds.map((id) => [id, r.survival!.clocks[id]?.saved ?? 0])),
+            melted: r.survival.melted === null ? null : { ...r.survival.melted },
+          }),
     },
     outcome,
   };

@@ -14,10 +14,11 @@
  *   results (`results`), results still to be written to D1 (`award`) and
  *   the planned alarm (`alarm`). Only rate limits live in memory.
  * - **One alarm**, always set to the nearest deadline: the end of the
- *   countdown, the end of the round, the end of the Versus standings, a
- *   dropped player's rejoin time, the empty-room and idle closes, and
- *   retrying a failed results write. Each event first catches up on any
- *   deadline that has passed, so a late alarm changes nothing.
+ *   countdown, the end of the round, a survival melt, the end of the
+ *   Versus standings, a dropped player's rejoin time, the empty-room and
+ *   idle closes, and retrying a failed results write. Each event first
+ *   catches up on any deadline that has passed, so a late alarm changes
+ *   nothing.
  * - **Cheap while idle** (docs/TECH.md §12): no timers, `{"op":"PING"}` is
  *   answered by the runtime, and a quiet room hibernates.
  *
@@ -30,6 +31,12 @@
  * - **Versus:** `lobby → countdown → round → standings → countdown → … →
  *   results`, a series of rounds on everyone's own copy of the mold. XP
  *   is written once, at the end of the series.
+ * - **Survival** (shared/survival.md), a variant of either, chosen with
+ *   CONFIG: one heated word at a time per mold (the team's, or each
+ *   racer's), with a countdown kept in the round. HEATED follows whatever
+ *   completed the last one; a melt (its deadline plus the grace) sends
+ *   MELT and ends the round. A countdown pauses while nobody is there to
+ *   forge it ({@link RoomDO.syncHeat}). Classic rooms never see any of it.
  */
 
 import { DurableObject } from "cloudflare:workers";
@@ -46,9 +53,12 @@ import {
 import type { Env } from "../env";
 import { RateLimiter, type RoomListing } from "../hub/protocol";
 import {
+  applyCoopHeat,
+  applyCoopMelt,
   applyEmberCollected,
   applyHint,
   applySubmit,
+  coopMeltAt,
   coopResults,
   forgedWords,
   hintProblem,
@@ -84,9 +94,12 @@ import {
   type RoomPhase,
   type Seat,
 } from "../rules/room";
+import { heatedFields, pauseClock, resumeClock, type HeatClock, type Variant } from "../rules/survival";
 import type { SeriesLength } from "../rules/vs";
 import {
   activeRacers,
+  applyVsHeat,
+  applyVsMelt,
   applyVsPickup,
   applyVsSubmit,
   canRace,
@@ -97,6 +110,8 @@ import {
   newVsSeries,
   seriesDecision,
   stopSeries,
+  vsHeatedFor,
+  vsNextMelt,
   vsRoundSnapshot,
   vsRoundStartFields,
   vsSeriesResults,
@@ -191,6 +206,8 @@ interface Room {
   listed: string | null;
   /** Versus: the series length (CONFIG). */
   series?: SeriesLength;
+  /** The variant the next START or AGAIN plays (CONFIG); classic while absent. */
+  variant?: Variant;
 }
 
 /** Where a round's clock stands, whatever the mode. */
@@ -450,8 +467,11 @@ export class RoomDO extends DurableObject<Env> {
     const server = pair[1];
     this.ctx.acceptWebSocket(server, [me.id]);
     server.serializeAttachment({ u: me.id } satisfies Attachment);
+    // Survival: someone is back, so a paused countdown goes on (before the SNAPSHOT shows it).
+    const resumed = this.syncHeat(room, now);
     send(server, { op: "WELCOME", you: me.id, protocol: PROTOCOL_VERSION, serverNow: now });
     send(server, this.snapshot(room, now, me.id));
+    this.sendHeated(resumed, now);
     this.broadcast(this.lobbyMessage(room), server);
 
     await this.schedule();
@@ -516,6 +536,7 @@ export class RoomDO extends DurableObject<Env> {
     if (!player.left && this.socketsOf(player.id, ws).length === 0) player.graceUntil = now + REJOIN_GRACE_MS;
     if (this.openSockets(ws).length === 0) room.emptySince ??= now;
     this.write(ROOM, room);
+    this.syncHeat(room, now, ws);
     this.broadcast(this.lobbyMessage(room, ws), ws);
     await this.settle();
   }
@@ -547,17 +568,27 @@ export class RoomDO extends DurableObject<Env> {
         }
         return;
 
-      case "CONFIG":
+      case "CONFIG": {
         // Co-op has no series to configure.
-        if (room.mode !== "vs") return this.error(ws, "bad_message");
-        if (room.phase !== "lobby") return this.error(ws, "wrong_phase");
+        if (message.series !== undefined && room.mode !== "vs") return this.error(ws, "bad_message");
+        // The series is chosen in the lobby; the variant in the lobby or results, for the next START or AGAIN.
+        if (message.series !== undefined ? room.phase !== "lobby" : !isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
-        if (room.series !== message.series) {
+        let changed = false;
+        if (message.series !== undefined && room.series !== message.series) {
           room.series = message.series;
+          changed = true;
+        }
+        if (message.variant !== undefined && (room.variant ?? "classic") !== message.variant) {
+          room.variant = message.variant;
+          changed = true;
+        }
+        if (changed) {
           this.write(ROOM, room);
           this.broadcast(this.lobbyMessage(room));
         }
         return;
+      }
 
       case "START":
       case "AGAIN": {
@@ -612,6 +643,7 @@ export class RoomDO extends DurableObject<Env> {
     if (this.openSockets().length === 0) room.emptySince ??= now;
     this.submitLimits.delete(player.id);
     this.write(ROOM, room);
+    this.syncHeat(room, now);
     this.broadcast(this.lobbyMessage(room));
     if (room.mode === "vs" && midGame) this.racerOut(room, player.id, now);
   }
@@ -655,6 +687,7 @@ export class RoomDO extends DurableObject<Env> {
         playerIds: players.map((p) => p.id),
         startsAt: now + COUNTDOWN_MS,
         rand: Math.random,
+        variant: fresh.variant,
       });
       fresh.rounds = round.round;
       fresh.phase = "countdown";
@@ -705,6 +738,8 @@ export class RoomDO extends DurableObject<Env> {
           pickup = emberKind(Math.random, player.level);
           applyEmberCollected(round, outcome.ember, player.id, pickup);
         }
+        // Survival: the claim (or a crossing it completed) may have saved the heated word.
+        const heated = applyCoopHeat(round, now);
         this.write(ROUND, round);
         reply("claimed", { word: outcome.word, points: outcome.points });
         this.broadcast({
@@ -717,6 +752,7 @@ export class RoomDO extends DurableObject<Env> {
           auto: outcome.auto,
           ...(pickup === null ? {} : { pickup }),
         });
+        if (heated) this.sendHeated([null], now);
         // Close the round before waiting on anything, so nothing more counts.
         if (outcome.complete) this.finishRound("complete", now);
         if (pickup !== null) {
@@ -747,6 +783,8 @@ export class RoomDO extends DurableObject<Env> {
     }
     if (!spent) return this.error(ws, "no_hint");
 
+    // Survival: the heated word may have melted while D1 answered.
+    if (round.survival !== undefined) await this.catchUp(Date.now());
     // The round may have moved on (or the cell filled) while D1 answered: give it back.
     const fresh = this.room();
     const current = this.coopRound();
@@ -761,10 +799,14 @@ export class RoomDO extends DurableObject<Env> {
 
     const outcome = applyHint(current, player.id, target, Math.random);
     if (!outcome.ok) return this.error(ws, outcome.code); // can't happen: checked just above
+    const at = Date.now();
+    // Survival: letters a hint shows can complete the heated word, which counts as saved.
+    const heated = applyCoopHeat(current, at);
     this.write(ROUND, current);
     this.broadcast({ op: "REVEAL", by: player.id, kind: target.kind, cells: outcome.cells, auto: outcome.auto });
+    if (heated) this.sendHeated([null], at);
     if (outcome.complete) {
-      this.finishRound("complete", Date.now());
+      this.finishRound("complete", at);
       await this.announceResults();
     }
   }
@@ -844,6 +886,7 @@ export class RoomDO extends DurableObject<Env> {
         heat,
         racerIds: racers,
         startedAt: now + COUNTDOWN_MS,
+        variant: fresh.variant,
       });
       for (const p of fresh.players) p.ready = false;
       this.write(STANDINGS, null);
@@ -919,12 +962,15 @@ export class RoomDO extends DurableObject<Env> {
       playerIds: next.players,
       startsAt: now + COUNTDOWN_MS,
       rand: Math.random,
+      variant: series.variant,
     });
     series.standingsEndsAt = null;
     room.phase = "countdown";
     this.write(ROUND, round);
     this.write(SERIES, series);
     this.write(ROOM, room);
+    // Survival: a racer still away from the standings starts with their countdown paused.
+    this.syncHeat(room, now);
     this.broadcast({ op: "ROUND_START", ...vsRoundStartFields(round, series, Date.now()) });
     this.broadcast(this.lobbyMessage(room));
   }
@@ -958,9 +1004,12 @@ export class RoomDO extends DurableObject<Env> {
           pickup = emberKind(Math.random, player.level);
           applyVsPickup(round, player.id, outcome.ember, pickup);
         }
+        // Survival: the claim (or a crossing it completed) may have saved this racer's heated word.
+        const heated = applyVsHeat(round, player.id, now);
         this.write(ROUND, round);
         reply("claimed", { word: outcome.word, slot: outcome.slot, auto: outcome.auto, ...(pickup === null ? {} : { pickup }) });
         this.broadcast({ op: "PROGRESS", id: player.id, filled: outcome.filled, total: outcome.total });
+        if (heated) this.sendHeated([player.id], now);
         if (outcome.complete) {
           this.finishVsRound("finished", now);
           await this.announceQueued();
@@ -1038,6 +1087,7 @@ export class RoomDO extends DurableObject<Env> {
         endedAt: now,
         results,
         forged: series.forged ?? {},
+        ...(series.variant === undefined ? {} : { variant: series.variant }),
       },
       usernames,
       attempts: 0,
@@ -1070,6 +1120,12 @@ export class RoomDO extends DurableObject<Env> {
         room.phase = "round";
         this.write(ROOM, room);
         this.broadcast(this.lobbyMessage(room));
+        continue;
+      }
+      // Survival: a heated word melts at its deadline plus the grace, unless the round's safety cap comes first.
+      const melt = room.phase === "round" && clock !== null ? this.nextMelt(room) : null;
+      if (melt !== null && clock !== null && now >= melt.at && melt.at <= clock.endsAt && this.melt(room, melt.id, now)) {
+        if (await this.announceQueued()) wroteAward = true;
         continue;
       }
       if (room.phase === "round" && clock !== null && now >= clock.endsAt) {
@@ -1127,6 +1183,7 @@ export class RoomDO extends DurableObject<Env> {
       changed = true;
     }
     if (changed) this.write(ROOM, room);
+    this.sendHeated(this.syncHeat(room, now), now);
   }
 
   private nextDeadline(): number | null {
@@ -1138,6 +1195,8 @@ export class RoomDO extends DurableObject<Env> {
     const clock = this.clock();
     if (clock !== null && room.phase === "countdown") deadlines.push(clock.startsAt);
     if (clock !== null && room.phase === "round") deadlines.push(clock.endsAt);
+    const melt = clock !== null && room.phase === "round" ? this.nextMelt(room) : null;
+    if (melt !== null) deadlines.push(melt.at);
     // Not while the next round's puzzle is on its way: its caller reschedules afterwards.
     const standingsEnd = room.phase === "standings" && !this.starting ? this.series()?.standingsEndsAt : null;
     if (standingsEnd != null) deadlines.push(standingsEnd);
@@ -1160,6 +1219,102 @@ export class RoomDO extends DurableObject<Env> {
   private async settle(): Promise<void> {
     await this.schedule();
     await this.syncListing();
+  }
+
+  // -------------------------------------------------------------------------
+  // Survival (shared/survival.md)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Pauses a countdown while nobody is there to forge it, and resumes it
+   * (its deadline moved on by the pause) when someone is back. Co-op: the
+   * team's, while no player is connected. Versus: each racer's own, while
+   * they're away; a racer out of the series can't melt, so theirs is left
+   * alone. `except` is a socket that is closing. Returns the countdowns
+   * that resumed, for {@link sendHeated}.
+   */
+  private syncHeat(room: Room, now: number, except?: WebSocket): (string | null)[] {
+    if (room.phase !== "countdown" && room.phase !== "round") return [];
+    const resumed: (string | null)[] = [];
+    let changed = false;
+    const sync = (clock: HeatClock, whose: string | null, here: boolean) => {
+      if (here && resumeClock(clock, now)) {
+        resumed.push(whose);
+        changed = true;
+      } else if (!here && pauseClock(clock, now)) {
+        changed = true;
+      }
+    };
+    if (room.mode === "vs") {
+      const round = this.vsRound();
+      const series = this.series();
+      if (round?.survival === undefined || round.survival.melted !== null || series === null) return [];
+      for (const id of round.playerIds) {
+        const clock = round.survival.clocks[id];
+        if (clock !== undefined && canRace(series, id)) sync(clock, id, this.socketsOf(id, except).length > 0);
+      }
+      if (changed) this.write(ROUND, round);
+    } else {
+      const round = this.coopRound();
+      if (round?.survival === undefined || round.survival.melted !== null) return [];
+      sync(round.survival.clock, null, round.playerIds.some((id) => this.socketsOf(id, except).length > 0));
+      if (changed) this.write(ROUND, round);
+    }
+    return resumed;
+  }
+
+  /**
+   * HEATED for countdowns that changed or resumed: `null` is the co-op
+   * team's (to everyone), an id is that racer's own (to them only).
+   * Nothing for a mold with nothing left to heat.
+   */
+  private sendHeated(whose: readonly (string | null)[], now: number): void {
+    for (const id of whose) {
+      if (id === null) {
+        const round = this.coopRound();
+        const fields = round?.survival === undefined ? null : heatedFields(round.survival.clock, now);
+        if (fields !== null) this.broadcast({ op: "HEATED", ...fields });
+      } else {
+        const round = this.vsRound();
+        const fields = round === null ? null : vsHeatedFor(round, id, now);
+        if (fields !== null) for (const ws of this.socketsOf(id)) send(ws, { op: "HEATED", ...fields });
+      }
+    }
+  }
+
+  /** The round's next melt (deadline plus grace), and on whose mold (`null`: the co-op team's). `null` if none is coming. */
+  private nextMelt(room: Room): { readonly at: number; readonly id: string | null } | null {
+    if (room.mode === "vs") {
+      const round = this.vsRound();
+      const series = this.series();
+      return round === null || series === null ? null : vsNextMelt(round, activeRacers(series));
+    }
+    const round = this.coopRound();
+    const at = round === null ? null : coopMeltAt(round);
+    return at === null ? null : { at, id: null };
+  }
+
+  /**
+   * The heated word on `id`'s mold (`null`: the team's) melted: MELT to
+   * everyone, then the round ends `melted` (co-op: ROUND_END once the
+   * results are written; Versus: ROUND_END now). False if nothing melted.
+   */
+  private melt(room: Room, id: string | null, now: number): boolean {
+    if (room.mode === "vs") {
+      const round = this.vsRound();
+      if (round === null || id === null || !applyVsMelt(round, id)) return false;
+      this.write(ROUND, round);
+      this.broadcast({ op: "MELT", slot: round.survival!.melted!.slot, id });
+      this.finishVsRound("melted", now);
+      return true;
+    }
+    const round = this.coopRound();
+    const slot = round === null ? null : applyCoopMelt(round);
+    if (slot === null) return false;
+    this.write(ROUND, round);
+    this.broadcast({ op: "MELT", slot });
+    this.finishRound("melted", now);
+    return true;
   }
 
   // -------------------------------------------------------------------------
@@ -1342,6 +1497,7 @@ export class RoomDO extends DurableObject<Env> {
           connected: this.socketsOf(p.id, except).length > 0,
         })),
       ...(room.mode === "vs" ? { series: room.series ?? DEFAULT_SERIES } : {}),
+      ...(room.variant === "survival" ? { variant: room.variant } : {}),
     };
   }
 
@@ -1357,7 +1513,7 @@ export class RoomDO extends DurableObject<Env> {
     return {
       op: "SNAPSHOT",
       lobby: this.lobbyFields(room),
-      ...(round !== null && room.phase !== "lobby" ? { round: roundSnapshot(round, now) } : {}),
+      ...(round !== null && room.phase !== "lobby" ? { round: roundSnapshot(round, now, room.phase === "countdown" || room.phase === "round") } : {}),
       ...(results !== null && room.phase === "results" ? { results } : {}),
     };
   }

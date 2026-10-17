@@ -5,6 +5,7 @@
 
 import { DELETED_NAME } from "../account/username";
 import { levelProgress, rankForLevel, STARTING_HINTS, type HintCounts } from "../rules/progression";
+import type { SurvivalBest } from "../rules/survival";
 
 export { DELETED_NAME };
 
@@ -42,6 +43,8 @@ export interface Account {
   readonly masterworkPieces: number;
   /** The UTC hour of the daily reminder, or `null` for none (shared/push.md). */
   readonly reminderHour: number | null;
+  /** The best Crucible run (shared/survival.md), or `null` before the first. */
+  readonly survivalBest: SurvivalBest | null;
 }
 
 export type SetUpAccount = Account & { readonly username: string; readonly avatar: string };
@@ -70,6 +73,10 @@ interface AccountRow {
   hammer: number;
   chisel: number;
   sparks: number;
+  best_puzzles: number | null;
+  best_words: number | null;
+  best_saved: number | null;
+  best_at: number | null;
 }
 
 const ACCOUNT_SQL = `
@@ -79,10 +86,12 @@ SELECT u.id, u.username, u.avatar, u.created_at,
        s.vs_series, s.vs_series_won, s.vs_rounds_won,
        COALESCE((SELECT count FROM inventory WHERE user_id = u.id AND item = 'hammer'), 0) AS hammer,
        COALESCE((SELECT count FROM inventory WHERE user_id = u.id AND item = 'chisel'), 0) AS chisel,
-       COALESCE((SELECT count FROM inventory WHERE user_id = u.id AND item = 'sparks'), 0) AS sparks
+       COALESCE((SELECT count FROM inventory WHERE user_id = u.id AND item = 'sparks'), 0) AS sparks,
+       b.puzzles AS best_puzzles, b.words AS best_words, b.saved AS best_saved, b.at AS best_at
   FROM users u
   JOIN profiles p ON p.user_id = u.id
   JOIN stats s ON s.user_id = u.id
+  LEFT JOIN survival_best b ON b.uid = u.id
  WHERE u.id = ?`;
 
 function toAccount(row: AccountRow): Account {
@@ -110,6 +119,8 @@ function toAccount(row: AccountRow): Account {
     stokeLast: row.stoke_last,
     masterworkPieces: row.masterwork_pieces,
     reminderHour: row.reminder_hour,
+    survivalBest:
+      row.best_at === null ? null : { puzzles: row.best_puzzles ?? 0, words: row.best_words ?? 0, saved: row.best_saved ?? 0, at: row.best_at },
   };
 }
 
@@ -144,7 +155,7 @@ export function isSetUp(account: Account): account is SetUpAccount {
   return account.username !== null && account.avatar !== null;
 }
 
-/** Body of `GET /v1/me` (also returned by setup and sync). */
+/** Body of `GET /v1/me` (also returned by setup, sync, the Daily Commission, the Forge Board's claims and Survival runs). */
 export interface ProfileBody {
   readonly id: string;
   readonly username: string | null;
@@ -167,6 +178,8 @@ export interface ProfileBody {
   readonly masterworks: { readonly pieces: number };
   /** The UTC hour of the daily reminder, or `null` for none (shared/push.md). */
   readonly reminderHour: number | null;
+  /** The best Crucible run `{puzzles, words, saved, at}`, or `null` before the first (shared/survival.md). */
+  readonly survivalBest: SurvivalBest | null;
   readonly createdAt: number;
 }
 
@@ -189,6 +202,7 @@ export function profileBody(account: Account): ProfileBody {
     stats: account.stats,
     masterworks: { pieces: account.masterworkPieces },
     reminderHour: account.reminderHour,
+    survivalBest: account.survivalBest,
     createdAt: account.createdAt,
   };
 }
@@ -294,6 +308,8 @@ export async function deleteAccount(db: D1Database, uid: string): Promise<{ form
     byUser("work_orders"),
     byUser("weekly_xp"),
     byUser("trial_claims"),
+    db.prepare("DELETE FROM survival_runs WHERE uid = ?1").bind(uid),
+    db.prepare("DELETE FROM survival_best WHERE uid = ?1").bind(uid),
     db.prepare("DELETE FROM users WHERE id = ?1").bind(uid),
   ]);
   return { formerFriends };

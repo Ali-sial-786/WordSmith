@@ -4,6 +4,11 @@
  * the results. Pure: the RoomDO stores a {@link CoopRound} in its own
  * storage, calls these to change it, and sends what they return.
  *
+ * In survival (shared/survival.md) the round also keeps the team's
+ * countdown on its heated word ({@link CoopSurvival}): forging the word in
+ * time (or completing it by crossings or hints) heats the next one, and a
+ * melt ends the round.
+ *
  * Functions named `apply…` change the round they're given in place.
  */
 
@@ -34,6 +39,18 @@ import {
   type Rand,
 } from "./mold";
 import { addToScrapBin, applyXp, coopRoundXp, type HintKind, type ScrapBinResult, type XpAward } from "./progression";
+import {
+  applyHeatProgress,
+  firstClock,
+  heatedFields,
+  heatOrder,
+  meltAt,
+  SURVIVAL_CAP_MS,
+  survivalCoopBonusXp,
+  type HeatClock,
+  type HeatedFields,
+  type Variant,
+} from "./survival";
 
 export interface ClaimRecord {
   readonly slot: number;
@@ -72,6 +89,16 @@ export interface HintRecord {
   readonly kind: HintKind;
 }
 
+/** Survival: the team's heated word and its countdown. */
+export interface CoopSurvival {
+  /** The order slots heat up in, set at the start (survival.ts `heatOrder`). */
+  readonly order: readonly number[];
+  /** The team's countdown on its heated slot. */
+  readonly clock: HeatClock;
+  /** The slot that melted, ending the round. */
+  melted: number | null;
+}
+
 /** Everything about a round in progress. Plain JSON, so it goes straight into storage. */
 export interface CoopRound {
   readonly round: number;
@@ -95,6 +122,8 @@ export interface CoopRound {
   hints: HintRecord[];
   /** Next arrival number. */
   n: number;
+  /** Survival only (absent in a classic round). */
+  readonly survival?: CoopSurvival;
 }
 
 export interface NewRoundInput {
@@ -105,13 +134,20 @@ export interface NewRoundInput {
   readonly playerIds: readonly string[];
   readonly startsAt: number;
   readonly rand: Rand;
+  /** Classic unless given. */
+  readonly variant?: Variant;
 }
 
-/** Sets up a round: shuffles the anvil, places any embers, starts the clock at `startsAt`. */
+/**
+ * Sets up a round: shuffles the anvil, places any embers, starts the clock
+ * at `startsAt`. In survival the clock is only a 10-minute safety cap, and
+ * the first heated word's countdown starts at `startsAt` too.
+ */
 export function newCoopRound(input: NewRoundInput): CoopRound {
   const { puzzle, rand } = input;
   const index = indexMold(puzzle);
   const fullLength = new Set(puzzle.slots.filter((s) => s.len === puzzle.letters.length).map((s) => s.word));
+  const survival = input.variant === "survival";
   return {
     round: input.round,
     heat: input.heat,
@@ -119,7 +155,7 @@ export function newCoopRound(input: NewRoundInput): CoopRound {
     puzzle,
     letters: shuffleLetters(puzzle.letters, rand, fullLength),
     startsAt: input.startsAt,
-    endsAt: input.startsAt + coopTimerMs(input.heat),
+    endsAt: input.startsAt + (survival ? SURVIVAL_CAP_MS : coopTimerMs(input.heat)),
     playerIds: [...input.playerIds],
     claims: [],
     auto: [],
@@ -129,7 +165,19 @@ export function newCoopRound(input: NewRoundInput): CoopRound {
     collected: [],
     hints: [],
     n: 0,
+    // Last, so a classic round uses `rand` exactly as before.
+    ...(survival ? { survival: newCoopSurvival(puzzle, input.heat, input.startsAt, rand) } : {}),
   };
+}
+
+function newCoopSurvival(puzzle: MpPuzzle, heat: HeatTier, startsAt: number, rand: Rand): CoopSurvival {
+  const order = heatOrder(puzzle.slots, rand);
+  return { order, clock: firstClock(order, lenOf(puzzle), heat, startsAt), melted: null };
+}
+
+/** A slot's length by its number (slots are numbered by their index). */
+export function lenOf(puzzle: MpPuzzle): (slot: number) => number {
+  return (slot) => puzzle.slots[slot]!.len;
 }
 
 export function roundLengthMs(r: CoopRound): number {
@@ -152,6 +200,10 @@ export interface RoundStartFields {
   readonly rows: number;
   readonly slots: readonly { slot: number; x: number; y: number; d: "a" | "d"; len: number }[];
   readonly pickups: readonly Pos[];
+  /** Survival only: `"survival"` (a classic round leaves the survival fields out). */
+  readonly variant?: Variant;
+  /** Survival only: the first heated slot, the same for everyone. */
+  readonly heated?: HeatedFields | null;
 }
 
 /** What `ROUND_START` is built from: any mode's round (co-op's {@link CoopRound}, or a Versus round). */
@@ -164,6 +216,8 @@ export interface RoundBoard {
   readonly endsAt: number;
   /** Ember cells still showing. */
   readonly embers: readonly Pos[];
+  /** Survival only: the order slots heat up in. */
+  readonly survival?: { readonly order: readonly number[] };
 }
 
 export function roundStartFields(r: RoundBoard, serverNow: number): RoundStartFields {
@@ -178,6 +232,9 @@ export function roundStartFields(r: RoundBoard, serverNow: number): RoundStartFi
     rows: r.puzzle.rows,
     slots: r.puzzle.slots.map(({ slot, x, y, d, len }) => ({ slot, x, y, d, len })),
     pickups: r.embers.map(({ x, y }) => ({ x, y })),
+    ...(r.survival === undefined
+      ? {}
+      : { variant: "survival" as const, heated: heatedFields(firstClock(r.survival.order, lenOf(r.puzzle), r.heat, r.startsAt), serverNow) }),
   };
 }
 
@@ -188,9 +245,12 @@ export interface RoundSnapshot extends RoundStartFields {
   readonly bonus: readonly { word: string; by: string }[];
   readonly revealed: readonly RevealedCell[];
   readonly scores: Record<string, number>;
+  /** Survival only: the team's words saved so far (`heated` is the team's now, `null` once nothing glows). */
+  readonly saved?: number;
 }
 
-export function roundSnapshot(r: CoopRound, serverNow: number): RoundSnapshot {
+/** The round so far; `live` is false once it has ended (survival then shows nothing heated). */
+export function roundSnapshot(r: CoopRound, serverNow: number, live = true): RoundSnapshot {
   return {
     ...roundStartFields(r, serverNow),
     claims: r.claims.map(({ slot, word, by, points }) => ({ slot, word, by, points })),
@@ -198,6 +258,9 @@ export function roundSnapshot(r: CoopRound, serverNow: number): RoundSnapshot {
     bonus: r.bonus.map(({ word, by }) => ({ word, by })),
     revealed: r.revealed.map(({ x, y, letter }) => ({ x, y, letter })),
     scores: scoresOf(r),
+    ...(r.survival === undefined
+      ? {}
+      : { heated: live && r.survival.melted === null ? heatedFields(r.survival.clock, serverNow) : null, saved: r.survival.clock.saved }),
   };
 }
 
@@ -364,7 +427,7 @@ export function applyHint(r: CoopRound, by: string, target: HintTarget, rand: Ra
 // Results
 // ---------------------------------------------------------------------------
 
-export type RoundEndReason = "complete" | "timeout";
+export type RoundEndReason = "complete" | "timeout" | "melted";
 
 export interface CoopPlayerResult {
   readonly id: string;
@@ -388,9 +451,13 @@ export interface CoopResults {
   readonly mvp: string | null;
   /** Every grid word, so the app can show the ones nobody found. */
   readonly answers: readonly SlotWord[];
+  /** Survival only: `"survival"`, the team's words saved, and the slot that melted (`null` if none did). */
+  readonly variant?: Variant;
+  readonly saved?: number;
+  readonly melted?: { readonly slot: number } | null;
 }
 
-/** The round's outcome when it ends at `now`, completed or timed out. */
+/** The round's outcome when it ends at `now`: completed, timed out, or (survival) melted, which scores as a timeout. */
 export function coopResults(r: CoopRound, reason: RoundEndReason, now: number): CoopResults {
   const index = indexMold(r.puzzle);
   const scores = scoresOf(r);
@@ -421,6 +488,13 @@ export function coopResults(r: CoopRound, reason: RoundEndReason, now: number): 
     }),
     mvp,
     answers: r.puzzle.slots.map(({ slot, word }) => ({ slot, word })),
+    ...(r.survival === undefined
+      ? {}
+      : {
+          variant: "survival" as const,
+          saved: r.survival.clock.saved,
+          melted: r.survival.melted === null ? null : { slot: r.survival.melted },
+        }),
   };
 }
 
@@ -444,13 +518,45 @@ export interface CoopAward {
 
 /**
  * What one player gets for a round: co-op XP (with any level-ups and their
- * rewards), and their bonus words smelted in the Scrap Bin.
+ * rewards), and their bonus words smelted in the Scrap Bin. A survival
+ * round adds 2 per word the team saved, up to +30.
  */
 export function coopAward(
   player: CoopPlayerResult,
-  results: Pick<CoopResults, "reason" | "mvp">,
+  results: Pick<CoopResults, "reason" | "mvp" | "saved">,
   profile: { readonly totalXp: number; readonly scrapBin: number },
 ): CoopAward {
-  const amount = coopRoundXp({ points: player.points, teamFilledMold: results.reason === "complete", isMvp: results.mvp === player.id });
+  const amount =
+    coopRoundXp({ points: player.points, teamFilledMold: results.reason === "complete", isMvp: results.mvp === player.id }) +
+    survivalCoopBonusXp(results.saved ?? 0);
   return { amount, xp: applyXp(profile.totalXp, amount), scrap: addToScrapBin(profile.scrapBin, player.bonus) };
+}
+
+// ---------------------------------------------------------------------------
+// Survival (shared/survival.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * After a claim or a hint at `now`: if the team's heated slot is now
+ * complete (however it filled), it counts as saved and the next slot in the
+ * order heats up. True if the heated slot changed; the caller then sends
+ * HEATED, unless nothing glows any more (the mold is full).
+ */
+export function applyCoopHeat(r: CoopRound, now: number): boolean {
+  const s = r.survival;
+  if (s === undefined || s.melted !== null) return false;
+  return applyHeatProgress(s.clock, s.order, doneSlots(r), lenOf(r.puzzle), r.heat, now);
+}
+
+/** When the team's heated slot melts (deadline plus grace), or `null` (classic, paused, nothing heated, or already melted). */
+export function coopMeltAt(r: CoopRound): number | null {
+  return r.survival === undefined || r.survival.melted !== null ? null : meltAt(r.survival.clock);
+}
+
+/** The heated slot melted: notes it, for the results. Returns the slot, or `null` if nothing was heated. */
+export function applyCoopMelt(r: CoopRound): number | null {
+  const s = r.survival;
+  if (s === undefined || s.clock.slot === null) return null;
+  s.melted = s.clock.slot;
+  return s.melted;
 }

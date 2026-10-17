@@ -278,7 +278,8 @@ function placements(results: CoopResults): Map<string, number> {
 /**
  * Writes a finished co-op round (see {@link writeMatch}): stats are
  * `coop_rounds`, `coop_mvps`, `words_forged` and `longest_word`; hints won
- * are level-up rewards and Scrap Bin hammers. Returns each written player's XP.
+ * are level-up rewards and Scrap Bin hammers. A survival round's XP has
+ * its bonus for words saved (`coopAward`). Returns each written player's XP.
  */
 export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, now: number): Promise<Record<string, XpBody>> {
   const { results } = record;
@@ -294,6 +295,8 @@ export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, no
     total: results.total,
     mvp: results.mvp,
     players: results.players.map(({ id, points, words, longest }) => ({ id, points, words, longest })),
+    // Survival rounds only (shared/survival.md "Records").
+    ...(results.variant === undefined ? {} : { variant: results.variant, saved: results.saved, melted: results.melted }),
   });
   const match = { matchId: record.matchId, mode: record.mode, code: record.code, startedAt: record.startedAt, endedAt: record.endedAt, summary };
 
@@ -341,6 +344,8 @@ export interface VsSeriesRecord {
   readonly results: VsSeriesResults;
   /** The grid words each racer forged on their own molds, for their Work Orders. Absent in records stored before them. */
   readonly forged?: Readonly<Record<string, readonly string[]>>;
+  /** Survival series only. */
+  readonly variant?: "survival";
 }
 
 /**
@@ -361,6 +366,8 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     early: results.early,
     forfeit: results.forfeit,
     players: results.players.map(({ id, wins, place, rounds, words, longest }) => ({ id, wins, place, rounds, words, longest })),
+    // Survival series only (shared/survival.md "Records").
+    ...(record.variant === undefined ? {} : { variant: record.variant }),
   });
   const match = { matchId: record.matchId, mode: "vs" as const, code: record.code, startedAt: record.startedAt, endedAt: record.endedAt, summary };
 

@@ -54,6 +54,8 @@ describe("D1 schema", () => {
     "puzzles",
     "solo_results",
     "stats",
+    "survival_best",
+    "survival_runs",
     "trial_claims",
     "users",
     "weekly_xp",
@@ -61,7 +63,7 @@ describe("D1 schema", () => {
     "xp_events",
   ];
 
-  it("has every table from TECH.md §7, plus pickup_seeds, daily_completions, push_tokens and the Forge Board's", async () => {
+  it("has every table from TECH.md §7, plus pickup_seeds, daily_completions, push_tokens, the Forge Board's and Survival's", async () => {
     const { results } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%' ORDER BY name",
     ).all<{ name: string }>();

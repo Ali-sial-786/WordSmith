@@ -19,6 +19,7 @@ import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, pu
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { postSync } from "./routes/solo";
+import { postSurvivalSolo } from "./routes/survival";
 import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
 
@@ -52,6 +53,7 @@ const router = new Router<Handler>([
   { method: "POST", path: "/v1/me/gifts/claim", handler: authed(postGiftsClaim) },
 
   { method: "POST", path: "/v1/solo/sync", handler: authed(postSync) },
+  { method: "POST", path: "/v1/survival/solo", handler: authed(postSurvivalSolo) },
 
   { method: "GET", path: "/v1/daily", handler: authed(getDaily) },
   { method: "POST", path: "/v1/daily/complete", handler: authed(postDailyComplete) },

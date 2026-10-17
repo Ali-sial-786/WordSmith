@@ -3,19 +3,24 @@
  * over one `wordsmith.v1` WebSocket per room. Pure, so it's unit-tested in
  * Node.
  *
- * Client → server: READY, CONFIG (Versus), START, SUBMIT, HINT, AGAIN,
- * LEAVE, EMOTE, and the exact text `{"op":"PING"}` (answered
- * `{"op":"PONG"}` by the runtime without waking the room).
+ * Client → server: READY, CONFIG (the variant, and the Versus series),
+ * START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, and the exact text
+ * `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime without waking
+ * the room).
  *
  * Server → client: WELCOME, LOBBY, ROUND_START, WORD_RESULT, CLAIMED, BONUS,
- * REVEAL, PROGRESS (Versus), ROUND_END, SERIES_END (Versus), SNAPSHOT,
- * EMOTE, ERROR.
+ * REVEAL, PROGRESS (Versus), HEATED and MELT (survival), ROUND_END,
+ * SERIES_END (Versus), SNAPSHOT, EMOTE, ERROR.
+ *
+ * Survival (shared/survival.md) adds its fields only to survival rooms and
+ * rounds: a message without `variant` is classic, exactly as before.
  */
 
 import type { CoopResults, RevealedCell, RoundSnapshot, RoundStartFields, SlotWord } from "../rules/coop-round";
 import type { HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
 import type { RoomMode, RoomPhase } from "../rules/room";
+import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isSeriesLength, type SeriesLength } from "../rules/vs";
 import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields } from "../rules/vs-round";
 
@@ -33,8 +38,8 @@ export type HintRequest = { readonly kind: "hammer" | "sparks" } | { readonly ki
 
 export type ClientMessage =
   | { readonly op: "READY"; readonly ready: boolean }
-  /** Versus: the series length, chosen by the host in the lobby. */
-  | { readonly op: "CONFIG"; readonly series: SeriesLength }
+  /** The host's choices: the variant (lobby or results), and the Versus series length (lobby). At least one. */
+  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength }
   | { readonly op: "START" }
   | { readonly op: "SUBMIT"; readonly word: string; readonly seq: number }
   | { readonly op: "HINT"; readonly hint: HintRequest }
@@ -79,8 +84,17 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
   switch (m.op) {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
-    case "CONFIG":
-      return isSeriesLength(m.series) ? { ok: true, message: { op: "CONFIG", series: m.series } } : BAD;
+    case "CONFIG": {
+      if (m.variant === undefined && m.series === undefined) return BAD;
+      if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
+      if (m.series !== undefined && !isSeriesLength(m.series)) return BAD;
+      const message: ClientMessage = {
+        op: "CONFIG",
+        ...(m.variant === undefined ? {} : { variant: m.variant }),
+        ...(m.series === undefined ? {} : { series: m.series }),
+      };
+      return { ok: true, message };
+    }
     case "START":
     case "AGAIN":
     case "LEAVE":
@@ -128,6 +142,8 @@ export interface LobbyFields {
   readonly players: readonly LobbyPlayer[];
   /** Versus only: the series length (3, 5, 7 or 10). */
   readonly series?: SeriesLength;
+  /** Only while it's `"survival"` (CONFIG): left out, the room is classic. Applies from the next START or AGAIN. */
+  readonly variant?: Variant;
 }
 
 export interface XpBody {
@@ -217,6 +233,10 @@ export type ServerMessage =
   | { readonly op: "BONUS"; readonly word: string; readonly by: string; readonly points: number; readonly scores: Readonly<Record<string, number>> }
   | { readonly op: "REVEAL"; readonly by: string; readonly kind: HintKind; readonly cells: readonly RevealedCell[]; readonly auto: readonly SlotWord[] }
   | { readonly op: "PROGRESS"; readonly id: string; readonly filled: number; readonly total: number }
+  /** Survival: a mold's heated slot changed (co-op: to everyone; Versus: to the racer, about their own), or its countdown resumed. */
+  | ({ readonly op: "HEATED" } & HeatedFields)
+  /** Survival: a heated slot melted (Versus: on `id`'s mold). Straight before ROUND_END. */
+  | { readonly op: "MELT"; readonly slot: number; readonly id?: string }
   | ({ readonly op: "ROUND_END" } & (ResultsFields | VsRoundEndFields))
   | ({ readonly op: "SERIES_END" } & SeriesEndFields)
   | {
