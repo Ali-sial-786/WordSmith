@@ -12,7 +12,7 @@ describe("routes", () => {
     const res = await get("/v1/version");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^application\/json/);
-    expect(await res.json()).toEqual({ latest: "0.3.0", minSupported: "0.1.0", protocol: 1 });
+    expect(await res.json()).toEqual({ latest: "0.3.1", minSupported: "0.1.0", protocol: 1 });
   });
 
   it("GET /v1/health is ok", async () => {
