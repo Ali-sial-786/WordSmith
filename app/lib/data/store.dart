@@ -160,6 +160,60 @@ class Store {
 
   set crashSeenAt(int at) => _prefs.setInt(_crashSeenKey, at);
 
+  static const _survivalKey = 'survival_queue.v1';
+  static const _survivalOpenKey = 'survival_open.v1';
+  static const _survivalBestKey = 'survival_best.v1';
+
+  /// Finished Crucible runs waiting to be sent (shared/survival.md).
+  List<Map<String, dynamic>> loadSurvivalQueue() {
+    final raw = _prefs.getString(_survivalKey);
+    return raw == null ? [] : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> enqueueSurvival(Map<String, Object?> run) =>
+      _prefs.setString(_survivalKey, jsonEncode([...loadSurvivalQueue(), run]));
+
+  Future<void> dropSurvival(String runId) => _prefs.setString(
+    _survivalKey,
+    jsonEncode(loadSurvivalQueue().where((r) => r['runId'] != runId).toList()),
+  );
+
+  /// The run being played right now, kept after every change.
+  Future<void> saveOpenSurvival(Map<String, Object?>? run) =>
+      run == null ? _prefs.remove(_survivalOpenKey) : _prefs.setString(_survivalOpenKey, jsonEncode(run));
+
+  /// Queues a run the app was closed in the middle of.
+  Future<void> closeOpenSurvival() async {
+    final raw = _prefs.getString(_survivalOpenKey);
+    if (raw == null) return;
+    await _prefs.remove(_survivalOpenKey);
+    final run = jsonDecode(raw) as Map<String, dynamic>;
+    if (!loadSurvivalQueue().any((r) => r['runId'] == run['runId'])) await enqueueSurvival(run);
+  }
+
+  /// Hints spent in runs the server hasn't seen yet, by kind name.
+  Map<String, int> pendingSurvivalHints() {
+    final open = _prefs.getString(_survivalOpenKey);
+    final runs = [...loadSurvivalQueue(), if (open != null) jsonDecode(open) as Map<String, dynamic>];
+    final used = <String, int>{};
+    for (final run in runs) {
+      for (final p in (run['puzzles'] as List).cast<Map<String, dynamic>>()) {
+        for (final e in (p['hintsUsed'] as Map).entries) {
+          used[e.key as String] = (used[e.key] ?? 0) + (e.value as num).toInt();
+        }
+      }
+    }
+    return used;
+  }
+
+  /// The best Crucible run on this phone: {puzzles, words, saved, at}.
+  Map<String, dynamic>? loadSurvivalBest() {
+    final raw = _prefs.getString(_survivalBestKey);
+    return raw == null ? null : jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  Future<void> saveSurvivalBest(Map<String, Object?> best) => _prefs.setString(_survivalBestKey, jsonEncode(best));
+
   /// One-time tips the player has already been shown.
   bool seenTip(String id) => _prefs.getStringList(_tipsKey)?.contains(id) ?? false;
 
@@ -226,7 +280,7 @@ class Store {
 
   /// Forgets everything on this phone (after deleting the account).
   Future<void> clearAll() async {
-    for (final key in [_profileKey, _savedKey, _syncKey]) {
+    for (final key in [_profileKey, _savedKey, _syncKey, _survivalKey, _survivalOpenKey, _survivalBestKey]) {
       await _prefs.remove(key);
     }
   }

@@ -49,6 +49,8 @@ sealed class RoomEvent {
     // Versus round ends say how the round was won; co-op ones don't.
     'ROUND_END' => m.containsKey('how') ? VsRoundEnd.fromJson(m) : RoundEnd.fromJson(m),
     'PROGRESS' => RacerProgress.fromJson(m),
+    'HEATED' => HeatedSlot.fromJson(m),
+    'MELT' => Melted((m['slot'] as num).toInt(), m['id'] as String?),
     'SERIES_END' => SeriesEnd.fromJson(m),
     'SNAPSHOT' => RoomSnapshot.fromJson(m),
     'EMOTE' => RoomEmote(m['from'] as String, m['emote'] as String),
@@ -116,6 +118,7 @@ class RoomLobby extends RoomEvent {
     required this.heat,
     required this.players,
     this.series = 3,
+    this.variant = 'classic',
   });
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
@@ -129,6 +132,7 @@ class RoomLobby extends RoomEvent {
         RoomPlayer.fromJson(p),
     ],
     series: j['series'] as int? ?? 3,
+    variant: j['variant'] as String? ?? 'classic',
   );
 
   final String code;
@@ -141,7 +145,11 @@ class RoomLobby extends RoomEvent {
   /// Versus: best of this many rounds.
   final int series;
 
+  /// `classic` or `survival` (shared/survival.md).
+  final String variant;
+
   bool get isVs => mode == 'vs';
+  bool get survival => variant == 'survival';
   int get maxPlayers => isVs ? 5 : 4;
 
   RoomPlayer? player(String id) {
@@ -183,6 +191,8 @@ class RoundStart extends RoomEvent {
     this.suddenDeath = false,
     this.racers = const [],
     this.tally = const {},
+    this.variant = 'classic',
+    this.heated,
   });
 
   factory RoundStart.fromJson(Map<String, dynamic> j) => RoundStart(
@@ -207,6 +217,8 @@ class RoundStart extends RoomEvent {
     suddenDeath: j['suddenDeath'] as bool? ?? false,
     racers: [for (final id in (j['players'] as List?) ?? const []) id as String],
     tally: _scores(j['tally']),
+    variant: j['variant'] as String? ?? 'classic',
+    heated: j['heated'] is Map ? HeatedSlot.fromJson((j['heated'] as Map).cast()) : null,
   );
 
   final int round;
@@ -227,6 +239,52 @@ class RoundStart extends RoomEvent {
   final bool suddenDeath;
   final List<String> racers;
   final Map<String, int> tally;
+
+  /// Survival: `survival`, with the first heated slot.
+  final String variant;
+  final HeatedSlot? heated;
+
+  bool get survival => variant == 'survival';
+}
+
+/// Survival: the slot now heated (the team's in co-op, mine in Versus) and
+/// when it melts, in server time.
+class HeatedSlot extends RoomEvent {
+  const HeatedSlot({
+    required this.slot,
+    required this.startsAt,
+    required this.deadline,
+    required this.durationMs,
+    required this.saved,
+    this.serverNow = 0,
+  });
+
+  factory HeatedSlot.fromJson(Map<String, dynamic> j) => HeatedSlot(
+    slot: (j['slot'] as num).toInt(),
+    startsAt: (j['startsAt'] as num?)?.toInt() ?? 0,
+    deadline: (j['deadline'] as num).toInt(),
+    durationMs: (j['durationMs'] as num?)?.toInt() ?? 0,
+    saved: (j['saved'] as num?)?.toInt() ?? 0,
+    serverNow: (j['serverNow'] as num?)?.toInt() ?? 0,
+  );
+
+  final int slot;
+  final int startsAt;
+  final int deadline;
+  final int durationMs;
+
+  /// Heated words saved so far this round.
+  final int saved;
+  final int serverNow;
+}
+
+/// Survival: a heated word melted; the round is over. [id] is whose mold
+/// (Versus).
+class Melted extends RoomEvent {
+  const Melted(this.slot, this.id);
+
+  final int slot;
+  final String? id;
 }
 
 class WordResult extends RoomEvent {
@@ -290,10 +348,12 @@ class VsRoundEnd extends RoomEvent {
     this.next,
     this.standingsEndsAt,
     this.round,
+    this.melted,
   });
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
     final next = j['next'] as Map<String, dynamic>?;
+    final melted = j['melted'] as Map<String, dynamic>?;
     return VsRoundEnd(
       reason: j['reason'] as String? ?? 'timeout',
       winner: j['winner'] as String?,
@@ -312,14 +372,18 @@ class VsRoundEnd extends RoomEvent {
             ),
       standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
       round: (j['round'] as num?)?.toInt(),
+      melted: melted == null ? null : (id: melted['id'] as String, slot: (melted['slot'] as num).toInt()),
     );
   }
 
   final String reason;
   final String? winner;
 
-  /// `finished`, `timeout` or `none`.
+  /// `finished`, `timeout`, `survived` (someone else melted) or `none`.
   final String how;
+
+  /// Survival: whose word melted, ending the round.
+  final ({String id, int slot})? melted;
   final List<RacerProgress> progress;
   final Map<String, int> tally;
   final List<(int, String)> answers;
@@ -472,6 +536,7 @@ class RoundEnd extends RoomEvent {
     required this.mvp,
     required this.answers,
     required this.xp,
+    this.saved = 0,
   });
 
   factory RoundEnd.fromJson(Map<String, dynamic> j) => RoundEnd(
@@ -494,8 +559,10 @@ class RoundEnd extends RoomEvent {
     mvp: j['mvp'] as String?,
     answers: _slotWords(j['answers']),
     xp: _xpAwards(j['xp']),
+    saved: (j['saved'] as num?)?.toInt() ?? 0,
   );
 
+  /// `complete`, `timeout` or `melted` (Survival).
   final String reason;
   final int teamScore;
   final int filled;
@@ -506,7 +573,11 @@ class RoundEnd extends RoomEvent {
   final List<(int, String)> answers;
   final Map<String, XpAward> xp;
 
+  /// Survival: heated words the team saved.
+  final int saved;
+
   bool get completed => reason == 'complete';
+  bool get melted => reason == 'melted';
 }
 
 class RoomSnapshot extends RoomEvent {
@@ -524,6 +595,8 @@ class RoomSnapshot extends RoomEvent {
     this.progress = const [],
     this.standings,
     this.seriesEnd,
+    this.heated,
+    this.saved = 0,
   });
 
   factory RoomSnapshot.fromJson(Map<String, dynamic> j) {
@@ -555,6 +628,8 @@ class RoomSnapshot extends RoomEvent {
       ],
       standings: standings == null ? null : VsRoundEnd.fromJson(standings),
       seriesEnd: vsResults ? SeriesEnd.fromJson(results) : null,
+      heated: round?['heated'] is Map ? HeatedSlot.fromJson((round!['heated'] as Map).cast()) : null,
+      saved: (round?['saved'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -574,6 +649,11 @@ class RoomSnapshot extends RoomEvent {
   final List<RacerProgress> progress;
   final VsRoundEnd? standings;
   final SeriesEnd? seriesEnd;
+
+  /// Survival: the heated slot right now (the team's, or mine in Versus)
+  /// and the words saved so far.
+  final HeatedSlot? heated;
+  final int saved;
 }
 
 class RoomEmote extends RoomEvent {
@@ -645,8 +725,10 @@ class RoomClient {
 
   void ready(bool ready) => _send({'op': 'READY', 'ready': ready});
 
-  /// Versus, host only: best of [series] rounds.
-  void config(int series) => _send({'op': 'CONFIG', 'series': series});
+  /// Host only: best of [series] rounds (Versus), and the variant
+  /// (`classic` or `survival`).
+  void config({int? series, String? variant}) =>
+      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});

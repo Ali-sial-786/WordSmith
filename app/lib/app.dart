@@ -20,6 +20,7 @@ import 'features/hall/hall_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
+import 'features/survival/crucible_screen.dart';
 import 'game/account.dart';
 import 'game/providers.dart';
 import 'game/daily_game.dart';
@@ -67,6 +68,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(path: '/daily/calendar', builder: (_, _) => const CalendarScreen()),
     GoRoute(path: '/lore', builder: (_, _) => const LoreScreen()),
+    GoRoute(path: '/crucible', builder: (_, _) => const CrucibleScreen()),
     GoRoute(
       path: '/room/:code',
       builder: (_, state) => RoomScreen(

@@ -8,8 +8,10 @@ import '../effects/sparks.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
 import 'mold_model.dart';
+import 'survival_overlay.dart';
 
 export 'mold_model.dart';
+export 'survival_overlay.dart';
 
 /// Per-cell animation cues handed down by the puzzle screen.
 class MoldCues {
@@ -46,6 +48,9 @@ class MoldGrid extends StatelessWidget {
     this.onCellTap,
     this.onFilledTap,
     this.maxCell = 80,
+    this.heat,
+    this.melt,
+    this.reducedMotion = false,
   });
 
   final MoldModel mold;
@@ -58,25 +63,35 @@ class MoldGrid extends StatelessWidget {
   final ValueChanged<CellPos>? onFilledTap;
   final double maxCell;
 
+  /// Survival: the heated word counting down, and a word melting away.
+  final HeatView? heat;
+  final MeltView? melt;
+  final bool reducedMotion;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
         final cell = min(maxCell, min(c.maxWidth / mold.cols, c.maxHeight / mold.rows));
         final gap = cell * 0.07;
+        Rect rectOf(CellPos pos) =>
+            Rect.fromLTWH(pos.x * cell + gap / 2, pos.y * cell + gap / 2, cell - gap, cell - gap);
         return Center(
           child: SizedBox(
             width: cell * mold.cols,
             height: cell * mold.rows,
             child: Stack(
+              // Melting drips and the countdown badge reach past the edges.
+              clipBehavior: Clip.none,
               children: [
-                for (final pos in mold.cells)
-                  Positioned(
-                    left: pos.x * cell + gap / 2,
-                    top: pos.y * cell + gap / 2,
-                    width: cell - gap,
-                    height: cell - gap,
-                    child: _cell(pos),
+                for (final pos in mold.cells) Positioned.fromRect(rect: rectOf(pos), child: _cell(pos)),
+                if (heat != null && melt == null)
+                  Positioned.fill(
+                    child: HeatOverlay(heat: heat!, rectOf: rectOf),
+                  ),
+                if (melt != null)
+                  Positioned.fill(
+                    child: MeltOverlay(melt: melt!, rectOf: rectOf, animate: !reducedMotion),
                   ),
               ],
             ),
@@ -198,12 +213,8 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) return;
     final center = box.localToGlobal(box.size.center(Offset.zero));
-    SparkField.of(context)?.burst(
-      center,
-      count: small ? 8 : 10,
-      speed: box.size.width * (small ? 3 : 4.5),
-      gravity: box.size.width * 14,
-    );
+    SparkField.of(context)
+        ?.burst(center, count: small ? 8 : 10, speed: box.size.width * (small ? 3 : 4.5), gravity: box.size.width * 14);
   }
 
   @override
@@ -232,9 +243,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
           final scale = 1 + 0.14 * sin(pop * pi);
           return Transform.scale(
             scale: scale,
-            child: LayoutBuilder(
-              builder: (context, c) => _buildCell(c.maxWidth),
-            ),
+            child: LayoutBuilder(builder: (context, c) => _buildCell(c.maxWidth)),
           );
         },
       ),
@@ -302,16 +311,9 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color.lerp(color, Colors.white, 0.35)!,
-                        color,
-                        Color.lerp(color, Colors.black, 0.35)!,
-                      ],
+                      colors: [Color.lerp(color, Colors.white, 0.35)!, color, Color.lerp(color, Colors.black, 0.35)!],
                     ),
-                    border: Border.all(
-                      color: Color.lerp(color, Colors.black, 0.4)!,
-                      width: 1,
-                    ),
+                    border: Border.all(color: Color.lerp(color, Colors.black, 0.4)!, width: 1),
                   ),
                   child: SizedBox.square(dimension: s),
                 ),
@@ -338,8 +340,16 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
                 Palette.gold.withValues(alpha: 0.10),
               ],
             ),
-            border: Border.all(color: Palette.gold.withValues(alpha: 0.7 + 0.3 * shine), width: max(1.5, s * 0.05)),
-            boxShadow: [BoxShadow(color: Palette.gold.withValues(alpha: 0.25 + 0.2 * shine), blurRadius: s * 0.3)],
+            border: Border.all(
+              color: Palette.gold.withValues(alpha: 0.7 + 0.3 * shine),
+              width: max(1.5, s * 0.05),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Palette.gold.withValues(alpha: 0.25 + 0.2 * shine),
+                blurRadius: s * 0.3,
+              ),
+            ],
           ),
         ),
       );
@@ -351,10 +361,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
           height: s,
           decoration: BoxDecoration(
             borderRadius: radius,
-            border: Border.all(
-              color: Palette.molten.withValues(alpha: 0.45 + 0.5 * _pulse.value),
-              width: 2,
-            ),
+            border: Border.all(color: Palette.molten.withValues(alpha: 0.45 + 0.5 * _pulse.value), width: 2),
           ),
         ),
       );
@@ -378,28 +385,20 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
             child: SvgPicture.asset(
               'assets/icons/ember.svg',
               colorFilter: const ColorFilter.mode(Palette.molten, BlendMode.srcIn),
-              placeholderBuilder: (_) =>
-                  const Icon(Icons.local_fire_department, color: Palette.molten),
+              placeholderBuilder: (_) => const Icon(Icons.local_fire_department, color: Palette.molten),
             ),
           ),
         ),
       );
     }
     if (widget.fill != CellFill.empty) {
-      final letterColor = filled
-          ? Color.lerp(Palette.darkLetter, widget.metal.letter, t)!
-          : Palette.molten;
+      final letterColor = filled ? Color.lerp(Palette.darkLetter, widget.metal.letter, t)! : Palette.molten;
       layers.add(
         Text(
           widget.letter,
           style: letterStyle(s * 0.6, color: letterColor).copyWith(
             shadows: filled
-                ? [
-                    Shadow(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      offset: Offset(0, s * 0.02),
-                    ),
-                  ]
+                ? [Shadow(color: Colors.white.withValues(alpha: 0.25), offset: Offset(0, s * 0.02))]
                 : [Shadow(color: Palette.ember, blurRadius: s * 0.2)],
           ),
         ),
@@ -410,10 +409,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
         Positioned(
           left: s * 0.08,
           top: s * 0.04,
-          child: Text(
-            widget.initial!,
-            style: letterStyle(s * 0.2, color: widget.metal.letter.withValues(alpha: 0.75)),
-          ),
+          child: Text(widget.initial!, style: letterStyle(s * 0.2, color: widget.metal.letter.withValues(alpha: 0.75))),
         ),
       );
     }

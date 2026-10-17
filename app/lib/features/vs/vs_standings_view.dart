@@ -74,6 +74,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
           switch (end.how) {
             'finished' => 'Filled the whole mold',
             'timeout' => 'Most letters when time ran out (${lastFilled[winner]?.filled ?? 0})',
+            'survived' =>
+              "${end.melted?.id == s.me ? 'Your' : "${s.nameOf(end.melted?.id)}'s"} heated word melted. "
+                  'Most letters among the rest (${lastFilled[winner]?.filled ?? 0})',
+            _ when end.melted != null => 'A heated word melted before anyone filled a letter',
             _ => 'Nobody filled a letter',
           },
           textAlign: TextAlign.center,

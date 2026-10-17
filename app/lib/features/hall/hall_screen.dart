@@ -11,6 +11,7 @@ import '../../game/forge_board.dart';
 import '../../net/api_client.dart';
 import '../../net/board.dart';
 import '../../net/hub_client.dart';
+import '../../net/models.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -109,6 +110,19 @@ class HallScreen extends ConsumerWidget {
                           const SizedBox(height: 12),
                           const _BoardButton(),
                         ],
+                        const SizedBox(height: 12),
+                        PlateButton(
+                          label: 'The Crucible',
+                          sublabel: _crucibleLine(
+                            account.server?.survivalBest ??
+                                switch (ref.read(storeProvider).loadSurvivalBest()) {
+                                  final b? => SurvivalBest.fromJson(b),
+                                  null => null,
+                                },
+                          ),
+                          icon: 'ember',
+                          onPressed: () => context.push('/crucible'),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -248,6 +262,11 @@ class _DailyButton extends ConsumerWidget {
     );
   }
 }
+
+/// Survival's solo mode: the best run so far, or what it is.
+String _crucibleLine(SurvivalBest? best) => best == null || best.puzzles + best.words == 0
+    ? 'Survival: forge the heated word before it melts'
+    : 'Survival · Best: ${best.puzzles} cleared, ${best.words} words';
 
 /// The Forge Board, with a badge for rewards waiting. The first time the
 /// Hall sees today's Daily Stoke unclaimed, it offers it.

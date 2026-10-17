@@ -267,4 +267,74 @@ void main() {
     await until(() => session.lobby!.phase == 'round');
     expect(session.phase, 'round');
   });
+
+  test('survival: the heated word, saves, then a melt holds the results back for the animation', () async {
+    final effects = <RoomEvent>[];
+    session.effects.listen(effects.add);
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send({..._lobby(phase: 'countdown'), 'variant': 'survival'})
+      ..send({
+        ..._roundStart(now),
+        'variant': 'survival',
+        'heated': {'slot': 1, 'startsAt': now + 3000, 'deadline': now + 24600, 'durationMs': 21600, 'saved': 0},
+      });
+    await until(() => session.mold != null);
+    expect(session.survival, isTrue);
+    expect(session.lobby!.survival, isTrue);
+    expect(session.heated!.slot, 1);
+    expect(session.heatRemainingMs, inInclusiveRange(23000, 24600));
+
+    room.send({
+      'op': 'HEATED',
+      'slot': 2,
+      'startsAt': now + 5000,
+      'deadline': now + 26600,
+      'durationMs': 20952,
+      'saved': 1,
+      'serverNow': now + 5000,
+    });
+    await until(() => session.heated?.slot == 2);
+    expect(session.saved, 1);
+
+    room
+      ..send({'op': 'MELT', 'slot': 2})
+      ..send({
+        'op': 'ROUND_END',
+        'reason': 'melted',
+        'teamScore': 30,
+        'filled': 3,
+        'total': 7,
+        'stars': 0,
+        'players': [],
+        'mvp': null,
+        'answers': [
+          {'slot': 2, 'word': 'TOE'},
+        ],
+        'xp': {},
+        'saved': 1,
+        'variant': 'survival',
+        'melted': {'slot': 2},
+      })
+      ..send(_lobby(phase: 'results'));
+    await until(() => session.results != null && session.phase == 'results');
+    expect(session.results!.melted, isTrue);
+    expect(session.results!.saved, 1);
+    expect(session.heated, isNull);
+    expect(session.melt!.slot, 2);
+    expect(session.melting, isTrue, reason: 'the round view stays up while it melts');
+    expect(effects.whereType<Melted>(), hasLength(1));
+  });
+
+  test('the host picks the variant', () async {
+    await until(() => room.sockets.isNotEmpty);
+    room.send(_lobby());
+    await until(() => session.lobby != null);
+    expect(session.survival, isFalse);
+    session.setVariant('survival');
+    await until(() => room.received.isNotEmpty);
+    expect(room.received.single, {'op': 'CONFIG', 'variant': 'survival'});
+  });
 }

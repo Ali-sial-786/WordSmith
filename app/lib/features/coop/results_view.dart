@@ -27,7 +27,11 @@ class ResultsView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
       children: [
         Text(
-          r.completed ? 'MOLD FILLED!' : "TIME'S UP",
+          r.completed
+              ? 'MOLD FILLED!'
+              : r.melted
+              ? 'IT MELTED!'
+              : "TIME'S UP",
           textAlign: TextAlign.center,
           style: displayStyle(32, color: r.completed ? Palette.molten : Palette.steel).copyWith(
             shadows: r.completed ? const [Shadow(color: Palette.ember, blurRadius: 20)] : null,
@@ -54,6 +58,12 @@ class ResultsView extends StatelessWidget {
           textAlign: TextAlign.center,
           style: text.titleMedium,
         ),
+        if (session.survival)
+          Text(
+            'Survival · ${r.saved} heated word${r.saved == 1 ? '' : 's'} saved',
+            textAlign: TextAlign.center,
+            style: text.bodyMedium?.copyWith(color: Palette.molten),
+          ),
         if (r.mvp != null) ...[
           const SizedBox(height: 14),
           ForgePanel(padding: const EdgeInsets.all(12), gold: true, child: Row(

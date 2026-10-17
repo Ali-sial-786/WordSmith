@@ -277,4 +277,55 @@ void main() {
     expect(session.mold!.letterAt((x: 0, y: 1)), 'O');
     expect(session.standings!.round, 1);
   });
+
+  test('survival: my own heated word, and a rival melting ends the round for everyone', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send({..._lobby('round'), 'variant': 'survival'})
+      ..send({
+        ..._roundStart(now),
+        'variant': 'survival',
+        'heated': {'slot': 0, 'startsAt': now + 3000, 'deadline': now + 22575, 'durationMs': 19575, 'saved': 0},
+      });
+    await until(() => session.mold != null);
+    expect(session.heated!.slot, 0);
+    room.send({
+      'op': 'HEATED',
+      'slot': 2,
+      'startsAt': now + 6000,
+      'deadline': now + 25000,
+      'durationMs': 19000,
+      'saved': 1,
+      'serverNow': now + 6000,
+    });
+    await until(() => session.saved == 1);
+    room
+      ..send({'op': 'MELT', 'slot': 1, 'id': 'u2'})
+      ..send({
+        'op': 'ROUND_END',
+        'round': 1,
+        'reason': 'melted',
+        'winner': 'u1',
+        'how': 'survived',
+        'progress': [
+          {'id': 'u1', 'filled': 3, 'total': 7},
+          {'id': 'u2', 'filled': 5, 'total': 7},
+        ],
+        'tally': {'u1': 1, 'u2': 0, 'u3': 0},
+        'answers': [],
+        'next': {'round': 2, 'suddenDeath': false, 'players': ['u1', 'u2', 'u3']},
+        'standingsEndsAt': now + 10000,
+        'variant': 'survival',
+        'saved': {'u1': 1, 'u2': 2},
+        'melted': {'id': 'u2', 'slot': 1},
+      });
+    await until(() => session.standings != null);
+    expect(session.standings!.how, 'survived');
+    expect(session.standings!.melted, (id: 'u2', slot: 1));
+    expect(session.melt!.id, 'u2');
+    expect(session.melting, isTrue);
+    expect(session.heated, isNull);
+  });
 }

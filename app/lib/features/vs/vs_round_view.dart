@@ -126,6 +126,11 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
           _sfx.play(SfxId.rivalFinished, volume: 0.85);
           _haptic(HapticFeedback.heavyImpact);
         }
+      case HeatedSlot(:final saved) when saved > 0 && !_s.melting:
+        _toast.currentState?.show('Saved! The next word is heating up', color: Palette.molten);
+      case Melted(:final id):
+        _sfx.play(SfxId.melt, volume: id == _s.me ? 1 : 0.6);
+        _haptic(HapticFeedback.heavyImpact);
       case RoomError(:final code) when code == 'not_playing':
         _toast.currentState?.show("You're watching this round", color: Palette.steel);
       default:
@@ -172,7 +177,19 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
     final counting = _s.countdownLeft > Duration.zero;
     final left = _s.timeLeft;
     final over = _s.roundOver;
-    final playing = !counting && !over && left > Duration.zero && _s.phase == 'round' && _s.racing;
+    final playing = !counting && !over && left > Duration.zero && _s.phase == 'round' && _s.racing && _s.melt == null;
+    final heated = _s.heated;
+    final heat = !_s.survival || heated == null || counting || over || !_s.racing
+        ? null
+        : HeatView(
+            cells: mold.slot(heated.slot).cells,
+            remainingMs: () => _s.heatRemainingMs,
+            durationMs: heated.durationMs,
+            onSecond: (_) => _sfx.play(SfxId.tick, volume: 0.7),
+          );
+    final melt = _s.melt;
+    // My own word melting plays on my mold before the headline covers it.
+    final myMelt = melt != null && melt.id == _s.me;
     return Stack(
       children: [
         LayoutBuilder(
@@ -183,6 +200,18 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
               children: [
                 _VsTopStrip(session: _s, timeLeft: left, onLeave: widget.onLeave, video: widget.video),
                 RivalStrip(session: _s, call: widget.video.call),
+                if (_s.survival && _s.racing)
+                  HeatBar(
+                    heat: heat,
+                    idle: melt != null
+                        ? (myMelt ? 'Your word melted!' : "${_s.nameOf(melt.id)}'s word melted!")
+                        : counting
+                        ? 'Survival: forge your heated word before it melts'
+                        : over
+                        ? 'Round over'
+                        : 'Heating the next word…',
+                    trailing: Text('Saved ${_s.saved}', style: Theme.of(context).textTheme.labelLarge),
+                  ),
                 Expanded(
                   child: _s.racing
                       ? Padding(
@@ -192,6 +221,17 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
                             metal: MetalStyle.forChapter('steel'),
                             cues: widget.cues,
                             onFilledTap: (c) => showMeanings(context, mold.wordsAt(c)),
+                            heat: heat,
+                            melt: myMelt
+                                ? MeltView(
+                                    cells: [
+                                      for (final c in mold.slot(melt.slot).cells)
+                                        if (mold.fillOf(c) != CellFill.filled) c,
+                                    ],
+                                    id: '${round.round}-${melt.slot}',
+                                  )
+                                : null,
+                            reducedMotion: ref.watch(settingsProvider.select((s) => s.reducedMotion)),
                           ),
                         )
                       : _Watching(session: _s),
@@ -237,7 +277,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
           },
         ),
         if (counting) Positioned.fill(child: VsCountdown(session: _s)),
-        if (over && _s.standings != null)
+        if (over && _s.standings != null && !(myMelt && _s.melting))
           Positioned.fill(
             child: IgnorePointer(
               child: ColoredBox(
@@ -280,7 +320,7 @@ class _VsTopStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final secs = timeLeft.inSeconds;
-    final urgent = secs <= 10 && secs > 0;
+    final urgent = secs <= 10 && secs > 0 && !session.survival;
     final sudden = session.round?.suddenDeath ?? false;
     return SizedBox(
       height: 48,
@@ -297,18 +337,20 @@ class _VsTopStrip extends StatelessWidget {
           ),
           if (video.call != null) VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: urgent ? Palette.quenchRed.withValues(alpha: 0.25) : Palette.soot,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: urgent ? Palette.quenchRed : Palette.ash),
+          // Survival has no round clock: the heated word is the clock.
+          if (!session.survival)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: urgent ? Palette.quenchRed.withValues(alpha: 0.25) : Palette.soot,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: urgent ? Palette.quenchRed : Palette.ash),
+              ),
+              child: Text(
+                '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
+                style: letterStyle(18, color: urgent ? Palette.quenchRed : Palette.whiteHeat),
+              ),
             ),
-            child: Text(
-              '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
-              style: letterStyle(18, color: urgent ? Palette.quenchRed : Palette.whiteHeat),
-            ),
-          ),
           const SizedBox(width: 10),
         ],
       ),

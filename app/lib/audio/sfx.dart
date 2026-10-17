@@ -25,7 +25,8 @@ enum SfxId {
   gilded('gilded'),
   masterwork('masterwork'),
   claim('claim'),
-  page('page');
+  page('page'),
+  melt('melt');
 
   const SfxId(this.file);
   final String file;

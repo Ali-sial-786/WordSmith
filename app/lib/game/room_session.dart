@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../net/room_client.dart';
+import '../ui/mold/survival_overlay.dart' show meltDuration;
 import '../ui/theme/palette.dart';
 
 enum RoomConnection { connecting, live, reconnecting, closed }
@@ -57,6 +59,55 @@ abstract class RoomSession extends ChangeNotifier {
 
   Duration get countdownLeft =>
       round == null ? Duration.zero : Duration(milliseconds: (round!.startsAt - serverNow).clamp(0, 1 << 31));
+
+  // ---- Survival (shared/survival.md) ----
+
+  /// The heated slot on my mold (the team's in co-op), while one is.
+  HeatedSlot? heated;
+
+  /// Heated words saved this round (the team's, or mine in Versus).
+  int saved = 0;
+
+  /// A word that melted, ending the round: the slot, whose mold (Versus),
+  /// and when the melt has finished playing (this phone's clock).
+  ({int slot, String? id, DateTime until})? melt;
+  Timer? _meltDone;
+
+  /// The round is (or was) a Survival one.
+  bool get survival => round?.survival ?? lobby?.survival ?? false;
+
+  /// The melt is still playing: the round view stays up until it's done.
+  bool get melting => melt != null && DateTime.now().isBefore(melt!.until);
+
+  /// How long the heated word has left, from the server's deadline.
+  int get heatRemainingMs => heated == null ? 0 : max(0, heated!.deadline - serverNow);
+
+  void _survival(RoomEvent e) {
+    switch (e) {
+      case RoundStart(:final heated):
+        this.heated = heated;
+        saved = heated?.saved ?? 0;
+        melt = null;
+      case HeatedSlot(:final saved, :final serverNow):
+        heated = e;
+        this.saved = saved;
+        syncClock(serverNow);
+      case Melted(:final slot, :final id):
+        heated = null;
+        melt = (slot: slot, id: id, until: DateTime.now().add(meltDuration + const Duration(milliseconds: 300)));
+        _meltDone?.cancel();
+        _meltDone = Timer(meltDuration + const Duration(milliseconds: 350), () {
+          if (!_disposed) notifyListeners();
+        });
+      case RoomSnapshot(:final heated, :final saved):
+        this.heated = heated;
+        this.saved = saved;
+      case RoundEnd() || VsRoundEnd():
+        heated = null;
+      default:
+        break;
+    }
+  }
 
   Future<void> start() async {
     _subs
@@ -118,6 +169,7 @@ abstract class RoomSession extends ChangeNotifier {
       default:
         handle(e);
     }
+    _survival(e);
     _effects.add(e);
     notifyListeners();
   }
@@ -129,6 +181,9 @@ abstract class RoomSession extends ChangeNotifier {
   // ---- Actions ----
 
   void setReady(bool ready) => client.ready(ready);
+
+  /// Host only, in the lobby or results: `classic` or `survival`.
+  void setVariant(String variant) => client.config(variant: variant);
   void startRound() => client.startRound();
   void again() => client.again();
   void emote(String id) => client.emote(id);
@@ -137,6 +192,7 @@ abstract class RoomSession extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _meltDone?.cancel();
     for (final s in _subs) {
       s.cancel();
     }

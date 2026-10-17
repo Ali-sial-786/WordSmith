@@ -126,11 +126,17 @@ String roundLabel(VsSession s) {
 /// The headline for a finished round.
 String roundHeadline(VsSession s, VsRoundEnd end) {
   final winner = end.winner;
-  if (winner == null) return 'No winner this round';
+  final melted = end.melted;
+  if (winner == null) {
+    if (melted == null) return 'No winner this round';
+    return melted.id == s.me ? 'Your word melted!' : "${s.nameOf(melted.id)}'s word melted!";
+  }
   final name = winner == s.me ? 'You' : s.nameOf(winner);
-  return end.how == 'finished'
-      ? '$name forged it first!'
-      : '$name ${winner == s.me ? 'win' : 'wins'} on time';
+  return switch (end.how) {
+    'finished' => '$name forged it first!',
+    'survived' => '$name ${winner == s.me ? 'survive' : 'survives'} the heat!',
+    _ => '$name ${winner == s.me ? 'win' : 'wins'} on time',
+  };
 }
 
 /// The big countdown before a round.

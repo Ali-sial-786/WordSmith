@@ -93,6 +93,11 @@ class ProfileNotifier extends Notifier<Profile> {
         hints[HintKind.hammer] = hints[HintKind.hammer]! + 1;
       }
     }
+    // Hints spent in Crucible runs the server hasn't had yet.
+    for (final e in _store.pendingSurvivalHints().entries) {
+      final k = HintKind.byName(e.key);
+      hints[k] = (hints[k]! - e.value).clamp(0, 1 << 30);
+    }
     final local = current;
     final s = server.stats;
     _set(

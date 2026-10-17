@@ -61,6 +61,8 @@ class LobbyView extends ConsumerWidget {
             style: text.titleSmall,
           ),
         ),
+        const SizedBox(height: 12),
+        _VariantPicker(session: session, survival: lobby.survival, vs: vs),
         if (vs && session is VsSession) ...[
           const SizedBox(height: 12),
           _SeriesPicker(session: session as VsSession, series: lobby.series),
@@ -113,11 +115,8 @@ class LobbyView extends ConsumerWidget {
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
                   backgroundColor: Palette.soot,
-                  builder: (_) => _InviteSheet(
-                    code: lobby.code,
-                    mode: lobby.mode,
-                    inRoom: {for (final p in lobby.players) p.id},
-                  ),
+                  builder: (_) =>
+                      _InviteSheet(code: lobby.code, mode: lobby.mode, inRoom: {for (final p in lobby.players) p.id}),
                 ),
               ),
             ),
@@ -127,6 +126,47 @@ class LobbyView extends ConsumerWidget {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// Classic or Survival (shared/survival.md). The host picks; everyone sees it.
+class _VariantPicker extends StatelessWidget {
+  const _VariantPicker({required this.session, required this.survival, required this.vs});
+
+  final RoomSession session;
+  final bool survival;
+  final bool vs;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          children: [
+            for (final (id, label) in const [('classic', 'Classic'), ('survival', 'Survival')])
+              ChoiceChip(
+                avatar: id == 'survival' ? const Icon(Icons.local_fire_department, size: 18) : null,
+                label: Text(label),
+                selected: survival == (id == 'survival'),
+                selectedColor: Palette.ember.withValues(alpha: 0.35),
+                side: BorderSide(color: survival == (id == 'survival') ? Palette.molten : Palette.ash),
+                onSelected: session.isHost ? (_) => session.setVariant(id) : null,
+              ),
+          ],
+        ),
+        if (survival)
+          Text(
+            vs
+                ? 'First heated word to melt ends the round; its smith loses it'
+                : 'Forge each heated word before it melts',
+            textAlign: TextAlign.center,
+            style: text.bodySmall?.copyWith(color: Palette.molten),
+          ),
       ],
     );
   }
@@ -175,7 +215,9 @@ class _CodeCard extends StatelessWidget {
   final String code;
 
   @override
-  Widget build(BuildContext context) => ForgePanel(padding: const EdgeInsets.all(14), child: Column(
+  Widget build(BuildContext context) => ForgePanel(
+    padding: const EdgeInsets.all(14),
+    child: Column(
       children: [
         Text('Room code', style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(height: 4),
@@ -200,7 +242,8 @@ class _CodeCard extends StatelessWidget {
           ],
         ),
       ],
-    ));
+    ),
+  );
 }
 
 class _PlayerRow extends StatelessWidget {
@@ -237,16 +280,9 @@ class _PlayerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('${player.username}${isMe ? ' (you)' : ''}', style: Theme.of(context).textTheme.titleSmall),
                 Text(
-                  '${player.username}${isMe ? ' (you)' : ''}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                Text(
-                  [
-                    'Lv ${player.level}',
-                    if (isHost) 'Host',
-                    if (!player.connected) 'Reconnecting…',
-                  ].join(' · '),
+                  ['Lv ${player.level}', if (isHost) 'Host', if (!player.connected) 'Reconnecting…'].join(' · '),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -300,8 +336,7 @@ class _InviteSheet extends ConsumerWidget {
               trailing: TextButton(
                 onPressed: () {
                   ref.read(accountProvider.notifier).invite(f.id, code, mode);
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Invited ${f.username}')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invited ${f.username}')));
                 },
                 child: const Text('Invite'),
               ),

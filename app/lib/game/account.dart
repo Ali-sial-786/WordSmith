@@ -360,6 +360,10 @@ class AccountController extends Notifier<AccountState> {
       do {
         _syncAgain = false;
         var server = state.server!;
+        for (final run in store.loadSurvivalQueue()) {
+          final out = await _sendRun(run);
+          if (out != null) server = out.profile;
+        }
         final queue = store.loadSyncQueue();
         for (var i = 0; i < queue.length; i += 100) {
           final batch = queue.sublist(i, (i + 100).clamp(0, queue.length));
@@ -379,6 +383,38 @@ class AccountController extends Notifier<AccountState> {
       if (ref.mounted) state = state.copyWith(error: e.friendly);
     } finally {
       if (ref.mounted) state = state.copyWith(syncing: false);
+    }
+  }
+
+  /// Sends one queued Crucible run and drops it from the queue. Null if the
+  /// server turned it down (dropped too) or doesn't know runs yet (kept).
+  Future<SurvivalOutcome?> _sendRun(Map<String, dynamic> run) async {
+    final store = ref.read(storeProvider);
+    try {
+      final out = await _api!.survivalSolo(run);
+      await store.dropSurvival(run['runId'] as String);
+      return out;
+    } on ApiException catch (e) {
+      if (e.status == 404) return null;
+      if (e.status == 400) {
+        debugPrint('survival run declined: ${e.code}');
+        await store.dropSurvival(run['runId'] as String);
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  /// Sends a finished Crucible run (already queued) for its results. Null
+  /// when it can't be sent now; it stays queued for the next sync.
+  Future<SurvivalOutcome?> sendSurvival(Map<String, dynamic> run) async {
+    if (!state.isReady) return null;
+    try {
+      final out = await _sendRun(run);
+      if (out != null && ref.mounted) applyProfile(out.profile);
+      return out;
+    } on ApiException {
+      return null;
     }
   }
 

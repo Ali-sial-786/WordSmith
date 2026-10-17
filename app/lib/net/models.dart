@@ -51,6 +51,7 @@ class ServerProfile {
     required this.hints,
     required this.stats,
     this.masterworkPieces = 0,
+    this.survivalBest,
   });
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -69,6 +70,7 @@ class ServerProfile {
     },
     stats: ServerStats.fromJson((j['stats'] as Map?)?.cast() ?? const {}),
     masterworkPieces: ((j['masterworks'] as Map?)?['pieces'] as num?)?.toInt() ?? 0,
+    survivalBest: j['survivalBest'] is Map ? SurvivalBest.fromJson((j['survivalBest'] as Map).cast()) : null,
   );
 
   final String id;
@@ -83,6 +85,67 @@ class ServerProfile {
   final Map<HintKind, int> hints;
   final ServerStats stats;
   final int masterworkPieces;
+
+  /// The best Crucible run (shared/survival.md).
+  final SurvivalBest? survivalBest;
+}
+
+/// A Crucible run's score: puzzles cleared, then words, then saved.
+class SurvivalBest {
+  const SurvivalBest({required this.puzzles, required this.words, required this.saved, this.at = 0});
+
+  factory SurvivalBest.fromJson(Map<String, dynamic> j) => SurvivalBest(
+    puzzles: (j['puzzles'] as num?)?.toInt() ?? 0,
+    words: (j['words'] as num?)?.toInt() ?? 0,
+    saved: (j['saved'] as num?)?.toInt() ?? 0,
+    at: (j['at'] as num?)?.toInt() ?? 0,
+  );
+
+  final int puzzles;
+  final int words;
+  final int saved;
+  final int at;
+
+  Map<String, Object> toJson() => {'puzzles': puzzles, 'words': words, 'saved': saved, 'at': at};
+
+  /// Whether this run beats [other].
+  bool beats(SurvivalBest? other) {
+    if (other == null) return puzzles + words + saved > 0;
+    if (puzzles != other.puzzles) return puzzles > other.puzzles;
+    if (words != other.words) return words > other.words;
+    return saved > other.saved;
+  }
+}
+
+/// What `POST /v1/survival/solo` gave for a run.
+class SurvivalOutcome {
+  const SurvivalOutcome({
+    required this.profile,
+    required this.xp,
+    required this.level,
+    required this.levelUps,
+    required this.best,
+    required this.newBest,
+  });
+
+  factory SurvivalOutcome.fromJson(Map<String, dynamic> j) {
+    final xp = (j['xp'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return SurvivalOutcome(
+      profile: ServerProfile.fromJson(j['profile'] as Map<String, dynamic>),
+      xp: (xp['xp'] as num?)?.toInt() ?? 0,
+      level: (xp['level'] as num?)?.toInt() ?? 1,
+      levelUps: (xp['levelUps'] as num?)?.toInt() ?? 0,
+      best: j['best'] is Map ? SurvivalBest.fromJson((j['best'] as Map).cast()) : null,
+      newBest: j['newBest'] as bool? ?? false,
+    );
+  }
+
+  final ServerProfile profile;
+  final int xp;
+  final int level;
+  final int levelUps;
+  final SurvivalBest? best;
+  final bool newBest;
 }
 
 class PlayerSummary {

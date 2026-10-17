@@ -24,6 +24,8 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final (store, campaign) = await (Store.open(), Campaign.load()).wait;
   _recordErrors(store);
+  // A Crucible run the app was closed in the middle of still counts.
+  await store.closeOpenSurvival();
   final sfx = Sfx(enabled: true, settings: store.loadSettings());
   final auth = await _startAuth();
   final api = AppConfig.hasServer && auth is FirebaseAuthService

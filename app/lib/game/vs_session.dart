@@ -137,7 +137,7 @@ class VsSession extends RoomSession {
   // ---- Actions ----
 
   /// Host only, in the lobby: best of [length] rounds.
-  void config(int length) => client.config(length);
+  void config(int length) => client.config(series: length);
 
   /// Sends a word; the result arrives as a [WordResult] effect.
   void submit(String word) => client.submit(word);

@@ -122,6 +122,12 @@ class _RoundViewState extends ConsumerState<RoundView> {
           widget.cues.stagger(_s.mold!.slot(s).cells);
         }
         if (by == _s.me) ref.read(profileProvider.notifier).addHint(HintKind.byName(kind), -1);
+      case HeatedSlot(:final saved) when saved > 0 && !_s.melting:
+        _toast.currentState?.show('Saved! The next word is heating up', color: Palette.molten);
+      case Melted():
+        setState(() => _chisel = false);
+        _sfx.play(SfxId.melt);
+        _haptic(HapticFeedback.heavyImpact);
       case RoomError(:final code):
         final message = switch (code) {
           'no_hint' => 'No hints of that kind left.',
@@ -185,7 +191,17 @@ class _RoundViewState extends ConsumerState<RoundView> {
     final profile = ref.watch(profileProvider);
     final counting = _s.countdownLeft > Duration.zero;
     final left = _s.timeLeft;
-    final playing = !counting && left > Duration.zero && _s.phase == 'round';
+    final playing = !counting && left > Duration.zero && _s.phase == 'round' && _s.melt == null;
+    final heated = _s.heated;
+    final heat = !_s.survival || heated == null || counting
+        ? null
+        : HeatView(
+            cells: mold.slot(heated.slot).cells,
+            remainingMs: () => _s.heatRemainingMs,
+            durationMs: heated.durationMs,
+            onSecond: (_) => _sfx.play(SfxId.tick, volume: 0.7),
+          );
+    final melt = _s.melt;
     return Stack(
       children: [
         LayoutBuilder(
@@ -196,6 +212,15 @@ class _RoundViewState extends ConsumerState<RoundView> {
               children: [
                 _TopStrip(session: _s, timeLeft: left, onLeave: widget.onLeave, video: widget.video),
                 _Teammates(session: _s, call: widget.video.call),
+                if (_s.survival)
+                  HeatBar(
+                    heat: heat,
+                    idle: melt != null
+                        ? 'Melted! The round is over'
+                        : counting
+                        ? 'Survival: forge the heated word before it melts'
+                        : 'Heating the next word…',
+                  ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
@@ -206,6 +231,17 @@ class _RoundViewState extends ConsumerState<RoundView> {
                       chiselMode: _chisel,
                       onCellTap: _onChiselCell,
                       onFilledTap: (c) => showMeanings(context, mold.wordsAt(c)),
+                      heat: heat,
+                      melt: melt == null
+                          ? null
+                          : MeltView(
+                              cells: [
+                                for (final c in mold.slot(melt.slot).cells)
+                                  if (mold.fillOf(c) != CellFill.filled) c,
+                              ],
+                              id: '${round.round}-${melt.slot}',
+                            ),
+                      reducedMotion: ref.watch(settingsProvider.select((s) => s.reducedMotion)),
                     ),
                   ),
                 ),
@@ -323,7 +359,7 @@ class _TopStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final team = session.scores.values.fold<int>(0, (a, b) => a + b);
     final secs = timeLeft.inSeconds;
-    final urgent = secs <= 10 && secs > 0;
+    final urgent = secs <= 10 && secs > 0 && !session.survival;
     return SizedBox(
       height: 52,
       child: Row(
@@ -343,7 +379,8 @@ class _TopStrip extends StatelessWidget {
               border: Border.all(color: urgent ? Palette.quenchRed : Palette.ash),
             ),
             child: Text(
-              '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
+              // Survival has no round clock: the heated word is the clock.
+              session.survival ? 'Saved ${session.saved}' : '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
               style: letterStyle(20, color: urgent ? Palette.quenchRed : Palette.whiteHeat),
             ),
           ),

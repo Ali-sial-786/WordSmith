@@ -43,6 +43,7 @@ class ApiException implements Exception {
     'nothing_to_claim' => 'No gifts to collect right now.',
     'already_sent' => 'You already sent them a gift today.',
     'not_friends' => 'You can only send gifts to friends.',
+    'invalid_run' => "The forge couldn't count that run.",
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
@@ -127,6 +128,10 @@ class ApiClient {
 
   Future<SyncOutcome> soloSync(List<Map<String, dynamic>> entries) async =>
       SyncOutcome.fromJson(await _send('POST', '/solo/sync', body: {'entries': entries}));
+
+  /// A finished Crucible run (shared/survival.md).
+  Future<SurvivalOutcome> survivalSolo(Map<String, dynamic> run) async =>
+      SurvivalOutcome.fromJson(await _send('POST', '/survival/solo', body: run));
 
   Future<FriendsList> friends() async => FriendsList.fromJson(await _send('GET', '/friends'));
 
