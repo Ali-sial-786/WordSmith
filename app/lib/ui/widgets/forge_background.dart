@@ -8,7 +8,7 @@ import '../effects/forge_fire.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 
-/// A dimmed, softly blurred scene image behind a screen, with an animated
+/// A dimmed scene image (blurred if asked) behind a screen, with an animated
 /// forge fire along the bottom and drifting embers. Falls back to a warm
 /// gradient while art is missing.
 class ForgeBackground extends ConsumerWidget {
@@ -17,7 +17,7 @@ class ForgeBackground extends ConsumerWidget {
     required this.image,
     required this.child,
     this.dim = 0.55,
-    this.blur = 3,
+    this.blur = 0,
     this.fire = 0.8,
     this.fireHeight = 0.42,
     this.warmth = 1,
@@ -58,6 +58,7 @@ class ForgeBackground extends ConsumerWidget {
           ),
         ),
         ImageFiltered(
+          enabled: blur > 0,
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           // Warm grade: dimmed yellow firelight otherwise drifts olive.
           child: ColorFiltered(
@@ -70,6 +71,7 @@ class ForgeBackground extends ConsumerWidget {
             child: Image.asset(
               image,
               fit: BoxFit.cover,
+              filterQuality: FilterQuality.medium,
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           ),

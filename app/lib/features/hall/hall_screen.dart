@@ -42,10 +42,9 @@ class HallScreen extends ConsumerWidget {
     return Scaffold(
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
-        dim: 0.45,
-        blur: 1.5,
-        fire: 0.85,
-        fireHeight: 0.45,
+        dim: 0.3,
+        fire: 0.45,
+        fireHeight: 0.32,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
