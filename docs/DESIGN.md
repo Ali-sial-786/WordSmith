@@ -132,7 +132,7 @@ mode. It is separate from the solo campaign's puzzle number. All XP is granted
 |---|---|
 | Solo puzzle forged | 10 + 1 per bonus word (capped) |
 | Co-op round | 20 participation + 1 per 10 points you scored + 20 if the team completes the mold + 10 for MVP |
-| VS match | 15 participation + placement bonus (1st 50 / 2nd 30 / 3rd 20 / 4th 10 / 5th 5, scaled by lobby size) |
+| VS series | 5 per round played + 10 per round won + 30 for winning the series (so longer series earn more) |
 
 XP needed for the next level: `50 + 10 × level` (Lv1→2 = 60 XP, Lv10→11 =
 150, Lv50→51 = 550).
@@ -257,29 +257,35 @@ Revealed letters score for no one. A word completed entirely by hints scores
 
 ## 9. Versus mode: "Anvil Clash" (2–5 players)
 
-### Proposed format (decision): same puzzle, separate molds
-Everyone gets the **same puzzle**, but each player fills **their own mold**.
-You can't block or steal each other's words. It's a pure race of speed and
-vocabulary. Co-op is already the shared-board mode, so this makes the two modes
-feel different.
+### Rounds: a race to finish the mold
+Every player gets the **same puzzle**, each on **their own mold**. Nobody can
+block or steal anyone else's words.
 
-- **3 rounds** per match. Difficulty is set from the lobby's median level.
-- Top strip: each opponent's avatar, live score and a **progress bar** (how full their mold is). You never see their words.
-- **Round timer** 2:30. The round ends early once everyone has finished.
-- **Scoring:** grid word 10/letter, bonus word 3/letter, **finish bonus** +50 plus **2 per second left**, and **+25 for first to finish**.
-- **Between rounds:** a 10-second scoreboard. **End of match:** podium (1st–5th) and XP.
-- **No hints in VS** (fairness). Turn/shuffle is allowed.
+- **The first player to fill their whole mold wins the round.** The round ends for everyone at that moment ("Sam forged it first!") and all boards freeze.
+- **If the timer runs out first, the round ends.** *Proposed default (decision):* the player with the most of their mold filled wins the round. Fill is counted in letters, and a tie goes to whoever reached that count first. The other option is that a timed-out round has no winner.
+- **Round timer:** 2:30 to start with, tuned per tier later.
+- **No hints in VS.** Turn (shuffle) is allowed. Bonus words are still accepted and still feed your Scrap Bin, but they don't help you win the round.
+- Top strip: each opponent's avatar, their round-win pips and a live **progress bar** showing how full their mold is. You never see their words.
 
-*Alternative:* a shared-board "scramble" (co-op rules, but scored against each
-other) could be a later extra mode.
+### Series: best of 3, 5, 7 or 10
+A match is a **series** of rounds. **Round wins add up across the series.**
+
+- Each round uses a new puzzle from the same tier, set from the lobby's median level.
+- **The series ends as soon as someone can't be caught**, i.e. their round wins are more than anyone else's round wins plus the rounds left. Otherwise it runs to the full length.
+  - With 2 players: best of 3 = first to 2, best of 5 = first to 3, best of 7 = first to 4, best of 10 = first to 6.
+  - With 3–5 players it can also end early, but it often runs the full length.
+- **Ties after the last round** can happen in best of 10 (5–5) or with 3+ players (e.g. 1–1–1 in a best of 3). *Proposed default (decision):* a **sudden-death round** between the tied players only, with everyone else watching live. The other option is to break ties on total letters forged across the series.
+- **Between rounds:** 10-second standings showing the round winner, the series tally and "Round 4 of up to 7".
+- **End of series:** podium ranked by round wins, then XP.
 
 ### Getting into a match
-- **Quick Match:** Nakama matchmaker ticket with `min 2, max 5`, grouped by level bracket. It waits up to about 20 seconds to fill toward 5, then starts with whoever's there (minimum 2).
-- **Private Clash:** room code or friend invite, exactly like Co-op. The creator starts it once 2–5 players are in.
+- **Private Clash:** room code or friend invite, exactly like Co-op. The creator picks the series length (3 / 5 / 7 / 10) in the lobby and starts once 2–5 players are in.
+- **Quick Match:** Nakama matchmaker ticket with `min 2, max 5`, grouped by level bracket. It waits up to about 20 seconds to fill toward 5, then starts with whoever's there (minimum 2). *Proposed default (decision):* Quick Match is **best of 3 only** at launch, so a small player base isn't split across four queues. Longer series are available in Private Clash, and they can be added to Quick Match once there are enough players.
 
 ### Disconnects
-A dropped player's board freezes. They can rejoin within 30 seconds and carry
-on. If they don't come back, they finish in last place.
+- A dropped player's mold freezes. They can rejoin the current round within 30 seconds and carry on.
+- If they don't come back, they simply can't win any more rounds, and the series continues without them.
+- If only one player is left, they win the series by forfeit.
 
 ---
 
@@ -291,7 +297,9 @@ on. If they don't come back, they finish in last place.
 LOBBY ──host Start──▶ COUNTDOWN (3s) ──▶ ROUND (timer) ──▶ ROUND_RESULTS
   ▲                                                          │
   └──────── Forge Again / next VS round ◀────────────────────┘
-                                         (VS after round 3) ─▶ MATCH_RESULTS ─▶ XP granted
+                     (VS once the series is clinched or played out) ─▶ SERIES_RESULTS ─▶ XP granted
+
+VS round ends: first player to complete their mold  OR  timer reaches 0
 ```
 
 - Each mode is a Nakama **authoritative match** running at **10 ticks/second**, so the most a guess waits for the next tick is 100 ms.
@@ -302,16 +310,17 @@ LOBBY ──host Start──▶ COUNTDOWN (3s) ──▶ ROUND (timer) ──▶
 
 | Op | Direction | Payload |
 |---|---|---|
-| `LOBBY_STATE` | S→C | players, levels, ready flags, host, tier |
+| `LOBBY_STATE` | S→C | players, levels, ready flags, host, tier, VS series length |
 | `READY` / `START` | C→S | (host only for START) |
-| `ROUND_START` | S→C | round #, grid shape, slots, letters, `startsAt`, `endsAt` |
+| `ROUND_START` | S→C | round #, grid shape, slots, letters, `startsAt`, `endsAt`; VS: series tally, which players are in it (sudden death) |
 | `SUBMIT` | C→S | `{ word, seq }` |
 | `WORD_RESULT` | S→C (sender) | `accepted` / `bonus` / `already` (+by whom) / `invalid` |
 | `WORD_CLAIMED` | S→C (all, co-op) | word, slot, player, points |
 | `PROGRESS` | S→C (all, VS) | player, % filled, score (no words) |
 | `HINT_USED` | C→S / S→C | co-op team hint, revealed cell |
 | `SNAPSHOT` | S→C | full state on join/rejoin |
-| `ROUND_END` / `MATCH_END` | S→C | results, MVP, XP awarded |
+| `ROUND_END` | S→C | co-op: results and MVP; VS: round winner, how it was won (finished / timer), series tally |
+| `SERIES_END` / `MATCH_END` | S→C | VS podium / co-op final; XP awarded |
 | `EMOTE` | C→S→C | preset reactions ("Nice strike!", 🔥) |
 
 ### Fairness and anti-cheat
@@ -385,7 +394,7 @@ WordSmith/
 | M1 | **Solo Forge (the base)** | Full Wordscapes-style loop offline: anvil swipe, mold, bonus words / Scrap Bin, Turn, Hammer Strike / Chisel / Spark Shower, campaign chapters, generated puzzles |
 | M2 | Accounts and progression | Guest / Google / email sign-in, server-side XP and Smith Level, ranks, cloud save, profile |
 | M3 | Co-op | Room codes, lobby, authoritative co-op match, live claims in player colours, results and MVP |
-| M4 | Versus | Quick Match and private rooms, 3-round matches, progress strip, podium |
+| M4 | Versus | Quick Match and private rooms, race rounds, best-of-3/5/7/10 series with early clinch and tiebreak, progress strip, podium |
 | M5 | Polish | Smithing art pass, sounds, haptics, friends and invites, leaderboards, Daily Commission |
 | M6 | Launch prep | Account deletion, privacy policy, closed test (12 testers × 14 days), store listing |
 
@@ -394,7 +403,10 @@ WordSmith/
 ## 16. Open questions
 
 1. **Platform:** OK with Flutter + Nakama on a small VPS you pay for (about $5–20/month)? Or would you rather have a fully managed backend (Supabase) and accept a clunkier round lifecycle?
-2. **Versus format:** separate molds with the same puzzle (proposed), or a shared-board scramble?
+2. **Versus details** (format settled: race on separate molds, first to finish wins the round, best of 3/5/7/10 series):
+   - When the timer runs out, does the most-filled mold win the round (proposed), or does nobody win it?
+   - Tie after the last round: sudden-death round (proposed), or most letters forged across the series?
+   - Quick Match best of 3 only at launch (proposed), or let players choose any length?
 3. **"Level":** an XP-based Smith Level from all modes (proposed), or the solo campaign puzzle number like Wordscapes' "Level 1,203"?
 4. **Hints in multiplayer:** none in VS, and 3 shared Hammer Strikes in Co-op (proposed)?
 5. **Sign-in:** guest + Google + email (proposed). Do we also need Facebook or others?
