@@ -1,13 +1,15 @@
 /**
  * `GET /v1/me`, `POST /v1/me/setup`, `DELETE /v1/me`, `GET /v1/users/:username`,
- * and `POST`/`DELETE /v1/me/push-token` (shared/push.md).
+ * `POST`/`DELETE /v1/me/push-token` and `PUT /v1/me/reminder` (shared/push.md).
  */
 
 import { checkUsername, isAvatar, looksLikeUsername, AVATARS } from "../account/username";
 import { deleteAccount, ensureAccount, isSetUp, loadAccount, profileBody, publicProfileBody, setupAccount, userIdByUsername } from "../db/accounts";
 import { linkBetween } from "../db/friends";
 import { isPushToken, registerPushToken, unregisterPushToken } from "../db/push";
+import { setReminderHour } from "../db/reminders";
 import { ApiError, json, readJsonObject } from "../http";
+import { isReminderHour } from "../push/reminder";
 import { notifyHub, requireSetUp, type AuthedContext } from "./context";
 
 /** My profile. Creates the account on first call; `needsSetup` until a username is chosen. */
@@ -76,4 +78,18 @@ export async function deletePushToken(c: AuthedContext): Promise<Response> {
   const token = await pushTokenBody(c);
   await unregisterPushToken(c.env.DB, c.uid, token);
   return json({ ok: true });
+}
+
+/**
+ * `{hour}` → `{ok: true, hour}`: a daily reminder at that UTC hour (0–23)
+ * while the Daily Commission is still waiting, or none with `{hour: null}`.
+ */
+export async function putReminder(c: AuthedContext): Promise<Response> {
+  await requireSetUp(c);
+  const body = await readJsonObject(c.request);
+  if (!("hour" in body) || !isReminderHour(body.hour)) {
+    throw new ApiError(400, "invalid_body", "Expected {hour}: a UTC hour 0–23, or null for no reminder");
+  }
+  await setReminderHour(c.env.DB, c.uid, body.hour);
+  return json({ ok: true, hour: body.hour });
 }

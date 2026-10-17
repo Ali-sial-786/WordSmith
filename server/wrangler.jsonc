@@ -7,6 +7,10 @@
   "observability": {
     "enabled": true
   },
+  // At the start of every hour: daily reminders for that UTC hour (shared/push.md).
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "vars": {
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
     "LATEST_VERSION": "0.2.0",

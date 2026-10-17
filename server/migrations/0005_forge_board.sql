@@ -1,5 +1,6 @@
--- The Forge Board (shared/forge-board.md), Masterworks (shared/masterworks.md)
--- and the Daily Commission's catch-up days (shared/daily.md).
+-- The Forge Board (shared/forge-board.md), Masterworks (shared/masterworks.md),
+-- the Daily Commission's catch-up days (shared/daily.md) and daily reminders
+-- (shared/push.md).
 --
 -- Days are UTC dates (YYYY-MM-DD) and weeks ISO weeks (YYYY-Www, Monday
 -- 00:00 UTC). Deleting an account deletes its rows in every table here,
@@ -10,6 +11,12 @@
 ALTER TABLE profiles ADD COLUMN stoke_claims INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE profiles ADD COLUMN stoke_last TEXT;               -- UTC day of the last claim
 ALTER TABLE profiles ADD COLUMN masterwork_pieces INTEGER NOT NULL DEFAULT 0;
+
+-- Daily reminders: the UTC hour asked for (NULL = off), and the UTC day the
+-- last one went out. The hourly Cron Trigger looks accounts up by hour.
+ALTER TABLE profiles ADD COLUMN reminder_hour INTEGER;           -- 0-23
+ALTER TABLE profiles ADD COLUMN reminder_last TEXT;              -- UTC day
+CREATE INDEX profiles_by_reminder ON profiles (reminder_hour, reminder_last);
 
 -- A catch-up day played late: flat XP, and streaks ignore it.
 ALTER TABLE daily_completions ADD COLUMN late INTEGER NOT NULL DEFAULT 0;

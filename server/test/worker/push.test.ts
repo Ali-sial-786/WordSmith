@@ -7,10 +7,13 @@
  * setFcmFetcher() routes the Worker's requests to Google into `fakeGoogle`.
  */
 
+import { createExecutionContext, createScheduledController, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { dueReminders } from "../../src/db/reminders";
+import worker from "../../src/index";
 import { fcmSendUrl, GOOGLE_TOKEN_URL, setFcmFetcher, setFcmServiceAccount } from "../../src/push/fcm";
-import { befriend, body, client, setUpClient, type Client } from "./helpers";
+import { befriend, body, client, request, setUpClient, type Client } from "./helpers";
 import { closeAll, connect, sleep, type Socket } from "./sockets";
 
 const RS256 = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
@@ -419,5 +422,117 @@ describe("gift notifications (shared/forge-board.md, \"Gifts\")", () => {
     await sleep(100);
     expect(google.sends()).toHaveLength(0);
     expect((await body<{ gifts: { pending: unknown[] } }>(await b.get("/v1/me/board"))).gifts.pending).toHaveLength(1);
+  });
+});
+
+describe("daily reminders (shared/push.md, \"Daily reminders\")", () => {
+  let google: ReturnType<typeof fakeGoogle>;
+
+  beforeEach(() => {
+    google = fakeGoogle();
+    setFcmFetcher(google.fetch);
+    setFcmServiceAccount(serviceAccount);
+  });
+
+  afterEach(() => {
+    setFcmFetcher(null);
+    setFcmServiceAccount(null);
+  });
+
+  async function setHour(c: Client, hour: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+    const res = await request("/v1/me/reminder", {
+      method: "PUT",
+      headers: { authorization: `Bearer ${c.token}`, "content-type": "application/json" },
+      body: JSON.stringify(hour === undefined ? {} : { hour }),
+    });
+    return { status: res.status, body: await body(res) };
+  }
+
+  /** The hourly Cron Trigger, as if it fired at `iso`. */
+  async function cron(iso: string): Promise<void> {
+    const ctx = createExecutionContext();
+    await worker.scheduled(createScheduledController({ scheduledTime: Date.parse(iso), cron: "0 * * * *" }), env, ctx);
+    await waitOnExecutionContext(ctx);
+  }
+
+  async function done(uid: string, ...days: [string, number][]): Promise<void> {
+    const insert = env.DB.prepare("INSERT INTO daily_completions (user_id, date, completed_at, xp, late) VALUES (?1, ?2, 0, 0, ?3)");
+    await env.DB.batch(days.map(([date, late]) => insert.bind(uid, date, late)));
+  }
+
+  const lastReminded = async (uid: string) => env.DB.prepare("SELECT reminder_last AS d FROM profiles WHERE user_id = ?1").bind(uid).first<string | null>("d");
+
+  it("sets the hour, which the profile shows", async () => {
+    const c = await setUpClient();
+    expect((await body(await c.get("/v1/me"))).reminderHour).toBeNull();
+    expect(await setHour(c, 7)).toEqual({ status: 200, body: { ok: true, hour: 7 } });
+    expect((await body(await c.get("/v1/me"))).reminderHour).toBe(7);
+    expect(await setHour(c, null)).toEqual({ status: 200, body: { ok: true, hour: null } });
+    expect((await body(await c.get("/v1/me"))).reminderHour).toBeNull();
+    for (const bad of [24, -1, 7.5, "7", undefined]) expect(await setHour(c, bad)).toMatchObject({ status: 400, body: { error: "invalid_body" } });
+    expect((await setHour(await client(), 7)).status).toBe(403);
+  });
+
+  it("reminds each account due this hour once a day, with its streak, unless today's is done", async () => {
+    const [streaky, fresh, finished, noPhone, later, off] = await Promise.all(Array.from({ length: 6 }, () => setUpClient()));
+    const tokens = new Map<string, string>();
+    for (const c of [streaky, fresh, finished, later, off]) {
+      const token = fcmToken("phone");
+      tokens.set(c!.uid, token);
+      await register(c!, token);
+    }
+    for (const c of [streaky, fresh, finished, noPhone]) expect((await setHour(c!, 3)).status).toBe(200);
+    expect((await setHour(later!, 4)).status).toBe(200);
+    // Three on-time days to yesterday; a late day doesn't make a streak; today's done.
+    await done(streaky!.uid, ["2026-03-14", 0], ["2026-03-15", 0], ["2026-03-16", 0]);
+    await done(fresh!.uid, ["2026-03-16", 1]);
+    await done(finished!.uid, ["2026-03-16", 0], ["2026-03-17", 0]);
+
+    await cron("2026-03-17T03:00:00Z");
+    const to = (c: Client) => google.messages().filter((m) => (m as { token: string }).token === tokens.get(c.uid));
+    expect(to(streaky!)).toEqual([
+      {
+        token: tokens.get(streaky!.uid),
+        notification: { title: "Today's Daily Commission is waiting", body: "Keep your 3-day streak going!" },
+        data: { type: "daily" },
+        android: { priority: "normal", ttl: "3600s", collapse_key: "daily" },
+      },
+    ]);
+    expect(to(fresh!)).toMatchObject([{ notification: { body: "A new puzzle is on the anvil." } }]);
+    for (const c of [finished!, later!, off!]) expect(to(c)).toEqual([]);
+    expect(await lastReminded(streaky!.uid)).toBe("2026-03-17");
+    expect(await lastReminded(noPhone!.uid)).toBeNull();
+
+    // Not twice in a day, even if the trigger fires again.
+    const sent = google.sends().length;
+    await cron("2026-03-17T03:00:00Z");
+    expect(google.sends()).toHaveLength(sent);
+    // The next day at the same hour, yes: the streak (ending yesterday) is gone now.
+    await cron("2026-03-18T03:00:00Z");
+    expect(to(streaky!).map((m) => (m as { notification: { body: string } }).notification.body)).toEqual([
+      "Keep your 3-day streak going!",
+      "A new puzzle is on the anvil.",
+    ]);
+    expect(to(finished!)).toHaveLength(1);
+    // And the other account at its own hour.
+    await cron("2026-03-18T04:00:00Z");
+    expect(to(later!)).toHaveLength(1);
+  });
+
+  it("takes the accounts reminded longest ago first, and does nothing without an FCM key", async () => {
+    const [a, b, c] = await Promise.all(Array.from({ length: 3 }, () => setUpClient()));
+    for (const x of [a!, b!, c!]) {
+      await register(x, fcmToken("phone"));
+      expect((await setHour(x, 5)).status).toBe(200);
+    }
+    await env.DB.prepare("UPDATE profiles SET reminder_last = ?2 WHERE user_id = ?1").bind(a!.uid, "2026-04-02").run();
+    await env.DB.prepare("UPDATE profiles SET reminder_last = ?2 WHERE user_id = ?1").bind(b!.uid, "2026-04-01").run();
+    const due = await dueReminders(env.DB, 5, "2026-04-03", 2);
+    expect(due).toEqual([c!.uid, b!.uid]);
+
+    setFcmServiceAccount(null);
+    await cron("2026-04-03T05:00:00Z");
+    expect(google.sends()).toEqual([]);
+    expect(await lastReminded(c!.uid)).toBeNull();
   });
 });

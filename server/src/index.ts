@@ -1,5 +1,6 @@
 /**
- * Wordsmith API Worker: the router for the REST routes in docs/TECH.md §4.
+ * Wordsmith API Worker: the router for the REST routes in docs/TECH.md §4,
+ * and the hourly Cron Trigger that sends daily reminders (shared/push.md).
  *
  * Every route except `/v1/version` and `/v1/health` needs a Firebase ID
  * token (`Authorization: Bearer <token>`; the WebSocket route reads it from
@@ -13,7 +14,8 @@ import { Router } from "./router";
 import { getBoard, postFriendGift, postGiftsClaim, postOrderClaim, postOrderSwap, postStokeClaim, postTrialsClaim } from "./routes/board";
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
-import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup } from "./routes/me";
+import { sendDailyReminders } from "./push/reminder";
+import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, putReminder } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { postSync } from "./routes/solo";
@@ -39,6 +41,7 @@ const router = new Router<Handler>([
   { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
   { method: "POST", path: "/v1/me/push-token", handler: authed(postPushToken) },
   { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },
+  { method: "PUT", path: "/v1/me/reminder", handler: authed(putReminder) },
   { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
 
   { method: "GET", path: "/v1/me/board", handler: authed(getBoard) },
@@ -90,5 +93,14 @@ export default {
       console.error(`${request.method} ${pathname} failed`, err);
       return errorResponse(500, "internal");
     }
+  },
+
+  /** The hourly Cron Trigger (wrangler.jsonc): today's daily reminders for this UTC hour. */
+  async scheduled(controller, env, ctx): Promise<void> {
+    ctx.waitUntil(
+      sendDailyReminders(env, controller.scheduledTime).catch((err: unknown) => {
+        console.error("daily reminders failed", err);
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;

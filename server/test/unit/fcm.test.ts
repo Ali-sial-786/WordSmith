@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { isPushToken, MAX_PUSH_TOKEN_LENGTH } from "../../src/db/push";
+import { giftMessage } from "../../src/push/gift";
 import {
   ACCESS_TOKEN_MARGIN_MS,
   FCM_SCOPE,
@@ -349,5 +350,16 @@ describe("isPushToken", () => {
     for (const bad of ["", " ", "has space", "tab\there", "line\nbreak", "émile", "x".repeat(MAX_PUSH_TOKEN_LENGTH + 1), 42, null, undefined, {}]) {
       expect(isPushToken(bad), JSON.stringify(bad)).toBe(false);
     }
+  });
+});
+
+describe("gift notifications", () => {
+  it("are an FCM HTTP v1 message as in shared/push.md", () => {
+    expect(giftMessage("tok-1", { from: "uid-ali", fromUsername: "Ali" })).toEqual({
+      token: "tok-1",
+      notification: { title: "Ali sent you a gift", body: "A free Hammer Strike is waiting in the Forge Hall" },
+      data: { type: "gift", from: "uid-ali" },
+      android: { priority: "normal", ttl: "86400s", collapse_key: "gift-uid-ali" },
+    });
   });
 });
