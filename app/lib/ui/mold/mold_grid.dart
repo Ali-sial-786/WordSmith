@@ -44,7 +44,7 @@ class MoldGrid extends StatelessWidget {
     required this.cues,
     this.chiselMode = false,
     this.onCellTap,
-    this.maxCell = 62,
+    this.maxCell = 80,
   });
 
   final Board board;

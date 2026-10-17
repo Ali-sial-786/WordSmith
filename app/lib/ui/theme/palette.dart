@@ -58,3 +58,11 @@ class MetalStyle {
 
   static MetalStyle forChapter(String id) => _byChapter[id] ?? _byChapter['iron']!;
 }
+
+/// Chapters that have their own scene so far (docs/ART_AND_AUDIO.md §4);
+/// the rest use the Forge Hall until their art lands.
+const _chapterScenes = {'tin', 'copper'};
+
+String chapterBackground(String chapterId) => _chapterScenes.contains(chapterId)
+    ? 'assets/images/bg_$chapterId.webp'
+    : 'assets/images/bg_hall.webp';

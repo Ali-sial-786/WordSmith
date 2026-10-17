@@ -12,7 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final (store, campaign) = await (Store.open(), Campaign.load()).wait;
-  final sfx = await Sfx.load(store.loadSettings());
+  final sfx = Sfx(enabled: true, settings: store.loadSettings());
   runApp(
     ProviderScope(
       overrides: [
@@ -23,5 +23,6 @@ Future<void> main() async {
       child: const WordsmithApp(),
     ),
   );
-  sfx.startAmbience();
+  // Sounds load after the first frame so startup isn't held up.
+  sfx.preload().then((_) => sfx.startAmbience());
 }

@@ -23,22 +23,52 @@ enum SfxId {
   final String file;
 }
 
+/// A few low-latency players for one sound, used round-robin so a sound can
+/// overlap itself (fast swipes, quick words).
+class _Voice {
+  _Voice(this._players);
+
+  final List<AudioPlayer> _players;
+  int _next = 0;
+
+  static Future<_Voice> load(String file, int count) async {
+    final players = <AudioPlayer>[];
+    for (var i = 0; i < count; i++) {
+      final p = AudioPlayer();
+      if (!kIsWeb) await p.setPlayerMode(PlayerMode.lowLatency);
+      await p.setReleaseMode(ReleaseMode.stop);
+      await p.setSource(AssetSource('audio/$file.ogg'));
+      players.add(p);
+    }
+    return _Voice(players);
+  }
+
+  Future<void> play(double volume) async {
+    final p = _players[_next];
+    _next = (_next + 1) % _players.length;
+    await p.stop();
+    await p.setVolume(volume);
+    await p.resume();
+  }
+}
+
 /// Sound effects and the forge ambience loop. Every call is fire-and-forget
 /// and failures are swallowed: a missing sound must never break the game.
 class Sfx {
-  Sfx._(this._enabled);
+  Sfx({required this._enabled, this._settings = const Settings()});
 
-  factory Sfx.silent() => Sfx._(false);
+  factory Sfx.silent() => Sfx(enabled: false);
 
   static const tinkCount = 8;
 
   final bool _enabled;
-  final Map<String, AudioPool> _pools = {};
+  final Map<String, _Voice> _voices = {};
   AudioPlayer? _ambience;
-  Settings _settings = const Settings();
+  Settings _settings;
 
-  static Future<Sfx> load(Settings settings) async {
-    final sfx = Sfx._(true).._settings = settings;
+  /// Loads every sound in the background; sounds play once loaded.
+  Future<void> preload() async {
+    if (!_enabled) return;
     try {
       await AudioPlayer.global.setAudioContext(
         AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build(),
@@ -46,29 +76,26 @@ class Sfx {
     } on Object catch (e) {
       debugPrint('audio context: $e');
     }
-    final files = [
-      for (var i = 1; i <= tinkCount; i++) 'tink_$i',
-      for (final id in SfxId.values) id.file,
-    ];
-    Future<void> loadOne(String file) async {
+    Future<void> loadOne(String file, int count) async {
       try {
-        sfx._pools[file] = await AudioPool.createFromAsset(
-          path: 'audio/$file.ogg',
-          maxPlayers: file.startsWith('tink') ? 2 : 3,
-        );
+        _voices[file] = await _Voice.load(file, count);
       } on Object catch (e) {
         debugPrint('sound $file unavailable: $e');
       }
     }
 
-    await Future.wait(files.map(loadOne));
-    return sfx;
+    await Future.wait([
+      for (var i = 1; i <= tinkCount; i++) loadOne('tink_$i', 2),
+      for (final id in SfxId.values) loadOne(id.file, 2),
+    ]);
   }
 
   void applySettings(Settings settings) {
     _settings = settings;
-    _ambience?.setVolume(settings.ambienceVolume * 0.6).ignore();
+    _ambience?.setVolume(_ambienceVolume).ignore();
   }
+
+  double get _ambienceVolume => _settings.ambienceVolume * 0.6;
 
   void play(SfxId id, {double volume = 1}) => _play(id.file, volume);
 
@@ -78,9 +105,9 @@ class Sfx {
 
   void _play(String file, double volume) {
     if (!_enabled || _settings.sfxVolume <= 0) return;
-    final pool = _pools[file];
-    if (pool == null) return;
-    pool.start(volume: volume * _settings.sfxVolume).ignore();
+    _voices[file]?.play(volume * _settings.sfxVolume).catchError((Object e) {
+      debugPrint('sound $file failed: $e');
+    });
   }
 
   Future<void> startAmbience() async {
@@ -88,7 +115,7 @@ class Sfx {
     try {
       final player = AudioPlayer();
       await player.setReleaseMode(ReleaseMode.loop);
-      await player.setVolume(_settings.ambienceVolume * 0.6);
+      await player.setVolume(_ambienceVolume);
       await player.play(AssetSource('audio/forge_ambience.ogg'));
       _ambience = player;
     } on Object catch (e) {

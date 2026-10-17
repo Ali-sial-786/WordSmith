@@ -259,7 +259,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     final metal = MetalStyle.forChapter(chapter.id);
     return Scaffold(
       body: ForgeBackground(
-        image: 'assets/images/bg_${chapter.id}.webp',
+        image: chapterBackground(chapter.id),
         child: SparkField(
           intensity: reducedMotion ? 0.35 : 1,
           child: SafeArea(
@@ -289,7 +289,23 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                       ),
                     ),
                     ToastLine(key: _toast),
-                    WordPreview(key: _preview, word: _word),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (widget.stage <= 2 && _game.board.foundSlots.isEmpty)
+                          AnimatedOpacity(
+                            opacity: _word.isEmpty ? 1 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(
+                              'Swipe across the letters to forge a word',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: Palette.molten,
+                              ),
+                            ),
+                          ),
+                        WordPreview(key: _preview, word: _word),
+                      ],
+                    ),
                     SizedBox(
                       height: ring + 8,
                       child: Row(
