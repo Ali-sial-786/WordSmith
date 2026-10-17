@@ -3,6 +3,12 @@ import 'package:wordsmith/video/video_call.dart';
 
 /// Video chat without LiveKit: tests set [peers] and watch the calls.
 class FakeVideoCall extends VideoCall {
+  FakeVideoCall({this.me});
+
+  /// This player, if set: like the real call's local participant, they're
+  /// one of the [peers] once joined, following [setCamera] and [setMic].
+  final String? me;
+
   VideoStatus _status = VideoStatus.off;
   bool _camera = false;
   bool _mic = false;
@@ -20,7 +26,11 @@ class FakeVideoCall extends VideoCall {
   @override
   bool get micOn => _mic;
   @override
-  Map<String, VideoPeer> get peers => _peers;
+  Map<String, VideoPeer> get peers {
+    final me = this.me;
+    if (me == null || _status != VideoStatus.live) return _peers;
+    return {..._peers, me: VideoPeer(id: me, camera: _camera, mic: _mic, speaking: _peers[me]?.speaking ?? false)};
+  }
 
   set peers(Map<String, VideoPeer> value) {
     _peers = value;
@@ -54,8 +64,9 @@ class FakeVideoCall extends VideoCall {
   }
 
   @override
-  Widget? view(String userId) =>
-      (peers[userId]?.camera ?? false) ? ColoredBox(key: ValueKey('video-$userId'), color: const Color(0xFF00FF00)) : null;
+  Widget? view(String userId) => (peers[userId]?.camera ?? false)
+      ? ColoredBox(key: ValueKey('video-$userId'), color: const Color(0xFF00FF00))
+      : null;
 
   @override
   Future<void> leave() async {

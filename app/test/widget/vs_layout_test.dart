@@ -10,6 +10,7 @@ import 'package:wordsmith/features/coop/room_video.dart';
 import 'package:wordsmith/features/vs/vs_results_view.dart';
 import 'package:wordsmith/features/vs/vs_round_view.dart';
 import 'package:wordsmith/features/vs/vs_standings_view.dart';
+import 'package:wordsmith/features/vs/vs_widgets.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/game/vs_session.dart';
 import 'package:wordsmith/net/room_client.dart';
@@ -76,7 +77,11 @@ final _end = VsRoundEnd.fromJson({
     {'slot': 1, 'word': 'COT'},
     {'slot': 2, 'word': 'TOE'},
   ],
-  'next': {'round': 4, 'suddenDeath': false, 'players': ['u1', 'u2', 'u3', 'u4']},
+  'next': {
+    'round': 4,
+    'suddenDeath': false,
+    'players': ['u1', 'u2', 'u3', 'u4'],
+  },
   'standingsEndsAt': DateTime.now().millisecondsSinceEpoch + 8000,
 });
 
@@ -105,8 +110,10 @@ final _seriesEnd = SeriesEnd.fromJson({
 });
 
 VsSession _session(String phase) {
-  final s = VsSession(client: RoomClient(baseUrl: 'http://127.0.0.1:9', code: 'V5X7KQ', token: () async => 't'), me: 'u1')
-    ..lobby = _lobby(phase);
+  final s = VsSession(
+    client: RoomClient(baseUrl: 'http://127.0.0.1:9', code: 'V5X7KQ', token: () async => 't'),
+    me: 'u1',
+  )..lobby = _lobby(phase);
   addTearDown(s.dispose);
   return s;
 }
@@ -133,7 +140,9 @@ Future<void> _pump(WidgetTester tester, Widget child, {double textScale = 1}) as
   await tester.pumpWidget(
     ProviderScope(
       overrides: [storeProvider.overrideWithValue(store)],
-      child: MaterialApp(home: Scaffold(body: SafeArea(child: child))),
+      child: MaterialApp(
+        home: Scaffold(body: SafeArea(child: child)),
+      ),
     ),
   );
   await tester.pump();
@@ -162,6 +171,13 @@ void main() {
       expect(find.text('Round 3 of up to 5'), findsOneWidget);
       expect(find.text('1/7'), findsNothing, reason: 'my count comes from my own mold');
       expect(find.text('0/7'), findsOneWidget);
+      // With video on, my own bubble too, but no bar as if I were a rival.
+      expect(find.byKey(const ValueKey('video-u1')), withVideo ? findsOneWidget : findsNothing);
+      expect(find.text('You'), withVideo ? findsOneWidget : findsNothing);
+      expect(
+        find.descendant(of: find.byType(RivalStrip), matching: find.byType(LinearProgressIndicator)),
+        findsNWidgets(4),
+      );
     });
   }
 
@@ -174,6 +190,21 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Sudden death!'), findsOneWidget);
     expect(find.textContaining("You're watching"), findsOneWidget);
+  });
+
+  testWidgets('watching sudden death with video, my own bubble shows beside the racers', (tester) async {
+    final start = _start(sudden: true);
+    final s = _session('round')
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('round'));
+    await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(await _call())));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('video-u1')), findsOneWidget);
+    expect(find.text('You'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(RivalStrip), matching: find.byType(LinearProgressIndicator)),
+      findsNWidgets(2),
+    );
   });
 
   testWidgets('the standings between rounds fit and say what comes next', (tester) async {
@@ -207,7 +238,11 @@ void main() {
       ..round = start
       ..mold = RemoteMold(start, () => _lobby('round'))
       ..tally = start.tally;
-    await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(await _call())), textScale: 1.3);
+    await _pump(
+      tester,
+      VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(await _call())),
+      textScale: 1.3,
+    );
     expect(tester.takeException(), isNull);
   });
 }

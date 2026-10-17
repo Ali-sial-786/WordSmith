@@ -23,7 +23,10 @@ class WinPips extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.local_fire_department, size: size, color: color),
-          Text('×$wins', style: TextStyle(fontSize: size, color: color, fontWeight: FontWeight.w700)),
+          Text(
+            '×$wins',
+            style: TextStyle(fontSize: size, color: color, fontWeight: FontWeight.w700),
+          ),
         ],
       );
     }
@@ -35,7 +38,8 @@ class WinPips extends StatelessWidget {
 }
 
 /// The rivals across the top of a Versus round: bubble, name, wins and a live
-/// bar of how full their mold is. Never their words.
+/// bar of how full their mold is. Never their words. With video chat on, my
+/// own bubble comes last, racing or watching.
 class RivalStrip extends StatelessWidget {
   const RivalStrip({super.key, required this.session, this.call});
 
@@ -46,14 +50,28 @@ class RivalStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final round = session.round;
     if (round == null) return const SizedBox.shrink();
+    final call = this.call;
     // Racers see their rivals; someone watching sudden death sees every racer.
-    final ids = [for (final id in round.racers) if (!session.racing || id != session.me) id];
+    final ids = [
+      for (final id in round.racers)
+        if (id != session.me) id,
+    ];
     // Taller when the phone uses bigger text, so names still fit.
     final textExtra = MediaQuery.textScalerOf(context).scale(14) - 14;
     return SizedBox(
       height: (call == null ? 74 : 86) + textExtra,
       child: Row(
-        children: [for (final id in ids.take(5)) Expanded(child: _RivalTile(session: session, id: id, call: call))],
+        children: [
+          for (final id in ids.take(5))
+            Expanded(
+              child: _RivalTile(session: session, id: id, call: call),
+            ),
+          if (call != null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: _MyTile(session: session, call: call),
+            ),
+        ],
       ),
     );
   }
@@ -115,6 +133,42 @@ class _RivalTile extends StatelessWidget {
   }
 }
 
+/// My own bubble in the strip: marked as me, and no bar, as my letters show
+/// beside the anvil.
+class _MyTile extends StatelessWidget {
+  const _MyTile({required this.session, required this.call});
+
+  final VsSession session;
+  final VideoCall call;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = session.colorOf(session.me);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 2, 6, 2),
+      // A faint line between the rivals and me.
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Palette.ash)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          VideoBubble(
+            userId: session.me,
+            avatar: session.myPlayer?.avatar ?? 'avatar_01',
+            size: 42,
+            call: call,
+            color: color,
+            me: true,
+          ),
+          const SizedBox(height: 2),
+          Text('You', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
 /// "Round 2 of up to 5", or sudden death.
 String roundLabel(VsSession s) {
   final r = s.round;
@@ -158,12 +212,12 @@ class VsCountdown extends StatelessWidget {
           ),
           Text(
             '${session.countdownLeft.inSeconds + 1}',
-            style: displayStyle(110, color: Palette.molten).copyWith(
-              shadows: const [Shadow(color: Palette.ember, blurRadius: 40)],
-            ),
+            style: displayStyle(
+              110,
+              color: Palette.molten,
+            ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 40)]),
           ),
-          if (!session.racing)
-            Text('You watch this one', style: Theme.of(context).textTheme.titleMedium),
+          if (!session.racing) Text('You watch this one', style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     ),

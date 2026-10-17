@@ -12,6 +12,7 @@ import 'package:wordsmith/game/coop_session.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/net/room_client.dart';
 import 'package:wordsmith/ui/mold/mold_grid.dart';
+import 'package:wordsmith/ui/widgets/video_bubble.dart';
 import 'package:wordsmith/video/video_call.dart';
 
 import '../fixtures/fake_video.dart';
@@ -54,25 +55,19 @@ final _start = RoundStart.fromJson({
   'pickups': [],
 });
 
-Future<FakeVideoCall> _call() async {
-  final call = FakeVideoCall();
-  await call.join(url: 'wss://x', token: 't', camera: true, mic: true);
+/// Me (u1) with my [camera] on or off, and two teammates; Bo isn't in the call.
+Future<FakeVideoCall> _call({bool camera = true}) async {
+  final call = FakeVideoCall(me: 'u1');
+  await call.join(url: 'wss://x', token: 't', camera: camera, mic: true);
   call.peers = {
-    'u1': const VideoPeer(id: 'u1', camera: true, mic: true),
     'u2': const VideoPeer(id: 'u2', camera: true, mic: false, speaking: true),
     'u3': const VideoPeer(id: 'u3', camera: true, mic: true),
   };
   return call;
 }
 
-RoomVideo _video(VideoCall call) => RoomVideo(
-  available: true,
-  call: call,
-  onEnable: () {},
-  onDisable: () {},
-  onCamera: () {},
-  onMic: () {},
-);
+RoomVideo _video(VideoCall call) =>
+    RoomVideo(available: true, call: call, onEnable: () {}, onDisable: () {}, onCamera: () {}, onMic: () {});
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
   SharedPreferences.setMockInitialValues({
@@ -84,11 +79,16 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [storeProvider.overrideWithValue(store)],
-      child: MaterialApp(home: Scaffold(body: SafeArea(child: child))),
+      child: MaterialApp(
+        home: Scaffold(body: SafeArea(child: child)),
+      ),
     ),
   );
   await tester.pump();
 }
+
+/// My own bubble with my camera off: my avatar, marked.
+final _myCameraOff = find.descendant(of: find.byType(VideoBubble), matching: find.byIcon(Icons.videocam_off));
 
 CoopSession _session(String phase) {
   final session = CoopSession(
@@ -107,6 +107,16 @@ void main() {
     expect(find.byKey(const ValueKey('video-u1')), findsOneWidget);
     expect(find.byKey(const ValueKey('video-u3')), findsOneWidget);
     expect(find.text('Video chat on'), findsOneWidget);
+    expect(_myCameraOff, findsNothing);
+  });
+
+  testWidgets('in the lobby my own bubble stays, marked, with my camera off', (tester) async {
+    final call = await _call(camera: false);
+    await _pump(tester, LobbyView(session: _session('lobby'), onLeave: () {}, video: _video(call)));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('video-u1')), findsNothing);
+    expect(_myCameraOff, findsOneWidget);
+    expect(find.byKey(const ValueKey('video-u2')), findsOneWidget);
   });
 
   testWidgets('the round shows teammates as video bubbles and fits on a small phone', (tester) async {
@@ -117,6 +127,24 @@ void main() {
     await _pump(tester, RoundView(session: session, cues: MoldCues(), onLeave: () {}, video: _video(call)));
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('video-u2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('video-u1')), findsOneWidget, reason: 'my own bubble too');
+    expect(find.text('You'), findsOneWidget);
     expect(find.byTooltip('Turn camera off'), findsOneWidget, reason: 'camera switch in the top strip');
   });
+
+  for (final camera in [true, false]) {
+    testWidgets('four smiths with big scores still fit, my camera ${camera ? 'on' : 'off'}', (tester) async {
+      final call = await _call(camera: camera);
+      final session = _session('round')
+        ..round = _start
+        ..mold = RemoteMold(_start, () => _lobby('round'))
+        ..scores = {'u1': 1240, 'u2': 985, 'u3': 2310, 'u4': 460};
+      await _pump(tester, RoundView(session: session, cues: MoldCues(), onLeave: () {}, video: _video(call)));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('video-u1')), camera ? findsOneWidget : findsNothing);
+      expect(_myCameraOff, camera ? findsNothing : findsOneWidget);
+      expect(find.text('You'), findsOneWidget);
+      expect(find.text('2310'), findsOneWidget);
+    });
+  }
 }

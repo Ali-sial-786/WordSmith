@@ -126,7 +126,13 @@ class _RoundViewState extends ConsumerState<RoundView> {
         Future.delayed(hammerImpact, () => _haptic(HapticFeedback.mediumImpact));
         if (by == _s.me) ref.read(profileProvider.notifier).addHint(HintKind.hammer, -1);
       case Revealed(:final by, :final kind, :final auto):
-        _sfx.play(kind == 'sparks' ? SfxId.hintSparks : kind == 'chisel' ? SfxId.hintChisel : SfxId.hintHammer);
+        _sfx.play(
+          kind == 'sparks'
+              ? SfxId.hintSparks
+              : kind == 'chisel'
+              ? SfxId.hintChisel
+              : SfxId.hintHammer,
+        );
         for (final (s, _) in auto) {
           widget.cues.stagger(_s.mold!.slot(s).cells);
         }
@@ -260,10 +266,7 @@ class _RoundViewState extends ConsumerState<RoundView> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       for (final line in _s.feed.take(2))
-                        Text(
-                          line.text,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: line.color),
-                        ),
+                        Text(line.text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: line.color)),
                     ],
                   ),
                 ),
@@ -337,9 +340,10 @@ class _RoundViewState extends ConsumerState<RoundView> {
               child: Center(
                 child: Text(
                   '${_s.countdownLeft.inSeconds + 1}',
-                  style: displayStyle(110, color: Palette.molten).copyWith(
-                    shadows: const [Shadow(color: Palette.ember, blurRadius: 40)],
-                  ),
+                  style: displayStyle(
+                    110,
+                    color: Palette.molten,
+                  ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 40)]),
                 ),
               ),
             ),
@@ -373,10 +377,11 @@ class _TopStrip extends StatelessWidget {
       height: 52,
       child: Row(
         children: [
-          IconButton(onPressed: onLeave, icon: const Icon(Icons.close, color: Palette.steel)),
-          Expanded(
-            child: Text('Team $team', style: displayStyle(18)),
+          IconButton(
+            onPressed: onLeave,
+            icon: const Icon(Icons.close, color: Palette.steel),
           ),
+          Expanded(child: Text('Team $team', style: displayStyle(18))),
           if (video.call != null)
             VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
@@ -409,39 +414,50 @@ class _Teammates extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final players = session.lobby?.players ?? const [];
+    final text = Theme.of(context).textTheme;
     return SizedBox(
       height: call == null ? 46 : 58,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (final p in players)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.fromLTRB(4, 3, 10, 3),
-              decoration: BoxDecoration(
-                color: Palette.soot.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Palette.player(p.color), width: 2),
+      // Shrinks a little rather than overflow (four smiths, big scores, video).
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final p in players)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.fromLTRB(4, 3, 10, 3),
+                decoration: BoxDecoration(
+                  color: Palette.soot.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Palette.player(p.color), width: 2),
+                ),
+                child: Row(
+                  children: [
+                    VideoBubble(
+                      userId: p.id,
+                      avatar: p.avatar,
+                      size: call == null ? 30 : 42,
+                      call: call,
+                      color: Palette.player(p.color),
+                      dimmed: !p.connected,
+                      me: p.id == session.me,
+                    ),
+                    const SizedBox(width: 6),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // With video on, which bubble is mine.
+                        if (call != null && p.id == session.me)
+                          Text('You', style: text.labelSmall?.copyWith(color: Palette.player(p.color), height: 1)),
+                        Text('${session.scores[p.id] ?? 0}', style: text.labelLarge),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  VideoBubble(
-                    userId: p.id,
-                    avatar: p.avatar,
-                    size: call == null ? 30 : 42,
-                    call: call,
-                    color: Palette.player(p.color),
-                    dimmed: !p.connected,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${session.scores[p.id] ?? 0}',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ],
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

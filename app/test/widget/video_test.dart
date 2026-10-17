@@ -13,7 +13,9 @@ import 'package:wordsmith/video/video_call.dart';
 
 import '../fixtures/fake_video.dart';
 
-Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+Widget _wrap(Widget child) => MaterialApp(
+  home: Scaffold(body: Center(child: child)),
+);
 
 void main() {
   testWidgets('a bubble shows live video while the camera is on, otherwise the avatar', (tester) async {
@@ -34,6 +36,24 @@ void main() {
     call.peers = {'u2': const VideoPeer(id: 'u2', camera: false, mic: true)};
     await tester.pump();
     expect(find.byKey(const ValueKey('video-u2')), findsNothing);
+  });
+
+  testWidgets('my own bubble shows my camera, or my avatar marked as camera off', (tester) async {
+    final call = FakeVideoCall(me: 'u1');
+    await call.join(url: 'wss://x', token: 't', camera: true, mic: true);
+    await tester.pumpWidget(_wrap(VideoBubble(userId: 'u1', avatar: 'avatar_05', size: 48, call: call, me: true)));
+    expect(find.byKey(const ValueKey('video-u1')), findsOneWidget);
+    expect(find.byIcon(Icons.videocam_off), findsNothing);
+
+    await call.setCamera(false);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('video-u1')), findsNothing);
+    expect(find.byType(SvgPicture), findsOneWidget, reason: 'my avatar');
+    expect(find.byIcon(Icons.videocam_off), findsOneWidget);
+
+    // Someone else's camera being off isn't marked.
+    await tester.pumpWidget(_wrap(VideoBubble(userId: 'u2', avatar: 'avatar_05', size: 48, call: call)));
+    expect(find.byIcon(Icons.videocam_off), findsNothing);
   });
 
   testWidgets('without a call the bubble is just the avatar', (tester) async {

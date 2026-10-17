@@ -274,6 +274,7 @@ class _PlayerRow extends StatelessWidget {
             call: call,
             color: color,
             dimmed: !player.connected,
+            me: isMe,
           ),
           const SizedBox(width: 12),
           Expanded(
