@@ -110,8 +110,8 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
     final board = _game.board;
     final tips = [
       if (board.gilded != null && !board.gildedCollected)
-        ('gilded', 'A gilded cell! Forge the word through it for a blueprint piece.', Palette.gold),
-      if (board.pickups.isNotEmpty) ('ember', 'An ember! Forge the word through it for a free hint.', Palette.molten),
+        ('gilded', 'A gilded cell! Forge its word for a blueprint piece.', Palette.gold),
+      if (board.pickups.isNotEmpty) ('ember', 'An ember! Forge its word for a free hint.', Palette.molten),
     ].where((t) => !store.seenTip(t.$1)).toList();
     for (final (i, (id, text, color)) in tips.indexed) {
       store.markTip(id);

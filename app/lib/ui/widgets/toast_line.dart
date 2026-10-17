@@ -49,12 +49,19 @@ class ToastLineState extends State<ToastLine> with SingleTickerProviderStateMixi
             child: Transform.translate(
               offset: Offset(0, 6 * (1 - (t / 0.1).clamp(0.0, 1.0))),
               child: Center(
-                child: Text(
-                  _text,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: _color,
-                    shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+                // A long message shrinks to fit rather than running off the edge.
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _text,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: _color,
+                        shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+                      ),
+                    ),
                   ),
                 ),
               ),
