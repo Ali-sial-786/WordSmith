@@ -1,0 +1,58 @@
+# Gloss filter for the Wordsmith dictionary (tools/dictgen).
+#
+# Senses whose WordNet definition matches a pattern below are left out.
+# Patterns are Python regular expressions, matched case-insensitively.
+# Everything else keeps WordNet's own text. The aim is narrow: slur senses
+# and sexual content, so that an ordinary word shows its ordinary meanings
+# (screw, mate, ball, jock). The word list itself is filtered separately by
+# tools/puzzlegen (data/blocklist*.txt).
+#
+# [always]       the sense is always dropped (a word with nothing left has no
+#                definition in the app).
+# [unless-only]  the sense is dropped when the word has another sense to show;
+#                if it is all WordNet has for the word, it stays. This keeps a
+#                plain definition for words like chastity, urethra or runt.
+#
+# Rebuild with `python3 -m dictgen build` after editing; the build report
+# (reports/lexicon.gen.json) counts the senses each pattern removed.
+
+[always]
+# Slurs: WordNet labels these senses itself.
+\bethnic slur\b
+\boffensive (and (derogatory|disparaging) )?(term|name|word|slang)s?\b
+\bobscene (term|word)s? for\b
+\bvulgar (slang|term|expression)s?\b
+# "derogatory/disparaging term" aimed at a nationality, people, faith or orientation.
+\b(derogatory|disparaging)\b.*\b(white|black|british|english|irish|italian|german|jews?|jewish|christians?|catholics?|muslims?|indians?|asian|african|mexican|latin|chinese|japanese|homosexual|gay|lesbian)\b
+# Graphic sexual content.
+\bmasturbat
+\borgasm
+\bejaculat
+\bfellatio\b
+\bcunnilingus\b
+\b(oral|anal) (sex|copulation|intercourse)\b
+\bsodom
+\bpornograph
+\berotic
+\bsex acts?\b
+\bsexually (arous|excit|stimulat|gratif)
+\bsexual fondling\b
+\berect penis\b
+
+[unless-only]
+# Sex, described plainly.
+\bsexual intercourse\b
+\bsexual (activity|activities|relations|organs?)\b
+\bha(ve|s|ving) sex\b
+\bcopulat
+\bcoit(us|al)\b
+\bfornicat
+# Anatomy.
+\bgenital(s|ia)?\b
+\bpenis
+\bvagina
+\bvulva
+\bclitor
+\bpubic hair\b
+# Insults that are not slurs (runt: "disparaging terms for small people").
+\b(derogatory|disparaging) (term|name|reference)s?\b

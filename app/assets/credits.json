@@ -396,6 +396,15 @@
     "changes": "Background removed, filled with a metal gradient (starmetal)"
   },
   {
+    "file": "dict/*.json.gz",
+    "title": "Open English WordNet 2024 (word definitions)",
+    "author": "The Open English WordNet Team (based on Princeton WordNet 3.1, Princeton University)",
+    "licence": "CC BY 4.0",
+    "url": "https://github.com/globalwordnet/english-wordnet",
+    "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Up to three definitions per word, shortened to 160 characters, a few offensive senses left out, inflected words linked to their base word (tools/dictgen)"
+  },
+  {
     "file": "images/ (3D renders)",
     "title": "Metal052C",
     "author": "ambientCG (Lennart Demes)",

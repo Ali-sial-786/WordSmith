@@ -34,6 +34,7 @@ and icons. Nothing here is CC BY-SA, NC, ND, GPL or taken from another game.
 | Fireplace Sound loop | PagDev | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/fireplace-sound-loop | 2026-10-17 | 1 file(s) |
 | Medieval: King's Feast | RandomMind | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/medieval-kings-feast | 2026-10-17 | 1 file(s) |
 | Medieval: Minstrel Dance | RandomMind | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/medieval-minstrel-dance | 2026-10-17 | 1 file(s) |
+| Open English WordNet 2024 | The Open English WordNet Team (based on Princeton WordNet 3.1, Princeton University) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://github.com/globalwordnet/english-wordnet | 2026-10-17 | 1 file(s) |
 
 Pinned download URLs and SHA-256 checksums are in `art/sources.json`.
 
@@ -160,6 +161,7 @@ Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by o
 
 | File | Built from | Author | Licence | Source |
 |---|---|---|---|---|
+| `dict/*.json.gz` | Open English WordNet 2024 (word definitions) | The Open English WordNet Team (based on Princeton WordNet 3.1, Princeton University) | CC BY 4.0 | https://github.com/globalwordnet/english-wordnet |
 | `images/ (3D renders)` | Metal052C | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Metal052C |
 | `images/ (3D renders)` | Ground054 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Ground054 |
 | `images/ (3D renders)` | Bricks102 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Bricks102 |

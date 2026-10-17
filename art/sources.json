@@ -582,6 +582,39 @@
         }
       ],
       "retrieved": "2026-10-17"
+    },
+    {
+      "id": "open-english-wordnet",
+      "title": "Open English WordNet 2024",
+      "author": "The Open English WordNet Team (based on Princeton WordNet 3.1, Princeton University)",
+      "licence": "CC BY 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+      "page": "https://github.com/globalwordnet/english-wordnet",
+      "copyright": "Copyright (c) 2019-present, The Open English WordNet Team. WordNet 3.1 Copyright 2011 by Princeton University.",
+      "note": "Word definitions in app/assets/dict/, built by tools/dictgen, which downloads the WordNet data itself; only the licence texts are fetched here. The full licence ships as app/assets/licenses/OEWN-CC-BY-4.0.txt.",
+      "files": [
+        {
+          "name": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/globalwordnet/english-wordnet/2024-edition/LICENSE.md",
+          "licence_text": true,
+          "sha256": "5d02a553699c4841d8b33cc5a1313cff1f96264e36e9dc98be829dfc94a6cc73",
+          "size": 20562
+        },
+        {
+          "name": "WNDB_License.txt",
+          "url": "https://raw.githubusercontent.com/globalwordnet/english-wordnet/2024-edition/WNDB_License.txt",
+          "sha256": "df30ec18fbabcdaf031b79ea026d3e6b959010cffe6dd7be9ac137822175b904",
+          "size": 1740
+        }
+      ],
+      "retrieved": "2026-10-17",
+      "used_by": [
+        {
+          "file": "dict/*.json.gz",
+          "title": "Open English WordNet 2024 (word definitions)",
+          "changes": "Up to three definitions per word, shortened to 160 characters, a few offensive senses left out, inflected words linked to their base word (tools/dictgen)"
+        }
+      ]
     }
   ]
 }
