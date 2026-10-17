@@ -268,6 +268,7 @@ export async function deleteAccount(db: D1Database, uid: string): Promise<{ form
     byUser("solo_results"),
     byUser("pickup_seeds"),
     byUser("daily_completions"),
+    byUser("push_tokens"),
     db.prepare("DELETE FROM users WHERE id = ?1").bind(uid),
   ]);
   return { formerFriends };
