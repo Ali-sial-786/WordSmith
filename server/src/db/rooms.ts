@@ -6,12 +6,16 @@
  * Every write that changes a player's hint stock or XP also moves
  * `profiles.updated_at` on, so a solo sync that read the profile before it
  * notices and retries instead of overwriting the change (src/db/sync.ts).
+ * A finished match also counts towards each player's Work Orders
+ * (src/db/orders.ts), in the same batch.
  */
 
+import { orderProgress } from "./orders";
 import { coopAward, type CoopResults } from "../rules/coop-round";
 import type { HeatTier } from "../rules/heat";
 import { parseMpPuzzle, type MpPuzzle } from "../rules/mold";
 import { HINT_KINDS, levelFromTotalXp, noHints, type HintCounts, type HintKind } from "../rules/progression";
+import type { PlayFacts } from "../rules/orders";
 import type { RoomMode } from "../rules/room";
 import type { SeriesLength } from "../rules/vs";
 import { vsAward, type VsSeriesResults } from "../rules/vs-round";
@@ -141,6 +145,8 @@ interface PlayerWrite<B> {
   /** The `SET` list for their `stats` row; it may use `?3`, `?4`, … bound to {@link statsBinds}. */
   readonly statsSet: string;
   readonly statsBinds: readonly (string | number)[];
+  /** What the match counts towards their Work Orders. */
+  readonly facts: PlayFacts;
   /** What the caller gets back for them. */
   readonly body: B;
 }
@@ -148,7 +154,7 @@ interface PlayerWrite<B> {
 /**
  * Writes a finished match in one D1 batch: the `matches` row, and for each
  * player their `match_players` row, XP (`xp_events` with the mode as
- * source, profile and level), stats, Scrap Bin and hints won.
+ * source, profile and level), stats, Scrap Bin, hints won and Work Orders.
  *
  * Safe to repeat: a player who already has a row for this match is skipped
  * (`earlier` describes them from what's left). Each player's statements
@@ -213,6 +219,7 @@ async function writeMatch<B>(
              ON CONFLICT (match_id, user_id) DO NOTHING`,
           )
           .bind(uid, version, match.matchId, w.placement, w.points, w.roundsWon, w.xp),
+        ...orderProgress(db, uid, version, w.facts, now),
       );
       // Last, because it moves the version the statements above check.
       profileStatement.set(uid, statements.length);
@@ -253,6 +260,8 @@ export interface CoopRoundRecord {
   readonly startedAt: number;
   readonly endedAt: number;
   readonly results: CoopResults;
+  /** The grid words each player forged, for their Work Orders. Absent in records stored before them. */
+  readonly forged?: Readonly<Record<string, readonly string[]>>;
 }
 
 /** 1-based places by points; equal points share a place. */
@@ -309,6 +318,7 @@ export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, no
         roundsWon: 0,
         statsSet: `coop_rounds = coop_rounds + 1, coop_mvps = coop_mvps + ?3, words_forged = words_forged + ?4, ${longestWordSet(5)}`,
         statsBinds: [results.mvp === uid ? 1 : 0, player.words, player.longest],
+        facts: { coopRounds: 1, bonusWords: player.bonus, forged: record.forged?.[uid] ?? [] },
         body: { xp: award.amount, level: award.xp.level, levelUps: award.xp.levelsGained, rewards: award.xp.rewards, scrapHammers: award.scrap.hammers },
       };
     },
@@ -329,6 +339,8 @@ export interface VsSeriesRecord {
   readonly startedAt: number;
   readonly endedAt: number;
   readonly results: VsSeriesResults;
+  /** The grid words each racer forged on their own molds, for their Work Orders. Absent in records stored before them. */
+  readonly forged?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -372,6 +384,7 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
         statsSet: `vs_series = vs_series + 1, vs_series_won = vs_series_won + ?3, vs_rounds_won = vs_rounds_won + ?4,
                    words_forged = words_forged + ?5, ${longestWordSet(6)}`,
         statsBinds: [results.winner === uid ? 1 : 0, player.wins, player.words, player.longest],
+        facts: { vsSeries: 1, bonusWords: player.bonus, forged: record.forged?.[uid] ?? [] },
         body: {
           xp: award.amount,
           level: award.xp.level,

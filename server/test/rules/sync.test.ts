@@ -56,6 +56,7 @@ function state(overrides: Partial<SoloState> = {}): SoloState {
     wordsForged: 0,
     longestWord: "",
     soloDone: 0,
+    masterworkPieces: 0,
     completedStages: new Set(),
     installSeeds: new Set(),
     ...overrides,

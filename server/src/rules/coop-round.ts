@@ -424,6 +424,14 @@ export function coopResults(r: CoopRound, reason: RoundEndReason, now: number): 
   };
 }
 
+/** The grid words each player forged (claimed), in order, for their Work Orders (shared/forge-board.md). */
+export function forgedWords(r: CoopRound): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const id of r.playerIds) out[id] = [];
+  for (const c of r.claims) (out[c.by] ??= []).push(c.word);
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // XP and the Scrap Bin (DESIGN.md §4.2, §3.2)
 // ---------------------------------------------------------------------------

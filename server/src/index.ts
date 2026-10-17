@@ -10,11 +10,12 @@ import { authenticate } from "./auth/request";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json } from "./http";
 import { Router } from "./router";
+import { getBoard, postFriendGift, postGiftsClaim, postOrderClaim, postOrderSwap, postStokeClaim, postTrialsClaim } from "./routes/board";
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
 import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
-import { getDaily, postDailyComplete } from "./routes/daily";
+import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { postSync } from "./routes/solo";
 import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
@@ -40,15 +41,24 @@ const router = new Router<Handler>([
   { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },
   { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
 
+  { method: "GET", path: "/v1/me/board", handler: authed(getBoard) },
+  { method: "POST", path: "/v1/me/stoke/claim", handler: authed(postStokeClaim) },
+  { method: "POST", path: "/v1/me/orders/swap", handler: authed(postOrderSwap) },
+  { method: "POST", path: "/v1/me/orders/claim", handler: authed(postOrderClaim) },
+  { method: "POST", path: "/v1/me/trials/claim", handler: authed(postTrialsClaim) },
+  { method: "POST", path: "/v1/me/gifts/claim", handler: authed(postGiftsClaim) },
+
   { method: "POST", path: "/v1/solo/sync", handler: authed(postSync) },
 
   { method: "GET", path: "/v1/daily", handler: authed(getDaily) },
   { method: "POST", path: "/v1/daily/complete", handler: authed(postDailyComplete) },
+  { method: "GET", path: "/v1/daily/calendar", handler: authed(getDailyCalendar) },
 
   { method: "GET", path: "/v1/friends", handler: authed(getFriends) },
   { method: "POST", path: "/v1/friends/request", handler: authed(postFriendRequest) },
   { method: "POST", path: "/v1/friends/respond", handler: authed(postFriendRespond) },
   { method: "DELETE", path: "/v1/friends/:id", handler: authed(deleteFriend) },
+  { method: "POST", path: "/v1/friends/:id/gift", handler: authed(postFriendGift) },
   { method: "GET", path: "/v1/leaderboard", handler: authed(getLeaderboard) },
 
   { method: "POST", path: "/v1/rooms", handler: authed(postRoom) },

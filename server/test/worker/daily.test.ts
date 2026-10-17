@@ -75,6 +75,7 @@ describe("GET /v1/daily", () => {
       completed: false,
       streak: 0,
       best: 0,
+      total: 0,
     });
     expect((await daily(b)).puzzle).toEqual(today.puzzle);
 
@@ -132,9 +133,10 @@ describe("POST /v1/daily/complete", () => {
     const sat = await daily(a);
     expect(sat).toMatchObject({ completed: false, streak: 2 });
     expect((await complete(a, solved(sat))).body).toMatchObject({ xp: 35, streak: 3, best: 3 });
-    // An hour in, yesterday's is too late, even as a repeat.
+    // An hour in, yesterday's would be late (shared/daily.md, "Calendar and
+    // catch-up"), and this one is a repeat anyway.
     a = await at("2026-10-17T01:00:00Z", a);
-    expect(await complete(a, solved(fri))).toMatchObject({ status: 400, body: { error: "wrong_day" } });
+    expect(await complete(a, solved(fri))).toMatchObject({ status: 200, body: { xp: 0, late: true, alreadyDone: true } });
 
     const me = await body<Message>(await a.get("/v1/me"));
     expect(me.totalXp).toBe(25 + 30 + 25 + 30 + 35);
@@ -194,7 +196,8 @@ describe("POST /v1/daily/complete", () => {
     let a: Client = await setUpClient();
     a = await at("2026-10-17T15:00:00Z", a);
     const today = await daily(a);
-    for (const date of ["2026-10-16", "2026-10-15", "2026-10-18"]) {
+    // Days before the 1st of last month, and days to come.
+    for (const date of ["2026-08-31", "2026-10-18", "2026-11-01"]) {
       expect(await complete(a, solved(today, { date }))).toMatchObject({ status: 400, body: { error: "wrong_day" } });
     }
     const words = today.puzzle.words as { w: string }[];

@@ -1,14 +1,17 @@
 /**
  * The Daily Commission (shared/daily.md): one puzzle a day, the same for
  * everyone, solved solo with the answers on the phone and checked by the
- * server when it's sent, with a streak of days in a row. Pure: the route
- * reads the day's puzzle and the player's completions and writes what these
- * return. The checks and the hint, Scrap Bin and XP arithmetic are solo
- * sync's (sync.ts, progression.ts).
+ * server when it's sent, with a streak of days in a row. Missed days from
+ * the 1st of last month on can be played late, for flat XP and no streak,
+ * and each month's days done earn a trophy. Pure: the route reads the day's
+ * puzzle and the player's completions and writes what these return. The
+ * checks and the hint, Scrap Bin and XP arithmetic are solo sync's
+ * (sync.ts, progression.ts).
  */
 
 import type { CampaignPuzzle } from "./campaign";
 import type { HeatTier } from "./heat";
+import type { PlayFacts } from "./orders";
 import { fnv1a32 } from "./pickups";
 import { addToScrapBin, applyXp, noHints, type HintCounts, type ScrapBinResult, type XpAward } from "./progression";
 import { couldBeFilled, isPlausibleDuration, parseHintCounts, spendHints, stringList } from "./sync";
@@ -20,6 +23,8 @@ export const DAILY_STREAK_XP = 5;
 export const DAILY_STREAK_XP_CAP = 30;
 /** Yesterday's puzzle may still be sent this long into the new UTC day. */
 export const DAILY_GRACE_MS = 3600_000;
+/** XP for a late completion (a catch-up day), whatever the streak. */
+export const DAILY_LATE_XP = 15;
 
 const DAY_MS = 86_400_000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -66,11 +71,92 @@ export function dailyPuzzleId(date: string): string {
   return `daily-${date}`;
 }
 
-/** A completion sent at `now` may be for today, or for yesterday within the first hour of today. */
+/**
+ * A completion sent at `now` is on time for today, or for yesterday within
+ * the first hour of today. Only on-time completions make streaks.
+ */
 export function isCompletableDay(date: string, now: number): boolean {
   const today = utcDate(now);
   if (date === today) return true;
   return date === addDays(today, -1) && now - Date.parse(`${today}T00:00:00Z`) < DAILY_GRACE_MS;
+}
+
+/** The first day that can still be played late: the 1st of last month. */
+export function firstCatchUpDay(today: string): string {
+  return `${previousMonth(monthOf(today))}-01`;
+}
+
+/** Days that can be shown and played at `now`: from the 1st of last month up to today. */
+export function isPlayableDay(date: string, now: number): boolean {
+  const today = utcDate(now);
+  return date >= firstCatchUpDay(today) && date <= today;
+}
+
+/** A playable day that isn't on time: completing it is late (flat XP, no streak). */
+export function isLateDay(date: string, now: number): boolean {
+  return isPlayableDay(date, now) && !isCompletableDay(date, now);
+}
+
+// ---------------------------------------------------------------------------
+// Months and trophies
+// ---------------------------------------------------------------------------
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Whether `value` is a `YYYY-MM` month. */
+export function isMonth(value: unknown): value is string {
+  return typeof value === "string" && MONTH_RE.test(value);
+}
+
+/** The `YYYY-MM` month of a date. */
+export function monthOf(date: string): string {
+  return date.slice(0, 7);
+}
+
+/** The month before `month`. */
+export function previousMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
+export function daysInMonth(month: string): number {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+export type Trophy = "bronze" | "silver" | "gold";
+
+/** Days done in a month for a silver or bronze trophy; gold is every day. */
+export const SILVER_DAYS = 15;
+export const BRONZE_DAYS = 7;
+
+/** A month's trophy for `done` days completed in it (on time or late). */
+export function monthTrophy(month: string, done: number): Trophy | null {
+  if (done >= daysInMonth(month)) return "gold";
+  if (done >= SILVER_DAYS) return "silver";
+  if (done >= BRONZE_DAYS) return "bronze";
+  return null;
+}
+
+export type TrophyCounts = Record<Trophy, number>;
+
+/** How many months have earned each trophy; a month counts once, at its best. */
+export function trophyCounts(dates: Iterable<string>): TrophyCounts {
+  const perMonth = new Map<string, number>();
+  for (const d of new Set(dates)) perMonth.set(monthOf(d), (perMonth.get(monthOf(d)) ?? 0) + 1);
+  const counts: TrophyCounts = { bronze: 0, silver: 0, gold: 0 };
+  for (const [month, n] of perMonth) {
+    const trophy = monthTrophy(month, n);
+    if (trophy !== null) counts[trophy] += 1;
+  }
+  return counts;
+}
+
+/** `GET /v1/daily/calendar` for `month`: the days done in it (ascending), its trophy so far, and every month's. */
+export function calendar(month: string, dates: Iterable<string>): { month: string; days: string[]; trophy: Trophy | null; trophies: TrophyCounts } {
+  const all = [...new Set(dates)];
+  const days = all.filter((d) => monthOf(d) === month).sort();
+  return { month, days, trophy: monthTrophy(month, days.length), trophies: trophyCounts(all) };
 }
 
 // ---------------------------------------------------------------------------
@@ -183,23 +269,27 @@ export interface DailyState {
 
 export interface DailyAward {
   readonly xp: number;
+  /** A catch-up day: flat XP, and no streak. */
+  readonly late: boolean;
   readonly award: XpAward;
   readonly scrap: ScrapBinResult;
   /** Hints used beyond the stock (never taken below zero), or `null`. */
   readonly hintsClamped: HintCounts | null;
   readonly state: DailyState;
+  /** What it counts towards the player's Work Orders. */
+  readonly facts: PlayFacts;
 }
 
 /**
- * A day's first completion, with `streak` counting that day: daily XP and
- * any level-up rewards, the valid bonus words into the Scrap Bin, and the
- * hints used taken off the stock (after the Scrap Bin's hammers, before
- * the level-up rewards, as in solo sync). Typed grid words count as words
- * forged.
+ * A day's first completion, with `streak` counting that day: daily XP (or
+ * {@link DAILY_LATE_XP} if it's `late`) and any level-up rewards, the valid
+ * bonus words into the Scrap Bin, and the hints used taken off the stock
+ * (after the Scrap Bin's hammers, before the level-up rewards, as in solo
+ * sync). Typed grid words count as words forged.
  */
-export function applyDaily(state: DailyState, c: DailyCompletion, puzzle: CampaignPuzzle, streak: number): DailyAward {
+export function applyDaily(state: DailyState, c: DailyCompletion, puzzle: CampaignPuzzle, streak: number, late = false): DailyAward {
   const { found, bonus } = wordsOf(c, puzzle);
-  const xp = dailyXp(streak);
+  const xp = late ? DAILY_LATE_XP : dailyXp(streak);
   const award = applyXp(state.totalXp, xp);
   const scrap = addToScrapBin(state.scrapBin, bonus.size);
   const gained = noHints();
@@ -209,9 +299,11 @@ export function applyDaily(state: DailyState, c: DailyCompletion, puzzle: Campai
   for (const w of found) if (w.length > longestWord.length) longestWord = w;
   return {
     xp,
+    late,
     award,
     scrap,
     hintsClamped: spent.clamped,
     state: { totalXp: award.totalXp, scrapBin: scrap.bin, hints: spent.hints, wordsForged: state.wordsForged + found.size, longestWord },
+    facts: { dailies: 1, bonusWords: bonus.size, forged: [...found] },
   };
 }

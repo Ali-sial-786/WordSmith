@@ -3,9 +3,9 @@
  * to each of the invited friend's phones.
  */
 
-import { forgetPushTokens } from "../db/push";
 import type { RoomMode } from "../hub/protocol";
 import type { FcmMessage, FcmSender } from "./fcm";
+import { pushToTokens } from "./send";
 
 export interface InviteNotice {
   /** The inviter's user ID. */
@@ -35,14 +35,6 @@ export function inviteMessage(token: string, invite: InviteNotice): FcmMessage {
  * Sends the invite to each token, then deletes the tokens FCM reported as
  * dead. Never rejects: an invite never fails because a notification did.
  */
-export async function pushInvite(sender: FcmSender, db: D1Database, tokens: readonly string[], invite: InviteNotice): Promise<void> {
-  try {
-    const outcomes = await Promise.all(tokens.map((token) => sender.send(inviteMessage(token, invite))));
-    await forgetPushTokens(
-      db,
-      tokens.filter((_, i) => outcomes[i] === "drop_token"),
-    );
-  } catch (err) {
-    console.error("invite notification failed", err);
-  }
+export function pushInvite(sender: FcmSender, db: D1Database, tokens: readonly string[], invite: InviteNotice): Promise<void> {
+  return pushToTokens(sender, db, tokens, (token) => inviteMessage(token, invite), "invite");
 }

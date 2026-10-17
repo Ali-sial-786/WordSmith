@@ -24,9 +24,15 @@
  * bonus words in the Scrap Bin (each 10 → a Hammer Strike), grants the
  * claimed pickups the server can reproduce, and takes off the hints used.
  * Hint stock never goes below zero: an overdraw is clamped and reported.
+ * A claimed gilded cell the server can reproduce is a blueprint piece
+ * (shared/masterworks.md), and a piece that finishes a Masterwork grants
+ * its reward too. The outcome also says what the accepted entries count
+ * towards the player's Work Orders (orders.ts).
  */
 
 import type { CampaignPuzzle } from "./campaign";
+import { gildedCell, MASTERWORK_REWARD, masterworksFinishedBetween } from "./masterworks";
+import type { PlayFacts } from "./orders";
 import { pickupsFor } from "./pickups";
 import {
   addToScrapBin,
@@ -38,6 +44,7 @@ import {
   type HintCounts,
   type HintKind,
 } from "./progression";
+import { addRewards, asGranted, type Reward } from "./rewards";
 import { normalizeWord } from "./words";
 
 /** Most entries one `POST /v1/solo/sync` may carry; the app sends bigger queues in chunks. */
@@ -68,6 +75,7 @@ const MAX_FOUND_WORDS = 64;
 const MAX_BONUS_WORDS = 1000;
 const MAX_WORD_LENGTH = 16;
 const MAX_PICKUP_CLAIMS = 8;
+const MAX_GILDED_CLAIMS = 4;
 const MAX_HINTS_USED = 10_000;
 const MAX_SEED_LENGTH = 128;
 const MAX_DURATION_MS = 30 * 24 * 3600 * 1000;
@@ -86,8 +94,10 @@ export interface SyncEntry {
   readonly bonusWords: readonly string[];
   readonly hintsUsed: Readonly<HintCounts>;
   readonly pickups: readonly ClaimedPickup[];
-  /** The id the pickups were seeded with; `null` means the account's own uid. */
+  /** The id the pickups (and the gilded cell) were seeded with; `null` means the account's own uid. */
   readonly pickupSeed: string | null;
+  /** Gilded cells collected (shared/masterworks.md); only one can be right. Absent or empty when none. */
+  readonly gilded?: readonly number[];
   readonly durationMs: number;
   readonly completedAt: number;
 }
@@ -169,6 +179,11 @@ export function parseSyncEntry(raw: unknown): ParsedEntry {
     pickups.push({ cell: p.cell, kind: p.kind as HintKind });
   }
 
+  const gilded = raw.gilded;
+  if (gilded !== undefined && (!Array.isArray(gilded) || gilded.length > MAX_GILDED_CLAIMS || !gilded.every((c) => isCount(c, 1000)))) {
+    return bad("gilded");
+  }
+
   let pickupSeed: string | null = null;
   if (raw.pickupSeed !== undefined && raw.pickupSeed !== null) {
     if (typeof raw.pickupSeed !== "string" || raw.pickupSeed === "" || raw.pickupSeed.length > MAX_SEED_LENGTH) {
@@ -190,6 +205,7 @@ export function parseSyncEntry(raw: unknown): ParsedEntry {
       hintsUsed,
       pickups,
       pickupSeed,
+      ...(gilded === undefined ? {} : { gilded: gilded as number[] }),
       durationMs: raw.durationMs,
       completedAt: raw.completedAt,
     },
@@ -286,6 +302,23 @@ export interface PickupCheck {
 }
 
 /**
+ * The seed an entry's pickups and gilded cell were made with, if this
+ * account may use it: its own uid, an install id it used before, or a new
+ * one while it has fewer than {@link MAX_INSTALL_SEEDS}. `null` otherwise.
+ */
+export function entrySeed(
+  uid: string,
+  entry: SyncEntry,
+  knownSeeds: ReadonlySet<string>,
+): { readonly seed: string; readonly newSeed: string | null } | null {
+  const seed = entry.pickupSeed ?? uid;
+  if (seed === uid) return { seed, newSeed: null };
+  if (!INSTALL_SEED_PATTERN.test(seed)) return null;
+  if (knownSeeds.has(seed)) return { seed, newSeed: null };
+  return knownSeeds.size >= MAX_INSTALL_SEEDS ? null : { seed, newSeed: seed };
+}
+
+/**
  * Which claimed pickups the server can reproduce with
  * `pickupsFor(seed, puzzleId, cellCount, levelAtStart)`. A claim on the
  * right cell gets the server's type (the level decides whether a Chisel or
@@ -298,18 +331,10 @@ export function checkPickups(
   levelAtStart: number,
   knownSeeds: ReadonlySet<string>,
 ): PickupCheck {
-  const none: PickupCheck = { granted: [], rejected: entry.pickups.length, newSeed: null };
   if (entry.pickups.length === 0) return { granted: [], rejected: 0, newSeed: null };
-
-  const seed = entry.pickupSeed ?? uid;
-  let newSeed: string | null = null;
-  if (seed !== uid) {
-    if (!INSTALL_SEED_PATTERN.test(seed)) return none;
-    if (!knownSeeds.has(seed)) {
-      if (knownSeeds.size >= MAX_INSTALL_SEEDS) return none;
-      newSeed = seed;
-    }
-  }
+  const accepted = entrySeed(uid, entry, knownSeeds);
+  if (accepted === null) return { granted: [], rejected: entry.pickups.length, newSeed: null };
+  const { seed, newSeed } = accepted;
 
   const expected = pickupsFor(seed, puzzle.id, puzzle.cellCount, levelAtStart);
   const claimed = new Set<number>();
@@ -324,6 +349,37 @@ export function checkPickups(
   return { granted, rejected, newSeed: granted.length > 0 ? newSeed : null };
 }
 
+export interface GildedCheck {
+  /** The gilded cell collected (a blueprint piece), or `null`. */
+  readonly cell: number | null;
+  /** An install id to remember for this account, if this entry used a new one. */
+  readonly newSeed: string | null;
+}
+
+/**
+ * Whether the entry collected its puzzle's gilded cell: one of its
+ * `gilded` claims is the cell `gildedCell(seed, puzzleId, cellCount,
+ * levelAtStart)` gives, for a seed the account may use (as for pickups).
+ * Wrong claims are ignored. A completed puzzle has every cell filled, so a
+ * right claim always counts.
+ */
+export function checkGilded(
+  uid: string,
+  entry: SyncEntry,
+  puzzle: CampaignPuzzle,
+  levelAtStart: number,
+  knownSeeds: ReadonlySet<string>,
+): GildedCheck {
+  const none: GildedCheck = { cell: null, newSeed: null };
+  const claims = entry.gilded ?? [];
+  if (claims.length === 0) return none;
+  const accepted = entrySeed(uid, entry, knownSeeds);
+  if (accepted === null) return none;
+  const cell = gildedCell(accepted.seed, puzzle.id, puzzle.cellCount, levelAtStart);
+  if (cell === null || !claims.includes(cell)) return none;
+  return { cell, newSeed: accepted.newSeed };
+}
+
 /** A player's solo-relevant numbers, before or after a sync. */
 export interface SoloState {
   readonly totalXp: number;
@@ -334,6 +390,8 @@ export interface SoloState {
   readonly wordsForged: number;
   readonly longestWord: string;
   readonly soloDone: number;
+  /** Blueprint pieces collected (shared/masterworks.md). */
+  readonly masterworkPieces: number;
   /** Stages already counted (at least every stage named in the batch). */
   readonly completedStages: ReadonlySet<number>;
   /** Install ids this account already uses as pickup seeds. */
@@ -349,9 +407,16 @@ interface ResultBase {
   readonly rewards: Readonly<HintCounts>;
 }
 
+/** A Masterwork an entry's piece finished, and what that granted. */
+export interface MasterworkFinished {
+  readonly id: string;
+  /** As granted (after any swap to Hammer Strikes). */
+  readonly reward: Reward;
+}
+
 export interface AcceptedResult extends ResultBase {
   readonly accepted: true;
-  /** Smith Level after this entry. */
+  /** Smith Level after this entry (and any Masterwork it finished). */
   readonly level: number;
   /** Hammer Strikes smelted from the Scrap Bin by this entry's bonus words. */
   readonly scrapHammers: number;
@@ -361,6 +426,10 @@ export interface AcceptedResult extends ResultBase {
   readonly pickupsRejected: number;
   /** Hints used beyond the stock the server knew of; only present if any. */
   readonly hintsClamped?: Readonly<HintCounts>;
+  /** The gilded cell collected (a blueprint piece); only present if one was. */
+  readonly gilded?: readonly number[];
+  /** The Masterwork that piece finished; only present if it did. Its XP isn't in `xp`, but its level-ups are in `levelUps`. */
+  readonly masterwork?: MasterworkFinished;
 }
 
 export interface RejectedResult extends ResultBase {
@@ -378,6 +447,8 @@ export interface AcceptedEntry {
   readonly puzzleId: string;
   readonly completedAt: number;
   readonly xp: number;
+  /** The Masterworks this entry finished, with the XP each granted (`xp_events` source `masterwork`). */
+  readonly masterworks: readonly { readonly id: string; readonly xp: number }[];
 }
 
 export interface SyncOutcome {
@@ -387,6 +458,8 @@ export interface SyncOutcome {
   readonly accepted: readonly AcceptedEntry[];
   readonly state: SoloState;
   readonly newInstallSeeds: readonly string[];
+  /** What the accepted entries count towards the player's Work Orders. */
+  readonly facts: PlayFacts;
 }
 
 export interface SyncInput {
@@ -417,12 +490,15 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
     (a, b) => a.entry.completedAt - b.entry.completedAt || a.entry.stage - b.entry.stage || a.index - b.index,
   );
 
-  let { totalXp, scrapBin, campaignCompleted, wordsForged, longestWord, soloDone } = state;
+  let { totalXp, scrapBin, campaignCompleted, wordsForged, longestWord, soloDone, masterworkPieces } = state;
   let hints: HintCounts = { ...state.hints };
   const completed = new Set(state.completedStages);
   const seeds = new Set(state.installSeeds);
   const newInstallSeeds: string[] = [];
   const accepted: AcceptedEntry[] = [];
+  const forged: string[] = [];
+  let noHintPuzzles = 0;
+  let bonusWords = 0;
 
   for (const { index, entry } of valid) {
     const puzzle = puzzles.get(entry.stage);
@@ -437,20 +513,37 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
     const levelAtStart = levelFromTotalXp(totalXp);
 
     const xp = soloPuzzleXp(bonusCount);
-    const award = applyXp(totalXp, xp);
     const scrap = addToScrapBin(scrapBin, bonusCount);
     const pickups = checkPickups(uid, entry, puzzle, levelAtStart, seeds);
     if (pickups.newSeed !== null) {
       seeds.add(pickups.newSeed);
       newInstallSeeds.push(pickups.newSeed);
     }
+    const gilded = checkGilded(uid, entry, puzzle, levelAtStart, seeds);
+    if (gilded.newSeed !== null) {
+      seeds.add(gilded.newSeed);
+      newInstallSeeds.push(gilded.newSeed);
+    }
+
+    // A piece that finishes a Masterwork grants its reward once the puzzle
+    // is done, with locked hint types swapped at the level reached by then.
+    const pieces = masterworkPieces + (gilded.cell === null ? 0 : 1);
+    let running = totalXp + xp;
+    const finished: MasterworkFinished[] = [];
+    for (const m of masterworksFinishedBetween(masterworkPieces, pieces)) {
+      const granted = asGranted(MASTERWORK_REWARD, levelFromTotalXp(running));
+      running += granted.xp;
+      finished.push({ id: m.id, reward: granted });
+    }
+    const award = applyXp(totalXp, running - totalXp);
+    const atTheEnd = addRewards({ xp: 0, hints: award.rewards }, ...finished.map((f) => f.reward)).hints;
 
     // Pickups and Scrap Bin hammers arrive mid-puzzle, so they can pay for
-    // hints used in it; level-up rewards only come at the end.
+    // hints used in it; level-up and Masterwork rewards only come at the end.
     const gained = noHints();
     gained.hammer += scrap.hammers;
     for (const p of pickups.granted) gained[p.kind] += 1;
-    const spent = spendHints(hints, gained, entry.hintsUsed, award.rewards);
+    const spent = spendHints(hints, gained, entry.hintsUsed, atTheEnd);
     hints = spent.hints;
 
     totalXp = award.totalXp;
@@ -459,8 +552,18 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
     wordsForged += found.size;
     for (const word of found) if (word.length > longestWord.length) longestWord = word;
     soloDone += 1;
+    masterworkPieces = pieces;
     completed.add(entry.stage);
-    accepted.push({ stage: entry.stage, puzzleId: puzzle.id, completedAt: entry.completedAt, xp });
+    accepted.push({
+      stage: entry.stage,
+      puzzleId: puzzle.id,
+      completedAt: entry.completedAt,
+      xp,
+      masterworks: finished.map((f) => ({ id: f.id, xp: f.reward.xp })),
+    });
+    forged.push(...found);
+    bonusWords += bonusCount;
+    if (HINT_KINDS.every((kind) => entry.hintsUsed[kind] === 0)) noHintPuzzles += 1;
 
     const result: AcceptedResult = {
       stage: entry.stage,
@@ -473,7 +576,12 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
       pickups: pickups.granted,
       pickupsRejected: pickups.rejected,
     };
-    results[index] = spent.clamped !== null ? { ...result, hintsClamped: spent.clamped } : result;
+    results[index] = {
+      ...result,
+      ...(spent.clamped !== null ? { hintsClamped: spent.clamped } : {}),
+      ...(gilded.cell !== null ? { gilded: [gilded.cell] } : {}),
+      ...(finished[0] !== undefined ? { masterwork: finished[0] } : {}),
+    };
   }
 
   return {
@@ -487,9 +595,11 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
       wordsForged,
       longestWord,
       soloDone,
+      masterworkPieces,
       completedStages: completed,
       installSeeds: seeds,
     },
     newInstallSeeds,
+    facts: { soloPuzzles: accepted.length, noHintPuzzles, bonusWords, forged },
   };
 }

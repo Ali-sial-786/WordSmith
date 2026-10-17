@@ -7,9 +7,15 @@
  * and {@link writeSync} returns false, so the caller re-reads and tries again.
  * That stops two overlapping syncs (a retry, or two phones) from granting
  * the same stage twice or losing each other's XP.
+ *
+ * The same batch adds the accepted entries to the player's Work Orders
+ * (src/db/orders.ts), and records Masterwork rewards as their own
+ * `xp_events` (`source: "masterwork"`), so their XP counts towards the
+ * Weekly Trials like the rest (migrations/0005_forge_board.sql).
  */
 
 import type { Account } from "./accounts";
+import { orderProgress } from "./orders";
 import { levelFromTotalXp } from "../rules/progression";
 import type { SoloState, SyncOutcome } from "../rules/sync";
 
@@ -29,6 +35,7 @@ export async function loadSoloState(db: D1Database, account: Account, stages: re
     wordsForged: account.stats.wordsForged,
     longestWord: account.stats.longestWord,
     soloDone: account.stats.soloDone,
+    masterworkPieces: account.masterworkPieces,
     completedStages: new Set(done!.results.map((r) => r.stage!)),
     installSeeds: new Set(seeds!.results.map((r) => r.seed!)),
   };
@@ -47,6 +54,7 @@ export async function writeSync(db: D1Database, account: Account, outcome: SyncO
   const version = account.version;
   const s = outcome.state;
   const accepted = JSON.stringify(outcome.accepted);
+  const masterworks = JSON.stringify(outcome.accepted.flatMap((a) => a.masterworks));
   const nextVersion = Math.max(now, version + 1);
 
   const statements = [
@@ -66,6 +74,13 @@ export async function writeSync(db: D1Database, account: Account, outcome: SyncO
       .bind(uid, version, accepted, now),
     db
       .prepare(
+        `INSERT INTO xp_events (user_id, source, amount, ref, created_at)
+         SELECT ?1, 'masterwork', json_extract(j.value, '$.xp'), json_extract(j.value, '$.id'), ?4
+           FROM json_each(?3) AS j WHERE ${UNCHANGED}`,
+      )
+      .bind(uid, version, masterworks, now),
+    db
+      .prepare(
         `INSERT INTO pickup_seeds (user_id, seed, first_used_at)
          SELECT ?1, j.value, ?4 FROM json_each(?3) AS j WHERE ${UNCHANGED}
          ON CONFLICT (user_id, seed) DO NOTHING`,
@@ -81,13 +96,14 @@ export async function writeSync(db: D1Database, account: Account, outcome: SyncO
     db
       .prepare(`UPDATE stats SET words_forged = ?3, longest_word = ?4, solo_done = ?5 WHERE user_id = ?1 AND ${UNCHANGED}`)
       .bind(uid, version, s.wordsForged, s.longestWord === "" ? null : s.longestWord, s.soloDone),
+    ...orderProgress(db, uid, version, outcome.facts, now),
     // Last, because it moves the version the statements above check.
     db
       .prepare(
-        `UPDATE profiles SET xp = ?3, level = ?4, campaign_stage = ?5, scrap_bin = ?6, updated_at = ?7
+        `UPDATE profiles SET xp = ?3, level = ?4, campaign_stage = ?5, scrap_bin = ?6, masterwork_pieces = ?7, updated_at = ?8
           WHERE user_id = ?1 AND updated_at = ?2`,
       )
-      .bind(uid, version, s.totalXp, levelFromTotalXp(s.totalXp), s.campaignCompleted, s.scrapBin, nextVersion),
+      .bind(uid, version, s.totalXp, levelFromTotalXp(s.totalXp), s.campaignCompleted, s.scrapBin, s.masterworkPieces, nextVersion),
   ];
 
   try {

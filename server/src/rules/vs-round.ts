@@ -257,6 +257,12 @@ export interface VsSeries {
   played: number;
   /** While the standings show: when the next countdown starts. */
   standingsEndsAt: number | null;
+  /**
+   * Grid words each racer forged on their own molds, for their Work Orders
+   * (shared/forge-board.md). Absent in series stored before them, and
+   * until the first round is recorded.
+   */
+  forged?: Record<string, string[]>;
 }
 
 export interface NewVsSeriesInput {
@@ -302,15 +308,17 @@ export function markOut(s: VsSeries, id: string): boolean {
   return true;
 }
 
-/** Adds a finished round to the series: the winner's win, and each racer's rounds, words, bonus words and embers. */
+/** Adds a finished round to the series: the winner's win, and each racer's rounds, words (and which), bonus words and embers. */
 export function recordRound(s: VsSeries, r: VsRound, result: VsRoundResult): void {
   s.played += 1;
+  const forged = (s.forged ??= {});
   for (const id of r.playerIds) {
     const racer = s.racers.find((x) => x.id === id);
     const mold = r.molds[id];
     if (racer === undefined || mold === undefined) continue;
     racer.rounds += 1;
     racer.words += mold.claims.length;
+    (forged[id] ??= []).push(...mold.claims.map((c) => c.word));
     for (const c of mold.claims) if (c.word.length > racer.longest.length) racer.longest = c.word;
     racer.bonus += mold.bonus.length;
     for (const p of mold.pickups) racer.pickups[p.kind] += 1;

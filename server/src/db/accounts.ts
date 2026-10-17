@@ -35,6 +35,11 @@ export interface Account {
   readonly version: number;
   readonly hints: Readonly<HintCounts>;
   readonly stats: Stats;
+  /** Daily Stoke claims ever made, and the UTC day of the last (shared/forge-board.md). */
+  readonly stokeClaims: number;
+  readonly stokeLast: string | null;
+  /** Blueprint pieces collected (shared/masterworks.md). */
+  readonly masterworkPieces: number;
 }
 
 export type SetUpAccount = Account & { readonly username: string; readonly avatar: string };
@@ -48,6 +53,9 @@ interface AccountRow {
   campaign_stage: number;
   scrap_bin: number;
   updated_at: number;
+  stoke_claims: number;
+  stoke_last: string | null;
+  masterwork_pieces: number;
   words_forged: number;
   longest_word: string | null;
   solo_done: number;
@@ -63,7 +71,7 @@ interface AccountRow {
 
 const ACCOUNT_SQL = `
 SELECT u.id, u.username, u.avatar, u.created_at,
-       p.xp, p.campaign_stage, p.scrap_bin, p.updated_at,
+       p.xp, p.campaign_stage, p.scrap_bin, p.updated_at, p.stoke_claims, p.stoke_last, p.masterwork_pieces,
        s.words_forged, s.longest_word, s.solo_done, s.coop_rounds, s.coop_mvps,
        s.vs_series, s.vs_series_won, s.vs_rounds_won,
        COALESCE((SELECT count FROM inventory WHERE user_id = u.id AND item = 'hammer'), 0) AS hammer,
@@ -95,6 +103,9 @@ function toAccount(row: AccountRow): Account {
       vsSeriesWon: row.vs_series_won,
       vsRoundsWon: row.vs_rounds_won,
     },
+    stokeClaims: row.stoke_claims,
+    stokeLast: row.stoke_last,
+    masterworkPieces: row.masterwork_pieces,
   };
 }
 
@@ -148,6 +159,8 @@ export interface ProfileBody {
   readonly scrapBin: number;
   readonly hints: Readonly<HintCounts>;
   readonly stats: Stats;
+  /** Blueprint pieces collected; the app works out the Masterworks from it (shared/masterworks.md). */
+  readonly masterworks: { readonly pieces: number };
   readonly createdAt: number;
 }
 
@@ -168,6 +181,7 @@ export function profileBody(account: Account): ProfileBody {
     scrapBin: account.scrapBin,
     hints: account.hints,
     stats: account.stats,
+    masterworks: { pieces: account.masterworkPieces },
     createdAt: account.createdAt,
   };
 }
@@ -260,6 +274,7 @@ export async function deleteAccount(db: D1Database, uid: string): Promise<{ form
       )
       .bind(uid, placeholder),
     db.prepare("DELETE FROM friends WHERE user_id = ?1 OR friend_id = ?1").bind(uid),
+    db.prepare("DELETE FROM gifts WHERE from_user = ?1 OR to_user = ?1").bind(uid),
     byUser("inventory"),
     byUser("stats"),
     byUser("profiles"),
@@ -269,6 +284,9 @@ export async function deleteAccount(db: D1Database, uid: string): Promise<{ form
     byUser("pickup_seeds"),
     byUser("daily_completions"),
     byUser("push_tokens"),
+    byUser("work_orders"),
+    byUser("weekly_xp"),
+    byUser("trial_claims"),
     db.prepare("DELETE FROM users WHERE id = ?1").bind(uid),
   ]);
   return { formerFriends };
