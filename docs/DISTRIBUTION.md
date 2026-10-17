@@ -36,7 +36,10 @@ or installing from a computer with ADB.
 
 ## 3. Package name and signing
 
-- **Package name (proposed):** `io.github.alisial786.wordsmith`. It can't be changed after the first release without everyone reinstalling.
+- **Package name:** `com.wordsmithforge.game`.
+  - It doesn't need to match a domain we own. It only has to be **unique**, meaning no other app uses it, and it must be accepted when we register it in the limited distribution account.
+  - A plain name like `com.wordsmith.game` is probably already taken by one of the existing "Wordsmith" apps, which is why it includes "forge".
+  - If registration says it's taken, we choose another **before the first friend build**. After that it can't change without everyone reinstalling.
 - **Release signing key:** generated once.
   - It's stored as **GitHub Actions secrets** (the keystore in base64 plus its passwords).
   - Keep a **backup somewhere safe**, such as a password manager.

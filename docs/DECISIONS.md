@@ -19,3 +19,4 @@ update the relevant plan document too.
 | 2026-10-17 | **Hints** are items, not bought with currency. They're **unlocked and granted by levelling up**, found as **random pickups in puzzles**, and earned from the Scrap Bin (bonus words). There's **no cap**, so players can save them up. There's no in-game currency in v1. | In co-op each player spends their own hints, and hinted letters score nothing. In VS, hints can't be used, but pickups found in VS are kept for later. |
 | 2026-10-17 | **Assets:** free, properly licensed assets first (CC0 preferred). Our own in Blender, Inkscape or code where those don't fit. | Rules in [ART_AND_AUDIO.md](ART_AND_AUDIO.md). |
 | 2026-10-17 | **English only. No free-text chat** (preset emotes instead). | — |
+| 2026-10-17 | **App ID (package name):** `com.wordsmithforge.game`. | No personal username in it. Confirmed when it's registered in the limited distribution account. |
