@@ -42,8 +42,34 @@ the server checks the result when it's sent.
   to that player for 60 days. The answers are public through `GET` (fine for a
   friends-only game).
 
+## Calendar and catch-up
+
+Missed a day? Days from the **1st of last month** up to yesterday can be
+played late, as in the genre's daily-puzzle calendars.
+
+- `GET /v1/daily?date=YYYY-MM-DD` → the same body for that day (without
+  `date`, today). Its `completed` is for that day; `streak` and `best` are as
+  usual. A date outside the window → `400 wrong_day`.
+- `POST /v1/daily/complete` also accepts any date in the window. A **late**
+  completion (any date other than today, apart from yesterday within the
+  first hour of today) grants a flat **15 XP**, never touches the streak, and
+  otherwise works the same (hints, Scrap Bin, `alreadyDone`, seen puzzles).
+- Every `GET /v1/daily` body also has `total`: all my completions, late ones
+  included. The app unlocks one Smith's Lore page per completion.
+- `GET /v1/daily/calendar?month=YYYY-MM` →
+  `{month, days, trophy, trophies}`:
+  - `days`: the dates I completed that month, on time or late, ascending.
+  - `trophy`: that month's trophy so far: `"gold"` when every day of the
+    month is done (only possible once the month is over or on its last day),
+    `"silver"` for 15+ days, `"bronze"` for 7+ days, otherwise `null`.
+  - `trophies`: `{bronze, silver, gold}`, how many months have earned each
+    (a month counts once, at its best trophy).
+  - `month` must be this month or last month for the calendar view; any
+    earlier month → `400 wrong_month`. (Trophy counts cover all months.)
+
 ## Storage
 
-A D1 table `daily_completions (user_id, date, completed_at, xp)` with primary
-key `(user_id, date)`; streaks are counted from it. Deleting an account deletes
-its rows.
+A D1 table `daily_completions (user_id, date, completed_at, xp, late)` with
+primary key `(user_id, date)`. Streaks are counted from it, ignoring `late`
+rows, so playing a missed day late can't repair a broken streak. Deleting an
+account deletes its rows.
