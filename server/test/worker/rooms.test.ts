@@ -103,6 +103,11 @@ describe("POST /v1/rooms and GET /v1/rooms/:code", () => {
       players: 1,
       maxPlayers: 4,
     });
+
+    // A code in use can't be opened again (POST /v1/rooms then tries another).
+    const other = { id: "someone", username: "Someone", avatar: "avatar_02", level: 1 };
+    expect(await stub(code).create(code, "coop", other)).toBe(false);
+    expect(await body(await a.get(`/v1/rooms/${code}`))).toMatchObject({ host: { id: a.uid } });
   });
 
   it("refuses bad requests", async () => {
@@ -412,6 +417,34 @@ describe("a co-op round", () => {
     again.ws.close();
   });
 
+  it("sends results without XP if D1 fails, then writes them on a retry", async () => {
+    const a = await setUpClient();
+    const code = await createRoom(a);
+    const sa = await join(a, code);
+    await startRound(sa, code);
+    const round = await roundOf(code);
+    await env.DB.prepare("ALTER TABLE match_players RENAME TO match_players_away").run();
+    try {
+      expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+      expect(await sa.next({ op: "ROUND_END" })).toMatchObject({ reason: "timeout", xp: {} });
+    } finally {
+      await env.DB.prepare("ALTER TABLE match_players_away RENAME TO match_players").run();
+    }
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE id = ?1").bind(round.matchId).first("n")).toBe(0);
+
+    // The alarm retries it.
+    expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+    const row = await env.DB.prepare("SELECT xp FROM match_players WHERE match_id = ?1 AND user_id = ?2").bind(round.matchId, a.uid).first("xp");
+    expect(row).toBe(20);
+    expect((await body<Message>(await a.get("/v1/me"))).totalXp).toBe(20);
+    // A rejoin now sees the XP too, and a further retry changes nothing.
+    sa.ws.close();
+    const back = await connect(a, `/v1/ws/room/${code}`);
+    expect((await back.next({ op: "SNAPSHOT" })).results.xp[a.uid]).toMatchObject({ xp: 20 });
+    await runInDurableObject(stub(code), (_i, state) => expect(state.storage.kv.get("award")).toBeUndefined());
+    back.ws.close();
+  });
+
   it("gives a collected ember to whoever forges its word", async () => {
     const a = await setUpClient();
     const code = await createRoom(a);
@@ -577,6 +610,18 @@ describe("rooms and players coming and going", () => {
     expect(keys).toBe(0);
     expect(await runInDurableObject(stub(code), (_i, state) => state.storage.getAlarm())).toBeNull();
     expect((await openSocket(a, `/v1/ws/room/${code}`)).status).toBe(404);
+  });
+
+  it("closes 30 minutes after the last message, telling everyone", async () => {
+    const a = await setUpClient();
+    const code = await createRoom(a);
+    const sa = await join(a, code);
+    sa.send({ op: "EMOTE", emote: "gg" });
+    await sa.next({ op: "EMOTE" });
+    // Nobody has dropped, so the next deadline is the idle close.
+    expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+    expect(await sa.closed).toEqual({ code: 4000, reason: "room_closed" });
+    expect((await a.get(`/v1/rooms/${code}`)).status).toBe(404);
   });
 
   it("closes a room nobody ever joined", async () => {

@@ -63,6 +63,16 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         sfx.play(completed ? SfxId.forged : SfxId.tick);
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
+      case RoomError(:final code):
+        final message = switch (code) {
+          'no_puzzle' => 'The forge has no puzzles ready. Try again in a minute.',
+          'not_host' => 'Only the host can do that.',
+          'not_enough_players' => 'Waiting for a smith to connect.',
+          _ => null,
+        };
+        if (message != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
       case RoomEmote(:final from, :final emote):
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

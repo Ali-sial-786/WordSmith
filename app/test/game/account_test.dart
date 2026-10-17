@@ -212,4 +212,24 @@ void main() {
     expect(server.deletedMe, isTrue);
     expect(c.read(accountProvider).phase, AccountPhase.signedOut);
   });
+
+  test('joining by code turns away full rooms and rounds in progress', () async {
+    final (c, auth, server, _) = await _setUp();
+    server.username = 'Ali';
+    auth.passwords['a@b.c'] = 'secret1';
+    await c.read(accountProvider.notifier).signIn('a@b.c', 'secret1');
+    await _settle();
+    Map<String, Object?> room(String phase, int players) =>
+        {'code': 'K7Q2AB', 'mode': 'coop', 'phase': phase, 'players': players, 'maxPlayers': 4};
+    final n = c.read(accountProvider.notifier);
+    Matcher fails(String code) => throwsA(isA<ApiException>().having((e) => e.code, 'code', code));
+
+    await expectLater(n.checkRoom('K7Q2AB'), fails('room_not_found'));
+    server.rooms['K7Q2AB'] = room('lobby', 4);
+    await expectLater(n.checkRoom('K7Q2AB'), fails('room_full'));
+    server.rooms['K7Q2AB'] = room('round', 2);
+    await expectLater(n.checkRoom('K7Q2AB'), fails('round_in_progress'));
+    server.rooms['K7Q2AB'] = room('results', 2);
+    await n.checkRoom('K7Q2AB');
+  });
 }

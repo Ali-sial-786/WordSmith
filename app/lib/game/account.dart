@@ -283,7 +283,16 @@ class AccountController extends Notifier<AccountState> {
   Future<String> createRoom(String mode) => _api!.createRoom(mode);
 
   /// Checks a typed code before joining. Throws [ApiException].
-  Future<void> checkRoom(String code) => _api!.room(code);
+  /// Throws an [ApiException] if the room is missing, full or mid-round.
+  Future<void> checkRoom(String code) async {
+    final room = await _api!.room(code);
+    final players = (room['players'] as num?)?.toInt() ?? 0;
+    final max = (room['maxPlayers'] as num?)?.toInt() ?? 4;
+    if (players >= max) throw const ApiException(409, 'room_full');
+    if (room['phase'] == 'countdown' || room['phase'] == 'round') {
+      throw const ApiException(409, 'round_in_progress');
+    }
+  }
 
   void dismissInvite(HubInvite invite) =>
       state = state.copyWith(invites: [...state.invites]..remove(invite));

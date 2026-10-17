@@ -109,6 +109,9 @@ class FakeServer {
   final friends = <Map<String, Object>>[];
   final incoming = <Map<String, Object>>[];
   bool down = false;
+
+  /// Room code → `GET /v1/rooms/:code` summary.
+  final rooms = <String, Map<String, Object?>>{};
   bool deletedMe = false;
   final calls = <String>[];
 
@@ -178,6 +181,10 @@ class FakeServer {
       case 'DELETE /me':
         deletedMe = true;
         return _json(200, {'ok': true});
+    }
+    if (req.method == 'GET' && path.startsWith('/rooms/')) {
+      final room = rooms[path.substring('/rooms/'.length)];
+      return room == null ? _json(404, {'error': 'room_not_found'}) : _json(200, room);
     }
     return _json(404, {'error': 'not_found'});
   }

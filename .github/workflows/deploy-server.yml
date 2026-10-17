@@ -2,8 +2,9 @@ name: Deploy server
 
 # Deploys the Cloudflare Worker (server/) and keeps its D1 database in step:
 # creates the database on the first run, applies migrations and reloads the
-# campaign. Runs on demand (Actions → Deploy server → Run workflow) and when
-# server/ or the campaign changes on the default branch.
+# campaign and the multiplayer puzzle bank. Runs on demand (Actions → Deploy
+# server → Run workflow) and when server/ or the campaign changes on the
+# default branch.
 #
 # Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
 # (docs/DISTRIBUTION.md §5). Without them it skips.
@@ -88,6 +89,12 @@ jobs:
         run: |
           npm run db:campaign
           npx wrangler d1 execute wordsmith --remote --file data/campaign.sql --yes
+
+      - name: Load the multiplayer puzzle bank
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm run db:bank
+          npx wrangler d1 execute wordsmith --remote --file data/bank.sql --yes
 
       - name: Deploy the Worker
         if: steps.secrets.outputs.ready == 'true'

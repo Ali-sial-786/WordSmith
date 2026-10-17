@@ -640,6 +640,9 @@ export class RoomDO extends DurableObject<Env> {
 
   /** Handles every deadline that has passed by `now`, in order. */
   private async catchUp(now: number): Promise<void> {
+    // One results write per pass: a failed one is retried by a later alarm,
+    // even when `now` is ahead of the clock its retry time was set by.
+    let wroteAward = false;
     for (let guard = 0; guard < 64; guard++) {
       const room = this.room();
       if (room === null) return;
@@ -655,6 +658,7 @@ export class RoomDO extends DurableObject<Env> {
       if (room.phase === "round" && round !== null && now >= round.endsAt) {
         this.finishRound("timeout", now);
         await this.announceResults();
+        wroteAward = true;
         continue;
       }
       const expired = room.players.find(
@@ -669,8 +673,9 @@ export class RoomDO extends DurableObject<Env> {
       }
       // A failed results write to retry, or one cut off by a restart.
       const award = this.read<PendingAward>(AWARD);
-      if (award !== null && now >= award.retryAt && this.awarding === null) {
+      if (award !== null && now >= award.retryAt && this.awarding === null && !wroteAward) {
         await this.announceResults();
+        wroteAward = true;
         continue;
       }
       return;
@@ -808,13 +813,16 @@ export class RoomDO extends DurableObject<Env> {
       }
     }
     if (levelled) this.write(ROOM, room);
-    if (!firstTime || this.round()?.matchId !== award.record.matchId) {
-      // A retry: ROUND_END already went out, so just show the new levels.
+    const body = this.resultsFields(award, xp ?? {});
+    const current = room.phase === "results" && this.round()?.matchId === award.record.matchId;
+    if (!firstTime || !current) {
+      // A retry: ROUND_END already went out, so just keep the results for
+      // SNAPSHOTs and show the new levels.
+      if (current && xp !== null) this.write(RESULTS, body);
       if (levelled) this.broadcast(this.lobbyMessage(room));
       return;
     }
-    const body = this.resultsFields(award, xp ?? {});
-    if (room.phase === "results") this.write(RESULTS, body);
+    this.write(RESULTS, body);
     this.broadcast({ op: "ROUND_END", ...body });
     this.broadcast(this.lobbyMessage(room));
   }

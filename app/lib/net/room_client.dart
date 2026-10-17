@@ -259,21 +259,32 @@ class Revealed extends RoomEvent {
 }
 
 class RoundPlayerResult {
-  const RoundPlayerResult(this.id, this.points, this.words, this.longest);
+  const RoundPlayerResult(this.id, this.points, this.words, this.longest, {this.username = '', this.bonus = 0});
 
   final String id;
   final int points;
   final int words;
   final String longest;
+
+  /// Set even for players who have left the room since.
+  final String username;
+
+  /// Bonus words found.
+  final int bonus;
 }
 
 class XpAward {
-  const XpAward(this.xp, this.level, this.levelUps, this.rewards);
+  const XpAward(this.xp, this.level, this.levelUps, this.rewards, {this.scrapHammers = 0});
 
   final int xp;
   final int level;
   final int levelUps;
+
+  /// Level-up rewards.
   final Map<String, int> rewards;
+
+  /// Hammer Strikes smelted from this round's bonus words (Scrap Bin).
+  final int scrapHammers;
 }
 
 class RoundEnd extends RoomEvent {
@@ -302,6 +313,8 @@ class RoundEnd extends RoomEvent {
           p['points'] as int? ?? 0,
           p['words'] as int? ?? 0,
           p['longest'] as String? ?? '',
+          username: p['username'] as String? ?? '',
+          bonus: p['bonus'] as int? ?? 0,
         ),
     ]..sort((a, b) => b.points.compareTo(a.points)),
     mvp: j['mvp'] as String?,
@@ -313,6 +326,7 @@ class RoundEnd extends RoomEvent {
           (e.value['level'] as num?)?.toInt() ?? 1,
           (e.value['levelUps'] as num?)?.toInt() ?? 0,
           _scores(e.value['rewards']),
+          scrapHammers: (e.value['scrapHammers'] as num?)?.toInt() ?? 0,
         ),
     },
   );
@@ -405,7 +419,9 @@ class RoomClient {
       onMessage: _onMessage,
       onOpen: () => _status.add(true),
       onDown: () => _status.add(false),
-      onGiveUp: (c) => _closed.complete(c),
+      onGiveUp: (c) {
+        if (!_closed.isCompleted) _closed.complete(c);
+      },
     );
   }
 

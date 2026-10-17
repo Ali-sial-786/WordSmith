@@ -176,8 +176,10 @@ void main() {
         'total': 7,
         'stars': 2,
         'players': [
-          {'id': 'u1', 'points': 30, 'words': 1, 'longest': 'CAT'},
-          {'id': 'u2', 'points': 30, 'words': 1, 'longest': 'TOE'},
+          {'id': 'u1', 'username': 'Ada', 'points': 30, 'words': 1, 'longest': 'CAT', 'bonus': 0},
+          {'id': 'u2', 'username': 'sam', 'points': 30, 'words': 1, 'longest': 'TOE', 'bonus': 0},
+          // Left mid-round: only the results know the name.
+          {'id': 'u3', 'username': 'Kit', 'points': 0, 'words': 0, 'longest': '', 'bonus': 2},
         ],
         'mvp': 'u1',
         'answers': [
@@ -186,13 +188,16 @@ void main() {
           {'slot': 2, 'word': 'TOE'},
         ],
         'xp': {
-          'u1': {'xp': 85, 'level': 13, 'levelUps': 1, 'rewards': {'hammer': 1}},
+          'u1': {'xp': 85, 'level': 13, 'levelUps': 1, 'rewards': {'hammer': 1}, 'scrapHammers': 1},
         },
       });
     await until(() => session.results != null);
     expect(session.phase, 'results');
     expect(session.results!.completed, isFalse);
     expect(session.results!.xp['u1']!.levelUps, 1);
+    expect(session.results!.xp['u1']!.scrapHammers, 1);
+    expect(session.nameOf('u3'), 'Kit');
+    expect(session.results!.players.last.bonus, 2);
     expect(mold.letterAt((x: 0, y: 1)), 'O', reason: 'missed words are shown after the round');
     expect(mold.fillOf((x: 0, y: 1)), CellFill.revealed);
     expect(effects.last, isA<RoundEnd>());

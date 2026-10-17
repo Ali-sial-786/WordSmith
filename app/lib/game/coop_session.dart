@@ -205,8 +205,16 @@ class CoopSession extends ChangeNotifier {
     if (serverNow > 0) clockOffsetMs = serverNow - DateTime.now().millisecondsSinceEpoch;
   }
 
-  String nameOf(String? id) =>
-      id == null ? 'The forge' : (lobby?.player(id)?.username ?? 'A smith');
+  String nameOf(String? id) {
+    if (id == null) return 'The forge';
+    final name = lobby?.player(id)?.username;
+    if (name != null) return name;
+    // Players who left mid-round are only named in the results.
+    for (final p in results?.players ?? const <RoundPlayerResult>[]) {
+      if (p.id == id && p.username.isNotEmpty) return p.username;
+    }
+    return 'A smith';
+  }
 
   Color colorOf(String? id) {
     final p = id == null ? null : lobby?.player(id);

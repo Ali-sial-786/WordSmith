@@ -96,7 +96,11 @@ class ResultsView extends StatelessWidget {
                         style: text.titleSmall,
                       ),
                       Text(
-                        '${p.words} words${p.longest.isEmpty ? '' : ' · longest ${p.longest}'}',
+                        [
+                          '${p.words} ${p.words == 1 ? 'word' : 'words'}',
+                          if (p.bonus > 0) '${p.bonus} bonus',
+                          if (p.longest.isNotEmpty) 'longest ${p.longest}',
+                        ].join(' · '),
                         style: text.bodySmall,
                       ),
                     ],
@@ -113,6 +117,12 @@ class ResultsView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: text.titleMedium?.copyWith(color: Palette.molten),
           ),
+          if (mine.scrapHammers > 0)
+            Text(
+              'Scrap Bin: +${mine.scrapHammers} Hammer Strike${mine.scrapHammers == 1 ? '' : 's'}',
+              textAlign: TextAlign.center,
+              style: text.bodyMedium?.copyWith(color: Palette.verdigris),
+            ),
         ],
         const SizedBox(height: 14),
         if (session.mold != null)

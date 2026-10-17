@@ -122,25 +122,30 @@ definition of the hub messages. Two hub details:
 
 ### Room (RoomDO)
 
+Overview only. Co-op is specified exactly in
+[`shared/room-protocol.md`](../shared/room-protocol.md); the VS-only parts
+below are the M4 plan.
+
 | Op | Direction | Payload |
 |---|---|---|
-| `LOBBY_STATE` | S→C | players (ID, name, avatar, level, colour, ready), host, mode, heat, VS series length |
+| `WELCOME` | S→C | your user ID, protocol version, `serverNow` |
+| `LOBBY` | S→C | players (ID, name, avatar, level, colour, ready, connected), host, mode, phase, heat, VS series length |
 | `READY` | C→S | `{ready: bool}` |
 | `CONFIG` | C→S (host) | VS series length (3 / 5 / 7 / 10) |
 | `START` | C→S (host) | — |
 | `ROUND_START` | S→C | round number, grid size, slots (x, y, direction, length; **never the words**), letters, pickup cells, `startsAt`, `endsAt`, `serverNow`. VS also gets the series tally and the list of players in this round (for sudden death). |
 | `SUBMIT` | C→S | `{word, seq}` |
-| `WORD_RESULT` | S→C (to the sender only) | `seq`, and one of `claimed` / `bonus` / `already` (with who found it) / `invalid` / `rate_limited` |
-| `WORD_CLAIMED` | S→C (co-op, to everyone) | slot, word, player, points, pickup collected |
+| `WORD_RESULT` | S→C (to the sender only) | `seq`, and one of `claimed` / `bonus` / `already` (with who found it) / `invalid` / `rate_limited` / `too_late` |
+| `CLAIMED` | S→C (co-op, to everyone) | slot, word, player, points, scores, crossing slots it completed, pickup collected |
+| `BONUS` | S→C (co-op, to everyone) | word, player, points, scores |
 | `REVEAL` | S→C | VS: the letters for your own slot (to you only). Co-op: hinted letters (to everyone). |
 | `HINT` | C→S (co-op) | `{type, cell?}` — the server checks your stock and spends one |
 | `PROGRESS` | S→C (VS, to everyone) | player, letters filled, % of the mold filled. **No words.** |
-| `ROUND_END` | S→C | Co-op: team result, stars, per-player breakdown, MVP. VS: round winner, how they won (`finished` / `timeout` / `none`), series tally. |
-| `SERIES_END` | S→C (VS) | podium, tiebreak details if a sudden-death round was needed |
-| `XP_AWARDED` | S→C | per player: XP, any level-up, hint rewards |
+| `ROUND_END` | S→C | Co-op: team result, stars, per-player breakdown, MVP, every answer, and per player XP, level-ups and hint rewards. VS: round winner, how they won (`finished` / `timeout` / `none`), series tally. |
+| `SERIES_END` | S→C (VS) | podium, tiebreak details if a sudden-death round was needed, XP |
 | `SNAPSHOT` | S→C | full room and round state, sent on join or rejoin |
 | `EMOTE` | C→S→C | preset emote ID |
-| `ERROR` | S→C | code and message (e.g. `room_full`, `not_host`, `version_too_old`) |
+| `ERROR` | S→C | code (e.g. `not_host`, `wrong_phase`, `no_hint`). Joining a full room or one mid-round is refused before the WebSocket upgrade. |
 
 ### Clock
 - The server sends `startsAt`, `endsAt` and `serverNow` as epoch milliseconds.
@@ -178,8 +183,8 @@ definition of the hub messages. Two hub details:
 - **Choosing a puzzle at the start of a round:** query D1 for the heat tier (and, for co-op, the size for the team), excluding puzzles any player has seen in the last 60 days. One is chosen at random.
 - **Pickups in multiplayer:** the server picks pickup cells at random when the round starts. In VS everyone gets the same cells, because it's the same puzzle.
 - **Checking a word:** normalise it to uppercase A–Z, check it's 3+ letters and can be made from the anvil's letters, then look it up in this puzzle's answer set and its bonus set (both precomputed by the generator, so no full dictionary is needed on the server).
-- **Rate limit:** a token bucket of 4 per second per socket. 10 invalid words within 5 seconds triggers a 3-second lockout.
-- **Writing results:** at the end of a round or series the server writes match records, XP, stats and hint changes to D1 in **one batch**, then sends `XP_AWARDED`.
+- **Rate limit:** words use a token bucket of 4 per second **per player** (so a second socket doesn't double it); 10 invalid words within 5 seconds triggers a 3-second lockout. Other messages: a burst of 10, then 2 a second, per socket.
+- **Writing results:** at the end of a round or series the server writes match records, XP, stats and hint changes to D1 in **one batch**, and the XP goes out in `ROUND_END` (retried by the alarm if the write fails).
 - **Rejoining:** a socket that closes mid-round starts a 30-second grace period. A player who reconnects with the same user ID gets a `SNAPSHOT`.
 - **Host handoff:** in the lobby, if the host leaves, the player who joined earliest becomes host and the heat is recalculated.
 
