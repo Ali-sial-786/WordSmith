@@ -11,7 +11,7 @@
 > - **M4:** live. Versus app and server are built; a best-of-3 series passed against the real server (podium, XP, stats). Waiting on a real-phones test.
 > - **M5:** mostly done.
 >   - Done: the Daily Commission (live, tested), rank badges, music and match sounds, the level-up flourish after matches, the update banner, multiplayer records on the profile, Join-a-friend, and the 130%-text accessibility pass.
->   - Still open: chapter art for the remaining metals (in progress), push notifications for invites (needs Firebase Cloud Messaging set up by the owner).
+>   - Still open: chapter art for the remaining metals (in progress), invite notifications are built and switch on once the owner adds the `FCM_SERVICE_ACCOUNT` secret (DISTRIBUTION.md §5).
 > - **Video chat (extra):** live. Tokens verified against LiveKit; needs a two-phone test.
 
 ---

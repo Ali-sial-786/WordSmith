@@ -120,6 +120,12 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 3. Add the GitHub **secrets** `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`.
 4. GitHub → **Actions → Deploy server → Run workflow** (or wait for the next server change). The run copies them to the Worker.
 
+**Invite notifications (Firebase Cloud Messaging, free):** optional.
+1. Firebase console → ⚙ **Project settings** → **Cloud Messaging**: check that **Firebase Cloud Messaging API (V1)** says *Enabled*.
+2. **Project settings → Service accounts → Generate new private key.** A JSON file downloads.
+3. Add a GitHub **secret** named `FCM_SERVICE_ACCOUNT` containing the whole JSON file, then delete the file.
+4. GitHub → **Actions → Deploy server → Run workflow**. The run copies it to the Worker. Friends get a notification when invited, and tapping it opens the room.
+
 Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
 `flutter build apk --dart-define-from-file=dart_defines.json`.
 
