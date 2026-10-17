@@ -14,6 +14,7 @@ import '../../engine/puzzle.dart';
 import '../../game/account.dart';
 import '../../game/daily_game.dart';
 import '../../game/providers.dart';
+import '../../game/replay_game.dart';
 import '../../game/solo_controller.dart';
 import '../../net/api_client.dart';
 import '../../net/models.dart';
@@ -31,13 +32,16 @@ import '../../ui/widgets/word_preview.dart';
 import 'forged_overlay.dart';
 
 class PuzzleScreen extends ConsumerStatefulWidget {
-  const PuzzleScreen({super.key, required int this.stage}) : daily = null;
+  const PuzzleScreen({super.key, required int this.stage, this.replay = false}) : daily = null;
 
   /// Today's Daily Commission instead of a campaign stage.
-  const PuzzleScreen.daily({super.key, required DailyInfo this.daily}) : stage = null;
+  const PuzzleScreen.daily({super.key, required DailyInfo this.daily}) : stage = null, replay = false;
 
   final int? stage;
   final DailyInfo? daily;
+
+  /// A finished campaign puzzle played again from the chapter map.
+  final bool replay;
 
   @override
   ConsumerState<PuzzleScreen> createState() => _PuzzleScreenState();
@@ -82,6 +86,12 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                       ..invalidate(dailyCalendarProvider);
                   },
                 )
+              : widget.replay
+              ? ReplayGame(
+                  stage: widget.stage!,
+                  campaign: ref.read(campaignProvider),
+                  profile: ref.read(profileProvider.notifier),
+                )
               : SoloController(
                   stage: widget.stage!,
                   campaign: ref.read(campaignProvider),
@@ -91,6 +101,44 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
           ..addListener(_onGameChanged);
     if (_game.isComplete) _finish();
     _account = ref.read(accountProvider.notifier)..setStatus('solo');
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startTips());
+  }
+
+  /// Explains a gilded cell or an ember the first time a puzzle has one.
+  void _startTips() {
+    if (!mounted || _game.isComplete) return;
+    final store = ref.read(storeProvider);
+    final board = _game.board;
+    final tips = [
+      if (board.gilded != null && !board.gildedCollected)
+        ('gilded', 'A gilded cell! Forge the word through it for a blueprint piece.', Palette.gold),
+      if (board.pickups.isNotEmpty) ('ember', 'An ember! Forge the word through it for a free hint.', Palette.molten),
+    ].where((t) => !store.seenTip(t.$1)).toList();
+    for (final (i, (id, text, color)) in tips.indexed) {
+      store.markTip(id);
+      Future.delayed(Duration(milliseconds: 600 + 2600 * i), () {
+        if (mounted) _toast.currentState?.show(text, color: color);
+      });
+    }
+  }
+
+  /// The tiles a first-time player is shown swiping: the puzzle's shortest
+  /// word, until they forge their first one.
+  List<int>? get _guide {
+    if (widget.stage != 1 || widget.replay || _game.board.foundSlots.isNotEmpty || _finishing) return null;
+    // A looping hand is too much motion for some; the text hint stays.
+    if (ref.read(settingsProvider).reducedMotion) return null;
+    final word = (_game.board.puzzle.slots.map((s) => s.word).toList()..sort((a, b) => a.length - b.length)).first;
+    final used = <int>[];
+    for (final ch in word.split('')) {
+      final tile = List.generate(_game.letters.length, (i) => i).firstWhere(
+        (i) => _game.letters[i] == ch && !used.contains(i),
+        orElse: () => -1,
+      );
+      if (tile < 0) return null;
+      used.add(tile);
+    }
+    return used;
   }
 
   late final AccountController _account;
@@ -142,13 +190,22 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
         _sfx.play(SfxId.clang);
         _haptic(HapticFeedback.mediumImpact);
         _announcePickups(r.collected, gilded: r.gilded);
+        final store = ref.read(storeProvider);
+        if (!store.seenTip('meaning') && !r.gilded && r.collected.isEmpty && !_game.isComplete) {
+          store.markTip('meaning');
+          Future.delayed(const Duration(milliseconds: 900), () {
+            if (mounted) _toast.currentState?.show('Tip: tap a forged word to see what it means');
+          });
+        }
       case SubmitOutcome.bonus:
         _preview.currentState?.react(r.word, PreviewResult.bonus);
         _sfx.play(SfxId.bonus);
         _haptic(HapticFeedback.lightImpact);
         _burstAt(_scrapKey, small: true);
         final bin = ref.read(profileProvider).scrapBin;
-        if (fb.smelted) {
+        if (widget.replay) {
+          _toast.currentState?.show('Bonus word!', color: Palette.verdigris);
+        } else if (fb.smelted) {
           Future.delayed(const Duration(milliseconds: 350), () {
             _sfx.play(SfxId.pickup);
             _burstAt(_scrapKey);
@@ -221,6 +278,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
 
   void _useHint(HintKind kind) {
     if (_finishing) return;
+    if (widget.replay) {
+      _toast.currentState?.show('Replays are just for fun: no hints', color: Palette.steel);
+      return;
+    }
     final level = ref.read(profileProvider).level;
     if (!kind.unlockedAt(level)) {
       _toast.currentState?.show('${kind.title} unlocks at Smith Level ${kind.unlockLevel}');
@@ -308,6 +369,21 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     final campaign = ref.read(campaignProvider);
     final next = (widget.stage ?? 0) + 1;
 
+    if (game is ReplayGame) {
+      await showForgedOverlay(
+        context,
+        reward: reward,
+        chapter: game.chapter,
+        nextChapter: null,
+        replay: true,
+        pickups: const [],
+        bonusWords: game.board.bonusFound.length,
+        words: [for (final s in game.board.puzzle.slots) s.word]
+          ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
+      );
+      if (mounted) context.canPop() ? context.pop() : context.go('/chapters');
+      return;
+    }
     final action = await showForgedOverlay(
       context,
       reward: reward,
@@ -454,6 +530,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                             order: _game.order,
                             size: ring,
                             enabled: !_finishing && !_chisel,
+                            guide: _guide,
                             onSelectionChanged: _onSelection,
                             onSubmit: _onSubmit,
                           ),

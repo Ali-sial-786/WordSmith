@@ -31,6 +31,7 @@ Future<ForgedAction> showForgedOverlay(
   DailyOutcome? daily,
   bool dailyLate = false,
   int? lorePage,
+  bool replay = false,
 }) async {
   final result = await showGeneralDialog<ForgedAction>(
     context: context,
@@ -40,9 +41,7 @@ Future<ForgedAction> showForgedOverlay(
     transitionBuilder: (context, a, _, child) => FadeTransition(
       opacity: a,
       child: ScaleTransition(
-        scale: Tween(begin: 0.9, end: 1.0).animate(
-          CurvedAnimation(parent: a, curve: Curves.easeOutBack),
-        ),
+        scale: Tween(begin: 0.9, end: 1.0).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)),
         child: child,
       ),
     ),
@@ -56,6 +55,7 @@ Future<ForgedAction> showForgedOverlay(
       daily: daily,
       dailyLate: dailyLate,
       lorePage: lorePage,
+      replay: replay,
     ),
   );
   return result ?? ForgedAction.hall;
@@ -72,6 +72,7 @@ class _ForgedCard extends StatefulWidget {
     this.daily,
     this.dailyLate = false,
     this.lorePage,
+    this.replay = false,
   });
 
   final CompletionReward reward;
@@ -94,15 +95,15 @@ class _ForgedCard extends StatefulWidget {
   /// The Smith's Lore page (index) this commission unlocked.
   final int? lorePage;
 
+  /// A replay from the chapter map: no XP, just the words.
+  final bool replay;
+
   @override
   State<_ForgedCard> createState() => _ForgedCardState();
 }
 
 class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _bar = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  );
+  late final AnimationController _bar = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
 
   @override
   void initState() {
@@ -139,7 +140,8 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
     final text = Theme.of(context).textTheme;
     final daily = widget.daily;
     final chapterDone = r.chapterFinished;
-    final campaignDone = daily == null && widget.nextChapter == null;
+    final replay = widget.replay;
+    final campaignDone = daily == null && widget.nextChapter == null && !replay;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -152,18 +154,17 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
               color: Palette.soot,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: const Color(0xFF8C6B47), width: 2),
-              boxShadow: [
-                BoxShadow(color: Palette.ember.withValues(alpha: 0.35), blurRadius: 40),
-              ],
+              boxShadow: [BoxShadow(color: Palette.ember.withValues(alpha: 0.35), blurRadius: 40)],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'FORGED!',
-                  style: displayStyle(40, color: Palette.molten).copyWith(
-                    shadows: const [Shadow(color: Palette.ember, blurRadius: 24)],
-                  ),
+                  style: displayStyle(
+                    40,
+                    color: Palette.molten,
+                  ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 24)]),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -173,46 +174,50 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                             : widget.dailyLate
                             ? 'Late commission forged'
                             : 'Daily Commission forged')
+                      : replay
+                      ? 'Replay complete · just for practice'
                       : chapterDone
                       ? '${widget.chapter!.name} chapter complete!'
                       : '${widget.chapter!.name} puzzle forged',
                   style: text.titleSmall?.copyWith(color: Palette.steel),
                 ),
                 const SizedBox(height: 20),
-                Text('+${r.xp} XP', style: displayStyle(26)),
-                if (widget.bonusWords > 0 && daily == null)
-                  Text(
-                    'includes +${soloXp(bonusWords: widget.bonusWords) - soloXp(bonusWords: 0)} for bonus words',
-                    style: text.bodySmall,
-                  ),
-                const SizedBox(height: 14),
-                AnimatedBuilder(
-                  animation: _bar,
-                  builder: (context, _) {
-                    final (level, fraction) = _barAt(Curves.easeInOut.transform(_bar.value));
-                    return Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Smith Level $level',
-                                overflow: TextOverflow.ellipsis,
-                                style: text.labelLarge,
+                if (!replay) ...[
+                  Text('+${r.xp} XP', style: displayStyle(26)),
+                  if (widget.bonusWords > 0 && daily == null)
+                    Text(
+                      'includes +${soloXp(bonusWords: widget.bonusWords) - soloXp(bonusWords: 0)} for bonus words',
+                      style: text.bodySmall,
+                    ),
+                  const SizedBox(height: 14),
+                  AnimatedBuilder(
+                    animation: _bar,
+                    builder: (context, _) {
+                      final (level, fraction) = _barAt(Curves.easeInOut.transform(_bar.value));
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Smith Level $level',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.labelLarge,
+                                ),
                               ),
-                            ),
-                            Text(
-                              Rank.forLevel(level).title,
-                              style: text.labelMedium?.copyWith(color: Palette.molten),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        XpBar(fraction: fraction, height: 12),
-                      ],
-                    );
-                  },
-                ),
+                              Text(
+                                Rank.forLevel(level).title,
+                                style: text.labelMedium?.copyWith(color: Palette.molten),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          XpBar(fraction: fraction, height: 12),
+                        ],
+                      );
+                    },
+                  ),
+                ],
                 if (r.leveledUp) ...[
                   const SizedBox(height: 18),
                   _Banner(
@@ -262,10 +267,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     ],
                   ),
                 ],
-                if (r.gildedPiece) ...[
-                  const SizedBox(height: 14),
-                  _MasterworkNote(reward: r),
-                ],
+                if (r.gildedPiece) ...[const SizedBox(height: 14), _MasterworkNote(reward: r)],
                 if (chapterDone && !campaignDone) ...[
                   const SizedBox(height: 14),
                   Text(
@@ -287,25 +289,16 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     children: [
                       const GameIcon('flame', size: 26, color: Palette.molten),
                       const SizedBox(width: 8),
-                      Text(
-                        '${daily.streak}-day streak',
-                        style: displayStyle(20, color: Palette.molten),
-                      ),
+                      Text('${daily.streak}-day streak', style: displayStyle(20, color: Palette.molten)),
                     ],
                   ),
                   Text(
                     daily.best > daily.streak ? 'Best: ${daily.best} days' : 'Your best yet!',
                     style: text.bodyMedium?.copyWith(color: Palette.steel),
                   ),
-                  Text(
-                    'A new commission arrives at midnight UTC.',
-                    style: text.bodySmall,
-                  ),
+                  Text('A new commission arrives at midnight UTC.', style: text.bodySmall),
                 ],
-                if (widget.lorePage case final index?) ...[
-                  const SizedBox(height: 14),
-                  _LoreNote(index: index),
-                ],
+                if (widget.lorePage case final index?) ...[const SizedBox(height: 14), _LoreNote(index: index)],
                 if (campaignDone) ...[
                   const SizedBox(height: 14),
                   Text(
@@ -315,7 +308,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                   ),
                 ],
                 const SizedBox(height: 24),
-                if (!campaignDone && daily == null)
+                if (!campaignDone && daily == null && !replay)
                   PlateButton(
                     label: 'Next puzzle',
                     icon: 'anvil',
@@ -324,7 +317,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                   ),
                 const SizedBox(height: 10),
                 PlateButton(
-                  label: 'Forge Hall',
+                  label: replay ? 'Back' : 'Forge Hall',
                   height: 48,
                   onPressed: () => Navigator.of(context).pop(ForgedAction.hall),
                 ),
@@ -411,7 +404,11 @@ class _MasterworkNote extends ConsumerWidget {
         ),
         child: Column(
           children: [
-            Text('MASTERWORK COMPLETE!', textAlign: TextAlign.center, style: displayStyle(20, color: Palette.gold)),
+            Text(
+              'MASTERWORK COMPLETE!',
+              textAlign: TextAlign.center,
+              style: displayStyle(20, color: Palette.gold),
+            ),
             const SizedBox(height: 8),
             SvgPicture.asset(
               'assets/masterworks/${done.id}.svg',

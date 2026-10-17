@@ -43,7 +43,7 @@ class ChaptersScreen extends ConsumerWidget {
                 opacity: locked ? 0.5 : 1,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: current ? () => context.push('/play/$stage') : null,
+                  onTap: locked ? null : () => context.push('/chapters/${ch.id}'),
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(

@@ -143,6 +143,15 @@ class Store {
   static const _settingsKey = 'settings.v1';
   static const _savedKey = 'saved_puzzle.v1';
   static const _syncKey = 'sync_queue.v1';
+  static const _tipsKey = 'tips_seen.v1';
+
+  /// One-time tips the player has already been shown.
+  bool seenTip(String id) => _prefs.getStringList(_tipsKey)?.contains(id) ?? false;
+
+  void markTip(String id) {
+    final seen = _prefs.getStringList(_tipsKey) ?? const [];
+    if (!seen.contains(id)) _prefs.setStringList(_tipsKey, [...seen, id]);
+  }
 
   Profile loadProfile() {
     final raw = _prefs.getString(_profileKey);

@@ -20,6 +20,7 @@ class AnvilRing extends StatefulWidget {
     required this.onSubmit,
     this.onSelectionChanged,
     this.enabled = true,
+    this.guide,
   });
 
   final String letters;
@@ -32,6 +33,9 @@ class AnvilRing extends StatefulWidget {
   /// Called with the current word whenever the selection changes.
   final ValueChanged<String>? onSelectionChanged;
   final bool enabled;
+
+  /// Tiles to show a hand swiping through, to teach a first-time player.
+  final List<int>? guide;
 
   @override
   State<AnvilRing> createState() => AnvilRingState();
@@ -178,6 +182,12 @@ class AnvilRingState extends State<AnvilRing> {
                 child: LetterTile(
                   letter: widget.letters[tile],
                   hot: _selected.contains(tile),
+                ),
+              ),
+            if (widget.guide case final guide? when _selected.isEmpty && !_moving && guide.length > 1)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: SwipeGuide(points: [for (final t in guide) _tileCenter(t)], size: d),
                 ),
               ),
           ],
@@ -358,4 +368,76 @@ class _TrailPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrailPainter old) =>
       old.pointer != pointer || old.points.length != points.length || old.width != width;
+}
+
+/// A hand tracing a swipe through [points], over and over.
+class SwipeGuide extends StatefulWidget {
+  const SwipeGuide({super.key, required this.points, required this.size});
+
+  final List<Offset> points;
+
+  /// Tile diameter, to size the hand and trail.
+  final double size;
+
+  @override
+  State<SwipeGuide> createState() => _SwipeGuideState();
+}
+
+class _SwipeGuideState extends State<SwipeGuide> with SingleTickerProviderStateMixin {
+  late final AnimationController _loop = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: 900 + 500 * widget.points.length),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _loop.dispose();
+    super.dispose();
+  }
+
+  /// The point a fraction [f] (0–1) of the way along the path.
+  Offset _along(double f) {
+    final pts = widget.points;
+    final segments = pts.length - 1;
+    final x = (f * segments).clamp(0.0, segments.toDouble());
+    final i = x.floor().clamp(0, segments - 1);
+    return Offset.lerp(pts[i], pts[i + 1], x - i)!;
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _loop,
+    builder: (context, _) {
+      final t = _loop.value;
+      // Rest on the first tile, trace the word, then fade out.
+      final move = Curves.easeInOut.transform(((t - 0.12) / 0.66).clamp(0.0, 1.0));
+      final fade = t < 0.08 ? t / 0.08 : t > 0.85 ? (1 - t) / 0.15 : 1.0;
+      final head = _along(move);
+      final path = [
+        widget.points.first,
+        for (var i = 1; i < widget.points.length && i / (widget.points.length - 1) <= move; i++) widget.points[i],
+        head,
+      ];
+      return Opacity(
+        opacity: fade.clamp(0.0, 1.0),
+        child: CustomPaint(
+          painter: _TrailPainter(points: path, pointer: null, width: widget.size * 0.18),
+          child: Stack(
+            children: [
+              Positioned(
+                left: head.dx - widget.size * 0.1,
+                top: head.dy - widget.size * 0.05,
+                child: Icon(
+                  Icons.touch_app,
+                  size: widget.size * 0.75,
+                  color: Palette.whiteHeat,
+                  shadows: const [Shadow(color: Colors.black87, blurRadius: 8)],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

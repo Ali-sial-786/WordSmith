@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/armory/armory_screen.dart';
+import 'features/campaign/chapter_map_screen.dart';
 import 'features/board/board_screen.dart';
 import 'features/account/setup_screen.dart';
 import 'features/account/sign_in_screen.dart';
@@ -28,6 +29,18 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HallScreen()),
     GoRoute(path: '/chapters', builder: (_, _) => const ChaptersScreen()),
+    GoRoute(
+      path: '/chapters/:id',
+      builder: (_, state) => ChapterMapScreen(chapterId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/replay/:stage',
+      builder: (_, state) => PuzzleScreen(
+        key: ValueKey('replay-${state.pathParameters['stage']}'),
+        stage: int.parse(state.pathParameters['stage']!),
+        replay: true,
+      ),
+    ),
     GoRoute(
       path: '/play/:stage',
       builder: (_, state) => PuzzleScreen(
