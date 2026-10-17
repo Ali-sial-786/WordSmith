@@ -78,8 +78,16 @@ def _print_table(header, rows):
 
 
 def report_path(path: str) -> str:
-    base = os.path.splitext(os.path.basename(path))[0]
-    return os.path.join(paths.REPORTS_DIR, base + ".gen.json")
+    """Where the generation report for an output file lives.
+
+    The committed outputs keep theirs in reports/; any other output gets one
+    beside it (so scratch runs never touch reports/).
+    """
+    for canonical in (paths.CAMPAIGN_JSON, paths.MP_BANK_JSON):
+        if os.path.abspath(path) == os.path.abspath(canonical):
+            base = os.path.splitext(os.path.basename(canonical))[0]
+            return os.path.join(paths.REPORTS_DIR, base + ".gen.json")
+    return os.path.splitext(os.path.abspath(path))[0] + ".gen.json"
 
 
 def stats(path: str) -> int:

@@ -27,6 +27,7 @@ SAMPLES = C.arg("samples", 128)
 ONLY = C.arg("only", "")
 FONT = os.path.join(C.THIRD, "fonts", "RobotoSlab-Black-static.ttf")
 
+ANVIL_YAW = 8.0
 TILE_R = 0.70
 TILE_R_SIN = 0.70 * math.sin(math.radians(12.0)) - 0.01
 TILE_POS = Vector((0.18, -0.04, 1.62 + TILE_R_SIN))
@@ -35,9 +36,10 @@ TILE_TILT = 12.0
 
 
 def build():
-    iron = P.iron_material("AnvilIron", base="#5E6064", rough=(0.30, 0.50),
+    iron = P.iron_material("AnvilIron", base="#585C63", rough=(0.30, 0.50),
                            bump=0.15, facet_scale=3.0)
-    anvil = P.anvil("Anvil", iron, depth=1.36)
+    anvil = P.anvil("Anvil", iron, depth=1.36, rot_z=math.radians(ANVIL_YAW),
+                    horn_len=1.15)
 
     # glowing tile = same lathe profile as the app's tiles, scaled
     tile = C.lathe("Tile", T.tile_profile(), segments=192)
@@ -77,23 +79,23 @@ def build():
     letter.data.materials.append(lm)
 
     # hammer, striking from the upper right
-    head = P.iron_material("HammerIron", base="#8A8886", rough=(0.25, 0.42),
+    head = P.iron_material("HammerIron", base="#7C7F85", rough=(0.25, 0.42),
                            bump=0.08, facet_scale=6.0)
-    wood = P.wood_material("Handle", value=0.7, scale=2.0)
-    ham = P.hammer("Hammer", head, wood, head_len=1.25, head_w=0.56,
-                   handle_len=2.1, pein_axis="y", handle_r=0.1)
+    wood = P.wood_material("Handle", value=1.1, scale=2.0, tint="#C08050")
+    ham = P.hammer("Hammer", head, wood, head_len=1.05, head_w=0.52,
+                   handle_len=1.5, pein_axis="none", handle_r=0.1)
     # orient: striking face points `face_dir`, handle runs along `handle_dir`
-    face_dir = Vector((-0.42, 0.10, -0.90)).normalized()
-    handle_dir = Vector((0.80, 0.25, 0.30))
+    face_dir = Vector((-0.50, 0.05, -0.86)).normalized()
+    handle_dir = Vector((0.78, 0.25, 0.56))
     X = -face_dir
     Z = -(handle_dir - handle_dir.dot(X) * X).normalized()
     Y = Z.cross(X)
     ham.rotation_euler = Matrix((X, Y, Z)).transposed().to_euler()
-    ham.location = (1.02, 0.02, 2.16)
+    ham.location = (0.62, 0.02, 1.98)
 
     # sparks bursting from the strike
     spk = P.spark_material("Spark", strength=14.0)
-    origin = Vector((0.80, -0.12, 1.86))
+    origin = Vector((0.55, -0.15, 1.88))
     # main fan: up and to the right/front, away from the letter
     sp = P.sparks(origin, count=22, seed=7, direction=(0.55, -0.45, 0.70),
                   spread=48, length=(0.14, 0.42), dist=(0.55, 1.6),
@@ -109,11 +111,11 @@ def lights():
     C.world_gradient(C.hex_lin("#060404"), C.hex_lin("#22160F"),
                      C.hex_lin("#080605"), 1.0)
     # warm key, front-left high
-    C.area_light("Key", (-4.0, -4.5, 6.0), (0, 0, 1.2), 200, size=3.0,
-                 color=(1.0, 0.82, 0.66))
+    C.area_light("Key", (-4.0, -4.5, 6.0), (0, 0, 1.2), 170, size=3.0,
+                 color=(0.92, 0.9, 0.9))
     # strong orange rim from behind: outlines anvil + hammer on dark bg
-    C.area_light("RimL", (-3.5, 5.0, 3.5), (0, 0, 1.2), 1000, size=2.5,
-                 color=(1.0, 0.45, 0.15))
+    C.area_light("RimL", (-3.5, 5.0, 3.5), (0, 0, 1.2), 650, size=2.5,
+                 color=(1.0, 0.55, 0.3))
     C.area_light("RimR", (4.5, 4.0, 4.0), (0, 0, 1.5), 800, size=2.5,
                  color=(1.0, 0.55, 0.22))
     # cool faint fill from the right-front for iron sheen variety
@@ -125,7 +127,7 @@ def lights():
 
 
 def camera():
-    cam = C.persp_camera((1.0, -7.0, 7.2), (0.08, 0.0, 1.45), lens=50)
+    cam = C.persp_camera((0.76, -7.6, 7.4), (0.06, 0.0, 1.36), lens=50)
     cam.data.shift_y = 0.02
     return cam
 

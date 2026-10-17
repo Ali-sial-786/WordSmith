@@ -145,7 +145,7 @@ def _densify(pts, step=0.05):
 
 
 def anvil(name="Anvil", mat=None, depth=1.0, location=(0, 0, 0), rot_z=0.0,
-          bevel=0.06):
+          bevel=0.06, horn_len=1.55):
     """Classic London-pattern anvil: extruded rounded side profile (face,
     heel, waist, feet) + a conical horn. Origin at floor centre."""
     cu = bpy.data.curves.new(name + "Curve", "CURVE")
@@ -188,7 +188,8 @@ def anvil(name="Anvil", mat=None, depth=1.0, location=(0, 0, 0), rot_z=0.0,
     # horn: cone along -X, top roughly flush with the face
     hr = 0.36
     bpy.ops.mesh.primitive_cone_add(vertices=48, radius1=hr, radius2=0.025,
-                                    depth=1.55, location=(-1.0 - 0.72, 0, 1.62 - hr),
+                                    depth=horn_len,
+                                    location=(-1.0 - horn_len / 2 + 0.06, 0, 1.62 - hr),
                                     rotation=(0, -math.pi / 2, 0))
     horn = bpy.context.active_object
     horn.name = name + "Horn"
@@ -196,7 +197,7 @@ def anvil(name="Anvil", mat=None, depth=1.0, location=(0, 0, 0), rot_z=0.0,
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     # bend the tip slightly up
     for v in horn.data.vertices:
-        t = max(0.0, (-v.co.x - 0.0) / 0.78)
+        t = max(0.0, (-v.co.x - 0.0) / (horn_len / 2))
         v.co.z += 0.06 * t * t
     C.shade_smooth(horn)
     sub = horn.modifiers.new("Sub", "SUBSURF")
@@ -237,10 +238,10 @@ def hammer(name="Hammer", head_mat=None, handle_mat=None, head_len=1.0,
         if v.co.x > 0:               # pein end: taper to a wedge
             if pein_axis == "z":
                 v.co.z *= 0.35
-            else:
+            elif pein_axis == "y":
                 v.co.y *= 0.35
     bv = head.modifiers.new("Bevel", "BEVEL")
-    bv.width = 0.05
+    bv.width = 0.05 if pein_axis != "none" else head_w * 0.16
     bv.segments = 4
     sub = head.modifiers.new("Sub", "SUBSURF")
     sub.levels = sub.render_levels = 1

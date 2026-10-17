@@ -10,6 +10,7 @@ import time
 from collections import Counter
 
 from . import paths
+from .render import report_path
 from .generate import Result, SeedPool, Spec, generate_slot, spec_for
 from .layout import LayoutOptions
 from .tiers import (CHAPTERS, MP_ANSWER_LEVEL, MP_SEED_LEVEL, MP_SIZE_MIN, MP_SIZES, TIERS,
@@ -73,9 +74,8 @@ def dump_puzzle_file(path: str, head: dict, puzzles: list[dict]) -> None:
 
 
 def write_report(out_path: str, report: dict) -> str:
-    os.makedirs(paths.REPORTS_DIR, exist_ok=True)
-    base = os.path.splitext(os.path.basename(out_path))[0]
-    rp = os.path.join(paths.REPORTS_DIR, base + ".gen.json")
+    rp = report_path(out_path)
+    os.makedirs(os.path.dirname(rp), exist_ok=True)
     with open(rp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(report, f, indent=1)
         f.write("\n")

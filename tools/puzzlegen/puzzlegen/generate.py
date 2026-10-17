@@ -7,6 +7,7 @@ import random
 from dataclasses import dataclass, field
 
 from . import layout as layout_mod
+from .rules import check_puzzle
 from .tiers import TIERS, Tier
 from .words import Lexicon, signature
 
@@ -200,6 +201,11 @@ def make_puzzle(lex: Lexicon, seed_word: str, spec: Spec, rng: random.Random,
         "words": words,
         "bonus": bonus,
     }
+    # Independent re-check of every format rule; a failure here is a bug in
+    # the layout code, so the seed is rejected (and counted) rather than kept.
+    errors = check_puzzle(dict(puzzle, id="c-0000"), lex)
+    if errors:
+        return Result(None, "failed rule check", seed=seed_word, info={"errors": errors})
     diff = difficulty(lex, letters, placed, cols, rows)
     return Result(puzzle, "", diff, seed_word, info={
         "placed": len(placed), "target": spec.target, "candidates": len(answers),
