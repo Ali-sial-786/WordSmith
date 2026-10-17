@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply wordsmith --local",
     "db:campaign": "node scripts/build-campaign-sql.mjs",
-    "db:seed:local": "node scripts/build-campaign-sql.mjs && wrangler d1 execute wordsmith --local --file data/campaign.sql",
+    "db:bank": "node scripts/build-bank-sql.mjs",
+    "db:seed:local": "node scripts/build-campaign-sql.mjs && node scripts/build-bank-sql.mjs && wrangler d1 execute wordsmith --local --file data/campaign.sql && wrangler d1 execute wordsmith --local --file data/bank.sql",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

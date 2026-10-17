@@ -13,11 +13,13 @@ import { Router } from "./router";
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
 import { deleteMe, getMe, getUser, postSetup } from "./routes/me";
+import { getRoom, getRoomSocket, postRoom } from "./routes/rooms";
 import { postSync } from "./routes/solo";
 import { getHubSocket } from "./routes/ws";
 import { versionInfo } from "./version";
 
 export { HubDO } from "./hub/hub";
+export { RoomDO } from "./room/room";
 
 type Handler =
   | { readonly auth: false; readonly run: (c: RequestContext) => Response | Promise<Response> }
@@ -43,8 +45,12 @@ const router = new Router<Handler>([
   { method: "DELETE", path: "/v1/friends/:id", handler: authed(deleteFriend) },
   { method: "GET", path: "/v1/leaderboard", handler: authed(getLeaderboard) },
 
-  // Authenticates itself, from the WebSocket subprotocol header.
+  { method: "POST", path: "/v1/rooms", handler: authed(postRoom) },
+  { method: "GET", path: "/v1/rooms/:code", handler: authed(getRoom) },
+
+  // These authenticate themselves, from the WebSocket subprotocol header.
   { method: "GET", path: "/v1/ws/hub", handler: open(getHubSocket) },
+  { method: "GET", path: "/v1/ws/room/:code", handler: open(getRoomSocket) },
 ]);
 
 export default {

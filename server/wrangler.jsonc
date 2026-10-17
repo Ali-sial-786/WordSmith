@@ -29,13 +29,15 @@
   "durable_objects": {
     "bindings": [
       // One global instance (idFromName("global")): presence, invites, open rooms.
-      { "name": "HUB", "class_name": "HubDO" }
-      // RoomDO arrives in M3.
+      { "name": "HUB", "class_name": "HubDO" },
+      // One per room code (idFromName(code)): lobby, referee, timers.
+      { "name": "ROOM", "class_name": "RoomDO" }
     ]
   },
   // Durable Object class migrations. Append new entries; never edit old ones.
   // SQLite-backed classes are the only kind the Workers Free plan allows.
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["HubDO"] }
+    { "tag": "v1", "new_sqlite_classes": ["HubDO"] },
+    { "tag": "v2", "new_sqlite_classes": ["RoomDO"] }
   ]
 }

@@ -1,5 +1,6 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
+import { loadBankRows } from "./scripts/build-bank-sql.mjs";
 import { loadCampaignRows } from "./scripts/build-campaign-sql.mjs";
 
 export default defineConfig(async () => {
@@ -7,6 +8,8 @@ export default defineConfig(async () => {
   const migrations = await readD1Migrations(new URL("./migrations", import.meta.url).pathname);
   // The real campaign from app/assets/campaign/campaign.json, for sync tests.
   const campaign = loadCampaignRows();
+  // The multiplayer bank from data/mp_bank.json, for room tests.
+  const bank = loadBankRows();
 
   return {
     test: {
@@ -24,7 +27,7 @@ export default defineConfig(async () => {
           plugins: [
             cloudflareTest({
               wrangler: { configPath: "./wrangler.jsonc" },
-              miniflare: { bindings: { TEST_MIGRATIONS: migrations, TEST_CAMPAIGN: campaign } },
+              miniflare: { bindings: { TEST_MIGRATIONS: migrations, TEST_CAMPAIGN: campaign, TEST_BANK: bank } },
             }),
           ],
           test: {

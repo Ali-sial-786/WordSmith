@@ -12,6 +12,11 @@
  * - No alarms or timers. `{"op":"PING"}` keep-alives are answered by the
  *   runtime without waking the hub.
  *
+ * It also keeps the open-rooms directory: each RoomDO reports its listing
+ * (or its closing) through {@link HubDO.roomListing}, and every connected
+ * friend of the host gets a fresh `OPEN_ROOMS`. Listings live in the
+ * hub's storage (`rooms`).
+ *
  * A player can have several sockets (two phones, or a reconnect that beats
  * the old socket's close). They're online while any is open; their status
  * is the one set most recently on any of them.
@@ -26,7 +31,9 @@ import {
   RateLimiter,
   type ClientMessage,
   type HubErrorCode,
+  type OpenRoom,
   type PresenceStatus,
+  type RoomListing,
   type ServerMessage,
 } from "./protocol";
 
@@ -37,6 +44,22 @@ export const HUB_PROTOCOL_HEADER = "x-wordsmith-protocol";
 
 /** Close code when the account behind a socket is deleted. */
 export const CLOSE_ACCOUNT_DELETED = 4001;
+
+/**
+ * A listing not refreshed for this long is ignored. Rooms remove their own
+ * listing when they start or close; this only guards against a room that
+ * never got to.
+ */
+const STALE_LISTING_MS = 6 * 3600_000;
+
+type RoomRow = {
+  code: string;
+  mode: OpenRoom["mode"];
+  host_id: string;
+  host_username: string;
+  players: number;
+  max: number;
+};
 
 /** Messages a socket may send: a burst of 20, then 1 per second. */
 const RATE_BURST = 20;
@@ -90,6 +113,19 @@ export class HubDO extends DurableObject<Env> {
          PRIMARY KEY (user_id, friend_id)
        ) WITHOUT ROWID`,
     );
+    ctx.storage.sql.exec("CREATE INDEX IF NOT EXISTS links_by_friend ON links (friend_id)");
+    ctx.storage.sql.exec(
+      `CREATE TABLE IF NOT EXISTS rooms (
+         code          TEXT PRIMARY KEY,
+         mode          TEXT NOT NULL,
+         host_id       TEXT NOT NULL,
+         host_username TEXT NOT NULL,
+         players       INTEGER NOT NULL,
+         max           INTEGER NOT NULL,
+         updated_at    INTEGER NOT NULL
+       ) WITHOUT ROWID`,
+    );
+    ctx.storage.sql.exec("CREATE INDEX IF NOT EXISTS rooms_by_host ON rooms (host_id)");
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(PING, PONG));
   }
 
@@ -134,7 +170,7 @@ export class HubDO extends DurableObject<Env> {
       const status = this.statusOf(friend);
       if (status !== "offline") send(server, { op: "PRESENCE", userId: friend, status });
     }
-    send(server, { op: "OPEN_ROOMS", rooms: [] });
+    send(server, { op: "OPEN_ROOMS", rooms: this.openRoomsFor(uid) });
 
     const protocol = request.headers.get(HUB_PROTOCOL_HEADER);
     const headers = protocol ? { "Sec-WebSocket-Protocol": protocol } : undefined;
@@ -236,12 +272,57 @@ export class HubDO extends DurableObject<Env> {
       } else {
         this.ctx.storage.sql.exec("DELETE FROM links WHERE user_id = ? AND friend_id = ?", self, other);
       }
+      // The other's rooms now show (or stop showing) in my list.
+      if (this.hostsRooms(other)) this.sendOpenRooms(self);
       const otherStatus = this.statusOf(other);
       if (accepted && otherStatus === "offline") continue;
       for (const ws of this.socketsOf(self)) {
         send(ws, { op: "PRESENCE", userId: other, status: accepted ? otherStatus : "offline" });
       }
     }
+  }
+
+  /**
+   * A room's entry in the open-rooms directory changed: `listing` while it
+   * is joinable, `null` once it starts, fills up or closes. Every connected
+   * friend of its host (and of its previous host) gets a fresh OPEN_ROOMS.
+   */
+  async roomListing(code: string, listing: RoomListing | null): Promise<void> {
+    const before = this.ctx.storage.sql
+      .exec<{ host_id: string }>("SELECT host_id FROM rooms WHERE code = ?", code)
+      .toArray()[0]?.host_id;
+    if (listing === null) {
+      this.ctx.storage.sql.exec("DELETE FROM rooms WHERE code = ?", code);
+    } else {
+      this.ctx.storage.sql.exec(
+        `INSERT INTO rooms (code, mode, host_id, host_username, players, max, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (code) DO UPDATE SET mode = excluded.mode, host_id = excluded.host_id,
+           host_username = excluded.host_username, players = excluded.players, max = excluded.max,
+           updated_at = excluded.updated_at`,
+        code,
+        listing.mode,
+        listing.hostId,
+        listing.hostUsername,
+        listing.players,
+        listing.max,
+        Date.now(),
+      );
+    }
+    this.ctx.storage.sql.exec("DELETE FROM rooms WHERE updated_at < ?", Date.now() - STALE_LISTING_MS);
+
+    const audience = new Set<string>();
+    for (const host of new Set([before, listing?.hostId])) {
+      if (host === undefined) continue;
+      for (const r of this.ctx.storage.sql.exec<{ user_id: string }>("SELECT user_id FROM links WHERE friend_id = ?", host)) {
+        audience.add(r.user_id);
+      }
+    }
+    for (const uid of audience) this.sendOpenRooms(uid);
+  }
+
+  /** The open rooms `uid` sees (for tests). */
+  async openRooms(uid: string): Promise<OpenRoom[]> {
+    return this.openRoomsFor(uid);
   }
 
   /**
@@ -286,6 +367,32 @@ export class HubDO extends DurableObject<Env> {
   /** The most recently set status across a player's open sockets, or offline. */
   private statusOf(uid: string, except?: WebSocket): PresenceStatus {
     return latestStatus(this.attachmentsOf(uid, except));
+  }
+
+  /** Joinable rooms hosted by `uid`'s friends, newest first. Needs `uid` connected (it reads `links`). */
+  private openRoomsFor(uid: string): OpenRoom[] {
+    return this.ctx.storage.sql
+      .exec<RoomRow>(
+        `SELECT r.code, r.mode, r.host_id, r.host_username, r.players, r.max FROM rooms r
+           JOIN links l ON l.friend_id = r.host_id
+          WHERE l.user_id = ? AND r.updated_at >= ?
+          ORDER BY r.updated_at DESC`,
+        uid,
+        Date.now() - STALE_LISTING_MS,
+      )
+      .toArray()
+      .map((r) => ({ code: r.code, mode: r.mode, hostId: r.host_id, hostUsername: r.host_username, players: r.players, max: r.max }));
+  }
+
+  private sendOpenRooms(uid: string): void {
+    const sockets = this.socketsOf(uid);
+    if (sockets.length === 0) return;
+    const rooms = this.openRoomsFor(uid);
+    for (const ws of sockets) send(ws, { op: "OPEN_ROOMS", rooms });
+  }
+
+  private hostsRooms(uid: string): boolean {
+    return this.ctx.storage.sql.exec("SELECT 1 FROM rooms WHERE host_id = ? LIMIT 1", uid).toArray().length > 0;
   }
 
   private friendsOf(uid: string): string[] {

@@ -14,8 +14,9 @@
  * Server → client
  * - `{"op":"PRESENCE","userId","status"}`, status also `"offline"`
  * - `{"op":"INVITE","from","fromUsername","code","mode"}`
- * - `{"op":"OPEN_ROOMS","rooms":[{code, mode, hostId, players, max}]}`
- *   (always empty until rooms arrive in M3)
+ * - `{"op":"OPEN_ROOMS","rooms":[{code, mode, hostId, hostUsername, players, max}]}`:
+ *   the joinable rooms hosted by my friends (RoomDO reports them, see
+ *   HubDO.roomListing). Sent on connect and whenever that list changes.
  * - `{"op":"ERROR","code","message"?}`
  *
  * On connect the server sends one PRESENCE per online friend, then
@@ -41,12 +42,17 @@ export type ClientMessage =
   | { readonly op: "SET_STATUS"; readonly status: SettableStatus }
   | { readonly op: "INVITE"; readonly to: string; readonly code: string; readonly mode: RoomMode };
 
-export interface OpenRoom {
-  readonly code: string;
+/** A room as the hub lists it (without its code, which is the key). */
+export interface RoomListing {
   readonly mode: RoomMode;
   readonly hostId: string;
+  readonly hostUsername: string;
   readonly players: number;
   readonly max: number;
+}
+
+export interface OpenRoom extends RoomListing {
+  readonly code: string;
 }
 
 export type ServerMessage =
