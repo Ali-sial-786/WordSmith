@@ -63,3 +63,59 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 - **Embers:** go to whoever claims the first word through the cell. An ember on a hinted cell stays until a word through it is forged; one on a slot that fills in by itself is lost.
 - **Open rooms (hub):** friends see `OPEN_ROOMS` entries `{code, mode, hostId, hostUsername, players, max}` for rooms in the lobby or results that aren't full.
 - **XP:** written by the server at `ROUND_END` (DESIGN §4.2) together with the match records, stats and level-up rewards, in one D1 batch.
+
+---
+
+# Versus (M4): "Anvil Clash"
+
+Everything above applies unless this section says otherwise. Game rules are in
+`docs/DESIGN.md` §9; the pure rules already exist in `server/src/rules/vs.ts`
+(`resolveVsRound`, `seriesStatus`, `podium`), `heat.ts` (`vsHeat`,
+`vsRoundTimerMs`) and `progression.ts` (`vsSeriesXp`).
+
+## Creating and joining
+
+- `POST /v1/rooms` with `{mode: "vs"}`. Up to **5** players; `color` is 0–4 (copper, gold, verdigris, cobalt, titanium).
+- `GET /v1/rooms/:code` reports `maxPlayers: 5`.
+- Joining is refused with `409 round_in_progress` during `countdown`, `round` and `standings` unless the player already holds a seat.
+
+## Phases
+
+`lobby → countdown (3 s) → round → standings (10 s) → countdown → round → … → results`
+
+- After a round that doesn't end the series, `standings` shows for 10 s, then the next countdown starts by itself.
+- When the series is decided, the room goes straight to `results` (`ROUND_END` then `SERIES_END`).
+- From `results`, the host's `AGAIN` starts a new series with the same length and whoever is still seated.
+
+## Client → server (changes)
+
+| Op | Fields | Notes |
+|---|---|---|
+| `CONFIG` | `series`: 3 · 5 · 7 · 10 | Host only, in the lobby. Default 3. |
+| `START` | — | Host only. Needs at least **2** connected players (`not_enough_players`). |
+| `SUBMIT` | `word`, `seq` | Only players racing this round. Someone watching a sudden-death round gets `ERROR not_playing`. |
+| `HINT` | — | Not allowed in VS: `ERROR no_hints`. (Turn is local to the app.) |
+| `AGAIN` | — | Host only, from `results`: a new series. |
+
+## Server → client (changes)
+
+| Op | Fields |
+|---|---|
+| `LOBBY` | adds `series` (3, 5, 7 or 10). `heat` comes from the **median** level of the seated players (`vsHeat`). |
+| `ROUND_START` | the co-op fields (`slots` without words, `letters`, `pickups`, `startsAt`, `endsAt`, `serverNow`, …) plus `series` (length), `regular` (1…`series` for a regular round, `null` for sudden death), `suddenDeath` (bool), `players` (ids racing this round; everyone else watches) and `tally` (`{userId: wins}`). Everyone gets the same puzzle and letters. |
+| `WORD_RESULT` | Sent to the submitter only. `claimed` adds `slot` and `auto`: `[{slot, word}]` (crossing slots this completed on **your** mold; they fill in too), plus `pickup` if an ember was collected (granted after the series). `already` means you've already got that word. `bonus` means a bonus word (it goes to the Scrap Bin and never counts as progress). No `points` in VS. |
+| `PROGRESS` | Sent to everyone whenever a racer's count changes: `id`, `filled` (letter cells filled on their mold), `total`. Never words or cells. |
+| `ROUND_END` | `reason`: `finished` \| `timeout`; `winner` (user id or `null`); `how`: `finished` \| `timeout` \| `none`; `progress`: `[{id, filled, total}]` for the racers; `tally` (after this round); `answers`: `[{slot, word}]`; `next`: `{round, suddenDeath, players}` for the round coming after the standings, or `null` if the series is over; `standingsEndsAt` (ms, when the next countdown starts; `null` if the series is over). |
+| `SERIES_END` | `winner` (user id or `null`), `early` (clinched before the last regular round), `forfeit` (everyone else left), `rounds` (rounds played, sudden death included), `podium`: `[{id, username, wins, place}]` (equal wins share a place), `xp`: `{userId: {xp, level, levelUps, rewards, scrapHammers, pickups: {hammer, chisel, sparks}}}` (`{}` if the write failed; retried like co-op). |
+| `SNAPSHOT` | `lobby`; during `countdown`/`round`: `round` = the `ROUND_START` fields plus `mine`: `{claims: [{slot, word}], auto: [{slot, word}]}` (the receiver's own mold) and `progress`: `[{id, filled, total}]`; during `standings`: `standings` = the last `ROUND_END`; during `results`: `results` = the `SERIES_END` (and `standings` = the last `ROUND_END`). |
+| `ERROR` | adds `not_playing`, `no_hints`. |
+
+## Rules worth spelling out (VS)
+
+- **Puzzle:** one bank puzzle per round with `size` 1 at the room's heat, skipping ones any racer saw in the last 60 days. Each racer fills their **own** copy. The round timer is `vsRoundTimerMs(heat)`.
+- **Winning a round:** the first racer to fill every letter wins at once (`finished`); the round ends for everyone and boards freeze. At the timer, the most letters filled wins, a tie going to whoever reached that count first (`timeout`). Nobody filled anything: no winner (`none`). Use a server-side counter as `reachedAt` so it never ties.
+- **Series:** after each round use `seriesStatus`. Clinched → `SERIES_END`. All regular rounds played and tied → **sudden death** between the tied leaders only; a sudden-death round with no winner is played again with the same players.
+- **Disconnects:** a dropped racer's mold freezes and they have 30 s to come back and carry on. A racer who leaves or runs out of time can't win any more rounds but keeps their wins on the podium. If only one racer is left, they win by **forfeit**.
+- **Embers:** the same cells for everyone. Each racer who forges a word through an ember collects it once; it's granted after the series, not usable during it.
+- **XP** (one D1 batch at `SERIES_END`): `vsSeriesXp` (5 per round played, 10 per round won, 30 for winning the series), plus level-up rewards, Scrap Bin hammers from bonus words, ember pickups, and stats (VS series played and won, VS rounds won).
+- **Open rooms:** VS rooms in `lobby` or `results` that aren't full are listed to friends like co-op ones (`mode: "vs"`, `max: 5`).
