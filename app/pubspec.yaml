@@ -69,6 +69,8 @@ flutter:
     - assets/images/
     - assets/audio/
     - assets/icons/
+    - assets/lore/
+    - assets/masterworks/
     - assets/credits.json
     - assets/licenses/
     - assets/dict/

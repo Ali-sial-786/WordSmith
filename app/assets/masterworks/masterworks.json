@@ -1,0 +1,77 @@
+{
+  "v": 1,
+  "items": [
+    {
+      "id": "horseshoe",
+      "name": "The Lucky Horseshoe",
+      "pieces": 6,
+      "blurb": "Every smith's first true masterwork. Hang it points-up over the forge door to keep the luck in, or so the old farriers swear."
+    },
+    {
+      "id": "bell",
+      "name": "The Founder's Bell",
+      "pieces": 6,
+      "blurb": "Cast in bell bronze, four parts copper to one of tin. Strike it once and the whole valley knows the forge is lit."
+    },
+    {
+      "id": "dagger",
+      "name": "The Ember Dagger",
+      "pieces": 8,
+      "blurb": "A short blade of bright steel, its edge quenched until it sang. Small enough for a boot, sharp enough for a legend."
+    },
+    {
+      "id": "lantern",
+      "name": "The Nightwatch Lantern",
+      "pieces": 8,
+      "blurb": "Pierced iron around a steady flame. It has lit many a smith home long after the coals went grey."
+    },
+    {
+      "id": "helm",
+      "name": "The Vigil Helm",
+      "pieces": 8,
+      "blurb": "Raised from a single sheet of steel with a thousand patient blows. The visor lifts, so the wearer can see whom to thank."
+    },
+    {
+      "id": "shield",
+      "name": "The Bulwark Shield",
+      "pieces": 10,
+      "blurb": "A steel face on a riveted frame, banded and bordered. Built to take the blows so its bearer doesn't have to."
+    },
+    {
+      "id": "axe",
+      "name": "The Twin Moon Axe",
+      "pieces": 10,
+      "blurb": "Two crescent blades on one haft, balanced so well it feels lighter than it is. It is not light."
+    },
+    {
+      "id": "crown",
+      "name": "The Gilded Crown",
+      "pieces": 10,
+      "blurb": "Gold beaten fine and set with stones that drink the forge-light. Kings may wear it, but every king knows which smith made him shine."
+    },
+    {
+      "id": "longsword",
+      "name": "The Starfall Longsword",
+      "pieces": 12,
+      "blurb": "A long, true blade with a fuller from hilt to point. Its steel is said to hold a little iron that fell from the sky."
+    },
+    {
+      "id": "astrolabe",
+      "name": "The Star-Taker Astrolabe",
+      "pieces": 12,
+      "blurb": "Brass plates, a turning star map and a sighting rule. Hold it to the night sky and it tells the hour by the stars."
+    },
+    {
+      "id": "warhammer",
+      "name": "The Thunderhead Warhammer",
+      "pieces": 12,
+      "blurb": "A spiked head on an iron-banded haft, heavy enough to dent plate. Every apprentice asks to hold it once, and only once."
+    },
+    {
+      "id": "anvil",
+      "name": "The Anvil of Ages",
+      "pieces": 12,
+      "blurb": "The last and greatest Masterwork: an anvil to forge all others. It rings like a bell, and every word you have forged echoes in it."
+    }
+  ]
+}

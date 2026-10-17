@@ -81,6 +81,8 @@ ratio.
 | 11 | **"Forged!" and level-up moments** | **Code** particle bursts plus a short **Blender** hammer-strike sprite sequence (about 12 frames) | — | Short and skippable. |
 | 12 | **Pickup marker** | **Code** glow plus a small ember icon in the grid cell | game-icons.net | A gentle pulse so it's noticeable but not distracting. |
 | 13 | **Rank badges** (Apprentice → Legend) | **Inkscape**: six badges in progressively finer metals | — | Shown on the profile and in lobbies. |
+| 14 | **Forge Board, calendar and Lore icons** | Free icon set, tinted in the app (same pipeline as #7) | game-icons.net (CC BY 3.0); Material Symbols (Apache 2.0) for `swap` | `scroll` (Work Orders), `gift`, `bellows` (Daily Stoke), `calendar`, `book` (Lore Book), `blueprint`, `gilded` (gold ingot), `swap`, `speaker` (pronunciation). Trophies reuse the existing `trophy`. |
+| 15 | **Masterworks** (12 legendary items, `shared/masterworks.md`) | One game-icons.net glyph per item in `app/assets/masterworks/<id>.svg`, cleaned like the icons (fill `#ffffff`, transparent, 512×512 viewBox) | game-icons.net (CC BY 3.0) | The app tints them: blueprint-white while unfinished, a metal gradient once finished. Names, piece counts and blurbs are in `app/assets/masterworks/masterworks.json`. |
 
 ---
 
@@ -129,6 +131,10 @@ ratio.
 | Last 10 seconds | Steady hammer "heartbeat" ticking | Kenney (CC0) |
 | Teammate claimed a word (co-op) | Lighter clang in a different tone from your own | Made from the valid-word sound |
 | Opponent finished (VS) | Deep gong-like anvil ring | Sonniss |
+| Blueprint piece from a gilded cell (`gilded.ogg`) | Bright golden chime: a quick run of small bells over a shimmer (~1 s) | Synthesised (`art/audio/build_audio.py`) |
+| Masterwork finished (`masterwork.ogg`) | Triumphant bell-and-anvil flourish ending on a big ringing chord (~3.3 s) | Synthesised, plus a Kenney bell (CC0) |
+| Reward claimed: Work Order, gift, Daily Stoke (`claim.ogg`) | Warm two-note rising bell chime, no coins (~0.8 s) | Synthesised |
+| Lore Book page turn (`page.ogg`) | Parchment page swish with a dry crinkle (~0.4 s) | Kenney RPG Audio `bookFlip2` (CC0) + synthesised layers |
 
 ### Music and ambience
 
@@ -146,6 +152,13 @@ If free libraries don't have the right metal sounds:
 - Sound effects are **mono OGG**. Music is stereo OGG.
 - Loudness is normalised to about −16 LUFS for music, with sound-effect peaks at −1 dBTP or below.
 - Settings has separate **SFX / Music / Ambience** volume sliders, plus a **haptics** toggle.
+
+### Written content
+
+| Asset | What it is | Notes |
+|---|---|---|
+| `app/assets/lore/lore.json` | **Smith's Lore**: 150 short pages, one unlocked per Daily Commission completed (`shared/daily.md`) | `{"v": 1, "pages": [{id, title, text, topic}]}`; topics `metals`, `history`, `tools`, `words`, `legends`, `craft`; text ≤ 260 characters. Our own writing, fact-checked page by page; sources in `art/lore/SOURCES.md`. Myths are framed as myth or legend, and uncertain etymologies say "probably". Early pages are the most accessible, with topics mixed. |
+| `app/assets/masterworks/masterworks.json` | Names and blurbs of the 12 Masterworks | `{"v": 1, "items": [{id, name, pieces, blurb}]}`; ids and piece counts match `shared/masterworks.md`. |
 
 ---
 
@@ -176,6 +189,8 @@ art/
 ├─ svg/                Inkscape sources (panels, badges, icon tweaks)
 ├─ audio/              source sound edits, synthesis scripts
 ├─ export.py           optimises renders → WebP/PNG at 1x/2x/3x, audio → OGG, into app/assets
+│                      (`icons` also writes the Masterwork glyphs to app/assets/masterworks/)
+├─ lore/SOURCES.md     a source note for every Smith's Lore page
 └─ CREDITS.md          every third-party asset, source and licence
 ```
 

@@ -605,6 +605,82 @@
     ],
     "notes": []
   },
+  "gilded": {
+    "file": "audio/gilded.ogg",
+    "description": "Blueprint piece from a gilded cell: bright golden chime, a quick E major run of small bells (E6 G#6 B6 E7) over a soft shimmer",
+    "duration_s": 0.969,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 12685,
+    "loudness_metric": "max momentary",
+    "target_lufs": -16,
+    "lufs_integrated": -19.0,
+    "lufs_momentary_max": -16.1,
+    "true_peak_dbtp": -7.0,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "masterwork": {
+    "file": "audio/masterwork.ogg",
+    "description": "Masterwork finished: ~3.3 s triumphant flourish, an anvil strike and three rising bells (A4 D5 F#5) into a D major chord, a quick run, then a big ringing D major bell-and-anvil chord with sparks",
+    "duration_s": 3.308,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 30082,
+    "loudness_metric": "max momentary",
+    "target_lufs": -12,
+    "lufs_integrated": -16.5,
+    "lufs_momentary_max": -12.2,
+    "true_peak_dbtp": -1.8,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-impact-sounds",
+        "file": "Audio/impactBell_heavy_000.ogg"
+      }
+    ],
+    "notes": []
+  },
+  "claim": {
+    "file": "audio/claim.ogg",
+    "description": "Reward claimed (Work Order, gift, Daily Stoke): warm two-note rising bell chime (C6 to G6), no coins",
+    "duration_s": 0.811,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 7857,
+    "loudness_metric": "max momentary",
+    "target_lufs": -16.5,
+    "lufs_integrated": -19.6,
+    "lufs_momentary_max": -16.5,
+    "true_peak_dbtp": -6.7,
+    "synthesized": true,
+    "sources": [],
+    "notes": []
+  },
+  "page": {
+    "file": "audio/page.ogg",
+    "description": "Lore Book page turn: a parchment page swishing over, with a dry crinkle",
+    "duration_s": 0.422,
+    "channels": 1,
+    "sample_rate": 44100,
+    "bytes": 7947,
+    "loudness_metric": "max momentary",
+    "target_lufs": -21,
+    "lufs_integrated": -24.6,
+    "lufs_momentary_max": -22.2,
+    "true_peak_dbtp": -2.0,
+    "synthesized": true,
+    "sources": [
+      {
+        "pack": "kenney-rpg-audio",
+        "file": "Audio/bookFlip2.ogg"
+      }
+    ],
+    "notes": [
+      "limited 4.7 dB"
+    ]
+  },
   "music_hall": {
     "file": "audio/music_hall.ogg",
     "description": "Forge Hall / menus music: calm medieval loop, 'King's Feast' (loop version), ~81 s stereo",

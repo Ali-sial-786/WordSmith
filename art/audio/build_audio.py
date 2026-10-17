@@ -334,6 +334,66 @@ def rival_finished():
     return S.fit(x, 1.3, fade_out=0.4)
 
 
+# ------------------------------------------------------------------ Masterworks, Forge Board, Lore Book
+@recipe("gilded", -16, "Blueprint piece from a gilded cell: bright golden chime, a quick E major run of small bells "
+        "(E6 G#6 B6 E7) over a soft shimmer", synth=True)
+def gilded():
+    x = S.silence(1.05)
+    for k, (at, f) in enumerate([(0.0, 1318.51), (0.045, 1661.22), (0.09, 1975.53), (0.135, 2637.02)]):
+        x = place(x, level(S.bell(f, 0.9, tau=0.3, seed=301 + k, strike=0.18)), at, undb(-4 - 0.7 * k))
+    x = place(x, level(S.bell(659.26, 0.95, tau=0.42, seed=305, strike=0.0)), 0.0, undb(-12))  # warm E5 under it
+    x = place(x, level(S.bell(2637.02, 0.8, tau=0.4, seed=306, strike=0.0)), 0.18, undb(-10))  # ringing top
+    x = place(x, level(S.sparkles(0.8, 28, seed=307, f_range=(5000, 11000), decay=0.25)), 0.03, undb(-15))
+    x = place(x, level(S.whoosh(0.35, 3000, 9000, seed=308, q=0.8, peak_at=0.3)), 0.0, undb(-22))
+    return S.fit(x, 1.05, fade_out=0.35)
+
+
+@recipe("masterwork", -12, "Masterwork finished: ~3.3 s triumphant flourish, an anvil strike and three rising bells "
+        "(A4 D5 F#5) into a D major chord, a quick run, then a big ringing D major bell-and-anvil chord with sparks",
+        synth=True, release=0.02, max_limit=5)
+def masterwork():
+    x = S.silence(3.4)
+    x = place(x, level(S.anvil(587.33 / 2.09, 0.9, decay=0.8, bright=0.9, thump_gain=0.7, seed=311)), 0.0, undb(-3))
+    for k, (at, f) in enumerate([(0.0, 440.00), (0.13, 587.33), (0.26, 739.99)]):         # da-da-da (rising)
+        x = place(x, level(S.bell(f, 0.35, tau=0.18, seed=312 + k, strike=0.22)), at, undb(-5))
+    for k, (f, g) in enumerate([(587.33, -8), (739.99, -8), (880.00, -6)]):               # DAA
+        x = place(x, level(S.bell(f, 0.8, tau=0.4, seed=315 + k)), 0.40, undb(g))
+    x = place(x, level(S.anvil(1174.66 / 2.09, 0.8, decay=0.6, bright=1.1, thump_gain=0.3, seed=318)), 0.40, undb(-10))
+    for k, (at, f) in enumerate([(0.86, 880.00), (0.96, 987.77), (1.06, 1108.73)]):       # quick run up
+        x = place(x, level(S.bell(f, 0.4, tau=0.2, seed=319 + k, strike=0.18)), at, undb(-7))
+    big = 1.18
+    for k, (f, g) in enumerate([(293.66, -12), (587.33, -9), (739.99, -9), (880.00, -8), (1174.66, -4),
+                                (1479.98, -10)]):
+        x = place(x, level(S.bell(f, 2.2, tau=1.2, seed=322 + k)), big, undb(g))
+    x = place(x, level(S.anvil(1174.66 / 2.09, 2.0, decay=1.4, bright=1.2, thump_gain=0.8, seed=328)), big, undb(-5))
+    x = place(x, level(K(KI, "Audio/impactBell_heavy_000.ogg")), big, undb(-12))
+    x = place(x, level(S.whoosh(1.0, 700, 5200, seed=329, q=1.0, peak_at=0.3)), big + 0.02, undb(-21))
+    x = place(x, level(S.sparkles(1.6, 50, seed=330, f_range=(4000, 10000), decay=0.45)), big + 0.03, undb(-13))
+    x = place(x, level(S.bell(2349.32, 1.6, tau=0.8, seed=331, strike=0.0)), big + 0.25, undb(-16))  # glint
+    return S.fit(x, 3.4, fade_out=0.8)
+
+
+@recipe("claim", -16.5, "Reward claimed (Work Order, gift, Daily Stoke): warm two-note rising bell chime (C6 to G6), "
+        "no coins", synth=True)
+def claim():
+    x = S.silence(0.85)
+    x = place(x, level(S.bell(1046.50, 0.5, tau=0.22, seed=341, strike=0.15)), 0.0, undb(-4))
+    x = place(x, level(S.bell(1567.98, 0.78, tau=0.4, seed=342, strike=0.15)), 0.085, undb(-2))
+    x = place(x, level(S.bell(783.99, 0.78, tau=0.38, seed=343, strike=0.0)), 0.085, undb(-11))
+    x = place(x, level(S.tink(3135.96, dur=0.2)), 0.085, undb(-15))
+    return S.fit(x, 0.85, fade_out=0.3)
+
+
+@recipe("page", -21, "Lore Book page turn: a parchment page swishing over, with a dry crinkle", synth=True,
+        release=0.01, max_limit=6.5)
+def page():
+    flip = S.fft_filter(K(KR, "Audio/bookFlip2.ogg"), lo=250, hi=11000)
+    x = level(S.fade(flip, fade_in=0.012))  # round off the flip's slap so it isn't all transient
+    x = place(x, level(S.whoosh(0.32, 900, 3500, seed=351, q=0.7, peak_at=0.55)), 0.02, undb(-7))
+    x = place(x, level(S.crackle(0.3, 70, seed=352, lo=1800, hi=9000)), 0.03, undb(-18))
+    return S.fit(x, 0.5, fade_out=0.15)
+
+
 # ------------------------------------------------------------------ music
 def seamless(x: np.ndarray, xfade: float = 0.015) -> np.ndarray:
     """Make a loop click-free: fold its last `xfade` s into its first (equal power).

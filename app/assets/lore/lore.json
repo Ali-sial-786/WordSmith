@@ -1,0 +1,905 @@
+{
+  "v": 1,
+  "pages": [
+    {
+      "id": 1,
+      "title": "Why iron glows",
+      "text": "Anything hot gives off light. Iron begins to glow a dim red at about 525 °C, then turns orange, yellow and finally white as it gets hotter, so a smith can read the heat of the metal from its colour.",
+      "topic": "metals"
+    },
+    {
+      "id": 2,
+      "title": "Strike while the iron is hot",
+      "text": "This saying comes straight from the forge: hot iron is soft enough to shape, but it cools fast, so you hammer it while you can. Chaucer used it in The Canterbury Tales over 600 years ago.",
+      "topic": "words"
+    },
+    {
+      "id": 3,
+      "title": "The god at the anvil",
+      "text": "In Greek myth, Hephaestus was the god of fire and the forge. He was lame, yet he was the finest craftsman on Olympus, and in Homer's Iliad he forges a dazzling new shield and armour for Achilles.",
+      "topic": "legends"
+    },
+    {
+      "id": 4,
+      "title": "A forge in your ear",
+      "text": "Three tiny bones in your middle ear are named after things in a smithy and a stable: the malleus (hammer), the incus (anvil) and the stapes (stirrup).",
+      "topic": "words"
+    },
+    {
+      "id": 5,
+      "title": "Gold, beaten thin",
+      "text": "Gold is the most malleable metal: a single gram can be hammered into a sheet about one square metre in size. Beaten that thin, it lets light through, and the light that passes glows greenish-blue.",
+      "topic": "metals"
+    },
+    {
+      "id": 6,
+      "title": "So many Smiths",
+      "text": "Smith is the most common surname in the United Kingdom, the United States, Canada, Australia and New Zealand. Nearly every village once needed a smith, so the trade became a very widespread family name.",
+      "topic": "history"
+    },
+    {
+      "id": 7,
+      "title": "Thor's short-handled hammer",
+      "text": "In Norse myth the dwarf brothers Brokkr and Eitri forged Thor's hammer Mjölnir. A gadfly, often thought to be Loki, bit Brokkr on the eye as he worked the bellows, so the hammer's handle came out short.",
+      "topic": "legends"
+    },
+    {
+      "id": 8,
+      "title": "The magnet trick",
+      "text": "Hot steel stops sticking to a magnet at roughly 770 °C, close to the heat it needs before quenching. Many bladesmiths keep a magnet by the forge as a quick check that a blade is nearly ready.",
+      "topic": "craft"
+    },
+    {
+      "id": 9,
+      "title": "Mettle and metal",
+      "text": "To test someone's mettle is to test their courage, but mettle began as just another spelling of metal. The two spellings split apart in the 1700s, and mettle kept the meaning 'what a person is made of'.",
+      "topic": "words"
+    },
+    {
+      "id": 10,
+      "title": "Tutankhamun's space dagger",
+      "text": "One of the daggers buried with the boy-king Tutankhamun has a blade of meteorite iron. Its nickel and cobalt content matches iron that fell to Earth from space.",
+      "topic": "history"
+    },
+    {
+      "id": 11,
+      "title": "A metal that melts in your hand",
+      "text": "Gallium melts at about 29.8 °C, below body temperature, so a solid piece held in your palm slowly turns into a silvery liquid.",
+      "topic": "metals"
+    },
+    {
+      "id": 12,
+      "title": "The lucky horseshoe",
+      "text": "An English legend says St Dunstan, a skilled smith, nailed a horseshoe to the Devil's hoof. He only took it off when the Devil promised never to enter a place with a horseshoe over the door.",
+      "topic": "legends"
+    },
+    {
+      "id": 13,
+      "title": "Black and white smiths",
+      "text": "A blacksmith works iron, the dark 'black metal'. A whitesmith works bright 'white' metals such as tin, or does the finishing work on iron and steel: filing, burnishing and polishing.",
+      "topic": "words"
+    },
+    {
+      "id": 14,
+      "title": "Why a katana curves",
+      "text": "A katana gets much of its curve in the quench. The smith coats the blade in clay, thin at the edge and thick on the back; the edge hardens first, then the back shrinks more as it cools, bending the blade.",
+      "topic": "craft"
+    },
+    {
+      "id": 15,
+      "title": "Pig iron",
+      "text": "Pig iron got its name from its moulds: molten iron ran down a central channel into rows of side moulds, which looked like a litter of piglets feeding from a sow.",
+      "topic": "words"
+    },
+    {
+      "id": 16,
+      "title": "Liberty in copper",
+      "text": "The Statue of Liberty's copper skin is only as thick as two pennies placed together, hung on an iron frame built by Gustave Eiffel. It was shiny reddish-brown in 1886 and had turned green within twenty years.",
+      "topic": "history"
+    },
+    {
+      "id": 17,
+      "title": "Wayland's Smithy",
+      "text": "Wayland's Smithy is a Neolithic tomb in Oxfordshire, about 5,500 years old. Local legend says that if you leave your horse there with a small coin, the unseen smith Wayland will shoe it while you're away.",
+      "topic": "legends"
+    },
+    {
+      "id": 18,
+      "title": "Smithereens",
+      "text": "Being smashed to smithereens has nothing to do with smiths. The word probably comes from Irish smidiríní, 'little fragments'.",
+      "topic": "words"
+    },
+    {
+      "id": 19,
+      "title": "Iron in your blood",
+      "text": "Most people's bodies hold about 4 to 5 grams of iron. Around half of it is in haemoglobin, the protein in red blood cells that carries oxygen from your lungs to the rest of your body.",
+      "topic": "metals"
+    },
+    {
+      "id": 20,
+      "title": "Married over the anvil",
+      "text": "A 1753 law stopped young English couples marrying without their parents' consent, but it didn't apply in Scotland. Couples eloped to Gretna Green, just over the border, where the blacksmiths married them.",
+      "topic": "history"
+    },
+    {
+      "id": 21,
+      "title": "The anvil's horn",
+      "text": "An anvil's pointed end, the horn, is for bending metal into curves and rings. The square hardy hole holds cutting and shaping tools, and the small round pritchel hole is used for punching.",
+      "topic": "tools"
+    },
+    {
+      "id": 22,
+      "title": "The smith who forged the sky",
+      "text": "In the Finnish epic the Kalevala, the smith Ilmarinen hammered out the dome of the sky. He also forged the Sampo, a magic mill that ground out flour, salt and gold.",
+      "topic": "legends"
+    },
+    {
+      "id": 23,
+      "title": "First metal",
+      "text": "Copper was one of the first metals people used, because it turns up in nature as pure lumps. People were working native copper around 10,000 years ago.",
+      "topic": "history"
+    },
+    {
+      "id": 24,
+      "title": "Forging and forgery",
+      "text": "To forge a sword and to forge a signature use the same word. Both come, through French, from Latin fabrica, a workshop, and the sense of making a fake grew out of the plain sense of making.",
+      "topic": "words"
+    },
+    {
+      "id": 25,
+      "title": "Tin cry",
+      "text": "Bend a bar of pure tin and it makes a faint crackling sound called the tin cry. It comes from the metal's crystals suddenly shifting as they bend, a process called twinning.",
+      "topic": "metals"
+    },
+    {
+      "id": 26,
+      "title": "Talos, the bronze guard",
+      "text": "Greek myth tells of Talos, a giant bronze man who guarded Crete by running around the island three times a day. He had a single vein, sealed with a bronze nail, and he fell when it was opened.",
+      "topic": "legends"
+    },
+    {
+      "id": 27,
+      "title": "The Iceman's axe",
+      "text": "Ötzi, the Iceman found frozen in the Alps in 1991, lived more than 5,000 years ago. He carried a copper axe on a handle of yew.",
+      "topic": "history"
+    },
+    {
+      "id": 28,
+      "title": "Not a blood groove",
+      "text": "The long groove down many sword blades is called a fuller. People often call it a 'blood groove', but its real job is to make the blade lighter while keeping it stiff.",
+      "topic": "tools"
+    },
+    {
+      "id": 29,
+      "title": "Forging ahead",
+      "text": "Forging ahead probably has nothing to do with the smithy. This forge, meaning to push steadily onward, was first used of ships and is most likely an altered form of force.",
+      "topic": "words"
+    },
+    {
+      "id": 30,
+      "title": "The Eiffel Tower is iron",
+      "text": "The Eiffel Tower is built of wrought iron: 18,038 parts joined by 2.5 million rivets. On a hot day the sunny side expands, and the top can lean up to 18 cm away from the sun.",
+      "topic": "history"
+    },
+    {
+      "id": 31,
+      "title": "Damascus steel",
+      "text": "Old Damascus blades were famous for their swirling, watery patterns. They were made from wootz, a crucible steel from India; layered pattern-welded blades are often wrongly called Damascus today.",
+      "topic": "metals"
+    },
+    {
+      "id": 32,
+      "title": "Wayland the Smith",
+      "text": "Wayland was the master smith of Germanic legend. A greedy king had him hamstrung and set him to work on an island; Wayland took a terrible revenge, then flew away on wings he had made.",
+      "topic": "legends"
+    },
+    {
+      "id": 33,
+      "title": "Martensite",
+      "text": "When hot steel is plunged into water or oil, its carbon is trapped in a strained crystal called martensite. That is what makes quenched steel so hard, and also brittle until it is tempered.",
+      "topic": "craft"
+    },
+    {
+      "id": 34,
+      "title": "Carats and carob seeds",
+      "text": "Carat, the measure of gems and of gold purity, comes through Arabic from the Greek keration, a carob seed. Pure gold is 24 carat, and 18-carat gold is 18 parts in 24, or 75 per cent.",
+      "topic": "words"
+    },
+    {
+      "id": 35,
+      "title": "The Anvil Chorus",
+      "text": "Verdi's 1853 opera Il trovatore has a famous Anvil Chorus, sung as a camp of Spanish Romani strike their anvils at dawn, singing the praises of hard work.",
+      "topic": "history"
+    },
+    {
+      "id": 36,
+      "title": "Most of Earth is iron",
+      "text": "Iron is the most common element on Earth by mass. Most of it is in the planet's core, but it is also the fourth most common element in the crust beneath our feet.",
+      "topic": "metals"
+    },
+    {
+      "id": 37,
+      "title": "Tubal-cain",
+      "text": "In the Book of Genesis, Tubal-cain is 'an instructor of every craftsman in bronze and iron', the forefather of smiths in the biblical tradition.",
+      "topic": "legends"
+    },
+    {
+      "id": 38,
+      "title": "Temper colours",
+      "text": "As polished steel is gently reheated, a thin oxide film paints it straw yellow at about 200 °C, then brown, purple and blue above 300 °C. Smiths read these colours to judge a temper.",
+      "topic": "craft"
+    },
+    {
+      "id": 39,
+      "title": "The hallmark",
+      "text": "Hallmark comes from Goldsmiths' Hall in London, where gold and silver have long been tested and stamped. English hallmarking goes back to a law of King Edward I in 1300.",
+      "topic": "words"
+    },
+    {
+      "id": 40,
+      "title": "St Clem's Day",
+      "text": "English blacksmiths took Pope St Clement as their patron. On his feast day, 23 November, they traditionally 'fired' their anvils with gunpowder, a loud and dangerous way to celebrate.",
+      "topic": "history"
+    },
+    {
+      "id": 41,
+      "title": "Steel's secret ingredient",
+      "text": "Steel is iron with a little carbon, usually well under 2 per cent. That small pinch of carbon is what lets steel be hardened and tempered into springs, blades and tools.",
+      "topic": "metals"
+    },
+    {
+      "id": 42,
+      "title": "The god who gave us volcanoes",
+      "text": "Vulcan, the Roman god of fire and metalworking, gave his name to volcanoes. His forge was said to lie under the island of Vulcano, off the coast of Sicily.",
+      "topic": "legends"
+    },
+    {
+      "id": 43,
+      "title": "Brand-new",
+      "text": "Brand-new probably meant 'fresh from the fire', like metal just off the anvil, since brand was an old word for fire or a burning torch. Shakespeare wrote fire-new in the same sense.",
+      "topic": "words"
+    },
+    {
+      "id": 44,
+      "title": "Meteorite iron",
+      "text": "Long before people could smelt iron, they worked iron from meteorites. Beads from Gerzeh in Egypt, made around 3200 BC, were hammered from iron that fell from the sky.",
+      "topic": "history"
+    },
+    {
+      "id": 45,
+      "title": "Forge welding",
+      "text": "Forge welding is the smith's ancient way of joining metal: heat two pieces almost white-hot and hammer them into one. A flux such as borax, or fine sand in early times, keeps the joint clean.",
+      "topic": "craft"
+    },
+    {
+      "id": 46,
+      "title": "A sword that split an anvil",
+      "text": "In Norse legend the smith Regin reforged Gram from the broken halves of Sigurd's father's sword. To test it, Sigurd struck Regin's anvil, and the blade cut it in two.",
+      "topic": "legends"
+    },
+    {
+      "id": 47,
+      "title": "Gild the lily",
+      "text": "'Gild the lily' is a misquote of Shakespeare's King John, which says 'to gild refined gold, to paint the lily': two ways of spoiling something by over-decorating it.",
+      "topic": "words"
+    },
+    {
+      "id": 48,
+      "title": "The Iron Pillar of Delhi",
+      "text": "The Iron Pillar of Delhi is about 1,600 years old and over 7 metres tall, yet it has barely rusted. Its iron is rich in phosphorus, which helps an even protective layer form on its surface.",
+      "topic": "history"
+    },
+    {
+      "id": 49,
+      "title": "Stainless steel",
+      "text": "Stainless steel has at least 10.5 per cent chromium, which forms a thin invisible film that heals itself when scratched. In 1913 Harry Brearley of Sheffield made one while looking for better gun barrels.",
+      "topic": "metals"
+    },
+    {
+      "id": 50,
+      "title": "Bellows",
+      "text": "A forge fire needs a steady blast of air to get hot enough for welding. Bellows push that air through a pipe called the tuyere into the heart of the fire.",
+      "topic": "tools"
+    },
+    {
+      "id": 51,
+      "title": "Masamune",
+      "text": "Masamune, who lived around 1264 to 1343, is widely called Japan's greatest swordsmith. His most famous blade, the Honjo Masamune, went missing in 1946 and has never been found.",
+      "topic": "history"
+    },
+    {
+      "id": 52,
+      "title": "Cold iron",
+      "text": "In European folklore, fairies, ghosts and witches fear 'cold iron'. People nailed iron horseshoes over their doors to keep such creatures out, and later simply for luck.",
+      "topic": "legends"
+    },
+    {
+      "id": 53,
+      "title": "The hamon",
+      "text": "The misty line along a katana's edge is the hamon. It marks where the very hard edge, quenched under thin clay, meets the softer, tougher spine, and every smith's hamon is a little different.",
+      "topic": "craft"
+    },
+    {
+      "id": 54,
+      "title": "Malleable",
+      "text": "Malleable, meaning able to be shaped by hammering, comes from Latin malleus, a hammer, the same word that names the hammer bone in your ear.",
+      "topic": "words"
+    },
+    {
+      "id": 55,
+      "title": "Bell bronze",
+      "text": "Bells are cast from bell metal, a bronze of about four parts copper to one part tin. The extra tin makes it stiffer and gives it a long, resonant ring.",
+      "topic": "metals"
+    },
+    {
+      "id": 56,
+      "title": "The Tsar Bell",
+      "text": "The Tsar Bell in Moscow is the largest bell in the world, weighing about 202 tonnes. A fire in 1737 cracked it before it was ever hung, and it has never been rung.",
+      "topic": "history"
+    },
+    {
+      "id": 57,
+      "title": "Ogun",
+      "text": "Ogun is the Yoruba orisha of iron, metalwork and war. He is honoured by blacksmiths, hunters and warriors, and drivers carry his amulets to ward off accidents.",
+      "topic": "legends"
+    },
+    {
+      "id": 58,
+      "title": "Wrought means worked",
+      "text": "Wrought iron is simply worked iron: it was hammered or rolled while hot to squeeze out slag. Threads of slag left inside give it a grain like wood.",
+      "topic": "words"
+    },
+    {
+      "id": 59,
+      "title": "The bloomery",
+      "text": "Early ironmakers never melted their iron. A bloomery furnace turned ore into a spongy lump of iron and slag, the bloom, which was hammered again and again to drive the slag out.",
+      "topic": "history"
+    },
+    {
+      "id": 60,
+      "title": "Spark testing",
+      "text": "Touch steel to a grinding wheel and the sparks reveal what it is. Wrought iron throws sparks in long straight lines, while high-carbon steel gives a bushy, branching spray.",
+      "topic": "craft"
+    },
+    {
+      "id": 61,
+      "title": "Goibniu",
+      "text": "Goibniu was the smith god of the Tuatha Dé Danann in Irish myth. With his brothers, a silversmith and a carpenter, he forged the weapons the gods used against the Fomorians.",
+      "topic": "legends"
+    },
+    {
+      "id": 62,
+      "title": "Paul Revere, metalworker",
+      "text": "Paul Revere, famous for his midnight ride in 1775, was a silversmith by trade. He later cast bells and cannon, and became the first American to roll copper into sheets for sheathing ships.",
+      "topic": "history"
+    },
+    {
+      "id": 63,
+      "title": "Copper from Cyprus",
+      "text": "Copper is named after Cyprus. Latin called it aes Cyprium, 'Cyprian metal', because the island was a major source of copper in the ancient world.",
+      "topic": "words"
+    },
+    {
+      "id": 64,
+      "title": "Rust",
+      "text": "Rust forms when iron meets oxygen and water. It doesn't cling to the metal: it flakes away and exposes fresh iron underneath, which rusts in turn.",
+      "topic": "metals"
+    },
+    {
+      "id": 65,
+      "title": "The Cyclopes' thunderbolts",
+      "text": "In Hesiod's Theogony, three one-eyed Cyclopes named Brontes, Steropes and Arges forged Zeus's thunderbolt. They also made Poseidon's trident and Hades' helmet of darkness.",
+      "topic": "legends"
+    },
+    {
+      "id": 66,
+      "title": "Slack tub",
+      "text": "The barrel of water beside a forge is the slack tub. Smiths plunge hot work into it to harden steel, or just to cool a piece enough to handle.",
+      "topic": "tools"
+    },
+    {
+      "id": 67,
+      "title": "John Deere's plough",
+      "text": "John Deere was a blacksmith in Illinois. In 1837 he made a plough of highly polished steel that sticky prairie soil slid off, and his business became a famous machinery company.",
+      "topic": "history"
+    },
+    {
+      "id": 68,
+      "title": "Plumbers and lead",
+      "text": "A plumber was first a worker in lead, from Latin plumbum. Lead was used for water pipes, and its chemical symbol, Pb, comes from the same word.",
+      "topic": "words"
+    },
+    {
+      "id": 69,
+      "title": "Excalibur",
+      "text": "In some Arthurian romances, the sword Arthur pulls from the stone breaks in a duel with King Pellinore. Merlin then takes him to the Lady of the Lake, who gives him Excalibur.",
+      "topic": "legends"
+    },
+    {
+      "id": 70,
+      "title": "Annealing copper",
+      "text": "Copper gets harder as it is hammered. Heating it softens it again, and unlike steel it can then be cooled fast in water and stay soft.",
+      "topic": "craft"
+    },
+    {
+      "id": 71,
+      "title": "Bronze",
+      "text": "Bronze is mostly copper with about 12 per cent tin. It was hard enough for good tools and weapons, and gave its name to the Bronze Age.",
+      "topic": "metals"
+    },
+    {
+      "id": 72,
+      "title": "The Iron Age",
+      "text": "The Iron Age began in the Near East around 1200 BC. Tin for bronze often had to be carried a long way, but iron ore can be found almost everywhere.",
+      "topic": "history"
+    },
+    {
+      "id": 73,
+      "title": "Anvil",
+      "text": "The word anvil goes back to Old English anfilt, probably made of 'on' and a word meaning 'beaten': the block you beat metal on.",
+      "topic": "words"
+    },
+    {
+      "id": 74,
+      "title": "Draupnir",
+      "text": "In Norse myth, the dwarves who made Thor's hammer also forged Draupnir, Odin's gold ring. Every ninth night, eight new rings of the same size and weight drip from it.",
+      "topic": "legends"
+    },
+    {
+      "id": 75,
+      "title": "Ulfberht swords",
+      "text": "About 170 medieval swords carry the inscription +VLFBERH+T. Some of the later ones have blades of crucible steel, rare in Europe at a time when most swords were pattern-welded.",
+      "topic": "history"
+    },
+    {
+      "id": 76,
+      "title": "Gold doesn't corrode",
+      "text": "Gold is one of the least reactive elements, so it resists rust and corrosion. That is why it is still used for electrical connectors that must stay clean and bright.",
+      "topic": "metals"
+    },
+    {
+      "id": 77,
+      "title": "Swage block",
+      "text": "A swage block is a heavy iron block full of holes and shaped notches. Smiths hammer hot metal into it to round, curve or shape bars that would be hard to form freehand.",
+      "topic": "tools"
+    },
+    {
+      "id": 78,
+      "title": "Mo Ye's furnace",
+      "text": "In a Chinese legend, the swordsmiths Gan Jiang and Mo Ye could not get their metal to melt. They cut their hair and nails and threw them into the furnace, and the twin swords they made bear their names.",
+      "topic": "legends"
+    },
+    {
+      "id": 79,
+      "title": "Cast iron in ancient China",
+      "text": "Chinese ironworkers were casting molten iron into moulds by the 5th century BC, many centuries before cast iron came into wide use in Europe.",
+      "topic": "history"
+    },
+    {
+      "id": 80,
+      "title": "Faber, the maker",
+      "text": "Fabricate, fabric and forge all come from Latin faber, a craftsman who worked in hard materials such as metal or stone.",
+      "topic": "words"
+    },
+    {
+      "id": 81,
+      "title": "Kothar-wa-Khasis",
+      "text": "In the myths of ancient Ugarit, in what is now Syria, the craftsman god Kothar-wa-Khasis forged the weapons the storm god Baal used to defeat Yam, the sea.",
+      "topic": "legends"
+    },
+    {
+      "id": 82,
+      "title": "Tin pest",
+      "text": "Below 13.2 °C, pure tin can slowly turn from a shiny metal into a crumbly grey powder. Once this 'tin pest' starts, it spreads through the metal like a disease.",
+      "topic": "metals"
+    },
+    {
+      "id": 83,
+      "title": "Pattern welding",
+      "text": "Early medieval smiths twisted rods of iron and steel together and forge-welded them into sword blades. Polished and etched, the blades showed rippling bands of pattern.",
+      "topic": "craft"
+    },
+    {
+      "id": 84,
+      "title": "The Liberty Bell",
+      "text": "The Liberty Bell cracked the first time it was rung in Philadelphia. Local metalworkers John Pass and John Stow recast it twice, and its famous large crack appeared in the first half of the 1800s.",
+      "topic": "history"
+    },
+    {
+      "id": 85,
+      "title": "Pythagoras and the hammers",
+      "text": "An ancient legend says Pythagoras discovered musical harmony by hearing hammers ring in a smithy. It's a lovely story, but hammer weights don't actually set the notes that way.",
+      "topic": "legends"
+    },
+    {
+      "id": 86,
+      "title": "Platinum, 'little silver'",
+      "text": "Platinum's name comes from the Spanish platina, 'little silver'. Spanish colonists in South America found it mixed in with gold and saw it as an unwanted impurity.",
+      "topic": "words"
+    },
+    {
+      "id": 87,
+      "title": "Tuyere",
+      "text": "The tuyere is the pipe that carries the air blast into the fire. The word came into English from French around 1500, along with new ways of making iron.",
+      "topic": "tools"
+    },
+    {
+      "id": 88,
+      "title": "Abraham Darby's coke",
+      "text": "In 1709 Abraham Darby began smelting iron in a blast furnace fuelled by coke, made from coal, instead of charcoal, made from wood. It was a big step towards the Industrial Revolution.",
+      "topic": "history"
+    },
+    {
+      "id": 89,
+      "title": "Hephaestus' golden helpers",
+      "text": "Homer says Hephaestus had helpers made of gold who looked like living maidens and could think and speak, and tripods on golden wheels that rolled about at his command.",
+      "topic": "legends"
+    },
+    {
+      "id": 90,
+      "title": "Silver shines brightest",
+      "text": "Silver conducts electricity and heat better than any other metal, and it is the most reflective metal too.",
+      "topic": "metals"
+    },
+    {
+      "id": 91,
+      "title": "Repoussé",
+      "text": "In repoussé, metalworkers shape a sheet by hammering it from the back, then sharpen the details from the front by chasing. The Statue of Liberty's copper skin was made this way.",
+      "topic": "craft"
+    },
+    {
+      "id": 92,
+      "title": "The Iron Bridge",
+      "text": "The Iron Bridge in Shropshire, opened in 1781, was the first major bridge in the world made of cast iron. Its iron parts were joined like timber, with dovetails and mortise-and-tenon joints.",
+      "topic": "history"
+    },
+    {
+      "id": 93,
+      "title": "Cobalt goblins",
+      "text": "Cobalt is named after the kobold, a goblin of German mines. Miners blamed it for ore laced with arsenic, which spoiled their silver smelting and made them ill.",
+      "topic": "words"
+    },
+    {
+      "id": 94,
+      "title": "Gleipnir",
+      "text": "In Norse myth, dwarves made the fetter that bound the wolf Fenrir from six impossible things, including the sound of a cat's footsteps, the roots of mountains and the breath of a fish.",
+      "topic": "legends"
+    },
+    {
+      "id": 95,
+      "title": "Tamahagane",
+      "text": "Japanese sword steel, tamahagane, is smelted from iron sand in a clay furnace called a tatara. A single smelt takes up to three days of non-stop work.",
+      "topic": "craft"
+    },
+    {
+      "id": 96,
+      "title": "Bessemer's blast",
+      "text": "In 1856 Henry Bessemer patented a way to make steel by blowing air through molten pig iron to burn away extra carbon. It was the first cheap way to mass-produce steel.",
+      "topic": "history"
+    },
+    {
+      "id": 97,
+      "title": "Hammer and tongs",
+      "text": "To go at something 'hammer and tongs' is to do it with great energy. The phrase, first recorded around 1700, pictures a blacksmith at work.",
+      "topic": "words"
+    },
+    {
+      "id": 98,
+      "title": "Iron from stars",
+      "text": "Fusion inside massive stars builds heavier and heavier elements, but it ends at iron. Much of the iron in rocky planets like Earth was made in exploding stars and scattered through space.",
+      "topic": "metals"
+    },
+    {
+      "id": 99,
+      "title": "Saint Eligius",
+      "text": "St Eligius, a 7th-century goldsmith who became a bishop, is a patron saint of metalworkers. Legend says he took a horse's leg off to shoe it more easily, then put it back.",
+      "topic": "legends"
+    },
+    {
+      "id": 100,
+      "title": "Sheffield knives",
+      "text": "Sheffield was already known for knives in the 1300s. In Chaucer's Canterbury Tales, the miller in the Reeve's Tale carries 'a Sheffeld thwitel', a Sheffield knife.",
+      "topic": "history"
+    },
+    {
+      "id": 101,
+      "title": "Lost-wax casting",
+      "text": "In lost-wax casting, a model is made in wax and covered in clay. The mould is heated so the wax runs out, then molten metal is poured into the space it left.",
+      "topic": "tools"
+    },
+    {
+      "id": 102,
+      "title": "Tungsten",
+      "text": "Tungsten has the highest melting point of any element, about 3,422 °C. That is why it was used for the glowing filaments of old light bulbs.",
+      "topic": "metals"
+    },
+    {
+      "id": 103,
+      "title": "The Colossus of Rhodes",
+      "text": "The Colossus of Rhodes was a bronze statue of the sun god Helios, about 33 metres tall. It stood for only about 54 years before an earthquake toppled it in 226 BC.",
+      "topic": "history"
+    },
+    {
+      "id": 104,
+      "title": "Upsetting",
+      "text": "To make a bar thicker, a smith 'upsets' it: heats it and hammers on the end, so the metal squashes and swells. Making it longer and thinner is called drawing out.",
+      "topic": "craft"
+    },
+    {
+      "id": 105,
+      "title": "The Sons of Ivaldi",
+      "text": "In Norse myth, the dwarves called the sons of Ivaldi forged golden hair for the goddess Sif after Loki cut hers off, Odin's spear Gungnir, and Freyr's ship Skíðblaðnir.",
+      "topic": "legends"
+    },
+    {
+      "id": 106,
+      "title": "Gilded Age",
+      "text": "America's boom years after the Civil War are called the Gilded Age after an 1873 novel by Mark Twain and Charles Dudley Warner. Gilded means golden only on the surface.",
+      "topic": "words"
+    },
+    {
+      "id": 107,
+      "title": "A hoard of nails",
+      "text": "When the Romans left their fortress at Inchtuthil in Scotland, they buried 875,000 iron nails in a hidden pit, so the local tribes couldn't forge the iron into weapons.",
+      "topic": "history"
+    },
+    {
+      "id": 108,
+      "title": "Silver tarnish",
+      "text": "Silver doesn't tarnish because of oxygen. The black film is silver sulfide, made when silver meets hydrogen sulfide in the air.",
+      "topic": "metals"
+    },
+    {
+      "id": 109,
+      "title": "Steam hammer",
+      "text": "James Nasmyth sketched the steam hammer in 1839, when a giant paddle shaft was needed for Brunel's steamship Great Britain. Later versions let the driver set the force of every blow.",
+      "topic": "tools"
+    },
+    {
+      "id": 110,
+      "title": "Kalevala's golden bride",
+      "text": "In Finnish song, the lonely smith Ilmarinen forges himself a maiden of gold. She is beautiful but cold to lie beside, and the song warns never to make a wife of gold and silver.",
+      "topic": "legends"
+    },
+    {
+      "id": 111,
+      "title": "Fire gilding",
+      "text": "In fire gilding, gold dissolved in mercury was painted onto metal and heated until the mercury boiled away, leaving a gold coat. Breathing the fumes was extremely dangerous.",
+      "topic": "craft"
+    },
+    {
+      "id": 112,
+      "title": "The Harmonious Blacksmith",
+      "text": "Handel's keyboard piece known as 'The Harmonious Blacksmith' wasn't named by Handel: the title was first recorded in the early 1800s, and the story of him hearing a smith at work is unproven.",
+      "topic": "history"
+    },
+    {
+      "id": 113,
+      "title": "Ferrari means smith",
+      "text": "Many surnames mean smith: Schmidt in German, Kowalski in Polish, Ferrari in Italian, Herrero in Spanish, Lefebvre in French, Gow in Scottish Gaelic and Goff in Welsh.",
+      "topic": "words"
+    },
+    {
+      "id": 114,
+      "title": "Widmanstätten patterns",
+      "text": "Cut and etch an iron meteorite and a criss-cross pattern of crystals appears. It can only grow when the metal cools extremely slowly, over millions of years in space.",
+      "topic": "metals"
+    },
+    {
+      "id": 115,
+      "title": "Muramasa",
+      "text": "Muramasa was a 16th-century Japanese swordsmith whose blades were prized by the shogun Tokugawa Ieyasu. From the 1700s, legends branded them yōtō, 'wicked swords' said to be cursed.",
+      "topic": "legends"
+    },
+    {
+      "id": 116,
+      "title": "Mail",
+      "text": "Mail armour is a mesh of thousands of small linked rings, many of them each closed with a tiny rivet. It was worn in Europe from the 3rd century BC to the 1500s.",
+      "topic": "craft"
+    },
+    {
+      "id": 117,
+      "title": "Cape York meteorite",
+      "text": "For centuries the Inughuit of north-west Greenland chipped iron from the huge Cape York meteorite to make their tools.",
+      "topic": "history"
+    },
+    {
+      "id": 118,
+      "title": "Charcoal",
+      "text": "For thousands of years, furnaces and forges burned charcoal: wood baked with little air until mostly carbon is left. It was the fuel of iron and steel making long before coke.",
+      "topic": "tools"
+    },
+    {
+      "id": 119,
+      "title": "Benin Bronzes",
+      "text": "The famous Benin Bronzes from the Kingdom of Benin, in present-day Nigeria, are mostly brass. They were cast by a royal guild whose descendants still work on Igun Street in Benin City.",
+      "topic": "history"
+    },
+    {
+      "id": 120,
+      "title": "Old Nick's copper",
+      "text": "Nickel is named after a mischievous sprite of German miners. Its ore looked like copper ore but gave no copper, so they called it Kupfernickel, 'Nickel's copper'.",
+      "topic": "words"
+    },
+    {
+      "id": 121,
+      "title": "Riveting",
+      "text": "Hot rivets were heated red, pushed through holes and hammered over; as each one cooled, it shrank and pulled the plates tight. The Titanic's hull held over three million of them.",
+      "topic": "craft"
+    },
+    {
+      "id": 122,
+      "title": "Weland's work",
+      "text": "In the Old English poem Beowulf, the hero's mail shirt, the best of armour, is praised as 'the work of Wayland', the master smith.",
+      "topic": "legends"
+    },
+    {
+      "id": 123,
+      "title": "Clinker",
+      "text": "A coal forge slowly builds up clinker, a glassy lump of melted ash, slag and grit, around the air pipe. Smiths dig it out so the air can keep flowing.",
+      "topic": "tools"
+    },
+    {
+      "id": 124,
+      "title": "The Village Blacksmith",
+      "text": "Longfellow's 1840 poem begins 'Under a spreading chestnut-tree / The village smithy stands'. In 1879 local schoolchildren gave him an armchair made from that very tree.",
+      "topic": "history"
+    },
+    {
+      "id": 125,
+      "title": "Pewter",
+      "text": "Pewter is mostly tin, mixed with a little antimony, copper or bismuth. It melts at a low heat, around 170 to 230 °C, so it was easy to cast into plates, mugs and spoons.",
+      "topic": "metals"
+    },
+    {
+      "id": 126,
+      "title": "Granulation",
+      "text": "Etruscan goldsmiths became famous for granulation: covering jewellery with tiny beads of gold fused to the surface. The technique is thought to go back about 5,000 years, to Sumer.",
+      "topic": "craft"
+    },
+    {
+      "id": 127,
+      "title": "Amakuni",
+      "text": "Japanese tradition credits a legendary smith named Amakuni with making the first single-edged sword with a curved blade, around the year 700.",
+      "topic": "legends"
+    },
+    {
+      "id": 128,
+      "title": "Files cut by hand",
+      "text": "Before machines took over, every tooth on a metal file was cut by hand with a hammer and chisel, before the file was hardened.",
+      "topic": "tools"
+    },
+    {
+      "id": 129,
+      "title": "Sutton Hoo helmet",
+      "text": "The Sutton Hoo helmet, buried around 625, probably with King Rædwald of East Anglia, is iron covered in stamped panels of tinned bronze, with a face mask, eyebrows and a moustache.",
+      "topic": "history"
+    },
+    {
+      "id": 130,
+      "title": "Ferrous and farrier",
+      "text": "Ferrous metals contain iron. The word, like iron's symbol Fe, comes from ferrum, the Latin for iron, and so does farrier, the smith who shoes horses.",
+      "topic": "words"
+    },
+    {
+      "id": 131,
+      "title": "Mokume-gane",
+      "text": "Mokume-gane, 'wood-grain metal', was first made in 17th-century Japan for sword fittings. Layers of different coloured metals are fused, carved and flattened to look like wood grain.",
+      "topic": "craft"
+    },
+    {
+      "id": 132,
+      "title": "Fabergé eggs",
+      "text": "The House of Fabergé made 50 jewelled Imperial Easter eggs for the Russian tsars between 1885 and 1917. Only 44 are known to survive; the fate of the rest is unknown.",
+      "topic": "history"
+    },
+    {
+      "id": 133,
+      "title": "Tvastr",
+      "text": "In the Rigveda, Tvastr is the divine craftsman who forged the vajra, the thunderbolt weapon of the god Indra.",
+      "topic": "legends"
+    },
+    {
+      "id": 134,
+      "title": "Gold bars",
+      "text": "The standard gold bar held by central banks weighs about 400 troy ounces, roughly 12.4 kilograms. Gold is so dense that the bar is smaller than a house brick.",
+      "topic": "metals"
+    },
+    {
+      "id": 135,
+      "title": "Horseshoes",
+      "text": "A horseshoe is nailed through the hoof wall, which has no feeling, much like a toenail, so a good farrier's nails don't hurt the horse. Farriers traditionally shaped the shoes hot at the forge.",
+      "topic": "craft"
+    },
+    {
+      "id": 136,
+      "title": "St Edward's Crown",
+      "text": "St Edward's Crown, used to crown British monarchs, was made in 1661 of 22-carat gold. It weighs 2.23 kg, heavy for something worn on the head.",
+      "topic": "history"
+    },
+    {
+      "id": 137,
+      "title": "Silver river",
+      "text": "Argentina takes its name from argentum, the Latin for silver, after the Río de la Plata, the 'river of silver'. Silver's symbol, Ag, comes from the same word.",
+      "topic": "words"
+    },
+    {
+      "id": 138,
+      "title": "Big Ben's crack",
+      "text": "Big Ben, the Great Bell of Westminster, cracked in 1859, months after it first rang. It was turned an eighth of a turn so a new hammer struck a fresh spot, and it still rings cracked today.",
+      "topic": "history"
+    },
+    {
+      "id": 139,
+      "title": "Wootz steel",
+      "text": "Wootz was a crucible steel made in southern India and Sri Lanka from more than 2,000 years ago. It was traded far and wide, and it was the raw steel of Damascus blades.",
+      "topic": "metals"
+    },
+    {
+      "id": 140,
+      "title": "The Franks Casket",
+      "text": "The Franks Casket, an early 8th-century Anglo-Saxon box of whale bone in the British Museum, shows Wayland the Smith at work in his forge on its front panel.",
+      "topic": "legends"
+    },
+    {
+      "id": 141,
+      "title": "Sheffield plate",
+      "text": "In the 1740s Thomas Boulsover found he could fuse silver onto copper and roll them out together. 'Sheffield plate' looked like solid silver at a fraction of the price.",
+      "topic": "craft"
+    },
+    {
+      "id": 142,
+      "title": "The Cellini Salt Cellar",
+      "text": "Benvenuto Cellini finished a golden salt cellar for King Francis I of France in 1543. Stolen from a Vienna museum in 2003, it was found in 2006 buried in a lead box in a forest.",
+      "topic": "history"
+    },
+    {
+      "id": 143,
+      "title": "The astrolabe",
+      "text": "Astrolabe means 'star-taker' in Greek. With one of these brass instruments you can measure the height of a star, find your latitude, or tell the time by night.",
+      "topic": "words"
+    },
+    {
+      "id": 144,
+      "title": "The anvil's face",
+      "text": "Many old anvils have a body of wrought iron with a face of hardened steel on top. A hard face makes the hammer rebound, while cheap soft anvils deaden every blow.",
+      "topic": "tools"
+    },
+    {
+      "id": 145,
+      "title": "The astrolabe maker of Aleppo",
+      "text": "Al-Ijliyyah was a 10th-century maker of astrolabes in Aleppo, in what is now Syria. She trained under a Baghdad master and worked for the ruler Sayf al-Dawla.",
+      "topic": "history"
+    },
+    {
+      "id": 146,
+      "title": "Tin cans aren't tin",
+      "text": "A 'tin' can was traditionally made of tinplate: steel with a very thin coat of tin that stops the steel from rusting.",
+      "topic": "metals"
+    },
+    {
+      "id": 147,
+      "title": "Gold leaf",
+      "text": "Gold leaf is usually about 0.1 micrometres thick. A stack of ten thousand leaves would be only about a millimetre tall.",
+      "topic": "craft"
+    },
+    {
+      "id": 148,
+      "title": "Anchor for the Titanic",
+      "text": "The Titanic's centre anchor was the largest ever forged by hand. Twenty Clydesdale horses hauled it from Hingley's forge in Netherton to the railway station two miles away.",
+      "topic": "history"
+    },
+    {
+      "id": 149,
+      "title": "Das Rheingold's anvils",
+      "text": "Wagner's opera Das Rheingold calls for eighteen anvils, hammered in rhythm as the music descends to the dwarves' underground forges of Nibelheim.",
+      "topic": "history"
+    },
+    {
+      "id": 150,
+      "title": "Fake wrought iron",
+      "text": "Real wrought iron is no longer made on a commercial scale. Most garden gates and railings sold as 'wrought iron' today are really mild steel.",
+      "topic": "metals"
+    }
+  ]
+}

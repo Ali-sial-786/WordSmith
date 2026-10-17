@@ -189,6 +189,87 @@
     "changes": "Background removed, recoloured #ffffff"
   },
   {
+    "file": "icons/scroll.svg",
+    "title": "Scroll unfurled",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/scroll-unfurled.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/gift.svg",
+    "title": "Present",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/present.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/bellows.svg",
+    "title": "Bellows",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/bellows.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/calendar.svg",
+    "title": "Calendar",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/calendar.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/book.svg",
+    "title": "Book cover",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/book-cover.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/blueprint.svg",
+    "title": "Armor blueprint",
+    "author": "SeregaCthtuf",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/seregacthtuf/armor-blueprint.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/gilded.svg",
+    "title": "Gold bar",
+    "author": "Willdabeast",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/willdabeast/gold-bar.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "icons/swap.svg",
+    "title": "swap_horiz (Rounded, weight 600)",
+    "author": "Google",
+    "licence": "Apache License 2.0",
+    "url": "https://fonts.google.com/icons?selected=Material+Symbols+Rounded:swap_horiz",
+    "licence_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "changes": "Recoloured #ffffff"
+  },
+  {
+    "file": "icons/speaker.svg",
+    "title": "Speaker",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/speaker.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
     "file": "icons/avatar_01.svg",
     "title": "Thor hammer",
     "author": "Delapouite",
@@ -394,6 +475,114 @@
     "url": "https://game-icons.net/1x1/lorc/laurel-crown.html",
     "licence_url": "https://creativecommons.org/licenses/by/3.0/",
     "changes": "Background removed, filled with a metal gradient (starmetal)"
+  },
+  {
+    "file": "masterworks/horseshoe.svg",
+    "title": "Horseshoe",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/horseshoe.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/bell.svg",
+    "title": "Ringing bell",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/ringing-bell.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/dagger.svg",
+    "title": "Plain dagger",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/plain-dagger.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/lantern.svg",
+    "title": "Lantern flame",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/lantern-flame.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/helm.svg",
+    "title": "Visored helm",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/visored-helm.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/shield.svg",
+    "title": "Bordered shield",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/bordered-shield.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/axe.svg",
+    "title": "Sharp axe",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/sharp-axe.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/crown.svg",
+    "title": "Crown",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/crown.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/longsword.svg",
+    "title": "Broadsword",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/broadsword.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/astrolabe.svg",
+    "title": "Astrolabe",
+    "author": "Caro Asercion",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/caro-asercion/astrolabe.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/warhammer.svg",
+    "title": "Warhammer",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/warhammer.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
+  },
+  {
+    "file": "masterworks/anvil.svg",
+    "title": "Anvil",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/anvil.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, recoloured #ffffff"
   },
   {
     "file": "dict/*.json.gz",
@@ -1028,6 +1217,60 @@
   {
     "file": "audio/rival_finished.ogg",
     "title": "Opponent finished / is close: deep gong-like anvil ring under a quick rising two-bell alert",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/gilded.ogg",
+    "title": "Blueprint piece from a gilded cell: bright golden chime, a quick E major run of small bells (E6 G#6 B6 E7) over a soft shimmer",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/masterwork.ogg",
+    "title": "impactBell_heavy_000.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/masterwork.ogg",
+    "title": "Masterwork finished: ~3.3 s triumphant flourish, an anvil strike and three rising bells (A4 D5 F#5) into a D major chord, a quick run, then a big ringing D major bell-and-anvil chord with sparks",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/claim.ogg",
+    "title": "Reward claimed (Work Order, gift, Daily Stoke): warm two-note rising bell chime (C6 to G6), no coins",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/page.ogg",
+    "title": "bookFlip2.ogg (Kenney RPG Audio)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/rpg-audio",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/page.ogg",
+    "title": "Lore Book page turn: a parchment page swishing over, with a dry crinkle",
     "author": "Wordsmith",
     "licence": "original (synthesized by Wordsmith)",
     "url": "",

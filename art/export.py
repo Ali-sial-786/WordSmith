@@ -8,7 +8,8 @@
 Steps:
   fonts    copy the variable TTFs to app/assets/fonts/ and licence texts (+ SCOWL's) to app/assets/licenses/
   icons    clean game-icons.net / Material Symbols SVGs into single-colour glyphs
-           (background removed, fill #ffffff, so the app can tint them) in app/assets/icons/
+           (background removed, fill #ffffff, so the app can tint them) in app/assets/icons/,
+           and the twelve Masterwork glyphs in app/assets/masterworks/
   audio    run art/audio/build_audio.py (needs ffmpeg + numpy) -> app/assets/audio/
   credits  write art/CREDITS.md, art/credits.json (+ app/assets/credits.json) from art/sources.json plus the
            icon/font tables below and art/audio/manifest.json
@@ -65,6 +66,16 @@ ICONS = {
     "flame.svg": (GI, "carl-olsen/flame.svg"),
     "map.svg": (GI, "lorc/treasure-map.svg"),
     "user.svg": (GI, "delapouite/character.svg"),
+    # Forge Board, Daily Commission calendar, Lore Book and Masterworks screens
+    "scroll.svg": (GI, "lorc/scroll-unfurled.svg"),            # Work Orders
+    "gift.svg": (GI, "delapouite/present.svg"),                # friend gifts
+    "bellows.svg": (GI, "delapouite/bellows.svg"),             # Daily Stoke (login reward)
+    "calendar.svg": (GI, "delapouite/calendar.svg"),
+    "book.svg": (GI, "delapouite/book-cover.svg"),             # Smith's Lore book
+    "blueprint.svg": (GI, "seregacthtuf/armor-blueprint.svg"),  # blueprint pieces
+    "gilded.svg": (GI, "willdabeast/gold-bar.svg"),            # gilded cell / gold ingot
+    "swap.svg": ("material-symbols", "swap_horiz_wght600_24px.svg"),
+    "speaker.svg": (GI, "delapouite/speaker.svg"),             # play pronunciation
 }
 AVATARS = [  # avatar_01.svg ... avatar_16.svg
     "delapouite/thor-hammer.svg", "lorc/anvil-impact.svg", "delapouite/blacksmith.svg", "lorc/fluffy-flame.svg",
@@ -101,6 +112,25 @@ RANKS = {
     "rank_legend.svg": ("starmetal", [("lorc/laurel-crown.svg", "")]),
 }
 RANK_FILL = "url(#metal)"
+
+# Masterworks (shared/masterworks.md): one single-colour glyph per item in app/assets/masterworks/<id>.svg,
+# cleaned exactly like the icons (fill #ffffff, transparent, square viewBox). The app tints them:
+# blueprint-white while unfinished, a metal gradient once finished. Names and blurbs live in
+# app/assets/masterworks/masterworks.json.
+MASTERWORKS = {
+    "horseshoe.svg": (GI, "delapouite/horseshoe.svg"),
+    "bell.svg": (GI, "lorc/ringing-bell.svg"),
+    "dagger.svg": (GI, "lorc/plain-dagger.svg"),
+    "lantern.svg": (GI, "lorc/lantern-flame.svg"),
+    "helm.svg": (GI, "lorc/visored-helm.svg"),
+    "shield.svg": (GI, "lorc/bordered-shield.svg"),
+    "axe.svg": (GI, "delapouite/sharp-axe.svg"),
+    "crown.svg": (GI, "lorc/crown.svg"),
+    "longsword.svg": (GI, "lorc/broadsword.svg"),
+    "astrolabe.svg": (GI, "caro-asercion/astrolabe.svg"),
+    "warhammer.svg": (GI, "delapouite/warhammer.svg"),
+    "anvil.svg": (GI, "lorc/anvil.svg"),
+}
 
 LICENCE_NAMES = {
     "OFL-1.1": "SIL Open Font License 1.1",
@@ -213,36 +243,52 @@ def rank_svg(metal: str, layers: list[tuple[str, str]]) -> tuple[str, str]:
             f'{defs}{"".join(groups)}</svg>\n'), changes
 
 
-def export_icons() -> None:
-    out = ASSETS / "icons"
+def write_glyphs(table: dict, out: Path) -> None:
+    """Clean each (pack, rel) source of `table` into a single-colour SVG in `out`."""
     out.mkdir(parents=True, exist_ok=True)
     P = packs()
-    for app_name, (pack, rel) in ICONS.items():
+    for app_name, (pack, rel) in table.items():
         meta = file_meta(P[pack], rel)
         credit = (f'"{meta.get("title", rel)}" by {meta.get("author", P[pack]["author"])}, '
                   f'{meta.get("page", P[pack]["page"])}, {P[pack]["licence"]}.')
         svg, _ = clean_svg(src_path(pack, rel), credit.replace("--", "-"))
         (out / app_name).write_text(svg)
+
+
+def export_icons() -> None:
+    out = ASSETS / "icons"
+    write_glyphs(ICONS, out)
     for app_name, (metal, layers) in RANKS.items():
         (out / app_name).write_text(rank_svg(metal, layers)[0])
     print(f"icons: {len(ICONS)} SVGs + {len(RANKS)} rank badges written to {out.relative_to(ROOT)}")
     validate_icons(out)
+    mw = ASSETS / "masterworks"
+    write_glyphs(MASTERWORKS, mw)
+    print(f"masterworks: {len(MASTERWORKS)} SVGs written to {mw.relative_to(ROOT)}")
+    validate_icons(mw, MASTERWORKS)
 
 
-def validate_icons(out: Path) -> None:
+def validate_icons(out: Path, table: dict | None = None) -> None:
     """Check the files this script writes (other SVGs in the folder, e.g. google_g.svg, are left alone)."""
-    for name in [*ICONS, *RANKS]:
+    names = list(table) if table is not None else [*ICONS, *RANKS]
+    for name in names:
         f = out / name
         root = ET.parse(f).getroot()
         paths = list(root.iter(f"{{{SVG_NS}}}path"))
         fills = {p.get("fill") for p in paths}
-        want = RANK_FILL if name in RANKS else ICON_FILL
+        rank = table is None and name in RANKS
+        want = RANK_FILL if rank else ICON_FILL
         assert root.tag == f"{{{SVG_NS}}}svg" and root.get("viewBox"), f
+        vb = root.get("viewBox").split()
+        assert vb[2] == vb[3], f"{f}: viewBox {vb} is not square"
         assert paths and fills == {want}, f"{f}: paths={len(paths)} fills={fills}"
         assert not list(root.iter(f"{{{SVG_NS}}}rect")), f"{f}: has a rect"
-        if name in RANKS:
+        if rank:
             assert len(list(root.iter(f"{{{SVG_NS}}}linearGradient"))) == 1, f"{f}: no metal gradient"
-    print(f"icons: {len(ICONS)} SVGs validated (XML, >=1 path, single fill {ICON_FILL}), "
+    if table is not None:
+        print(f"{out.name}: {len(names)} SVGs validated (XML, square viewBox, >=1 path, single fill {ICON_FILL})")
+        return
+    print(f"icons: {len(ICONS)} SVGs validated (XML, square viewBox, >=1 path, single fill {ICON_FILL}), "
           f"{len(RANKS)} rank badges (fill {RANK_FILL} + gradient)")
 
 
@@ -263,13 +309,17 @@ def credit_rows() -> list[dict]:
                          licence=LICENCE_NAMES[p["licence"]], url=p["page"], licence_url=p["licence_url"],
                          source=file_meta(p, ttf)["url"], changes="Renamed file; licence shipped alongside as " + app_lic,
                          retrieved=p["retrieved"]))
-    for app_name, (pack, rel) in ICONS.items():
-        p, m = P[pack], file_meta(P[pack], rel)
-        rows.append(dict(file=f"icons/{app_name}", title=m.get("title", rel), author=m.get("author", p["author"]),
-                         licence=LICENCE_NAMES[p["licence"]], url=m.get("page", p["page"]), licence_url=p["licence_url"],
-                         source=m["url"], retrieved=p["retrieved"],
-                         changes=("Background removed, recoloured " if clean_svg(src_path(pack, rel), "")[1]
-                                  else "Recoloured ") + ICON_FILL))
+    def glyph_rows(folder: str, table: dict) -> None:
+        for app_name, (pack, rel) in table.items():
+            p, m = P[pack], file_meta(P[pack], rel)
+            rows.append(dict(file=f"{folder}/{app_name}", title=m.get("title", rel),
+                             author=m.get("author", p["author"]), licence=LICENCE_NAMES[p["licence"]],
+                             url=m.get("page", p["page"]), licence_url=p["licence_url"],
+                             source=m["url"], retrieved=p["retrieved"],
+                             changes=("Background removed, recoloured " if clean_svg(src_path(pack, rel), "")[1]
+                                      else "Recoloured ") + ICON_FILL))
+
+    glyph_rows("icons", ICONS)
     for app_name, (metal, layers) in RANKS.items():
         changes = rank_svg(metal, layers)[1]
         for rel in dict.fromkeys(rel for rel, _ in layers):
@@ -277,6 +327,7 @@ def credit_rows() -> list[dict]:
             rows.append(dict(file=f"icons/{app_name}", title=m["title"], author=m["author"],
                              licence=LICENCE_NAMES[p["licence"]], url=m["page"], licence_url=p["licence_url"],
                              source=m["url"], retrieved=p["retrieved"], changes=changes[0].upper() + changes[1:]))
+    glyph_rows("masterworks", MASTERWORKS)
     # Other outputs (e.g. Blender renders built from CC0 textures) can be credited by adding
     # "used_by": [{"file": "images/x.webp", "changes": "..."}] to their pack in sources.json.
     for p in P.values():
@@ -332,6 +383,13 @@ def write_credits() -> None:
         used_packs.setdefault(pack, set()).add(f"icons/{app_name}")
     for app_name in RANKS:
         used_packs.setdefault(GI, set()).add(f"icons/{app_name}")
+    for app_name, (pack, _rel) in MASTERWORKS.items():
+        used_packs.setdefault(pack, set()).add(f"masterworks/{app_name}")
+    # Everyone whose game-icons.net work we ship, in order of first use.
+    gi_authors = list(dict.fromkeys(r["author"] for r in rows
+                                    if r["url"].startswith("https://game-icons.net/")))
+    gi_credit = ", ".join(gi_authors[:-1]) + " and " + gi_authors[-1]
+    ms_used = [t for t, (pack, _rel) in ICONS.items() if pack == "material-symbols"]
     audio = json.loads(AUDIO_MANIFEST.read_text())
     for a in audio.values():
         for s in a["sources"]:
@@ -341,7 +399,8 @@ def write_credits() -> None:
             used_packs.setdefault(pid, set()).add(u["file"])
 
     L = ["# Wordsmith asset credits", "",
-         "Every third-party file bundled in `app/assets/` (fonts, icons, audio), where it came from and its licence.",
+         "Every third-party file bundled in `app/assets/` (fonts, icons, masterworks, audio), where it came from and",
+         "its licence.",
          "Generated by `python3 art/export.py credits` from `art/sources.json`, the tables in `art/export.py` and",
          "`art/audio/manifest.json`; the same data is in `art/credits.json` for the in-app Credits screen.",
          "Do not edit by hand. Licence texts are saved by `art/fetch.py` under `art/third_party/<pack>/LICENSE`",
@@ -349,12 +408,12 @@ def write_credits() -> None:
          "Allowed licences (docs/ART_AND_AUDIO.md section 7): CC0, CC BY 3.0/4.0 (credited), OFL / Apache 2.0 for fonts",
          "and icons. Nothing here is CC BY-SA, NC, ND, GPL or taken from another game.", "",
          "## Attribution required in the app", "",
-         "- **Icons:** game-icons.net icons are CC BY 3.0. Credit line: *Icons made by Lorc, Delapouite, Carl Olsen and",
-         "  Kier Heyl, from game-icons.net, licensed under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).*",
-         "  All were modified (background removed, recoloured).",
+         "- **Icons and Masterworks:** game-icons.net icons are CC BY 3.0. Credit line: *Icons made by",
+         f"  {gi_credit}, from game-icons.net, licensed under CC BY 3.0",
+         "  (https://creativecommons.org/licenses/by/3.0/).* All were modified (background removed, recoloured).",
          "- **Fonts:** Cinzel and Nunito Sans (SIL OFL 1.1), Roboto Slab (Apache 2.0): ship the licence files; a credits",
          "  mention is good practice.",
-         "- **Material Symbols** (back arrow): Apache 2.0, Google.",
+         f"- **Material Symbols** ({', '.join(f'`{n}`' for n in ms_used)}): Apache 2.0, Google.",
          "- **Audio:** Kenney and OpenGameArt sources are CC0 (no attribution required; credited anyway).", "",
          "## Source packs", "",
          "| Pack | Author | Licence | Page | Retrieved | Used by |", "|---|---|---|---|---|---|"]
@@ -376,6 +435,13 @@ def write_credits() -> None:
     for r in rows:
         if r["file"].startswith("icons/"):
             L.append(f"| `{r['file']}` | {r['title']} | {r['author']} | {r['licence']} | {r['url']} |")
+    L += ["", "## Masterworks (`app/assets/masterworks/`)", "",
+          "One single-colour glyph per Masterwork (fill `#ffffff`, transparent background, square viewBox), tinted by",
+          "the app. Names and blurbs (`masterworks.json`) are our own writing.", "",
+          "| File | Icon | Author | Licence | Source page |", "|---|---|---|---|---|"]
+    for r in rows:
+        if r["file"].startswith("masterworks/"):
+            L.append(f"| `{r['file']}` | {r['title']} | {r['author']} | {r['licence']} | {r['url']} |")
     L += ["", "## Audio (`app/assets/audio/`)", "",
           "Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by our own code",
           "(modal synthesis of struck metal, filtered noise); third-party rows list each source clip used.", "",
@@ -384,7 +450,7 @@ def write_credits() -> None:
         if r["file"].startswith("audio/"):
             src = r["url"] or f"`{r['source']}`"
             L.append(f"| `{r['file']}` | {md_escape(r['title'])} | {md_escape(r['author'])} | {r['licence']} | {src} |")
-    other = [r for r in rows if not r["file"].startswith(("fonts/", "icons/", "audio/"))]
+    other = [r for r in rows if not r["file"].startswith(("fonts/", "icons/", "masterworks/", "audio/"))]
     if other:
         L += ["", "## Other assets", "", "| File | Built from | Author | Licence | Source |", "|---|---|---|---|---|"]
         L += [f"| `{r['file']}` | {md_escape(r['title'])} | {md_escape(r['author'])} | {r['licence']} | {r['url']} |"

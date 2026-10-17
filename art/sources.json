@@ -514,6 +514,168 @@
           "size": 1338
         },
         {
+          "name": "lorc/scroll-unfurled.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/scroll-unfurled.svg",
+          "author": "Lorc",
+          "title": "Scroll unfurled",
+          "page": "https://game-icons.net/1x1/lorc/scroll-unfurled.html",
+          "sha256": "bbbe367221e46a6d9ad8f1b0c47e8a0db223cd2b9fda67b885e906c6fe72d9c9",
+          "size": 1967
+        },
+        {
+          "name": "delapouite/present.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/present.svg",
+          "author": "Delapouite",
+          "title": "Present",
+          "page": "https://game-icons.net/1x1/delapouite/present.html",
+          "sha256": "6a52d7a51d811c0920f23aedacd48df2e41563c98a90d181ca435fe84b118484",
+          "size": 1273
+        },
+        {
+          "name": "delapouite/bellows.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/bellows.svg",
+          "author": "Delapouite",
+          "title": "Bellows",
+          "page": "https://game-icons.net/1x1/delapouite/bellows.html",
+          "sha256": "4e0d586162a83065df82a04134a1147e70f8e00a0d72578549df4a28fd0404bc",
+          "size": 1683
+        },
+        {
+          "name": "delapouite/calendar.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/calendar.svg",
+          "author": "Delapouite",
+          "title": "Calendar",
+          "page": "https://game-icons.net/1x1/delapouite/calendar.html",
+          "sha256": "acbc7ae7670c225f6ffc381297d5ed745f7e1df0da19e33801a6e6a34a9a8824",
+          "size": 948
+        },
+        {
+          "name": "delapouite/book-cover.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/book-cover.svg",
+          "author": "Delapouite",
+          "title": "Book cover",
+          "page": "https://game-icons.net/1x1/delapouite/book-cover.html",
+          "sha256": "9dd166bdcf7c454c628760523f4be3d0042693529fd0e35b679004f13e43489e",
+          "size": 1534
+        },
+        {
+          "name": "seregacthtuf/armor-blueprint.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/seregacthtuf/armor-blueprint.svg",
+          "author": "SeregaCthtuf",
+          "title": "Armor blueprint",
+          "page": "https://game-icons.net/1x1/seregacthtuf/armor-blueprint.html",
+          "sha256": "da2b1f4199bfdbcac45e8ed8a481e95e88a8d7f55c828b52f779ac9072ad8995",
+          "size": 1514
+        },
+        {
+          "name": "willdabeast/gold-bar.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/willdabeast/gold-bar.svg",
+          "author": "Willdabeast",
+          "title": "Gold bar",
+          "page": "https://game-icons.net/1x1/willdabeast/gold-bar.html",
+          "sha256": "984483d7877a3e6f4ec89368fdc13ea0e1a1b9bbbade8c7a2ac209ac12d99152",
+          "size": 865
+        },
+        {
+          "name": "delapouite/speaker.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/speaker.svg",
+          "author": "Delapouite",
+          "title": "Speaker",
+          "page": "https://game-icons.net/1x1/delapouite/speaker.html",
+          "sha256": "9244f41ab0013ea2ca65949df5d3de65a66d73ed22d3aa6e5a1f465a239bb1d8",
+          "size": 713
+        },
+        {
+          "name": "lorc/ringing-bell.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/ringing-bell.svg",
+          "author": "Lorc",
+          "title": "Ringing bell",
+          "page": "https://game-icons.net/1x1/lorc/ringing-bell.html",
+          "sha256": "af3c98f2179d59dab8396ad7f80eef7dff2819585af838e26b2b8c52e8b610de",
+          "size": 2189
+        },
+        {
+          "name": "lorc/plain-dagger.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/plain-dagger.svg",
+          "author": "Lorc",
+          "title": "Plain dagger",
+          "page": "https://game-icons.net/1x1/lorc/plain-dagger.html",
+          "sha256": "096ac4a7fff58534604bfabb91e150b7c7fc67f22d995f33ecee2c4fd88b6734",
+          "size": 1062
+        },
+        {
+          "name": "lorc/lantern-flame.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/lantern-flame.svg",
+          "author": "Lorc",
+          "title": "Lantern flame",
+          "page": "https://game-icons.net/1x1/lorc/lantern-flame.html",
+          "sha256": "7161627a48ed29eae7f15c608010a20ead24977f8f67476c98f0f769a78c7986",
+          "size": 907
+        },
+        {
+          "name": "lorc/visored-helm.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/visored-helm.svg",
+          "author": "Lorc",
+          "title": "Visored helm",
+          "page": "https://game-icons.net/1x1/lorc/visored-helm.html",
+          "sha256": "e01c9f3989d8680677a2a71009fe44f9a79413e237cfce84698a1189eac1a5dd",
+          "size": 1337
+        },
+        {
+          "name": "lorc/bordered-shield.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/bordered-shield.svg",
+          "author": "Lorc",
+          "title": "Bordered shield",
+          "page": "https://game-icons.net/1x1/lorc/bordered-shield.html",
+          "sha256": "a644f5b7aad40c18cc0dae1fe10219fa0ead817c48733741632ec6db00fd52ea",
+          "size": 1612
+        },
+        {
+          "name": "delapouite/sharp-axe.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/sharp-axe.svg",
+          "author": "Delapouite",
+          "title": "Sharp axe",
+          "page": "https://game-icons.net/1x1/delapouite/sharp-axe.html",
+          "sha256": "0bd31d16d1fb965de13480939042584b64cb07ad221774f88f7760e4b08462fd",
+          "size": 2243
+        },
+        {
+          "name": "lorc/crown.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/crown.svg",
+          "author": "Lorc",
+          "title": "Crown",
+          "page": "https://game-icons.net/1x1/lorc/crown.html",
+          "sha256": "2cc6c5699d80caab294edeacc318b662bffd0c3a672fe34062d5ef0c37a35fb7",
+          "size": 1609
+        },
+        {
+          "name": "lorc/broadsword.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/lorc/broadsword.svg",
+          "author": "Lorc",
+          "title": "Broadsword",
+          "page": "https://game-icons.net/1x1/lorc/broadsword.html",
+          "sha256": "37eda3d1e9c41d2389ed28e163472672391df6bd4e02b6e36e8acc37087e5079",
+          "size": 1314
+        },
+        {
+          "name": "caro-asercion/astrolabe.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/caro-asercion/astrolabe.svg",
+          "author": "Caro Asercion",
+          "title": "Astrolabe",
+          "page": "https://game-icons.net/1x1/caro-asercion/astrolabe.html",
+          "sha256": "0b490bff8a83b1031d00af2eee12116f3927f0d2e4b47db91834bcdd47ce4c0d",
+          "size": 3833
+        },
+        {
+          "name": "delapouite/warhammer.svg",
+          "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/delapouite/warhammer.svg",
+          "author": "Delapouite",
+          "title": "Warhammer",
+          "page": "https://game-icons.net/1x1/delapouite/warhammer.html",
+          "sha256": "3450497ca97ae97846121e969462ba97dbbf2b3cbe02f4280e56002787abc7fd",
+          "size": 691
+        },
+        {
           "name": "LICENSE",
           "url": "https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/license.txt",
           "licence_text": true,
@@ -572,6 +734,14 @@
           "url": "https://raw.githubusercontent.com/google/material-design-icons/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/arrow_back/materialsymbolsrounded/arrow_back_wght600_24px.svg",
           "sha256": "35b321da6379bc207d437380bf1d92d0374db209515e6ddcc27f65acf0d73641",
           "size": 505
+        },
+        {
+          "name": "swap_horiz_wght600_24px.svg",
+          "title": "swap_horiz (Rounded, weight 600)",
+          "page": "https://fonts.google.com/icons?selected=Material+Symbols+Rounded:swap_horiz",
+          "url": "https://raw.githubusercontent.com/google/material-design-icons/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/swap_horiz/materialsymbolsrounded/swap_horiz_wght600_24px.svg",
+          "sha256": "68e002b7dc66ae8e8b37c4133373fed109472d0decf40893de7ead2b8d52ec5a",
+          "size": 916
         },
         {
           "name": "LICENSE",
