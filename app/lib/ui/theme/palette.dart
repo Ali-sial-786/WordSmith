@@ -57,6 +57,13 @@ class MetalStyle {
   };
 
   static MetalStyle forChapter(String id) => _byChapter[id] ?? _byChapter['iron']!;
+
+  /// A metal in any colour (co-op player colours).
+  factory MetalStyle.fromColor(Color c) => MetalStyle(
+    c,
+    Color.lerp(c, const Color(0xFFFFFFFF), 0.4)!,
+    c.computeLuminance() > 0.3 ? const Color(0xFF1A1008) : const Color(0xFFFFF6E8),
+  );
 }
 
 /// Chapters that have their own scene so far (docs/ART_AND_AUDIO.md §4);

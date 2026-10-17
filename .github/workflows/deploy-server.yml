@@ -95,12 +95,18 @@ jobs:
           npx wrangler deploy 2>&1 | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
           if [ -n "$url" ]; then
-            curl -fsS "$url/v1/health"
             {
-              echo "### Server is live"
+              echo "### Server deployed"
               echo ""
               echo "URL: $url"
               echo ""
               echo "Set the repository **variable** \`API_BASE_URL\` to this URL so friend builds use it."
             } >> "$GITHUB_STEP_SUMMARY"
+            # A brand-new workers.dev address can take a minute to answer.
+            for i in $(seq 1 18); do
+              if curl -fsS "$url/v1/health"; then echo; exit 0; fi
+              sleep 10
+            done
+            echo "::error::$url/v1/health did not answer within 3 minutes"
+            exit 1
           fi

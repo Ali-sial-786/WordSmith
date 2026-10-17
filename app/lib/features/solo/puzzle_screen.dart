@@ -287,7 +287,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                         child: KeyedSubtree(
                           key: _moldKey,
                           child: MoldGrid(
-                            board: _game.board,
+                            mold: BoardMold(_game.board),
                             metal: metal,
                             cues: _cues,
                             chiselMode: _chisel,

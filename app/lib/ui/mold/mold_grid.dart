@@ -3,13 +3,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../engine/board.dart';
 import '../../engine/puzzle.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import 'mold_model.dart';
 
-enum CellFill { empty, revealed, filled }
+export 'mold_model.dart';
 
 /// Per-cell animation cues handed down by the puzzle screen.
 class MoldCues {
@@ -39,7 +39,7 @@ class MoldCues {
 class MoldGrid extends StatelessWidget {
   const MoldGrid({
     super.key,
-    required this.board,
+    required this.mold,
     required this.metal,
     required this.cues,
     this.chiselMode = false,
@@ -47,7 +47,7 @@ class MoldGrid extends StatelessWidget {
     this.maxCell = 80,
   });
 
-  final Board board;
+  final MoldModel mold;
   final MetalStyle metal;
   final MoldCues cues;
   final bool chiselMode;
@@ -56,45 +56,47 @@ class MoldGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final puzzle = board.puzzle;
     return LayoutBuilder(
       builder: (context, c) {
-        final cell = min(
-          maxCell,
-          min(c.maxWidth / puzzle.cols, c.maxHeight / puzzle.rows),
-        );
+        final cell = min(maxCell, min(c.maxWidth / mold.cols, c.maxHeight / mold.rows));
         final gap = cell * 0.07;
         return Center(
           child: SizedBox(
-            width: cell * puzzle.cols,
-            height: cell * puzzle.rows,
+            width: cell * mold.cols,
+            height: cell * mold.rows,
             child: Stack(
               children: [
-                for (final pos in puzzle.cells)
+                for (final pos in mold.cells)
                   Positioned(
                     left: pos.x * cell + gap / 2,
                     top: pos.y * cell + gap / 2,
                     width: cell - gap,
                     height: cell - gap,
-                    child: MoldCell(
-                      key: ValueKey(pos),
-                      letter: puzzle.letterAt[pos]!,
-                      fill: cellFill(board, pos),
-                      metal: metal,
-                      delay: cues.fillDelay[pos] ?? Duration.zero,
-                      flash: cues.flash[pos] ?? 0,
-                      pickup: board.isFilled(pos) ? null : board.pickupAt(pos)?.kind.name,
-                      highlight: chiselMode && !board.isFilled(pos),
-                      onTap: chiselMode && !board.isFilled(pos) && onCellTap != null
-                          ? () => onCellTap!(pos)
-                          : null,
-                    ),
+                    child: _cell(pos),
                   ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _cell(CellPos pos) {
+    final fill = mold.fillOf(pos);
+    final empty = fill != CellFill.filled && fill != CellFill.revealed;
+    final owner = mold.ownerColor(pos);
+    return MoldCell(
+      key: ValueKey(pos),
+      letter: mold.letterAt(pos),
+      fill: fill,
+      metal: owner == null ? metal : MetalStyle.fromColor(owner),
+      initial: mold.ownerInitial(pos),
+      delay: cues.fillDelay[pos] ?? Duration.zero,
+      flash: cues.flash[pos] ?? 0,
+      pickup: fill == CellFill.filled ? null : mold.pickupAt(pos),
+      highlight: chiselMode && empty,
+      onTap: chiselMode && empty && onCellTap != null ? () => onCellTap!(pos) : null,
     );
   }
 }
@@ -108,11 +110,15 @@ class MoldCell extends StatefulWidget {
     required this.delay,
     required this.flash,
     this.pickup,
+    this.initial,
     this.highlight = false,
     this.onTap,
   });
 
   final String letter;
+
+  /// Co-op: the forger's initial, drawn small in the corner.
+  final String? initial;
   final CellFill fill;
   final MetalStyle metal;
   final Duration delay;
@@ -365,14 +371,20 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
         ),
       );
     }
+    if (filled && widget.initial != null) {
+      layers.add(
+        Positioned(
+          left: s * 0.08,
+          top: s * 0.04,
+          child: Text(
+            widget.initial!,
+            style: letterStyle(s * 0.2, color: widget.metal.letter.withValues(alpha: 0.75)),
+          ),
+        ),
+      );
+    }
     return Stack(alignment: Alignment.center, children: layers);
   }
-}
-
-/// What [pos] shows on [board].
-CellFill cellFill(Board board, CellPos pos) {
-  if (board.puzzle.slotsAt[pos]!.any(board.isSlotComplete)) return CellFill.filled;
-  return board.revealed.contains(pos) ? CellFill.revealed : CellFill.empty;
 }
 
 /// cell_metal.png is a mid-grey plate (about 63% brightness), so multiplying

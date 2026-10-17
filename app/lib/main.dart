@@ -14,6 +14,7 @@ import 'game/providers.dart';
 import 'net/api_client.dart';
 import 'net/config.dart';
 import 'net/hub_client.dart';
+import 'net/room_client.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,11 @@ Future<void> main() async {
         authServiceProvider.overrideWithValue(auth),
         apiClientProvider.overrideWithValue(api),
         hubClientProvider.overrideWithValue(hub),
+        roomClientFactoryProvider.overrideWithValue(
+          api == null
+              ? null
+              : (code) => RoomClient(baseUrl: AppConfig.apiBase, code: code, token: auth.idToken),
+        ),
       ],
       child: const WordsmithApp(),
     ),

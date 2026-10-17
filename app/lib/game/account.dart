@@ -7,12 +7,16 @@ import '../auth/auth_service.dart';
 import '../net/api_client.dart';
 import '../net/hub_client.dart';
 import '../net/models.dart';
+import '../net/room_client.dart';
 import 'providers.dart';
 
 /// Overridden in main() from the build's settings (net/config.dart).
 final authServiceProvider = Provider<AuthService>((_) => const DisabledAuthService());
 final apiClientProvider = Provider<ApiClient?>((_) => null);
 final hubClientProvider = Provider<HubClient?>((_) => null);
+
+/// Opens the connection to a room by code (null without a server).
+final roomClientFactoryProvider = Provider<RoomClient Function(String code)?>((_) => null);
 
 final accountProvider = NotifierProvider<AccountController, AccountState>(
   AccountController.new,
@@ -40,6 +44,7 @@ class AccountState {
     this.friends = const FriendsList(),
     this.presence = const {},
     this.invites = const [],
+    this.openRooms = const [],
     this.error,
     this.syncing = false,
   });
@@ -52,6 +57,9 @@ class AccountState {
   /// Friend user id → `online`, `solo`, `in_room:<CODE>` or `offline`.
   final Map<String, String> presence;
   final List<HubInvite> invites;
+
+  /// Friends' rooms that can be joined.
+  final List<OpenRoom> openRooms;
   final String? error;
   final bool syncing;
 
@@ -68,6 +76,7 @@ class AccountState {
     FriendsList? friends,
     Map<String, String>? presence,
     List<HubInvite>? invites,
+    List<OpenRoom>? openRooms,
     String? error,
     bool clearError = false,
     bool? syncing,
@@ -78,6 +87,7 @@ class AccountState {
     friends: friends ?? this.friends,
     presence: presence ?? this.presence,
     invites: invites ?? this.invites,
+    openRooms: openRooms ?? this.openRooms,
     error: clearError ? null : error ?? this.error,
     syncing: syncing ?? this.syncing,
   );
@@ -261,6 +271,16 @@ class AccountController extends Notifier<AccountState> {
   /// `online` in menus, `solo` while forging a campaign puzzle.
   void setStatus(String status) => _hub?.setStatus(status);
 
+  void invite(String friendId, String code, String mode) => _hub?.invite(friendId, code, mode);
+
+  // ---- Rooms ----
+
+  /// Creates a room and returns its code. Throws [ApiException].
+  Future<String> createRoom(String mode) => _api!.createRoom(mode);
+
+  /// Checks a typed code before joining. Throws [ApiException].
+  Future<void> checkRoom(String code) => _api!.room(code);
+
   void dismissInvite(HubInvite invite) =>
       state = state.copyWith(invites: [...state.invites]..remove(invite));
 
@@ -286,7 +306,9 @@ class AccountController extends Notifier<AccountState> {
         if (!state.friends.friends.any((f) => f.id == userId)) unawaited(refreshFriends());
       case HubInvite():
         state = state.copyWith(invites: [...state.invites, event]);
-      case HubOpenRooms() || HubError():
+      case HubOpenRooms(:final rooms):
+        state = state.copyWith(openRooms: rooms);
+      case HubError():
         break;
     }
   }

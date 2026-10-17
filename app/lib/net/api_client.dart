@@ -27,6 +27,11 @@ class ApiException implements Exception {
     'already_friends' => "You're already friends.",
     'too_many_requests' => 'Too many friend requests waiting. Try later.',
     'setup_required' => 'Pick a name first.',
+    'room_not_found' => 'No forge with that code. Check it and try again.',
+    'room_full' => 'That forge is full.',
+    'round_in_progress' => "They're mid-round. Try again when it ends.",
+    // An unknown route: the server is older than this app.
+    'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
   };
 
@@ -116,6 +121,14 @@ class ApiClient {
 
   Future<void> removeFriend(String userId) =>
       _send('DELETE', '/friends/${Uri.encodeComponent(userId)}');
+
+  /// Creates a room and returns its code.
+  Future<String> createRoom(String mode) async =>
+      (await _send('POST', '/rooms', body: {'mode': mode}))['code'] as String;
+
+  /// Room summary; throws `room_not_found` for a bad code.
+  Future<Map<String, dynamic>> room(String code) =>
+      _send('GET', '/rooms/${Uri.encodeComponent(code)}');
 
   Future<List<LeaderboardEntry>> leaderboard() async => [
     for (final e in ((await _send('GET', '/leaderboard'))['entries'] as List)

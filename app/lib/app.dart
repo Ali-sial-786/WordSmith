@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'features/account/setup_screen.dart';
 import 'features/account/sign_in_screen.dart';
 import 'features/campaign/chapters_screen.dart';
+import 'features/coop/room_screen.dart';
 import 'features/credits/credits_screen.dart';
 import 'features/friends/friends_screen.dart';
 import 'features/hall/hall_screen.dart';
@@ -31,6 +32,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
     GoRoute(path: '/setup', builder: (_, _) => const SetupScreen()),
     GoRoute(path: '/friends', builder: (_, _) => const FriendsScreen()),
+    GoRoute(
+      path: '/room/:code',
+      builder: (_, state) => RoomScreen(
+        key: ValueKey(state.pathParameters['code']),
+        code: state.pathParameters['code']!.toUpperCase(),
+      ),
+    ),
   ],
 );
 

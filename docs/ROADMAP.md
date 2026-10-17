@@ -6,8 +6,9 @@
 > **Status (2026-10-17):**
 > - **M0:** done.
 > - **M1:** built. The first friend build is waiting on the one-time setup in DISTRIBUTION.md §5 (signing key, Firebase App Distribution).
-> - **M2:** built and tested on both sides: sign-in, smith names, cloud sync, friends and online status. Going live needs the Cloudflare setup in DISTRIBUTION.md §5.
-> - **M3–M5:** not started.
+> - **M2:** live. The server runs at https://wordsmith-api.wordsmith-forge.workers.dev and deploys from GitHub Actions.
+> - **M3:** the app side is built (lobby, shared round, results; contract in shared/room-protocol.md). The server side is in progress.
+> - **M4–M5:** not started.
 
 ---
 

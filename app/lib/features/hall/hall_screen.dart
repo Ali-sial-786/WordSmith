@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../engine/hints.dart';
 import '../../game/account.dart';
+import '../../net/hub_client.dart';
 import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -12,6 +13,7 @@ import '../../ui/widgets/forge_background.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_bar.dart';
+import '../coop/coop_entry.dart';
 
 /// Home screen.
 class HallScreen extends ConsumerWidget {
@@ -65,6 +67,10 @@ class HallScreen extends ConsumerWidget {
                           _AccountBanner(state: account),
                           const SizedBox(height: 14),
                         ],
+                        for (final invite in account.invites) ...[
+                          _InviteBanner(invite: invite),
+                          const SizedBox(height: 10),
+                        ],
                         _ProfileCard(
                           name: account.server?.username,
                           avatar: account.server?.avatar,
@@ -115,18 +121,22 @@ class HallScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               child: PlateButton(
                                 label: 'Co-op',
-                                sublabel: 'Coming soon',
+                                sublabel: account.isReady
+                                    ? 'Up to 4 smiths'
+                                    : online
+                                    ? 'Sign in first'
+                                    : 'Coming soon',
                                 icon: 'anvil',
-                                onPressed: null,
+                                onPressed: account.isReady ? () => showCoopEntry(context) : null,
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Expanded(
+                            const SizedBox(width: 12),
+                            const Expanded(
                               child: PlateButton(
                                 label: 'Versus',
                                 sublabel: 'Coming soon',
@@ -166,6 +176,47 @@ class HallScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A friend's invitation to a room.
+class _InviteBanner extends ConsumerWidget {
+  const _InviteBanner({required this.invite});
+
+  final HubInvite invite;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = ref.read(accountProvider.notifier);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+      decoration: BoxDecoration(
+        color: Palette.ember.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Palette.molten),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${invite.fromUsername} invited you to ${invite.mode == 'vs' ? 'Versus' : 'Co-op'}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              n.dismissInvite(invite);
+              context.push('/room/${invite.code}');
+            },
+            child: const Text('Join', style: TextStyle(color: Palette.molten)),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () => n.dismissInvite(invite),
+          ),
+        ],
       ),
     );
   }
