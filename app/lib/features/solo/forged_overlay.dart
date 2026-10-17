@@ -490,7 +490,9 @@ class _LoreNote extends ConsumerWidget {
             children: [
               const GameIcon('book', size: 18, color: Palette.molten),
               const SizedBox(width: 6),
-              Text("New page of Smith's Lore", style: text.labelMedium?.copyWith(color: Palette.molten)),
+              Flexible(
+                child: Text("New page of Smith's Lore", style: text.labelMedium?.copyWith(color: Palette.molten)),
+              ),
             ],
           ),
           const SizedBox(height: 6),
