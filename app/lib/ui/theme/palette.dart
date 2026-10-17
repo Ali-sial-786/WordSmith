@@ -34,6 +34,9 @@ abstract final class Palette {
     Color(0xFF4A78C8), // cobalt
     Color(0xFF9A6BC8), // titanium
   ];
+
+  /// A room player's colour (0–4).
+  static Color player(int color) => players[color % players.length];
 }
 
 /// Metal colours finished mold cells cool to, per campaign chapter.

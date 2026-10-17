@@ -20,6 +20,7 @@ import '../../ui/widgets/toast_line.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../ui/widgets/word_preview.dart';
 import '../../video/video_call.dart';
+import 'emotes.dart';
 import 'room_video.dart';
 
 /// The co-op round: one shared mold, everyone's anvil has the same letters.
@@ -328,6 +329,7 @@ class _TopStrip extends StatelessWidget {
           ),
           if (video.call != null)
             VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
+          EmoteButton(onEmote: session.emote, size: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -368,7 +370,7 @@ class _Teammates extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Palette.soot.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Palette.players[p.color % 4], width: 2),
+                border: Border.all(color: Palette.player(p.color), width: 2),
               ),
               child: Row(
                 children: [
@@ -377,7 +379,7 @@ class _Teammates extends StatelessWidget {
                     avatar: p.avatar,
                     size: call == null ? 30 : 42,
                     call: call,
-                    color: Palette.players[p.color % 4],
+                    color: Palette.player(p.color),
                     dimmed: !p.connected,
                   ),
                   const SizedBox(width: 6),

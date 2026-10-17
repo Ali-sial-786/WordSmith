@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../engine/heat.dart';
 import '../../game/account.dart';
-import '../../game/coop_session.dart';
+import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -14,11 +14,12 @@ import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 import 'room_video.dart';
 
-/// Before a round: the code to share, who's in, ready checks, host start.
+/// Before a round (co-op or Versus): the code to share, who's in, ready
+/// checks, the series length in Versus, and the host's start.
 class LobbyView extends ConsumerWidget {
   const LobbyView({super.key, required this.session, required this.onLeave, this.video = RoomVideo.none});
 
-  final CoopSession session;
+  final RoomSession session;
   final VoidCallback onLeave;
   final RoomVideo video;
 
@@ -29,10 +30,18 @@ class LobbyView extends ConsumerWidget {
     final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
     final host = lobby.player(lobby.hostId);
     final me = session.myPlayer;
+    final vs = lobby.isVs;
+    final max = lobby.maxPlayers;
+    final connected = lobby.players.where((p) => p.connected).length;
+    final canStart = !vs || connected >= 2;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Text('The Guild Forge', textAlign: TextAlign.center, style: displayStyle(24, color: Palette.molten)),
+        Text(
+          vs ? 'Anvil Clash' : 'The Guild Forge',
+          textAlign: TextAlign.center,
+          style: displayStyle(24, color: Palette.molten),
+        ),
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),
         const SizedBox(height: 12),
@@ -44,17 +53,23 @@ class LobbyView extends ConsumerWidget {
             border: Border.all(color: Palette.heat(heat)),
           ),
           child: Text(
-            '${heat.title} heat · set by host ${host?.username ?? '?'} (Lv ${host?.level ?? '?'})',
+            vs
+                ? '${heat.title} heat · from the middle level in the room'
+                : '${heat.title} heat · set by host ${host?.username ?? '?'} (Lv ${host?.level ?? '?'})',
             textAlign: TextAlign.center,
             style: text.titleSmall,
           ),
         ),
+        if (vs && session is VsSession) ...[
+          const SizedBox(height: 12),
+          _SeriesPicker(session: session as VsSession, series: lobby.series),
+        ],
         const SizedBox(height: 18),
-        Text('Smiths ${lobby.players.length}/4', style: text.titleMedium),
+        Text('Smiths ${lobby.players.length}/$max', style: text.titleMedium),
         const SizedBox(height: 6),
         for (final p in lobby.players)
           _PlayerRow(player: p, isHost: p.id == lobby.hostId, isMe: p.id == session.me, call: video.call),
-        for (var i = lobby.players.length; i < 4; i++)
+        for (var i = lobby.players.length; i < max; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Text('Waiting for a smith…', style: text.bodySmall),
@@ -71,13 +86,15 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 10),
         if (session.isHost)
           PlateButton(
-            label: 'Start the round',
-            sublabel: lobby.players.every((p) => p.ready || p.id == session.me)
+            label: vs ? 'Start the series' : 'Start the round',
+            sublabel: !canStart
+                ? 'Versus needs at least 2 smiths'
+                : lobby.players.every((p) => p.ready || p.id == session.me)
                 ? 'Everyone is ready'
                 : "Not everyone is ready (you can start anyway)",
-            icon: 'anvil',
+            icon: vs ? 'trophy' : 'anvil',
             primary: true,
-            onPressed: session.startRound,
+            onPressed: canStart ? session.startRound : null,
           )
         else
           Text(
@@ -95,7 +112,11 @@ class LobbyView extends ConsumerWidget {
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
                   backgroundColor: Palette.soot,
-                  builder: (_) => _InviteSheet(code: lobby.code, inRoom: {for (final p in lobby.players) p.id}),
+                  builder: (_) => _InviteSheet(
+                    code: lobby.code,
+                    mode: lobby.mode,
+                    inRoom: {for (final p in lobby.players) p.id},
+                  ),
                 ),
               ),
             ),
@@ -103,6 +124,43 @@ class LobbyView extends ConsumerWidget {
             Expanded(
               child: OutlinedButton(onPressed: onLeave, child: const Text('Leave')),
             ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Versus: best of 3, 5, 7 or 10. The host picks; everyone sees it.
+class _SeriesPicker extends StatelessWidget {
+  const _SeriesPicker({required this.session, required this.series});
+
+  final VsSession session;
+  final int series;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        Text(
+          session.isHost ? 'Best of how many rounds?' : 'Best of $series · the host picks',
+          style: text.labelLarge?.copyWith(color: Palette.steel),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final n in const [3, 5, 7, 10])
+              ChoiceChip(
+                label: Text('$n'),
+                selected: series == n,
+                selectedColor: Palette.ember.withValues(alpha: 0.35),
+                side: BorderSide(color: series == n ? Palette.molten : Palette.ash),
+                onSelected: session.isHost ? (_) => session.config(n) : null,
+              ),
           ],
         ),
       ],
@@ -141,9 +199,8 @@ class _CodeCard extends StatelessWidget {
               icon: const Icon(Icons.copy, color: Palette.steel),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: code));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Copied $code. Send it to your friends!')),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text('Copied $code. Send it to your friends!')));
               },
             ),
           ],
@@ -163,7 +220,7 @@ class _PlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Palette.players[player.color % 4];
+    final color = Palette.player(player.color);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -213,9 +270,10 @@ class _PlayerRow extends StatelessWidget {
 }
 
 class _InviteSheet extends ConsumerWidget {
-  const _InviteSheet({required this.code, required this.inRoom});
+  const _InviteSheet({required this.code, required this.mode, required this.inRoom});
 
   final String code;
+  final String mode;
   final Set<String> inRoom;
 
   @override
@@ -245,10 +303,9 @@ class _InviteSheet extends ConsumerWidget {
               subtitle: Text(presenceLabel(account.presence[f.id])),
               trailing: TextButton(
                 onPressed: () {
-                  ref.read(accountProvider.notifier).invite(f.id, code, 'coop');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Invited ${f.username}')),
-                  );
+                  ref.read(accountProvider.notifier).invite(f.id, code, mode);
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('Invited ${f.username}')));
                 },
                 child: const Text('Invite'),
               ),

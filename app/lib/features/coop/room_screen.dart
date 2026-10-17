@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/coop_session.dart';
+import '../../game/vs_session.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
 import '../../net/room_client.dart';
@@ -15,23 +16,30 @@ import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/widgets/forge_background.dart';
 import '../../video/video_call.dart';
+import '../vs/vs_results_view.dart';
+import '../vs/vs_round_view.dart';
+import '../vs/vs_standings_view.dart';
+import 'emotes.dart';
 import 'lobby_view.dart';
 import 'results_view.dart';
 import 'room_video.dart';
 import 'round_view.dart';
 
-/// One co-op room, from lobby to results and back.
+/// One room, co-op or Versus, from lobby to results and back.
 class RoomScreen extends ConsumerStatefulWidget {
-  const RoomScreen({super.key, required this.code});
+  const RoomScreen({super.key, required this.code, this.mode = 'coop'});
 
   final String code;
+
+  /// `coop` or `vs`, from whoever sent us here (entry sheet, invite, open room).
+  final String mode;
 
   @override
   ConsumerState<RoomScreen> createState() => _RoomScreenState();
 }
 
 class _RoomScreenState extends ConsumerState<RoomScreen> {
-  CoopSession? _session;
+  RoomSession? _session;
   final _cues = MoldCues();
   late final AccountController _account;
   StreamSubscription<RoomEvent>? _sub;
@@ -51,7 +59,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final factory = ref.read(roomClientFactoryProvider);
     final me = ref.read(accountProvider).user?.uid ?? '';
     if (factory != null) {
-      _session = CoopSession(client: factory(widget.code), me: me)..addListener(_changed);
+      final client = factory(widget.code);
+      _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
+        ..addListener(_changed);
       _sub = _session!.effects.listen(_onEffect);
       _session!.start();
       _account.setStatus('in_room:${widget.code}');
@@ -152,6 +162,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         sfx.play(completed ? SfxId.forged : SfxId.tick);
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
+      case VsRoundEnd(:final winner):
+        sfx.play(winner == _session?.me ? SfxId.forged : SfxId.tick);
+      case SeriesEnd(:final winner, :final xp):
+        sfx.play(winner == _session?.me || (xp[_session?.me]?.levelUps ?? 0) > 0 ? SfxId.levelUp : SfxId.tick);
+        _account.sync();
       case RoomError(:final code):
         final message = switch (code) {
           'no_puzzle' => 'The forge has no puzzles ready. Try again in a minute.',
@@ -167,7 +182,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               duration: const Duration(seconds: 2),
-              content: Text('${_session?.nameOf(from)}: ${_emoteText(emote)}'),
+              content: Text('${_session?.nameOf(from)}: ${emoteText(emote)}'),
             ),
           );
         }
@@ -175,15 +190,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         break;
     }
   }
-
-  static String _emoteText(String id) => switch (id) {
-    'nice' => 'Nice strike!',
-    'close' => 'So close!',
-    'fire' => '🔥',
-    'hammer' => '🔨',
-    'gg' => 'Good game!',
-    _ => id,
-  };
 
   Future<void> _leave() async {
     final ok = await showDialog<bool>(
@@ -247,7 +253,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     );
   }
 
-  Widget _body(CoopSession s) {
+  Widget _body(RoomSession s) {
     if (_left) return _message('Leaving the forge…', busy: true);
     if (s.connection == RoomConnection.closed) {
       return _message(
@@ -256,14 +262,28 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       );
     }
     if (s.lobby == null) return _message('Joining forge ${widget.code}…', busy: true);
-    final view = switch (s.phase) {
-      'results' when s.results != null => ResultsView(session: s, cues: _cues, onLeave: _leave),
-      'countdown' || 'round' when s.round != null => RoundView(
-        session: s,
-        cues: _cues,
-        onLeave: _leave,
-        video: _roomVideo,
-      ),
+    final view = switch (s) {
+      CoopSession() => switch (s.phase) {
+        'results' when s.results != null => ResultsView(session: s, cues: _cues, onLeave: _leave),
+        'countdown' || 'round' when s.round != null => RoundView(
+          session: s,
+          cues: _cues,
+          onLeave: _leave,
+          video: _roomVideo,
+        ),
+        _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
+      },
+      VsSession() => switch (s.phase) {
+        'results' when s.seriesEnd != null => VsResultsView(session: s, onLeave: _leave),
+        'standings' || 'results' when s.standings != null => VsStandingsView(session: s, cues: _cues, onLeave: _leave),
+        'countdown' || 'round' when s.round != null => VsRoundView(
+          session: s,
+          cues: _cues,
+          onLeave: _leave,
+          video: _roomVideo,
+        ),
+        _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
+      },
       _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
     };
     return Stack(

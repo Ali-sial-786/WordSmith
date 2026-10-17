@@ -136,12 +136,16 @@ class HallScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: PlateButton(
                                 label: 'Versus',
-                                sublabel: 'Coming soon',
+                                sublabel: account.isReady
+                                    ? 'Race up to 5 smiths'
+                                    : online
+                                    ? 'Sign in first'
+                                    : 'Coming soon',
                                 icon: 'trophy',
-                                onPressed: null,
+                                onPressed: account.isReady ? () => showRoomEntry(context, 'vs') : null,
                               ),
                             ),
                           ],
@@ -208,7 +212,7 @@ class _InviteBanner extends ConsumerWidget {
           TextButton(
             onPressed: () {
               n.dismissInvite(invite);
-              context.push('/room/${invite.code}');
+              context.push('/room/${invite.code}?mode=${invite.mode}');
             },
             child: const Text('Join', style: TextStyle(color: Palette.molten)),
           ),

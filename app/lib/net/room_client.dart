@@ -21,6 +21,9 @@ sealed class RoomEvent {
       result: m['result'] as String,
       by: m['by'] as String?,
       points: m['points'] as int? ?? 0,
+      slot: m['slot'] as int?,
+      auto: _slotWords(m['auto']),
+      pickup: m['pickup'] as String?,
     ),
     'CLAIMED' => WordClaimed(
       slot: m['slot'] as int,
@@ -43,7 +46,10 @@ sealed class RoomEvent {
       cells: _cellLetters(m['cells']),
       auto: _slotWords(m['auto']),
     ),
-    'ROUND_END' => RoundEnd.fromJson(m),
+    // Versus round ends say how the round was won; co-op ones don't.
+    'ROUND_END' => m.containsKey('how') ? VsRoundEnd.fromJson(m) : RoundEnd.fromJson(m),
+    'PROGRESS' => RacerProgress.fromJson(m),
+    'SERIES_END' => SeriesEnd.fromJson(m),
     'SNAPSHOT' => RoomSnapshot.fromJson(m),
     'EMOTE' => RoomEmote(m['from'] as String, m['emote'] as String),
     'ERROR' => RoomError(m['code'] as String? ?? 'unknown'),
@@ -109,6 +115,7 @@ class RoomLobby extends RoomEvent {
     required this.hostId,
     required this.heat,
     required this.players,
+    this.series = 3,
   });
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
@@ -121,6 +128,7 @@ class RoomLobby extends RoomEvent {
       for (final p in ((j['players'] as List?) ?? const []).cast<Map<String, dynamic>>())
         RoomPlayer.fromJson(p),
     ],
+    series: j['series'] as int? ?? 3,
   );
 
   final String code;
@@ -129,6 +137,12 @@ class RoomLobby extends RoomEvent {
   final String hostId;
   final int heat;
   final List<RoomPlayer> players;
+
+  /// Versus: best of this many rounds.
+  final int series;
+
+  bool get isVs => mode == 'vs';
+  int get maxPlayers => isVs ? 5 : 4;
 
   RoomPlayer? player(String id) {
     for (final p in players) {
@@ -164,6 +178,11 @@ class RoundStart extends RoomEvent {
     required this.rows,
     required this.slots,
     required this.pickups,
+    this.series,
+    this.regular,
+    this.suddenDeath = false,
+    this.racers = const [],
+    this.tally = const {},
   });
 
   factory RoundStart.fromJson(Map<String, dynamic> j) => RoundStart(
@@ -183,6 +202,11 @@ class RoundStart extends RoomEvent {
       for (final p in ((j['pickups'] as List?) ?? const []).cast<Map<String, dynamic>>())
         (x: p['x'] as int, y: p['y'] as int),
     ],
+    series: j['series'] as int?,
+    regular: j['regular'] as int?,
+    suddenDeath: j['suddenDeath'] as bool? ?? false,
+    racers: [for (final id in (j['players'] as List?) ?? const []) id as String],
+    tally: _scores(j['tally']),
   );
 
   final int round;
@@ -195,6 +219,14 @@ class RoundStart extends RoomEvent {
   final int rows;
   final List<RemoteSlot> slots;
   final List<CellPos> pickups;
+
+  /// Versus: series length, the regular round number (null in sudden death),
+  /// who races this round (everyone else watches) and wins so far.
+  final int? series;
+  final int? regular;
+  final bool suddenDeath;
+  final List<String> racers;
+  final Map<String, int> tally;
 }
 
 class WordResult extends RoomEvent {
@@ -204,6 +236,9 @@ class WordResult extends RoomEvent {
     required this.result,
     this.by,
     this.points = 0,
+    this.slot,
+    this.auto = const [],
+    this.pickup,
   });
 
   final int seq;
@@ -213,6 +248,125 @@ class WordResult extends RoomEvent {
   final String result;
   final String? by;
   final int points;
+
+  /// Versus `claimed`: the slot on my own mold, crossing slots it completed,
+  /// and an ember collected (granted after the series).
+  final int? slot;
+  final List<(int, String)> auto;
+  final String? pickup;
+}
+
+/// Versus: how full a racer's mold is (never their words).
+class RacerProgress extends RoomEvent {
+  const RacerProgress(this.id, this.filled, this.total);
+
+  factory RacerProgress.fromJson(Map<String, dynamic> j) =>
+      RacerProgress(j['id'] as String, (j['filled'] as num?)?.toInt() ?? 0, (j['total'] as num?)?.toInt() ?? 0);
+
+  final String id;
+  final int filled;
+  final int total;
+
+  double get fraction => total == 0 ? 0 : filled / total;
+}
+
+/// Versus: the round after this one's standings.
+class NextRound {
+  const NextRound(this.round, this.suddenDeath, this.racers);
+
+  final int round;
+  final bool suddenDeath;
+  final List<String> racers;
+}
+
+class VsRoundEnd extends RoomEvent {
+  const VsRoundEnd({
+    required this.reason,
+    required this.winner,
+    required this.how,
+    required this.progress,
+    required this.tally,
+    required this.answers,
+    this.next,
+    this.standingsEndsAt,
+  });
+
+  factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
+    final next = j['next'] as Map<String, dynamic>?;
+    return VsRoundEnd(
+      reason: j['reason'] as String? ?? 'timeout',
+      winner: j['winner'] as String?,
+      how: j['how'] as String? ?? 'none',
+      progress: [
+        for (final p in ((j['progress'] as List?) ?? const []).cast<Map<String, dynamic>>()) RacerProgress.fromJson(p),
+      ],
+      tally: _scores(j['tally']),
+      answers: _slotWords(j['answers']),
+      next: next == null
+          ? null
+          : NextRound(
+              (next['round'] as num?)?.toInt() ?? 0,
+              next['suddenDeath'] as bool? ?? false,
+              [for (final id in (next['players'] as List?) ?? const []) id as String],
+            ),
+      standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
+    );
+  }
+
+  final String reason;
+  final String? winner;
+
+  /// `finished`, `timeout` or `none`.
+  final String how;
+  final List<RacerProgress> progress;
+  final Map<String, int> tally;
+  final List<(int, String)> answers;
+  final NextRound? next;
+  final int? standingsEndsAt;
+}
+
+class PodiumPlace {
+  const PodiumPlace(this.id, this.username, this.wins, this.place);
+
+  final String id;
+  final String username;
+  final int wins;
+  final int place;
+}
+
+class SeriesEnd extends RoomEvent {
+  const SeriesEnd({
+    required this.winner,
+    required this.early,
+    required this.forfeit,
+    required this.rounds,
+    required this.podium,
+    required this.xp,
+  });
+
+  factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
+    winner: j['winner'] as String?,
+    early: j['early'] as bool? ?? false,
+    forfeit: j['forfeit'] as bool? ?? false,
+    rounds: (j['rounds'] as num?)?.toInt() ?? 0,
+    podium: [
+      for (final p in ((j['podium'] as List?) ?? const []).cast<Map<String, dynamic>>())
+        PodiumPlace(
+          p['id'] as String,
+          p['username'] as String? ?? '',
+          (p['wins'] as num?)?.toInt() ?? 0,
+          (p['place'] as num?)?.toInt() ?? 0,
+        ),
+    ],
+    xp: _xpAwards(j['xp']),
+  );
+
+  final String? winner;
+  final bool early;
+  final bool forfeit;
+  final int rounds;
+  final List<PodiumPlace> podium;
+  final Map<String, XpAward> xp;
 }
 
 class WordClaimed extends RoomEvent {
@@ -274,7 +428,7 @@ class RoundPlayerResult {
 }
 
 class XpAward {
-  const XpAward(this.xp, this.level, this.levelUps, this.rewards, {this.scrapHammers = 0});
+  const XpAward(this.xp, this.level, this.levelUps, this.rewards, {this.scrapHammers = 0, this.pickups = const {}});
 
   final int xp;
   final int level;
@@ -285,7 +439,22 @@ class XpAward {
 
   /// Hammer Strikes smelted from this round's bonus words (Scrap Bin).
   final int scrapHammers;
+
+  /// Versus: embers collected during the series, granted at the end.
+  final Map<String, int> pickups;
 }
+
+Map<String, XpAward> _xpAwards(Object? j) => {
+  for (final e in ((j as Map?) ?? const {}).entries)
+    e.key as String: XpAward(
+      (e.value['xp'] as num?)?.toInt() ?? 0,
+      (e.value['level'] as num?)?.toInt() ?? 1,
+      (e.value['levelUps'] as num?)?.toInt() ?? 0,
+      _scores(e.value['rewards']),
+      scrapHammers: (e.value['scrapHammers'] as num?)?.toInt() ?? 0,
+      pickups: _scores(e.value['pickups']),
+    ),
+};
 
 class RoundEnd extends RoomEvent {
   const RoundEnd({
@@ -319,16 +488,7 @@ class RoundEnd extends RoomEvent {
     ]..sort((a, b) => b.points.compareTo(a.points)),
     mvp: j['mvp'] as String?,
     answers: _slotWords(j['answers']),
-    xp: {
-      for (final e in ((j['xp'] as Map?) ?? const {}).entries)
-        e.key as String: XpAward(
-          (e.value['xp'] as num?)?.toInt() ?? 0,
-          (e.value['level'] as num?)?.toInt() ?? 1,
-          (e.value['levelUps'] as num?)?.toInt() ?? 0,
-          _scores(e.value['rewards']),
-          scrapHammers: (e.value['scrapHammers'] as num?)?.toInt() ?? 0,
-        ),
-    },
+    xp: _xpAwards(j['xp']),
   );
 
   final String reason;
@@ -354,10 +514,19 @@ class RoomSnapshot extends RoomEvent {
     this.revealed = const [],
     this.scores = const {},
     this.results,
+    this.mine = const [],
+    this.mineAuto = const [],
+    this.progress = const [],
+    this.standings,
+    this.seriesEnd,
   });
 
   factory RoomSnapshot.fromJson(Map<String, dynamic> j) {
     final round = j['round'] as Map<String, dynamic>?;
+    final mine = round?['mine'] as Map<String, dynamic>?;
+    final results = j['results'] as Map<String, dynamic>?;
+    final standings = j['standings'] as Map<String, dynamic>?;
+    final vsResults = results != null && results.containsKey('podium');
     return RoomSnapshot(
       lobby: RoomLobby.fromJson(j['lobby'] as Map<String, dynamic>),
       round: round == null ? null : RoundStart.fromJson(round),
@@ -372,9 +541,15 @@ class RoomSnapshot extends RoomEvent {
       ],
       revealed: _cellLetters(round?['revealed']),
       scores: _scores(round?['scores']),
-      results: j['results'] == null
-          ? null
-          : RoundEnd.fromJson(j['results'] as Map<String, dynamic>),
+      results: results == null || vsResults ? null : RoundEnd.fromJson(results),
+      mine: _slotWords(mine?['claims']),
+      mineAuto: _slotWords(mine?['auto']),
+      progress: [
+        for (final p in ((round?['progress'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          RacerProgress.fromJson(p),
+      ],
+      standings: standings == null ? null : VsRoundEnd.fromJson(standings),
+      seriesEnd: vsResults ? SeriesEnd.fromJson(results) : null,
     );
   }
 
@@ -386,6 +561,14 @@ class RoomSnapshot extends RoomEvent {
   final List<(CellPos, String)> revealed;
   final Map<String, int> scores;
   final RoundEnd? results;
+
+  /// Versus: my own mold's words, everyone's progress, the last round's
+  /// standings and the series result.
+  final List<(int, String)> mine;
+  final List<(int, String)> mineAuto;
+  final List<RacerProgress> progress;
+  final VsRoundEnd? standings;
+  final SeriesEnd? seriesEnd;
 }
 
 class RoomEmote extends RoomEvent {
@@ -455,6 +638,9 @@ class RoomClient {
   void _send(Map<String, Object?> m) => _socket.send(jsonEncode(m));
 
   void ready(bool ready) => _send({'op': 'READY', 'ready': ready});
+
+  /// Versus, host only: best of [series] rounds.
+  void config(int series) => _send({'op': 'CONFIG', 'series': series});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});

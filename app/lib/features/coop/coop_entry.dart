@@ -13,21 +13,26 @@ import '../../ui/widgets/metal_button.dart';
 const roomCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /// Start or join a co-op room.
-Future<void> showCoopEntry(BuildContext context) => showModalBottomSheet<void>(
+Future<void> showCoopEntry(BuildContext context) => showRoomEntry(context, 'coop');
+
+/// Start or join a room: `coop` or `vs`.
+Future<void> showRoomEntry(BuildContext context, String mode) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
   backgroundColor: Palette.soot,
-  builder: (_) => const _CoopEntrySheet(),
+  builder: (_) => _RoomEntrySheet(mode: mode),
 );
 
-class _CoopEntrySheet extends ConsumerStatefulWidget {
-  const _CoopEntrySheet();
+class _RoomEntrySheet extends ConsumerStatefulWidget {
+  const _RoomEntrySheet({required this.mode});
+
+  final String mode;
 
   @override
-  ConsumerState<_CoopEntrySheet> createState() => _CoopEntrySheetState();
+  ConsumerState<_RoomEntrySheet> createState() => _RoomEntrySheetState();
 }
 
-class _CoopEntrySheetState extends ConsumerState<_CoopEntrySheet> {
+class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
   final _code = TextEditingController();
   bool _busy = false;
   String? _error;
@@ -38,16 +43,19 @@ class _CoopEntrySheetState extends ConsumerState<_CoopEntrySheet> {
     super.dispose();
   }
 
-  Future<void> _run(Future<String> Function() getCode) async {
+  bool get _vs => widget.mode == 'vs';
+
+  /// [getRoom] returns the room's code and mode.
+  Future<void> _run(Future<(String, String)> Function() getRoom) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final code = await getCode();
+      final (code, mode) = await getRoom();
       if (!mounted) return;
       Navigator.of(context).pop();
-      GoRouter.of(context).push('/room/$code');
+      GoRouter.of(context).push('/room/$code?mode=$mode');
     } on ApiException catch (e) {
       setState(() => _error = e.friendly);
     } finally {
@@ -56,14 +64,14 @@ class _CoopEntrySheetState extends ConsumerState<_CoopEntrySheet> {
   }
 
   Future<void> _join(String code) => _run(() async {
-    await ref.read(accountProvider.notifier).checkRoom(code);
-    return code;
+    final mode = await ref.read(accountProvider.notifier).checkRoom(code);
+    return (code, mode);
   });
 
   @override
   Widget build(BuildContext context) {
     final account = ref.watch(accountProvider);
-    final rooms = account.openRooms.where((r) => r.mode == 'coop').toList();
+    final rooms = account.openRooms.where((r) => r.mode == widget.mode).toList();
     final text = Theme.of(context).textTheme;
     return Padding(
       padding: EdgeInsets.fromLTRB(22, 22, 22, 22 + MediaQuery.viewInsetsOf(context).bottom),
@@ -71,20 +79,28 @@ class _CoopEntrySheetState extends ConsumerState<_CoopEntrySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('The Guild Forge', textAlign: TextAlign.center, style: displayStyle(24, color: Palette.molten)),
+          Text(
+            _vs ? 'Anvil Clash' : 'The Guild Forge',
+            textAlign: TextAlign.center,
+            style: displayStyle(24, color: Palette.molten),
+          ),
           const SizedBox(height: 4),
           Text(
-            'Up to 4 smiths, one mold, one timer. First to forge a word scores it.',
+            _vs
+                ? 'Up to 5 smiths race the same puzzle. First to fill their mold wins the round; best of 3, 5, 7 or 10.'
+                : 'Up to 4 smiths, one mold, one timer. First to forge a word scores it.',
             textAlign: TextAlign.center,
             style: text.bodyMedium?.copyWith(color: Palette.steel),
           ),
           const SizedBox(height: 18),
           PlateButton(
-            label: 'Light a forge',
-            sublabel: 'You host; your level sets the heat',
-            icon: 'anvil',
+            label: _vs ? 'Call a clash' : 'Light a forge',
+            sublabel: _vs ? 'You host and pick the series length' : 'You host; your level sets the heat',
+            icon: _vs ? 'trophy' : 'anvil',
             primary: true,
-            onPressed: _busy ? null : () => _run(() => ref.read(accountProvider.notifier).createRoom('coop')),
+            onPressed: _busy
+                ? null
+                : () => _run(() async => (await ref.read(accountProvider.notifier).createRoom(widget.mode), widget.mode)),
           ),
           const SizedBox(height: 18),
           Row(
@@ -128,11 +144,11 @@ class _CoopEntrySheetState extends ConsumerState<_CoopEntrySheet> {
           ],
           if (rooms.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text("Friends' forges", style: text.titleMedium),
+            Text(_vs ? "Friends' clashes" : "Friends' forges", style: text.titleMedium),
             for (final r in rooms)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text("${r.hostUsername}'s forge"),
+                title: Text(_vs ? "${r.hostUsername}'s clash" : "${r.hostUsername}'s forge"),
                 subtitle: Text('${r.players}/${r.max} smiths · ${r.code}'),
                 trailing: TextButton(
                   onPressed: _busy || r.players >= r.max ? null : () => _join(r.code),
