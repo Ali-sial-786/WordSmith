@@ -9,19 +9,12 @@ import '../engine/hints.dart';
 import '../engine/pickups.dart';
 import '../engine/puzzle.dart';
 import 'providers.dart';
+import 'solo_game.dart';
 
-/// What happened after the player lifted their finger.
-class WordFeedback {
-  const WordFeedback(this.result, {this.smelted = false});
-
-  final SubmitResult result;
-
-  /// The bonus word filled the Scrap Bin, which became a Hammer Strike.
-  final bool smelted;
-}
+export 'solo_game.dart';
 
 /// Runs one campaign puzzle: the board, the anvil order, hints and saving.
-class SoloController extends ChangeNotifier {
+class SoloController extends SoloGame {
   SoloController({
     required this.stage,
     required this.campaign,
@@ -63,12 +56,13 @@ class SoloController extends ChangeNotifier {
   final Puzzle puzzle;
   final Random _rng;
 
+  @override
   late final Board board;
 
-  /// Tile letters (fixed for the life of this screen).
+  @override
   late final String letters;
 
-  /// Ring position → tile index.
+  @override
   late List<int> order;
 
   /// The id this puzzle's pickups were seeded with.
@@ -81,9 +75,20 @@ class SoloController extends ChangeNotifier {
 
   Chapter get chapter => campaign.chapterFor(stage);
   int get stageInChapter => stage - chapter.first + 1;
+  @override
   bool get isComplete => board.isComplete;
+  @override
+  String get look => chapter.id;
+  @override
+  String get title => chapter.name;
+  @override
+  String get subtitle => 'Puzzle $stageInChapter of ${chapter.count}';
+
+  @override
+  Future<CompletionReward> finish() async => reward!;
   int get elapsedMs => _elapsedBefore + _clock.elapsedMilliseconds;
 
+  @override
   WordFeedback submit(String word) {
     if (isComplete) {
       return WordFeedback(SubmitResult(SubmitOutcome.alreadyFound, word));
@@ -102,7 +107,7 @@ class SoloController extends ChangeNotifier {
     return WordFeedback(result, smelted: smelted);
   }
 
-  /// Turn: reshuffle the anvil, never landing on the same arrangement.
+  @override
   void turn() {
     if (order.length < 2) return;
     final next = [...order];
@@ -113,11 +118,13 @@ class SoloController extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
   bool canUse(HintKind kind) =>
       !isComplete &&
       kind.unlockedAt(profile.current.level) &&
       profile.current.hintCount(kind) > 0;
 
+  @override
   RevealResult? useHammer() {
     if (!canUse(HintKind.hammer)) return null;
     final target = board.hammerTarget(_rng);
@@ -125,11 +132,13 @@ class SoloController extends ChangeNotifier {
     return _spend(HintKind.hammer, [target]);
   }
 
+  @override
   RevealResult? useChisel(CellPos cell) {
     if (!canUse(HintKind.chisel) || board.isFilled(cell)) return null;
     return _spend(HintKind.chisel, [cell]);
   }
 
+  @override
   RevealResult? useSparks() {
     if (!canUse(HintKind.sparks)) return null;
     final targets = board.sparksTargets(_rng);
@@ -181,7 +190,7 @@ class SoloController extends ChangeNotifier {
     ),
   );
 
-  /// Saves the play time when leaving mid-puzzle.
+  @override
   void pause() {
     if (!isComplete) _save();
   }

@@ -11,8 +11,11 @@ import '../../engine/hints.dart';
 import '../../engine/pickups.dart';
 import '../../engine/puzzle.dart';
 import '../../game/account.dart';
+import '../../game/daily_game.dart';
 import '../../game/providers.dart';
 import '../../game/solo_controller.dart';
+import '../../net/api_client.dart';
+import '../../net/models.dart';
 import '../../ui/anvil/anvil_ring.dart';
 import '../../ui/effects/sparks.dart';
 import '../../ui/mold/mold_grid.dart';
@@ -26,9 +29,13 @@ import '../../ui/widgets/word_preview.dart';
 import 'forged_overlay.dart';
 
 class PuzzleScreen extends ConsumerStatefulWidget {
-  const PuzzleScreen({super.key, required this.stage});
+  const PuzzleScreen({super.key, required int this.stage}) : daily = null;
 
-  final int stage;
+  /// Today's Daily Commission instead of a campaign stage.
+  const PuzzleScreen.daily({super.key, required DailyInfo this.daily}) : stage = null;
+
+  final int? stage;
+  final DailyInfo? daily;
 
   @override
   ConsumerState<PuzzleScreen> createState() => _PuzzleScreenState();
@@ -36,7 +43,7 @@ class PuzzleScreen extends ConsumerStatefulWidget {
 
 class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
     with WidgetsBindingObserver {
-  late final SoloController _game;
+  late final SoloGame _game;
   final _cues = MoldCues();
   final _preview = GlobalKey<WordPreviewState>();
   final _toast = GlobalKey<ToastLineState>();
@@ -52,12 +59,23 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _game = SoloController(
-      stage: widget.stage,
-      campaign: ref.read(campaignProvider),
-      store: ref.read(storeProvider),
-      profile: ref.read(profileProvider.notifier),
-    )..addListener(_onGameChanged);
+    final daily = widget.daily;
+    final api = ref.read(apiClientProvider);
+    _game =
+        (daily != null && api != null
+              ? DailyGame(
+                  info: daily,
+                  api: api,
+                  store: ref.read(storeProvider),
+                  profile: ref.read(profileProvider.notifier),
+                )
+              : SoloController(
+                  stage: widget.stage!,
+                  campaign: ref.read(campaignProvider),
+                  store: ref.read(storeProvider),
+                  profile: ref.read(profileProvider.notifier),
+                ))
+          ..addListener(_onGameChanged);
     if (_game.isComplete) _finish();
     _account = ref.read(accountProvider.notifier)..setStatus('solo');
   }
@@ -223,8 +241,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       _finishing = true;
       _chisel = false;
     });
-    final reward = _game.reward;
-    _account.sync();
+    final game = _game;
+    // Campaign results sync in the background; the daily one is sent now.
+    if (game is SoloController) _account.sync();
+    final rewardSoon = _reward();
     await Future<void>.delayed(const Duration(milliseconds: 1100));
     if (!mounted) return;
     _sfx.play(SfxId.forged);
@@ -233,27 +253,60 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
       Future.delayed(Duration(milliseconds: i * 140), () => _burstAt(_moldKey));
     }
     await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted || reward == null) return;
+    final reward = await rewardSoon;
+    if (!mounted) return;
+    if (reward == null) {
+      context.go('/');
+      return;
+    }
     if (reward.leveledUp) {
       Future.delayed(const Duration(milliseconds: 900), () => _sfx.play(SfxId.levelUp));
     }
     final campaign = ref.read(campaignProvider);
-    final next = widget.stage + 1;
+    final next = (widget.stage ?? 0) + 1;
     final action = await showForgedOverlay(
       context,
       reward: reward,
-      chapter: _game.chapter,
-      nextChapter: next <= campaign.stageCount ? campaign.chapterFor(next) : null,
+      chapter: game is SoloController ? game.chapter : null,
+      nextChapter: game is SoloController && next <= campaign.stageCount ? campaign.chapterFor(next) : null,
+      daily: game is DailyGame ? game.outcome : null,
       pickups: [
         for (final i in _game.board.collectedPickups) _game.board.pickups[i],
       ],
       bonusWords: _game.board.bonusFound.length,
     );
     if (!mounted) return;
-    if (action == ForgedAction.next && next <= campaign.stageCount) {
+    // Refreshed only now: the daily screen swaps to "done" when it reloads.
+    if (game is DailyGame) ref.invalidate(dailyProvider);
+    if (game is SoloController && action == ForgedAction.next && next <= campaign.stageCount) {
       context.pushReplacement('/play/$next');
     } else {
       context.go('/');
+    }
+  }
+
+  /// The reward, asking to retry if the daily result can't reach the server.
+  /// Null if the player gives up.
+  Future<CompletionReward?> _reward() async {
+    while (true) {
+      try {
+        return await _game.finish();
+      } on ApiException catch (e) {
+        if (!mounted) return null;
+        final retry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text("Couldn't reach the forge"),
+            content: Text('${e.friendly}\n\nYour commission is done; try sending it again.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Later')),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Try again')),
+            ],
+          ),
+        );
+        if (retry != true) return null;
+      }
     }
   }
 
@@ -261,11 +314,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
   Widget build(BuildContext context) {
     final profile = ref.watch(profileProvider);
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
-    final chapter = _game.chapter;
-    final metal = MetalStyle.forChapter(chapter.id);
+    final metal = MetalStyle.forChapter(_game.look);
     return Scaffold(
       body: ForgeBackground(
-        image: chapterBackground(chapter.id),
+        image: chapterBackground(_game.look),
         fire: 1,
         fireHeight: 0.5,
         child: SparkField(
@@ -277,10 +329,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                 final side = (c.maxWidth - ring) / 2;
                 return Column(
                   children: [
-                    _TopBar(
-                      title: chapter.name,
-                      subtitle: 'Puzzle ${_game.stageInChapter} of ${chapter.count}',
-                    ),
+                    _TopBar(title: _game.title, subtitle: _game.subtitle),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
@@ -300,7 +349,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen>
                     Stack(
                       alignment: Alignment.center,
                       children: [
-                        if (widget.stage <= 2 && _game.board.foundSlots.isEmpty)
+                        if ((widget.stage ?? 99) <= 2 && _game.board.foundSlots.isEmpty)
                           AnimatedOpacity(
                             opacity: _word.isEmpty ? 1 : 0,
                             duration: const Duration(milliseconds: 200),
@@ -398,8 +447,13 @@ class _TopBar extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(title, style: displayStyle(20)),
-                Text(subtitle, style: Theme.of(context).textTheme.labelSmall),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(20)),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),

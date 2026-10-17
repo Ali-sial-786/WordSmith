@@ -2,6 +2,7 @@
 library;
 
 import '../engine/hints.dart';
+import '../engine/puzzle.dart';
 
 class ServerStats {
   const ServerStats({
@@ -173,4 +174,57 @@ class SyncOutcome {
 
   /// "stage: reason" for entries the server turned down.
   final List<String> rejected;
+}
+
+/// Today's Daily Commission (shared/daily.md).
+class DailyInfo {
+  const DailyInfo({
+    required this.date,
+    required this.heat,
+    required this.puzzle,
+    required this.completed,
+    required this.streak,
+    required this.best,
+  });
+
+  factory DailyInfo.fromJson(Map<String, dynamic> j) => DailyInfo(
+    date: j['date'] as String,
+    heat: (j['heat'] as num?)?.toInt() ?? 1,
+    puzzle: Puzzle.fromJson(j['puzzle'] as Map<String, dynamic>),
+    completed: j['completed'] as bool? ?? false,
+    streak: (j['streak'] as num?)?.toInt() ?? 0,
+    best: (j['best'] as num?)?.toInt() ?? 0,
+  );
+
+  /// The UTC day, `YYYY-MM-DD`.
+  final String date;
+  final int heat;
+  final Puzzle puzzle;
+  final bool completed;
+  final int streak;
+  final int best;
+}
+
+class DailyOutcome {
+  const DailyOutcome({
+    required this.profile,
+    required this.xp,
+    required this.streak,
+    required this.best,
+    required this.alreadyDone,
+  });
+
+  factory DailyOutcome.fromJson(Map<String, dynamic> j) => DailyOutcome(
+    profile: ServerProfile.fromJson(j['profile'] as Map<String, dynamic>),
+    xp: (j['xp'] as num?)?.toInt() ?? 0,
+    streak: (j['streak'] as num?)?.toInt() ?? 0,
+    best: (j['best'] as num?)?.toInt() ?? 0,
+    alreadyDone: j['alreadyDone'] as bool? ?? false,
+  );
+
+  final ServerProfile profile;
+  final int xp;
+  final int streak;
+  final int best;
+  final bool alreadyDone;
 }

@@ -5,6 +5,7 @@ import '../../engine/hints.dart';
 import '../../engine/pickups.dart';
 import '../../engine/progression.dart';
 import '../../game/providers.dart';
+import '../../net/models.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
@@ -16,10 +17,11 @@ enum ForgedAction { next, hall }
 Future<ForgedAction> showForgedOverlay(
   BuildContext context, {
   required CompletionReward reward,
-  required Chapter chapter,
+  required Chapter? chapter,
   required Chapter? nextChapter,
   required List<Pickup> pickups,
   required int bonusWords,
+  DailyOutcome? daily,
 }) async {
   final result = await showGeneralDialog<ForgedAction>(
     context: context,
@@ -41,6 +43,7 @@ Future<ForgedAction> showForgedOverlay(
       nextChapter: nextChapter,
       pickups: pickups,
       bonusWords: bonusWords,
+      daily: daily,
     ),
   );
   return result ?? ForgedAction.hall;
@@ -53,13 +56,19 @@ class _ForgedCard extends StatefulWidget {
     required this.nextChapter,
     required this.pickups,
     required this.bonusWords,
+    this.daily,
   });
 
   final CompletionReward reward;
-  final Chapter chapter;
+
+  /// Null for the Daily Commission.
+  final Chapter? chapter;
   final Chapter? nextChapter;
   final List<Pickup> pickups;
   final int bonusWords;
+
+  /// The Daily Commission's streak, when that's what was forged.
+  final DailyOutcome? daily;
 
   @override
   State<_ForgedCard> createState() => _ForgedCardState();
@@ -104,10 +113,11 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
   Widget build(BuildContext context) {
     final r = widget.reward;
     final text = Theme.of(context).textTheme;
+    final daily = widget.daily;
     final chapterDone = r.chapterFinished;
-    final campaignDone = widget.nextChapter == null;
+    final campaignDone = daily == null && widget.nextChapter == null;
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Material(
           color: Colors.transparent,
@@ -133,9 +143,11 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  chapterDone
-                      ? '${widget.chapter.name} chapter complete!'
-                      : '${widget.chapter.name} puzzle forged',
+                  daily != null
+                      ? (daily.alreadyDone ? 'Already forged today' : 'Daily Commission forged')
+                      : chapterDone
+                      ? '${widget.chapter!.name} chapter complete!'
+                      : '${widget.chapter!.name} puzzle forged',
                   style: text.titleSmall?.copyWith(color: Palette.steel),
                 ),
                 const SizedBox(height: 20),
@@ -209,6 +221,28 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     style: text.titleMedium?.copyWith(color: Palette.molten),
                   ),
                 ],
+                if (daily != null) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const GameIcon('flame', size: 26, color: Palette.molten),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${daily.streak}-day streak',
+                        style: displayStyle(20, color: Palette.molten),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    daily.best > daily.streak ? 'Best: ${daily.best} days' : 'Your best yet!',
+                    style: text.bodyMedium?.copyWith(color: Palette.steel),
+                  ),
+                  Text(
+                    'A new commission arrives at midnight UTC.',
+                    style: text.bodySmall,
+                  ),
+                ],
                 if (campaignDone) ...[
                   const SizedBox(height: 14),
                   Text(
@@ -218,7 +252,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                   ),
                 ],
                 const SizedBox(height: 24),
-                if (!campaignDone)
+                if (!campaignDone && daily == null)
                   PlateButton(
                     label: 'Next puzzle',
                     icon: 'anvil',

@@ -19,6 +19,15 @@ final hubClientProvider = Provider<HubClient?>((_) => null);
 /// Opens the connection to a room by code (null without a server).
 final roomClientFactoryProvider = Provider<RoomClient Function(String code)?>((_) => null);
 
+/// Today's Daily Commission, once signed in (null otherwise). Invalidated after
+/// forging it.
+final dailyProvider = FutureProvider<DailyInfo?>((ref) async {
+  final ready = ref.watch(accountProvider.select((a) => a.isReady));
+  final api = ref.read(apiClientProvider);
+  if (!ready || api == null) return null;
+  return api.daily();
+});
+
 /// Makes a room's video chat for this player (user ID); null without online play.
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 

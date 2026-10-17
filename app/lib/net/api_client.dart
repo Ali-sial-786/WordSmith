@@ -32,6 +32,7 @@ class ApiException implements Exception {
     'round_in_progress' => "They're mid-round. Try again when it ends.",
     'video_unavailable' => "Video chat isn't set up on the server yet.",
     'not_in_room' => 'Join the room first.',
+    'wrong_day' => "That was yesterday's commission. Today's is waiting!",
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
@@ -131,6 +132,28 @@ class ApiClient {
   /// Room summary; throws `room_not_found` for a bad code.
   Future<Map<String, dynamic>> room(String code) =>
       _send('GET', '/rooms/${Uri.encodeComponent(code)}');
+
+  Future<DailyInfo> daily() async => DailyInfo.fromJson(await _send('GET', '/daily'));
+
+  Future<DailyOutcome> completeDaily({
+    required String date,
+    required List<String> foundWords,
+    required List<String> bonusWords,
+    required Map<String, int> hintsUsed,
+    required int durationMs,
+  }) async => DailyOutcome.fromJson(
+    await _send(
+      'POST',
+      '/daily/complete',
+      body: {
+        'date': date,
+        'foundWords': foundWords,
+        'bonusWords': bonusWords,
+        'hintsUsed': hintsUsed,
+        'durationMs': durationMs,
+      },
+    ),
+  );
 
   /// A LiveKit token for a room's video chat; only for players in the room.
   Future<({String url, String token})> roomVideo(String code) async {

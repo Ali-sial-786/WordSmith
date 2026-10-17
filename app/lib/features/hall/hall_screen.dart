@@ -92,6 +92,10 @@ class HallScreen extends ConsumerWidget {
                           height: 72,
                           onPressed: finished ? null : () => context.push('/play/$stage'),
                         ),
+                        if (account.isReady) ...[
+                          const SizedBox(height: 12),
+                          const _DailyButton(),
+                        ],
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -181,6 +185,29 @@ class HallScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Today's Daily Commission and the streak.
+class _DailyButton extends ConsumerWidget {
+  const _DailyButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final info = ref.watch(dailyProvider).value;
+    final sublabel = info == null
+        ? 'A new puzzle every day'
+        : info.completed
+        ? 'Forged today · ${info.streak}-day streak'
+        : info.streak > 0
+        ? 'Keep your ${info.streak}-day streak going'
+        : 'A new puzzle every day';
+    return PlateButton(
+      label: 'Daily Commission',
+      sublabel: sublabel,
+      icon: 'flame',
+      onPressed: () => context.push('/daily'),
     );
   }
 }

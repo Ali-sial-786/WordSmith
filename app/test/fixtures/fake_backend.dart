@@ -112,6 +112,12 @@ class FakeServer {
 
   /// Room code → `GET /v1/rooms/:code` summary.
   final rooms = <String, Map<String, Object?>>{};
+
+  /// The Daily Commission (shared/daily.md).
+  Map<String, dynamic>? dailyPuzzle;
+  bool dailyDone = false;
+  int dailyStreak = 0;
+  final dailyPosts = <Map<String, dynamic>>[];
   bool deletedMe = false;
   final calls = <String>[];
 
@@ -181,6 +187,31 @@ class FakeServer {
       case 'DELETE /me':
         deletedMe = true;
         return _json(200, {'ok': true});
+      case 'GET /daily':
+        if (dailyPuzzle == null) return _json(404, {'error': 'not_found'});
+        return _json(200, {
+          'date': '2026-10-17',
+          'heat': 1,
+          'puzzle': dailyPuzzle,
+          'completed': dailyDone,
+          'streak': dailyStreak,
+          'best': dailyStreak > 3 ? dailyStreak : 3,
+        });
+      case 'POST /daily/complete':
+        dailyPosts.add(body);
+        final already = dailyDone;
+        if (!already) {
+          dailyDone = true;
+          dailyStreak++;
+          totalXp += 25;
+        }
+        return _json(200, {
+          'profile': profile(token),
+          'xp': already ? 0 : 25,
+          'streak': dailyStreak,
+          'best': dailyStreak > 3 ? dailyStreak : 3,
+          'alreadyDone': already,
+        });
     }
     if (req.method == 'GET' && path.startsWith('/rooms/')) {
       final room = rooms[path.substring('/rooms/'.length)];
