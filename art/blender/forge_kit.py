@@ -1034,3 +1034,55 @@ def meteors(streaks, mat=None, radius=0.05):
         ob.visible_shadow = False
         obs.append(ob)
     return obs
+
+
+def arch_outline(cx, width, z0, zs, apex=None, steps=32):
+    """(x, z) outline of a round (apex=None) or pointed (two-centred, apex =
+    height of the point) arch opening: jambs from z0 up to the spring line zs."""
+    r = width / 2
+    pts = [(cx - r, z0), (cx + r, z0)]
+    if apex is None:
+        for i in range(steps + 1):
+            a = math.pi * i / steps
+            pts.append((cx + r * math.cos(a), zs + r * math.sin(a)))
+    else:
+        R = (r * r + (apex - zs) ** 2) / (2 * r)
+        top = math.atan2(apex - zs, R - r)            # angle of the point seen from each centre
+        for i in range(steps + 1):                     # right arc, centre at cx - (R - r)
+            a = top * i / steps
+            pts.append((cx - (R - r) + R * math.cos(a), zs + R * math.sin(a)))
+        for i in range(steps, -1, -1):                 # left arc, centre at cx + (R - r)
+            a = top * i / steps
+            pts.append((cx + (R - r) - R * math.cos(a), zs + R * math.sin(a)))
+    out = []
+    for p in pts:                                      # drop duplicates
+        if not out or (abs(out[-1][0] - p[0]) > 1e-6 or abs(out[-1][1] - p[1]) > 1e-6):
+            out.append(p)
+    return out
+
+
+def wall_with_openings(name, center, size, outlines, mat):
+    """Box wall (thin in Y) with openings cut by an exact boolean; each outline
+    is a list of (x, z) points in world space."""
+    import bmesh
+    wall = box(name, center, size, mat, bevel=0)
+    y0, y1 = center[1] - size[1], center[1] + size[1]
+    for k, pts in enumerate(outlines):
+        n = len(pts)
+        verts = [(x, y0, z) for x, z in pts] + [(x, y1, z) for x, z in pts]
+        faces = [tuple(range(n)), tuple(range(2 * n - 1, n - 1, -1))]
+        faces += [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+        cut = C.mesh_object(f"{name}Cut{k}", verts, faces, smooth=False)
+        bm = bmesh.new()
+        bm.from_mesh(cut.data)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(cut.data)
+        bm.free()
+        mod = wall.modifiers.new(f"Opening{k}", "BOOLEAN")
+        mod.operation = "DIFFERENCE"
+        mod.object = cut
+        mod.solver = "EXACT"
+        bpy.context.view_layer.objects.active = wall
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        bpy.data.objects.remove(cut)
+    return wall

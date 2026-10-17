@@ -26,12 +26,14 @@ and icons. Nothing here is CC BY-SA, NC, ND, GPL or taken from another game.
 | Cinzel | Natanael Gama (The Cinzel Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Cinzel | 2026-10-17 | 1 file(s) |
 | Roboto Slab | Christian Robertson (The Roboto Slab Project Authors) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | https://fonts.google.com/specimen/Roboto+Slab | 2026-10-17 | 1 file(s) |
 | Nunito Sans | Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin (The Nunito Sans Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Nunito+Sans | 2026-10-17 | 1 file(s) |
-| Game-icons.net | (per icon) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://game-icons.net | 2026-10-17 | 33 file(s) |
+| Game-icons.net | (per icon) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://game-icons.net | 2026-10-17 | 39 file(s) |
 | Material Symbols (Rounded) | Google | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | https://fonts.google.com/icons | 2026-10-17 | 1 file(s) |
-| Kenney Impact Sounds | Kenney (www.kenney.nl) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://kenney.nl/assets/impact-sounds | 2026-10-17 | 10 file(s) |
+| Kenney Impact Sounds | Kenney (www.kenney.nl) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://kenney.nl/assets/impact-sounds | 2026-10-17 | 13 file(s) |
 | Kenney RPG Audio | Kenney (www.kenney.nl) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://kenney.nl/assets/rpg-audio | 2026-10-17 | 2 file(s) |
 | Kenney Interface Sounds | Kenney (www.kenney.nl) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://kenney.nl/assets/interface-sounds | 2026-10-17 | 2 file(s) |
 | Fireplace Sound loop | PagDev | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/fireplace-sound-loop | 2026-10-17 | 1 file(s) |
+| Medieval: King's Feast | RandomMind | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/medieval-kings-feast | 2026-10-17 | 1 file(s) |
+| Medieval: Minstrel Dance | RandomMind | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://opengameart.org/content/medieval-minstrel-dance | 2026-10-17 | 1 file(s) |
 
 Pinned download URLs and SHA-256 checksums are in `art/sources.json`.
 
@@ -45,7 +47,8 @@ Pinned download URLs and SHA-256 checksums are in `art/sources.json`.
 
 ## Icons (`app/assets/icons/`)
 
-All single-colour SVGs (fill `#ffffff`, transparent background) for tinting in the app.
+Single-colour SVGs (fill `#ffffff`, transparent background) for tinting in the app; the `rank_*`
+badges instead carry a metal gradient (bronze, iron, steel, silver, gold, starmetal) and are drawn untinted.
 
 | File | Icon | Author | Licence | Source page |
 |---|---|---|---|---|
@@ -83,6 +86,13 @@ All single-colour SVGs (fill `#ffffff`, transparent background) for tinting in t
 | `icons/avatar_14.svg` | Bear head | Delapouite | CC BY 3.0 | https://game-icons.net/1x1/delapouite/bear-head.html |
 | `icons/avatar_15.svg` | Owl | Lorc | CC BY 3.0 | https://game-icons.net/1x1/lorc/owl.html |
 | `icons/avatar_16.svg` | Mountains | Lorc | CC BY 3.0 | https://game-icons.net/1x1/lorc/mountains.html |
+| `icons/rank_apprentice.svg` | 3D hammer | Delapouite | CC BY 3.0 | https://game-icons.net/1x1/delapouite/3d-hammer.html |
+| `icons/rank_journeyman.svg` | 3D hammer | Delapouite | CC BY 3.0 | https://game-icons.net/1x1/delapouite/3d-hammer.html |
+| `icons/rank_smith.svg` | Anvil | Lorc | CC BY 3.0 | https://game-icons.net/1x1/lorc/anvil.html |
+| `icons/rank_master.svg` | Anvil | Lorc | CC BY 3.0 | https://game-icons.net/1x1/lorc/anvil.html |
+| `icons/rank_master.svg` | Round star | Delapouite | CC BY 3.0 | https://game-icons.net/1x1/delapouite/round-star.html |
+| `icons/rank_grandmaster.svg` | Jewel crown | Delapouite | CC BY 3.0 | https://game-icons.net/1x1/delapouite/jewel-crown.html |
+| `icons/rank_legend.svg` | Laurel crown | Lorc | CC BY 3.0 | https://game-icons.net/1x1/lorc/laurel-crown.html |
 
 ## Audio (`app/assets/audio/`)
 
@@ -136,6 +146,15 @@ Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by o
 | `audio/tick.ogg` | Last 10 seconds: hammer 'heartbeat' tick | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
 | `audio/forge_ambience.ogg` | fire.wav (Fireplace Sound loop) | PagDev | CC0 1.0 (public domain) | https://opengameart.org/content/fireplace-sound-loop |
 | `audio/forge_ambience.ogg` | Forge fire crackle, seamless ~27 s stereo loop with one faint bellows breath | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
+| `audio/round_win.ogg` | Round won: bright 'ta-da' sting, a two-bell pickup into a G major bell chord over an anvil ring | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
+| `audio/round_lose.ogg` | impactGeneric_light_001.ogg (Kenney Impact Sounds) | Kenney (www.kenney.nl) | CC0 1.0 (public domain) | https://kenney.nl/assets/impact-sounds |
+| `audio/round_lose.ogg` | Round lost: gentle 'aw', two soft falling bell notes (G4 to E-flat 4) that sag in pitch | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
+| `audio/series_win.ogg` | impactBell_heavy_001.ogg (Kenney Impact Sounds) | Kenney (www.kenney.nl) | CC0 1.0 (public domain) | https://kenney.nl/assets/impact-sounds |
+| `audio/series_win.ogg` | Series won: ~2.8 s bell-and-anvil fanfare (ta-ta-ta-TAA, then a rising run into a big C major chord) | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
+| `audio/rival_finished.ogg` | impactBell_heavy_003.ogg (Kenney Impact Sounds) | Kenney (www.kenney.nl) | CC0 1.0 (public domain) | https://kenney.nl/assets/impact-sounds |
+| `audio/rival_finished.ogg` | Opponent finished / is close: deep gong-like anvil ring under a quick rising two-bell alert | Wordsmith | original (synthesized by Wordsmith) | `art/audio/build_audio.py` |
+| `audio/music_hall.ogg` | Loop_Kings_Feast_0.wav (Medieval: King's Feast) | RandomMind | CC0 1.0 (public domain) | https://opengameart.org/content/medieval-kings-feast |
+| `audio/music_round.ogg` | Loop_Minstrel_Dance_0.wav (Medieval: Minstrel Dance) | RandomMind | CC0 1.0 (public domain) | https://opengameart.org/content/medieval-minstrel-dance |
 
 ## Other assets
 
@@ -150,6 +169,13 @@ Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by o
 | `images/ (3D renders)` | RoofingTiles014B | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=RoofingTiles014B |
 | `images/ (3D renders)` | Ground037 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Ground037 |
 | `images/ (3D renders)` | Plaster007 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Plaster007 |
+| `images/ (3D renders)` | Rock030 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Rock030 |
+| `images/ (3D renders)` | Rock035 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Rock035 |
+| `images/ (3D renders)` | Ground080 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Ground080 |
+| `images/ (3D renders)` | Tiles074 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Tiles074 |
+| `images/ (3D renders)` | Marble012 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Marble012 |
+| `images/ (3D renders)` | Concrete031 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=Concrete031 |
+| `images/ (3D renders)` | MetalPlates006 | ambientCG (Lennart Demes) | CC0 1.0 Universal | https://ambientcg.com/view?id=MetalPlates006 |
 | `images/ (3D renders)` | RobotoSlab-wght.ttf | Christian Robertson (Google Fonts) | Apache License 2.0 | https://fonts.google.com/specimen/Roboto+Slab |
 | `images/ (3D renders)` | LICENSE-RobotoSlab.txt | Google Fonts | Apache License 2.0 (licence text) | https://raw.githubusercontent.com/google/fonts/main/apache/robotoslab/LICENSE.txt |
 
@@ -182,3 +208,9 @@ Built by `art/audio/build_audio.py`. Rows marked *original* are synthesized by o
 | `audio/go.ogg` | 0.95 s | mono | -16.0 LUFS-M max | -7.4 dBTP | 8.3 KiB |
 | `audio/tick.ogg` | 0.15 s | mono | -24.7 LUFS-M max | -1.7 dBTP | 4.4 KiB |
 | `audio/forge_ambience.ogg` | 27.26 s | stereo | -30.0 LUFS integrated | -4.6 dBTP | 413.9 KiB |
+| `audio/round_win.ogg` | 1.44 s | mono | -13.0 LUFS-M max | -1.5 dBTP | 13.7 KiB |
+| `audio/round_lose.ogg` | 1.35 s | mono | -19.0 LUFS-M max | -6.1 dBTP | 7.7 KiB |
+| `audio/series_win.ogg` | 2.82 s | mono | -12.1 LUFS-M max | -1.8 dBTP | 25.2 KiB |
+| `audio/rival_finished.ogg` | 1.26 s | mono | -15.0 LUFS-M max | -3.9 dBTP | 8.9 KiB |
+| `audio/music_hall.ogg` | 80.73 s | stereo | -16.0 LUFS integrated | -1.9 dBTP | 913.9 KiB |
+| `audio/music_round.ogg` | 56.29 s | stereo | -16.1 LUFS integrated | -4.4 dBTP | 597.8 KiB |

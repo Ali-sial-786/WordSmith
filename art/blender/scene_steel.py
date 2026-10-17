@@ -2,7 +2,7 @@
 
 A cleaner, cooler workshop than the earlier chapters: brick walls with
 riveted steel wainscot, a concrete floor and tall multi-pane steel windows
-letting in a cold blue dusk light that falls in shafts through the haze.
+letting in a cold blue dusk light.
 The warm focal point (~48-60 % down the frame) is a crucible hanging from
 chains, tipping a white-hot stream of steel into a row of ingot moulds.
 A brick cupola furnace glows on the left; heat-blued bars and blades hang
@@ -36,11 +36,12 @@ WIN_Z0, WIN_Z1 = 1.35, 3.7
 
 def materials():
     return dict(
-        brick=K.tex_material("Brick", "Bricks094", scale=0.9, value=0.32, sat=0.7,
-                             rough=(0.7, 1.0), soot=0.6, soot_range=(3.5, 6.0)),
+        brick=K.tex_material("Brick", "Bricks094", scale=0.9, value=0.3, sat=0.35,
+                             tint="#8A96A8", tint_fac=0.45, rough=(0.7, 1.0), soot=0.6,
+                             soot_range=(3.5, 6.0)),
         plates=K.tex_material("Plates", "MetalPlates006", scale=0.8, value=0.35, sat=0.5,
                               rough=(0.35, 0.7), normal=0.8),
-        floor=K.tex_material("Floor", "Concrete031", scale=0.35, value=0.3, sat=0.4,
+        floor=K.tex_material("Floor", "Concrete031", scale=0.35, value=0.26, sat=0.3,
                              rough=(0.45, 0.9), normal=0.6),
         furnace=K.tex_material("Furnace", "Bricks094", scale=1.4, value=0.42, sat=0.8,
                                rough=(0.7, 1.0), soot=0.7, soot_range=(1.5, 4.0)),
@@ -48,8 +49,8 @@ def materials():
         cast=P.iron_material("CastIron", base="#3E4248", rough=(0.4, 0.65), bump=0.15),
         blued=K.blued_steel_material("Blued"),
         frame=K.flat_material("WinFrame", "#15181C", rough=0.5, metallic=0.8),
-        sky=K.flat_material("DuskSky", "#000000", emission=(C.hex_lin("#5E7AA8"), 1.6)),
-        molten=K.glow_material("MoltenSteel", "#FFB040", 28.0),
+        sky=K.flat_material("DuskSky", "#000000", emission=(C.hex_lin("#34507E"), 0.55)),
+        molten=K.glow_material("MoltenSteel", "#FF8A24", 16.0),
         ingot_hot=K.glow_material("IngotHot", "#FF5A14", 6.0),
         ingot_warm=K.glow_material("IngotWarm", "#8A1E08", 2.5),
         wood=P.wood_material("Wood", value=0.45, scale=1.2),
@@ -59,8 +60,9 @@ def materials():
 def window(cx, w, M):
     """Steel-framed industrial window: emissive dusk 'sky' behind a grid of panes."""
     h = WIN_Z1 - WIN_Z0
-    K.plane(f"Sky{cx}", (cx, BACK + 0.6, (WIN_Z0 + WIN_Z1) / 2), (w + 0.4, h + 0.4), rot=(90, 0, 0),
-            mat=M["sky"])
+    sky = K.plane(f"Sky{cx}", (cx, BACK + 0.6, (WIN_Z0 + WIN_Z1) / 2), (w + 0.4, h + 0.4), rot=(90, 0, 0),
+                  mat=M["sky"])
+    sky.visible_shadow = False            # let the low sun through, for the shafts
     t = 0.035
     K.box(f"WinFrameL{cx}", (cx - w / 2, BACK + 0.12, (WIN_Z0 + WIN_Z1) / 2), (0.07, 0.1, h), M["frame"], 0.005)
     K.box(f"WinFrameR{cx}", (cx + w / 2, BACK + 0.12, (WIN_Z0 + WIN_Z1) / 2), (0.07, 0.1, h), M["frame"], 0.005)
@@ -125,20 +127,22 @@ def build(M):
         mat = M["molten"] if i == 0 else (M["ingot_hot"] if i == 1 else
                                           (M["ingot_warm"] if i == 2 else M["steel"]))
         K.box(f"Ingot{i}", (x, PY, 0.875), (0.17, 0.32, 0.02), mat, 0.004)
-    C.point_light("PourLight", (sx0, PY - 0.35, 1.05), 70, radius=0.1, color=(1.0, 0.6, 0.25))
-    C.point_light("PourLight2", (sx0 + 0.1, PY - 0.2, 1.5), 25, radius=0.1, color=(1.0, 0.7, 0.35))
+    C.point_light("PourLight", (sx0, PY - 0.35, 1.05), 70, radius=0.1, color=(1.0, 0.55, 0.2))
+    K.flame_volume((sx0, PY - 0.05, 1.05), size=(0.35, 0.3, 0.35), strength=1.6, name="PourGlow")
+    C.point_light("PourLight2", (sx0 + 0.1, PY - 0.2, 1.5), 12, radius=0.1, color=(1.0, 0.7, 0.35))
     P.sparks((sx0, PY - 0.02, 0.9), count=26, seed=5, direction=(0, -0.4, 1), spread=80,
              length=(0.05, 0.16), dist=(0.08, 0.6), radius=0.005, gravity=0.6)
 
     # cupola furnace, left back: glowing tap hole + runner ---------------------
-    FX, FY, FR = -1.75, 3.55, 0.6
+    FX, FY, FR = -2.15, 3.3, 0.6
     K.cylinder("Cupola", (FX, FY, HEIGHT / 2), FR, HEIGHT, M["furnace"], verts=48)
     for i, z in enumerate((0.6, 1.6, 2.6, 3.6)):
         bpy.ops.mesh.primitive_torus_add(major_radius=FR + 0.02, minor_radius=0.03, major_segments=64,
                                          minor_segments=8, location=(FX, FY, z))
         C.assign(bpy.context.active_object, M["cast"])
-    K.box("TapHole", (FX + 0.12, FY - FR + 0.02, 0.85), (0.18, 0.06, 0.16), M["molten"], 0.02)
-    C.point_light("TapLight", (FX + 0.12, FY - FR - 0.25, 0.9), 40, radius=0.1, color=(1.0, 0.5, 0.18))
+    K.box("TapHole", (FX + 0.12, FY - FR + 0.02, 0.85), (0.24, 0.08, 0.2), M["molten"], 0.02)
+    C.point_light("TapLight", (FX + 0.12, FY - FR - 0.25, 0.9), 70, radius=0.12, color=(1.0, 0.5, 0.18))
+    K.flame_volume((FX + 0.12, FY - FR - 0.1, 0.9), size=(0.25, 0.2, 0.25), strength=1.5, name="TapGlow")
     K.box("Runner", (FX + 0.3, FY - FR - 0.25, 0.72), (0.14, 0.5, 0.06), M["cast"], 0.01,
           rot=(8, 0, -25))
 
@@ -169,16 +173,18 @@ def build(M):
     K.chain("FloorChain", (-1.3, 0.2, 0.02), (-0.6, 0.9, 0.02), M["cast"], link=0.12, thick=0.016)
 
     # light: cool dusk through the windows, faint fills -------------------------
-    sun = C.sun_light("Dusk", (0, 0, 0), 1.6, angle=2.0, color=(0.6, 0.72, 1.0))
-    sun.rotation_euler = Vector((0.15, -1.0, -0.55)).to_track_quat("-Z", "Y").to_euler()
+    sun = C.sun_light("Dusk", (0, 0, 0), 6.0, angle=2.0, color=(0.6, 0.72, 1.0))
+    sun.rotation_euler = Vector((-0.18, -1.0, -0.45)).to_track_quat("-Z", "Y").to_euler()
     for cx, w in WIN:
-        C.area_light(f"WinLight{cx}", (cx, BACK + 0.4, (WIN_Z0 + WIN_Z1) / 2), (cx * 0.6, 0.0, 0.5), 40,
+        C.area_light(f"WinLight{cx}", (cx, BACK + 0.4, (WIN_Z0 + WIN_Z1) / 2), (cx * 0.6, 0.0, 0.5), 45,
                      size=w, size_y=WIN_Z1 - WIN_Z0, shape="RECTANGLE", color=(0.6, 0.72, 1.0))
     C.area_light("RimAnvil", (0.3, 2.0, 1.5), (AX, AY, 0.85), 18, size=0.8, color=(1.0, 0.55, 0.25))
-    C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 6, size=3.0, color=(0.55, 0.65, 1.0))
+    C.area_light("RackLight", (0.9, 2.4, 2.6), (RX, BACK - 0.1, 1.7), 22, size=1.0, color=(0.65, 0.75, 1.0))
+    C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 22, size=3.0, color=(0.5, 0.62, 1.0))
 
     K.haze((-W_HALF + 0.05, FRONT + 2, 0.05), (W_HALF - 0.05, BACK - 0.05, HEIGHT - 0.1),
-           density=0.007, color=(0.92, 0.95, 1.0), anisotropy=0.55)
+           density=0.012, color=(0.92, 0.95, 1.0), anisotropy=0.6)
+
 
 
 def main():

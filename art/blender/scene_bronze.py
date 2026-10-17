@@ -1,11 +1,10 @@
 """bg_bronze: an ancient bronze foundry by torchlight (Bronze chapter).
 
-A stone casting hall: a clay-brick furnace with a roaring arched mouth sits
-centre-back (~45-58 % down the frame). To its right a crucible of molten
+A stone casting hall: a round clay furnace with a roaring arched mouth sits
+centre-back (~45-58 % down the frame). To its left a crucible of molten
 bronze tips a thin bright stream into a clay mould on a stone bench. A big
-finished bronze bell hangs from a timber frame on the left, a bronze warrior
-bust stands on a plinth in the right foreground, and two wall torches flank
-the furnace. Clay moulds and small cast bells sit about the sandy floor.
+finished bronze bell hangs on a chain on the right, a little bronze warrior
+statuette stands on the bench, and two wall torches flank the furnace. Clay moulds and small cast bells sit about the sandy floor.
 
 Top ~45 % (beams, bell, sooty wall) and the bottom (floor) stay dark and calm.
 
@@ -60,47 +59,52 @@ def materials():
     )
 
 
-def bust(name, loc, mat, scale=1.0):
-    """Bronze warrior bust with a crested helmet; `loc` = bottom centre."""
+def statuette(name, loc, mat, h=0.62):
+    """Small cast-bronze warrior on a little plinth: crested helmet, round
+    shield and spear, so it reads as a statue even when tiny."""
     x, y, z = loc
-    k = scale
-    parts = []
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=1.0,
-                                         location=(x, y, z + 0.1 * k))
-    sh = bpy.context.active_object
-    sh.scale = (0.34 * k, 0.19 * k, 0.17 * k)
-    C.apply_transform(sh)
-    for v in sh.data.vertices:            # cut flat underneath
-        v.co.z = max(v.co.z, -0.1 * k)
-    parts.append(sh)
-    parts.append(K.cylinder(name + "Neck", (x, y, z + 0.32 * k), 0.075 * k, 0.2 * k, None, verts=32))
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.135 * k,
-                                         location=(x, y - 0.01 * k, z + 0.5 * k))
-    hd = bpy.context.active_object
-    hd.scale = (0.95, 1.05, 1.22)
-    parts.append(hd)
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.17 * k, minor_radius=0.03 * k,
-                                     major_segments=48, minor_segments=10,
-                                     location=(x, y + 0.02 * k, z + 0.55 * k),
-                                     rotation=(0, math.pi / 2, 0))
-    cr = bpy.context.active_object
-    cr.scale = (1.0, 1.0, 0.45)
-    for v in cr.data.vertices:            # keep only the upper half of the ring
-        if v.co.x > 0.02 * k:
-            v.co.x = 0.02 * k
-    parts.append(cr)
-    for sx in (-1, 1):                    # cheek guards
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=0.06 * k,
-                                             location=(x + sx * 0.105 * k, y - 0.06 * k,
-                                                       z + 0.44 * k))
-        cg = bpy.context.active_object
-        cg.scale = (0.4, 1.0, 1.4)
-        parts.append(cg)
+    k = h / 0.62
+    parts = [K.box(name + "Plinth", (x, y, z + 0.03 * k), (0.2 * k, 0.16 * k, 0.06 * k), None, 0.005)]
+    for sx in (-1, 1):                    # legs
+        parts.append(K.cylinder(f"{name}Leg{sx}", (x + sx * 0.03 * k, y, z + 0.17 * k), 0.022 * k,
+                                0.22 * k, None, verts=12, rot=(0, sx * 4, 0)))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1.0,
+                                         location=(x, y, z + 0.37 * k))
+    torso = bpy.context.active_object
+    torso.scale = (0.075 * k, 0.05 * k, 0.11 * k)
+    parts.append(torso)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=0.042 * k,
+                                         location=(x, y, z + 0.52 * k))
+    parts.append(bpy.context.active_object)
+    parts.append(K.box(name + "Crest", (x, y + 0.005 * k, z + 0.575 * k), (0.012 * k, 0.09 * k, 0.04 * k),
+                       None, 0.004))
+    parts.append(K.cylinder(name + "Arm", (x + 0.075 * k, y - 0.01 * k, z + 0.36 * k), 0.016 * k,
+                            0.18 * k, None, verts=10, rot=(0, -15, 0)))
+    parts.append(K.cylinder(name + "Shield", (x - 0.085 * k, y - 0.04 * k, z + 0.34 * k), 0.085 * k,
+                            0.018 * k, None, verts=32, rot=(90, 0, 15)))
+    parts.append(K.cylinder(name + "Spear", (x + 0.1 * k, y - 0.01 * k, z + 0.4 * k), 0.007 * k,
+                            0.72 * k, None, verts=8))
     for i, ob in enumerate(parts):
         ob.name = f"{name}{i}"
         C.shade_smooth(ob)
         C.assign(ob, mat)
     return parts
+
+
+def sand_patch(name, center, rx, ry, mat, seed=3):
+    """Irregular disc of casting sand on the floor (no straight edges)."""
+    import random
+    rnd = random.Random(seed)
+    n = 48
+    verts = [(center[0], center[1], 0.004)]
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        k = 1.0 + 0.12 * math.sin(3 * a + 1.0) + 0.06 * math.sin(7 * a) + rnd.uniform(-0.04, 0.04)
+        verts.append((center[0] + rx * k * math.cos(a), center[1] + ry * k * math.sin(a), 0.004))
+    faces = [(0, 1 + i, 1 + (i + 1) % n) for i in range(n)]
+    ob = C.mesh_object(name, verts, faces, smooth=False)
+    C.assign(ob, mat)
+    return ob
 
 
 def dome_furnace(loc, M, radius=1.2, base_h=0.55, mouth_w=1.05, mouth_h=1.0, chimney_top=6.0,
@@ -210,7 +214,7 @@ def build(M):
                   color=(1.0, 0.55, 0.2))
     P.sparks((mx, my, mz + mh * 1.07), count=12, seed=13, direction=(0, -0.3, 1),
              spread=75, length=(0.03, 0.1), dist=(0.04, 0.26), radius=0.004)
-    bust("Bust", (BX + 0.3, BY - 0.2, 0.9), M["bronze"], scale=0.58)
+    statuette("Statuette", (BX + 0.32, BY - 0.18, 0.9), M["bronze"], h=0.6)
 
     # big bronze bell hanging from the beam, right ----------------------------------
     GX, GY, GTOP, GH = 1.22, 1.6, 2.3, 0.92
@@ -222,7 +226,7 @@ def build(M):
         K.turned(f"SmallBell{i}", "bell", (x, y, 0), h, M["bronze_old"], segments=48)
     for i, (x, y, h) in enumerate(((-0.7, 0.4, 0.34), (-0.3, 0.75, 0.26))):
         K.turned(f"Mould{i}", "mould", (x, y, 0), h, M["mould"], segments=48)
-    K.plane("SandPatch", (-0.3, 0.6, 0.004), (1.8, 1.2), mat=M["sand"])
+    sand_patch("SandPatch", (-0.35, 0.65), 1.05, 0.62, M["sand"])
     K.turned("Urn", "urn", (1.55, 2.1, 0), 0.6, M["bronze_old"], segments=48)
 
     # wall torches flanking the furnace ----------------------------------------

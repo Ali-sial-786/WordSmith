@@ -333,13 +333,76 @@
     "changes": "Background removed, recoloured #ffffff"
   },
   {
+    "file": "icons/rank_apprentice.svg",
+    "title": "3D hammer",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/3d-hammer.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (bronze)"
+  },
+  {
+    "file": "icons/rank_journeyman.svg",
+    "title": "3D hammer",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/3d-hammer.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (iron), two copies mirrored and scaled into a crossed pair"
+  },
+  {
+    "file": "icons/rank_smith.svg",
+    "title": "Anvil",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/anvil.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (steel)"
+  },
+  {
+    "file": "icons/rank_master.svg",
+    "title": "Anvil",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/anvil.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (silver), glyphs scaled and combined"
+  },
+  {
+    "file": "icons/rank_master.svg",
+    "title": "Round star",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/round-star.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (silver), glyphs scaled and combined"
+  },
+  {
+    "file": "icons/rank_grandmaster.svg",
+    "title": "Jewel crown",
+    "author": "Delapouite",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/delapouite/jewel-crown.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (gold)"
+  },
+  {
+    "file": "icons/rank_legend.svg",
+    "title": "Laurel crown",
+    "author": "Lorc",
+    "licence": "CC BY 3.0",
+    "url": "https://game-icons.net/1x1/lorc/laurel-crown.html",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Background removed, filled with a metal gradient (starmetal)"
+  },
+  {
     "file": "images/ (3D renders)",
     "title": "Metal052C",
     "author": "ambientCG (Lennart Demes)",
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Metal052C",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Iron roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvil & hammers"
+    "changes": "Baked into renders: Metal roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvils & hammers; bronze, steel, silver and gold wares; blued steel"
   },
   {
     "file": "images/ (3D renders)",
@@ -348,7 +411,7 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Ground054",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Casting sand of the empty mold cell (cell_empty)"
+    "changes": "Baked into renders: Casting sand of the empty mold cell (cell_empty) and of the bronze foundry (bg_bronze)"
   },
   {
     "file": "images/ (3D renders)",
@@ -357,7 +420,7 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Bricks102",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper)"
+    "changes": "Baked into renders: Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper, bg_bronze, bg_gold)"
   },
   {
     "file": "images/ (3D renders)",
@@ -366,7 +429,7 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Bricks094",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper)"
+    "changes": "Baked into renders: Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper, bg_bronze furnace), brick walls and cupola (bg_steel)"
   },
   {
     "file": "images/ (3D renders)",
@@ -375,7 +438,7 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Planks023A",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Wood: beams, stumps, barrels, handles, doors, water wheel (icon + all backgrounds)"
+    "changes": "Baked into renders: Wood: beams, stumps, barrels, handles, doors, water wheel, benches, shelves, racks, chest (icon + all backgrounds)"
   },
   {
     "file": "images/ (3D renders)",
@@ -384,7 +447,7 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=PavingStones142",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Flagstone floors (bg_hall, bg_tin, bg_copper interior)"
+    "changes": "Baked into renders: Flagstone floors (bg_hall, bg_tin, bg_copper interior, bg_bronze, bg_iron)"
   },
   {
     "file": "images/ (3D renders)",
@@ -411,7 +474,70 @@
     "licence": "CC0 1.0 Universal",
     "url": "https://ambientcg.com/view?id=Plaster007",
     "licence_url": "https://docs.ambientcg.com/license/",
-    "changes": "Baked into renders: Old plaster walls (bg_tin smithy, bg_copper workshop)"
+    "changes": "Baked into renders: Old plaster walls (bg_tin, bg_copper, bg_silver), clay moulds and crucibles (bg_bronze, bg_gold), adobe and clay hearth (bg_damascus)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Rock030",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Rock030",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Rough rock walls of the mountain forge (bg_iron)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Rock035",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Rock035",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Dark volcanic rock and the meteorite (bg_starmetal)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Ground080",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Ground080",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Desert sand (bg_damascus)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Tiles074",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Tiles074",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Chequered marble floor of the treasury (bg_gold)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Marble012",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Marble012",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Pale marble floor and window sill of the silversmith's studio (bg_silver)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "Concrete031",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=Concrete031",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Foundry floor (bg_steel)"
+  },
+  {
+    "file": "images/ (3D renders)",
+    "title": "MetalPlates006",
+    "author": "ambientCG (Lennart Demes)",
+    "licence": "CC0 1.0 Universal",
+    "url": "https://ambientcg.com/view?id=MetalPlates006",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "changes": "Baked into renders: Riveted steel wall panels (bg_steel)"
   },
   {
     "file": "images/ (3D renders)",
@@ -835,5 +961,86 @@
     "url": "",
     "licence_url": "",
     "changes": ""
+  },
+  {
+    "file": "audio/round_win.ogg",
+    "title": "Round won: bright 'ta-da' sting, a two-bell pickup into a G major bell chord over an anvil ring",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/round_lose.ogg",
+    "title": "impactGeneric_light_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/round_lose.ogg",
+    "title": "Round lost: gentle 'aw', two soft falling bell notes (G4 to E-flat 4) that sag in pitch",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/series_win.ogg",
+    "title": "impactBell_heavy_001.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/series_win.ogg",
+    "title": "Series won: ~2.8 s bell-and-anvil fanfare (ta-ta-ta-TAA, then a rising run into a big C major chord)",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/rival_finished.ogg",
+    "title": "impactBell_heavy_003.ogg (Kenney Impact Sounds)",
+    "author": "Kenney (www.kenney.nl)",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/rival_finished.ogg",
+    "title": "Opponent finished / is close: deep gong-like anvil ring under a quick rising two-bell alert",
+    "author": "Wordsmith",
+    "licence": "original (synthesized by Wordsmith)",
+    "url": "",
+    "licence_url": "",
+    "changes": ""
+  },
+  {
+    "file": "audio/music_hall.ogg",
+    "title": "Loop_Kings_Feast_0.wav (Medieval: King's Feast)",
+    "author": "RandomMind",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://opengameart.org/content/medieval-kings-feast",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
+  },
+  {
+    "file": "audio/music_round.ogg",
+    "title": "Loop_Minstrel_Dance_0.wav (Medieval: Minstrel Dance)",
+    "author": "RandomMind",
+    "licence": "CC0 1.0 (public domain)",
+    "url": "https://opengameart.org/content/medieval-minstrel-dance",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "changes": "Edited, layered and loudness-normalised (art/audio/build_audio.py)"
   }
 ]

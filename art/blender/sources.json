@@ -12,7 +12,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Iron roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvil & hammers"
+      "used_for": "Metal roughness/normal detail: letter tiles, anvil face, mold-cell plate, icon/scene anvils & hammers; bronze, steel, silver and gold wares; blued steel"
     },
     {
       "file": "ambientcg/Ground054_1K-JPG.zip",
@@ -24,7 +24,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Casting sand of the empty mold cell (cell_empty)"
+      "used_for": "Casting sand of the empty mold cell (cell_empty) and of the bronze foundry (bg_bronze)"
     },
     {
       "file": "ambientcg/Bricks102_1K-JPG.zip",
@@ -36,7 +36,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper)"
+      "used_for": "Stone walls, forge apron, embankment/plinth stone (bg_hall, bg_copper, bg_bronze, bg_gold)"
     },
     {
       "file": "ambientcg/Bricks094_1K-JPG.zip",
@@ -48,7 +48,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper)"
+      "used_for": "Forge/hearth and chimney bricks (bg_hall, bg_tin, bg_copper, bg_bronze furnace), brick walls and cupola (bg_steel)"
     },
     {
       "file": "ambientcg/Planks023A_1K-JPG.zip",
@@ -60,7 +60,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Wood: beams, stumps, barrels, handles, doors, water wheel (icon + all backgrounds)"
+      "used_for": "Wood: beams, stumps, barrels, handles, doors, water wheel, benches, shelves, racks, chest (icon + all backgrounds)"
     },
     {
       "file": "ambientcg/PavingStones142_1K-JPG.zip",
@@ -72,7 +72,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Flagstone floors (bg_hall, bg_tin, bg_copper interior)"
+      "used_for": "Flagstone floors (bg_hall, bg_tin, bg_copper interior, bg_bronze, bg_iron)"
     },
     {
       "file": "ambientcg/RoofingTiles014B_1K-JPG.zip",
@@ -108,7 +108,7 @@
       "author": "ambientCG (Lennart Demes)",
       "licence": "CC0 1.0 Universal",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "used_for": "Old plaster walls (bg_tin smithy, bg_copper workshop)"
+      "used_for": "Old plaster walls (bg_tin, bg_copper, bg_silver), clay moulds and crucibles (bg_bronze, bg_gold), adobe and clay hearth (bg_damascus)"
     },
     {
       "file": "ambientcg/Rock030_1K-JPG.zip",

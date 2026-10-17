@@ -225,9 +225,9 @@ def build(M):
              iron=M["rough_iron"], water=K.water_material("Water"))
 
     # light: cold moonlight through the mouth, warm rims, faint fill ---------------
-    sun = C.sun_light("Moon", (0, 0, 0), 0.7, angle=1.0, color=(0.55, 0.68, 1.0))
+    sun = C.sun_light("Moon", (0, 0, 0), 0.5, angle=1.0, color=(0.55, 0.68, 1.0))
     sun.rotation_euler = Vector((-0.22, -1.0, -0.5)).to_track_quat("-Z", "Y").to_euler()
-    C.area_light("MouthSky", (OP_CX, BACK + 0.9, OP_CZ), (OP_CX - 0.5, 0.5, 0.6), 30,
+    C.area_light("MouthSky", (OP_CX, BACK + 2.2, OP_CZ), (OP_CX - 0.5, 0.5, 0.6), 22,
                  size=OP_RX * 1.6, size_y=OP_RZ * 1.6, shape="RECTANGLE", color=(0.45, 0.6, 1.0))
     C.area_light("RimAnvil", (-0.3, 2.0, 1.4), (AX, AY, 0.85), 30, size=0.8,
                  color=(1.0, 0.5, 0.2))

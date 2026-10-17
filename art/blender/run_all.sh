@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Re-render every Wordsmith 3D asset from scratch, reproducibly.
 #
-#   ./run_all.sh                 # everything (~1.5 h on 4 CPU cores)
-#   ./run_all.sh tiles icon      # only some: tiles anvil cells icon hall tin copper
+#   ./run_all.sh                 # everything (~2.5 h on 4 CPU cores)
+#   ./run_all.sh tiles icon      # only some: tiles anvil cells icon hall tin copper bronze iron
+#                                #   steel silver gold damascus starmetal
 #   QUICK=1 ./run_all.sh hall    # fast low-res/low-sample preview render
 #
 # Env: BLENDER  path to the Blender binary (default /opt/blender/blender)
@@ -19,7 +20,7 @@ if [ ! -x "$BLENDER" ]; then
   exit 1
 fi
 
-ALL=(tiles anvil cells icon hall tin copper)
+ALL=(tiles anvil cells icon hall tin copper bronze iron steel silver gold damascus starmetal)
 WANT=("$@")
 [ ${#WANT[@]} -eq 0 ] && WANT=("${ALL[@]}")
 
@@ -49,6 +50,8 @@ for w in "${WANT[@]}"; do
     hall)   blend scene_hall.py   $(quick --samples 24 --scale 0.3); POST+=(bg) ;;
     tin)    blend scene_tin.py    $(quick --samples 24 --scale 0.3); POST+=(bg) ;;
     copper) blend scene_copper.py $(quick --samples 24 --scale 0.3); POST+=(bg) ;;
+    bronze|iron|steel|silver|gold|damascus|starmetal)
+            blend "scene_$w.py" $(quick --samples 24 --scale 0.3); POST+=(bg) ;;
     *) echo "unknown asset '$w' (choose from: ${ALL[*]})" >&2; exit 1 ;;
   esac
 done

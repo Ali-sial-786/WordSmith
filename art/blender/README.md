@@ -11,7 +11,10 @@ is touched up by hand.
 fetch_assets.py   downloads the CC0 textures + font (pinned URL + sha256 from sources.json)
 common.py         shared bpy helpers: scene/Cycles setup, cameras, lights, lathe, node builder
 props.py          stylised props: anvil, hammer, tongs, sparks, iron/wood/hot-metal shaders
-forge_kit.py      scene kit: textured materials, hearths, arched forge, flames, coals, barrels, haze
+forge_kit.py      scene kit: textured materials, hearths, arched forge, flames, coals, barrels, haze;
+                  chapter kit: metal/blued/damascus/glow shaders, lathe-turned wares (bells, goblets,
+                  urns, crucibles, moulds...), torches, chains, blades, coins, ingots, night skies,
+                  meteors, and walls with exact boolean openings (round or pointed arches)
 tiles.py          tile_cold / tile_hot / tile_used
 anvil_face.py     anvil_face + anvil_face_glow
 cells.py          cell_empty / cell_metal
@@ -19,6 +22,13 @@ icon.py           app icon foreground (+ an ID pass for the monochrome icon)
 scene_hall.py     bg_hall   (Forge Hall, night)
 scene_tin.py      bg_tin    (village smithy at dawn)
 scene_copper.py   bg_copper (riverside workshop with water wheel, golden afternoon)
+scene_bronze.py   bg_bronze (torchlit bronze foundry: clay dome furnace, crucible pour, bell)
+scene_iron.py     bg_iron   (mountain forge hewn into rock, moonlit peaks through a cave mouth)
+scene_steel.py    bg_steel  (early steelworks at dusk: crucible pour on chains, blued steel)
+scene_silver.py   bg_silver (silversmith's studio by moonlight, arched window)
+scene_gold.py     bg_gold   (royal goldsmith's vault: treasure shelves, crown, molten gold)
+scene_damascus.py bg_damascus (desert bladesmith's workshop at sunset, damascus blades)
+scene_starmetal.py bg_starmetal (volcanic ridge forge under a meteor shower, meteorite iron)
 post.py           downscale, alpha/masks, drop shadow, glow layers, bloom, WebP; writes the outputs
 preview.py        dev aid: mock-ups (letters on tiles, tiles on the anvil, tinted cells...)
 run_all.sh        runs everything in order
@@ -48,9 +58,11 @@ Raw renders and logs go to `_renders/`, which is git-ignored. Downloads go to
 ```sh
 cd art/blender
 ./run_all.sh                       # everything: fetch, render, post-process
-./run_all.sh tiles cells           # only some: tiles anvil cells icon hall tin copper
+./run_all.sh tiles cells           # only some: tiles anvil cells icon hall tin copper bronze iron
+                                   #   steel silver gold damascus starmetal
 QUICK=1 ./run_all.sh hall          # fast low-res/low-sample render to check a change
 python3 post.py bg                 # just redo post-processing (tiles anvil cells icon bg)
+python3 post.py bg bg_gold         # ...or only some backgrounds
 python3 preview.py tiles anvil cells   # mock-ups in _renders/preview/
 ```
 
@@ -71,6 +83,13 @@ Single script: `"$BLENDER" -b --factory-startup -P tiles.py -- --samples 128 --r
 | `app/assets/images/bg_hall.webp` | 1080×2340 | scene_hall.py | big arched forge with flames at ~45–62 % down the frame |
 | `app/assets/images/bg_tin.webp` | 1080×2340 | scene_tin.py | open hearth with flames, plus a dawn doorway with chickens |
 | `app/assets/images/bg_copper.webp` | 1080×2340 | scene_copper.py | workshop across the river: forge glowing through open doors, water wheel |
+| `app/assets/images/bg_bronze.webp` | 1080×2340 | scene_bronze.py | round clay furnace, crucible pouring into a mould, hanging bronze bell, warrior statuette, torches |
+| `app/assets/images/bg_iron.webp` | 1080×2340 | scene_iron.py | rock-cut smithy: open stone hearth, ragged cave mouth onto moonlit snowy peaks, chain and hook |
+| `app/assets/images/bg_steel.webp` | 1080×2340 | scene_steel.py | steelworks: crucible on chains pouring into ingot moulds, steel-framed dusk windows, cupola, blued bars |
+| `app/assets/images/bg_silver.webp` | 1080×2340 | scene_silver.py | moonlit studio: arched window with a big moon, silverware on the bench, small brazier and candle |
+| `app/assets/images/bg_gold.webp` | 1080×2340 | scene_gold.py | treasury vault: round hearth with molten gold, shelves of gold, crown on a cushion, coins and bars |
+| `app/assets/images/bg_damascus.webp` | 1080×2340 | scene_damascus.py | adobe workshop, pointed arch onto dunes and a huge low sun, rack of damascus blades |
+| `app/assets/images/bg_starmetal.webp` | 1080×2340 | scene_starmetal.py | rock overhang framing a violet starry sky with meteors and a far volcano; glowing meteorite on the anvil |
 | `art/icon/icon_background.png` | 1024² opaque | post.py | warm forge glow gradient (procedural) |
 | `art/icon/icon_foreground.png` | 1024² RGBA | icon.py | hammer striking a glowing "W" tile on an anvil, sparks; post.py scales it so everything fits inside a 60 % circle (safe zone 61 %) |
 | `art/icon/icon_monochrome.png` | 1024² RGBA | icon.py + post.py | white silhouette with the W knocked out (Android 13 themed icon) |

@@ -37,8 +37,8 @@ def materials():
     return dict(
         plaster=K.tex_material("Plaster", "Plaster007", scale=0.5, value=0.42, sat=0.4,
                                tint="#A8B4C8", tint_fac=0.5, rough=(0.8, 1.0)),
-        floor=K.tex_material("Marble", "Marble012", scale=0.5, value=0.42, sat=0.5,
-                             tint="#9AA6BA", tint_fac=0.3, rough=(0.15, 0.4), normal=0.3),
+        floor=K.tex_material("Marble", "Marble012", scale=0.5, value=0.36, sat=0.5,
+                             tint="#9AA6BA", tint_fac=0.3, rough=(0.4, 0.65), normal=0.3),
         sill=K.tex_material("Sill", "Marble012", scale=1.2, value=0.6, sat=0.4, rough=(0.2, 0.45)),
         bench=K.tex_material("Bench", "Planks023A", scale=0.9, value=0.3, sat=0.7,
                              tint="#5A4636", tint_fac=0.4, rough=(0.5, 0.85)),
@@ -55,33 +55,12 @@ def materials():
 
 
 def window_wall(M):
-    """Back wall with a tall round-arched window: a dense grid with the arch
-    removed, solidified; then a dark frame with glazing bars."""
-    bpy.ops.mesh.primitive_grid_add(x_subdivisions=160, y_subdivisions=120, size=1,
-                                    location=(0, BACK + 0.02, HEIGHT / 2),
-                                    rotation=(math.pi / 2, 0, 0))
-    wall = bpy.context.active_object
-    wall.name = "BackWall"
-    wall.scale = (2 * W_HALF + 0.6, HEIGHT + 0.2, 1)
-    C.apply_transform(wall)
+    """Back wall with a tall round-arched window (exact boolean cut), a stone
+    surround and a dark frame with glazing bars."""
     r = WW / 2
     zs = WZ1 - r                                  # spring line of the arch
-    bm = bmesh.new()
-    bm.from_mesh(wall.data)
-    kill = []
-    for f in bm.faces:
-        c = f.calc_center_median() + wall.location
-        dx = c.x - WX
-        inside = abs(dx) < r and WZ0 < c.z < zs or (c.z >= zs and dx * dx + (c.z - zs) ** 2 < r * r)
-        if inside:
-            kill.append(f)
-    bmesh.ops.delete(bm, geom=kill, context="FACES")
-    bm.to_mesh(wall.data)
-    bm.free()
-    so = wall.modifiers.new("Thick", "SOLIDIFY")
-    so.thickness = 0.45
-    so.offset = -1.0
-    C.assign(wall, M["plaster"])
+    wall = K.wall_with_openings("BackWall", (0, BACK + 0.24, HEIGHT / 2), (2 * W_HALF + 0.6, 0.45, HEIGHT + 0.2),
+                                [K.arch_outline(WX, WW, WZ0, zs)], M["plaster"])
     # frame: jambs, sill, arch ring, glazing bars
     K.box("WinSill", (WX, BACK - 0.08, WZ0 - 0.05), (WW + 0.3, 0.32, 0.1), M["sill"], 0.02)
     bpy.ops.mesh.primitive_torus_add(major_radius=r, minor_radius=0.04, major_segments=64,
@@ -89,11 +68,30 @@ def window_wall(M):
                                      rotation=(math.pi / 2, 0, 0))
     ring = bpy.context.active_object
     ring.name = "ArchRing"
-    for v in ring.data.vertices:
-        v.co.y = max(v.co.y, 0.0) if False else v.co.y
+    bm = bmesh.new()                              # keep only the upper half of the ring
+    bm.from_mesh(ring.data)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.y < -0.01], context="VERTS")
+    bm.to_mesh(ring.data)
+    bm.free()
     C.assign(ring, M["frame"])
     for sx in (-1, 1):
         K.box(f"Jamb{sx}", (WX + sx * r, BACK + 0.2, (WZ0 + zs) / 2), (0.08, 0.08, zs - WZ0), M["frame"], 0)
+    # stone surround on the wall face: hides the stepped edge of the cut-out
+    bpy.ops.mesh.primitive_torus_add(major_radius=r + 0.04, minor_radius=0.075, major_segments=96,
+                                     minor_segments=8, location=(WX, BACK + 0.01, zs),
+                                     rotation=(math.pi / 2, 0, 0))
+    sur = bpy.context.active_object
+    sur.name = "Surround"
+    sur.scale = (1, 1, 0.6)
+    bm = bmesh.new()
+    bm.from_mesh(sur.data)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.y < -0.01], context="VERTS")
+    bm.to_mesh(sur.data)
+    bm.free()
+    C.assign(sur, M["sill"])
+    for sx in (-1, 1):
+        K.box(f"SurroundJamb{sx}", (WX + sx * (r + 0.04), BACK + 0.01, (WZ0 + zs) / 2), (0.15, 0.09, zs - WZ0),
+              M["sill"], 0.01)
     K.box("Mullion", (WX, BACK + 0.2, (WZ0 + WZ1) / 2), (0.035, 0.05, WZ1 - WZ0), M["frame"], 0)
     for i in range(1, 5):
         z = WZ0 + (zs - WZ0) * i / 5
@@ -133,8 +131,8 @@ def build(M):
              ("goblet", 0.42, -0.15, 0.26, "silver_dull"), ("urn", -1.1, 0.2, 0.38, "silver_dull")]
     for i, (kind, dx, dy, h, mat) in enumerate(items):
         K.turned(f"Ware{i}", kind, (WX + dx, BY + dy, BZ), h, M[mat], segments=64)
-    plate = K.turned("Plate", "plate", (0, 0, 0), 0.75, M["silver"], segments=96)
-    plate.location = (WX - 0.15, BY + 0.38, BZ + 0.3)
+    plate = K.turned("Plate", "plate", (0, 0, 0), 0.5, M["silver"], segments=96)
+    plate.location = (WX - 0.45, BY + 0.36, BZ + 0.2)
     plate.rotation_euler = (math.radians(78), 0, 0)          # leaning on the window reveal
     K.turned("Plate2", "plate", (WX + 0.3, BY - 0.05, BZ), 0.5, M["silver_dull"], segments=96)
     # candle in the tall candlestick
@@ -149,8 +147,19 @@ def build(M):
     C.point_light("BrazierLight", (bx, by - 0.05, BZ + 0.32), 14, radius=0.06, color=(1.0, 0.45, 0.15))
     K.box("Ingot", (bx + 0.35, by - 0.1, BZ + 0.02), (0.14, 0.06, 0.035), M["silver"], 0.006)
 
+    # wall shelf of silverware (left) and a rack of small hammers (right) ---------------
+    K.box("WallShelf", (-1.35, BACK - 0.14, 1.95), (1.1, 0.26, 0.05), M["bench"], 0.01)
+    for i, (kind, dx, h, mat) in enumerate((("urn", -0.35, 0.34, "silver_dull"), ("goblet", -0.05, 0.24, "silver"),
+                                            ("jug", 0.25, 0.3, "silver"))):
+        K.turned(f"ShelfWare{i}", kind, (-1.35 + dx, BACK - 0.14, 1.975), h, M[mat], segments=48)
+    sp = K.turned("ShelfPlate", "plate", (0, 0, 0), 0.36, M["silver_dull"], segments=64)
+    sp.location = (-1.0, BACK - 0.05, 2.15)
+    sp.rotation_euler = (math.radians(82), 0, 0)
+    K.tool_rack((1.75, BACK - 0.04, 1.95), along="X", length=0.8, wood=M["bench"], iron=M["steel"],
+                handle=M["handle"], facing=-1, seed=6)
+
     # foreground: stake anvil on a stump, hammers --------------------------------------
-    AX, AY = -0.75, 0.6
+    AX, AY = -0.9, 0.55
     K.stump("Stump", (AX, AY, 0), radius=0.3, height=0.62, mat=M["bench"])
     K.cylinder("StakePost", (AX, AY, 0.72), 0.04, 0.22, M["steel"], verts=16)
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.1, location=(AX, AY, 0.86))
@@ -164,13 +173,14 @@ def build(M):
     hm.rotation_euler = (math.radians(90), 0, math.radians(-35))
 
     # light: moonlight through the window, faint cool fill, warm accents -------------
-    sun = C.sun_light("Moonlight", (0, 0, 0), 2.6, angle=0.8, color=(0.62, 0.74, 1.0))
-    sun.rotation_euler = (-Vector(MOON)).to_track_quat("-Z", "Y").to_euler()
-    sun.rotation_euler = Vector((-0.06, -1.0, -0.55)).to_track_quat("-Z", "Y").to_euler()
-    C.area_light("WindowSky", (WX, BACK + 0.6, (WZ0 + WZ1) / 2), (WX, 1.0, 0.8), 25, size=WW,
+    sun = C.sun_light("Moonlight", (0, 0, 0), 1.0, angle=0.8, color=(0.62, 0.74, 1.0))
+    sun.rotation_euler = Vector((-0.06, -1.0, -1.15)).to_track_quat("-Z", "Y").to_euler()
+    C.area_light("SilverKey", (WX + 0.2, BACK - 2.4, 2.4), (WX, BACK - 0.85, 1.05), 45, size=1.2,
+                 color=(0.7, 0.8, 1.0))
+    C.area_light("WindowSky", (WX, BACK + 0.6, (WZ0 + WZ1) / 2), (WX, 1.0, 0.8), 40, size=WW,
                  size_y=WZ1 - WZ0, shape="RECTANGLE", color=(0.55, 0.68, 1.0))
     C.area_light("RimStake", (0.4, 2.2, 1.6), (AX, AY, 0.85), 8, size=0.6, color=(0.7, 0.8, 1.0))
-    C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 6, size=3.0, color=(0.55, 0.65, 1.0))
+    C.area_light("CoolFill", (-2.0, -3.0, 3.5), (0, 2, 1), 14, size=3.0, color=(0.55, 0.65, 1.0))
     K.haze((-W_HALF + 0.05, FRONT + 2, 0.05), (W_HALF - 0.05, BACK - 0.5, HEIGHT - 0.1),
            density=0.006, color=(0.9, 0.94, 1.0), anisotropy=0.55)
 
