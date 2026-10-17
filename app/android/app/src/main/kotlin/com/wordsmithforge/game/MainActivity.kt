@@ -280,7 +280,7 @@ class MainActivity : FlutterActivity() {
         /** MainActivity instances alive in this process. */
         var openActivities = 0
 
-        const val COMPAT ="compatGraphics"
+        const val COMPAT = "compatGraphics"
         const val COMPAT_AUTO = "compatGraphicsAuto"
         const val BACKEND = "backend"
         const val SEEN_EXIT_AT = "seenExitAt"
