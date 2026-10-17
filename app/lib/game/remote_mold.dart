@@ -9,7 +9,7 @@ import '../ui/theme/palette.dart';
 /// letters only once forged, hinted or shown in the results. Co-op shares one
 /// between the team; in Versus it's this player's own.
 class RemoteMold implements MoldModel {
-  RemoteMold(RoundStart start, this._players)
+  RemoteMold(RoundStart start, this._players, {this.initials = true})
     : cols = start.cols,
       rows = start.rows,
       slots = start.slots,
@@ -23,6 +23,10 @@ class RemoteMold implements MoldModel {
     }
     _cells.sort((a, b) => a.y != b.y ? a.y.compareTo(b.y) : a.x.compareTo(b.x));
   }
+
+  /// Mark each forged word with its smith's initial (co-op; in Versus
+  /// every word on your mold is yours).
+  final bool initials;
 
   @override
   final int cols;
@@ -119,6 +123,7 @@ class RemoteMold implements MoldModel {
 
   @override
   String? ownerInitial(CellPos cell) {
+    if (!initials) return null;
     for (final e in _owner.entries) {
       if (e.value == null) continue;
       final s = slot(e.key);

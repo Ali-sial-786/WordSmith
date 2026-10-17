@@ -63,7 +63,7 @@ class VsSession extends RoomSession {
     bonusWords = 0;
     _closeCalls.clear();
     feed.clear();
-    mold = RemoteMold(start, () => lobby!);
+    mold = RemoteMold(start, () => lobby!, initials: false);
     final total = mold!.cells.length;
     progress = {for (final id in start.racers) id: RacerProgress(id, 0, total)};
     tally = {...start.tally};

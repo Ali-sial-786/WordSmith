@@ -49,3 +49,5 @@ app.*.map.json
 
 # Local build settings (Firebase API key, API base URL); see app/README.md
 dart_defines.json
+# Screenshots rendered by test_shots/shots_test.dart
+test_shots/shots/

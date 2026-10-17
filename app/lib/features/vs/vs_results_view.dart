@@ -24,8 +24,9 @@ class VsResultsView extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final mine = r.xp[session.me];
     final iWon = r.winner == session.me;
-    final top = r.podium.where((p) => p.place <= 3).toList();
-    final rest = r.podium.where((p) => p.place > 3).toList();
+    // The podium holds three; anyone sharing a place beyond that is listed.
+    final top = r.podium.take(3).toList();
+    final rest = r.podium.skip(3).toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
       children: [

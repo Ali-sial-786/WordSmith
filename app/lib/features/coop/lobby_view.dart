@@ -91,7 +91,7 @@ class LobbyView extends ConsumerWidget {
                 ? 'Versus needs at least 2 smiths'
                 : lobby.players.every((p) => p.ready || p.id == session.me)
                 ? 'Everyone is ready'
-                : "Not everyone is ready (you can start anyway)",
+                : 'Not everyone is ready yet',
             icon: vs ? 'trophy' : 'anvil',
             primary: true,
             onPressed: canStart ? session.startRound : null,
