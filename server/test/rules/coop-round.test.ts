@@ -5,6 +5,7 @@ import {
   applySubmit,
   coopAward,
   coopResults,
+  forgedWords,
   filledCells,
   hintProblem,
   isComplete,
@@ -227,6 +228,16 @@ describe("coopResults", () => {
     applySubmit(r, "a", "TEA");
     expect(coopResults(r, "timeout", T0).mvp).toBe("a");
     expect(coopResults(round(), "timeout", T0).mvp).toBeNull();
+  });
+});
+
+describe("forgedWords", () => {
+  it("lists the grid words each player claimed, in order", () => {
+    const r = round();
+    applySubmit(r, "b", "RATE");
+    applySubmit(r, "a", "TEA"); // a bonus word: not forged
+    applySubmit(r, "b", "TEAR");
+    expect(forgedWords(r)).toEqual({ a: [], b: ["RATE", "TEAR"] });
   });
 });
 

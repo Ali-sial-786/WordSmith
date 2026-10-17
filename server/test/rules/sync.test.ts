@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { campaignPuzzle, type CampaignPuzzle } from "../../src/rules/campaign";
 import { pickupsFor } from "../../src/rules/pickups";
 import { noHints, totalXpForLevel } from "../../src/rules/progression";
+import { gildedCell } from "../../src/rules/masterworks";
 import {
   checkEntry,
+  checkGilded,
   checkPickups,
   evaluateSync,
   MAX_INSTALL_SEEDS,
@@ -356,5 +358,99 @@ describe("evaluateSync", () => {
     const out = evaluateSync({ uid, now: NOW, state: state(), entries, puzzles: puzzles(...withPickups) });
     expect(out.newInstallSeeds).toEqual([seed]);
     expect([...out.state.installSeeds]).toEqual([seed]);
+  });
+});
+
+describe("gilded cells and Masterworks (shared/masterworks.md)", () => {
+  // A 12-cell c-0025: for user-123 the gilded cell is 4 (stepped off the pickup at 3).
+  const c25 = synthetic(25, 4);
+  const uid = "user-123";
+
+  it("reads the gilded claims, which are optional", () => {
+    const raw = { stage: 25, puzzleId: "c-0025", foundWords: [], durationMs: 0, completedAt: NOW };
+    expect(parseSyncEntry({ ...raw, gilded: [4] })).toMatchObject({ ok: true, entry: { gilded: [4] } });
+    expect(parseSyncEntry({ ...raw, gilded: [] })).toMatchObject({ ok: true, entry: { gilded: [] } });
+    expect(parseSyncEntry(raw)).toMatchObject({ ok: true });
+    for (const bad of [4, [-1], ["4"], [1.5], [0, 1, 2, 3, 4]]) {
+      expect(parseSyncEntry({ ...raw, gilded: bad })).toEqual({ ok: false, stage: 25, detail: "gilded" });
+    }
+  });
+
+  it("accepts a claim on the cell the server works out, for a seed the account may use", () => {
+    expect(c25.cellCount).toBe(12);
+    expect(gildedCell(uid, "c-0025", 12, 20)).toBe(4);
+    expect(checkGilded(uid, entry(c25, { gilded: [4] }), c25, 20, new Set())).toEqual({ cell: 4, newSeed: null });
+    expect(checkGilded(uid, entry(c25, { gilded: [3, 4] }), c25, 20, new Set())).toEqual({ cell: 4, newSeed: null });
+    expect(checkGilded(uid, entry(c25, { gilded: [3] }), c25, 20, new Set())).toEqual({ cell: null, newSeed: null });
+    expect(checkGilded(uid, entry(c25), c25, 20, new Set())).toEqual({ cell: null, newSeed: null });
+    // Somebody else's uid as the seed isn't allowed.
+    expect(checkGilded("me", entry(c25, { pickupSeed: uid, gilded: [4] }), c25, 20, new Set())).toEqual({ cell: null, newSeed: null });
+
+    const seed = "install-" + "d".repeat(32);
+    const ps = Array.from({ length: 60 }, (_, i) => synthetic(i + 1, 5));
+    const p = ps.find((x) => gildedCell(seed, x.id, x.cellCount, 1) !== null)!;
+    const cell = gildedCell(seed, p.id, p.cellCount, 1)!;
+    expect(checkGilded("me", entry(p, { pickupSeed: seed, gilded: [cell] }), p, 1, new Set())).toEqual({ cell, newSeed: seed });
+    const full = new Set(Array.from({ length: MAX_INSTALL_SEEDS }, (_, i) => `install-${String(i).repeat(32)}`));
+    expect(checkGilded("me", entry(p, { pickupSeed: seed, gilded: [cell] }), p, 1, full)).toEqual({ cell: null, newSeed: null });
+  });
+
+  it("counts a piece for a right claim and ignores a wrong one, accepting the entry either way", () => {
+    const right = evaluateSync({ uid, now: NOW, state: state(), entries: [entry(c25, { gilded: [4] })], puzzles: puzzles(c25) });
+    expect(right.results[0]).toMatchObject({ accepted: true, xp: 10, gilded: [4] });
+    expect(right.results[0]).not.toHaveProperty("masterwork");
+    expect(right.state.masterworkPieces).toBe(1);
+    expect(right.accepted[0]!.masterworks).toEqual([]);
+
+    const wrong = evaluateSync({ uid, now: NOW, state: state(), entries: [entry(c25, { gilded: [5] })], puzzles: puzzles(c25) });
+    expect(wrong.results[0]).toMatchObject({ accepted: true, xp: 10 });
+    expect(wrong.results[0]).not.toHaveProperty("gilded");
+    expect(wrong.state.masterworkPieces).toBe(0);
+  });
+
+  it("grants a finished Masterwork's reward in the same sync, locked types as Hammer Strikes", () => {
+    const out = evaluateSync({ uid, now: NOW, state: state({ masterworkPieces: 5 }), entries: [entry(c25, { gilded: [4] })], puzzles: puzzles(c25) });
+    expect(out.results[0]).toMatchObject({
+      accepted: true,
+      xp: 10,
+      gilded: [4],
+      masterwork: { id: "horseshoe", reward: { xp: 100, hints: { hammer: 2, chisel: 0, sparks: 0 } } },
+      // 110 XP: level 2 (60 XP) and nearly 3 (130).
+      level: 2,
+      levelUps: 1,
+      rewards: { hammer: 1, chisel: 0, sparks: 0 },
+    });
+    expect(out.state).toMatchObject({ totalXp: 110, masterworkPieces: 6, hints: { hammer: 3 + 2 + 1, chisel: 0, sparks: 0 } });
+    expect(out.accepted[0]!.masterworks).toEqual([{ id: "horseshoe", xp: 100 }]);
+  });
+
+  it("swaps at the level the puzzle's XP reached, and the reward pays for nothing used in the puzzle", () => {
+    // At level 12 (after the puzzle) every type is unlocked.
+    const before = totalXpForLevel(12) - 5;
+    const out = evaluateSync({
+      uid,
+      now: NOW,
+      state: state({ totalXp: before, masterworkPieces: 11, hints: { hammer: 0, chisel: 0, sparks: 0 } }),
+      entries: [entry(c25, { gilded: [4], hintsUsed: { hammer: 0, chisel: 1, sparks: 0 } })],
+      puzzles: puzzles(c25),
+    });
+    expect(out.results[0]).toMatchObject({ masterwork: { id: "bell", reward: { xp: 100, hints: { hammer: 0, chisel: 1, sparks: 1 } } }, hintsClamped: { chisel: 1 } });
+    expect(out.state.totalXp).toBe(before + 110);
+    expect(out.state.hints.chisel).toBe(1);
+    expect(out.state.hints.sparks).toBe(1);
+  });
+
+  it("says what the accepted entries count towards Work Orders", () => {
+    const a = synthetic(1, 3);
+    const b = synthetic(2, 2, ["XYZ", "ZYX"]);
+    const out = evaluateSync({
+      uid,
+      now: NOW,
+      state: state(),
+      entries: [entry(a, { bonusWords: ["XYZ", "xyz", "ZYX"] }), entry(b, { foundWords: ["AAA"], hintsUsed: { hammer: 3, chisel: 0, sparks: 0 } }), entry(a)],
+      puzzles: puzzles(a, b),
+    });
+    expect(out.results.map((r) => r.accepted)).toEqual([true, true, false]);
+    expect(out.facts).toEqual({ soloPuzzles: 2, noHintPuzzles: 1, bonusWords: 2, forged: ["AAA", "BBB", "CCC", "AAA"] });
   });
 });

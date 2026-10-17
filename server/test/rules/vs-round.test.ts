@@ -249,6 +249,12 @@ describe("the series", () => {
       { id: "c", wins: 0, rounds: 0, words: 0, longest: "", bonus: 0, pickups: { hammer: 0, chisel: 0, sparks: 0 }, out: false },
     ]);
     expect(tallyOf(s)).toEqual({ a: 1, b: 0, c: 0 });
+    // The words each racer forged, for their Work Orders; bonus words aren't.
+    expect(s.forged).toEqual({ a: ["RATE", "EAT"], b: [] });
+    const r2 = round(["a", "b"], { n: 2 });
+    applyVsSubmit(r2, "b", "TEAR");
+    recordRound(s, r2, resolveRound(r2, activeRacers(s)));
+    expect(s.forged).toEqual({ a: ["RATE", "EAT"], b: ["TEAR"] });
   });
 
   it("plays the regular rounds, then sudden death between the tied leaders, replayed until someone wins", () => {

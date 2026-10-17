@@ -3,7 +3,17 @@ import { campaignPuzzle } from "../../src/rules/campaign";
 import {
   addDays,
   applyDaily,
+  calendar,
   checkDaily,
+  DAILY_LATE_XP,
+  daysInMonth,
+  firstCatchUpDay,
+  isLateDay,
+  isMonth,
+  isPlayableDay,
+  monthTrophy,
+  previousMonth,
+  trophyCounts,
   dailyHeat,
   dailyIndex,
   dailyPuzzleId,
@@ -185,5 +195,68 @@ describe("applyDaily", () => {
     expect(out.award).toMatchObject({ level: 2, levelsGained: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 } });
     expect(out.state.hints).toEqual({ hammer: 1, chisel: 0, sparks: 0 });
     expect(out.hintsClamped).toBeNull();
+  });
+});
+
+describe("catch-up days", () => {
+  it("go back to the 1st of last month", () => {
+    expect(firstCatchUpDay("2026-10-17")).toBe("2026-09-01");
+    expect(firstCatchUpDay("2026-10-01")).toBe("2026-09-01");
+    expect(firstCatchUpDay("2027-01-31")).toBe("2026-12-01");
+    const now = at("2026-10-17T15:00:00Z");
+    expect(["2026-09-01", "2026-09-30", "2026-10-16", "2026-10-17"].map((d) => isPlayableDay(d, now))).toEqual([true, true, true, true]);
+    expect(["2026-08-31", "2026-10-18", "2027-10-17"].map((d) => isPlayableDay(d, now))).toEqual([false, false, false]);
+  });
+
+  it("are late unless on time (today, or yesterday in the first hour)", () => {
+    expect(isLateDay("2026-10-17", at("2026-10-17T15:00:00Z"))).toBe(false);
+    expect(isLateDay("2026-10-16", at("2026-10-17T00:30:00Z"))).toBe(false);
+    expect(isLateDay("2026-10-16", at("2026-10-17T01:00:00Z"))).toBe(true);
+    expect(isLateDay("2026-09-01", at("2026-10-17T15:00:00Z"))).toBe(true);
+    // Outside the window isn't late: it can't be played at all.
+    expect(isLateDay("2026-08-31", at("2026-10-17T15:00:00Z"))).toBe(false);
+  });
+
+  it("pay a flat 15 XP whatever the streak, and count for Work Orders like any completion", () => {
+    const state = { totalXp: 0, scrapBin: 0, hints: { hammer: 0, chisel: 0, sparks: 0 }, wordsForged: 0, longestWord: "" };
+    const late = applyDaily(state, completion({ bonusWords: ["TEA", "NOPE"] }), example, 7, true);
+    expect(DAILY_LATE_XP).toBe(15);
+    expect(late).toMatchObject({ xp: 15, late: true, state: { totalXp: 15, scrapBin: 1, wordsForged: 3 } });
+    expect(late.facts).toEqual({ dailies: 1, bonusWords: 1, forged: ["TEAR", "EAT", "RATE"] });
+    expect(applyDaily(state, completion(), example, 7)).toMatchObject({ xp: 55, late: false });
+  });
+});
+
+describe("the calendar", () => {
+  it("knows months", () => {
+    expect(["2026-10", "2026-01", "2026-12"].every(isMonth)).toBe(true);
+    for (const bad of ["2026-13", "2026-00", "2026-1", "2026-10-01", 202610, null]) expect(isMonth(bad)).toBe(false);
+    expect(previousMonth("2026-10")).toBe("2026-09");
+    expect(previousMonth("2027-01")).toBe("2026-12");
+    expect([daysInMonth("2026-02"), daysInMonth("2028-02"), daysInMonth("2026-10"), daysInMonth("2026-09")]).toEqual([28, 29, 31, 30]);
+  });
+
+  it("gives gold for every day, silver for 15+, bronze for 7+", () => {
+    expect(monthTrophy("2026-10", 31)).toBe("gold");
+    expect(monthTrophy("2026-02", 28)).toBe("gold");
+    expect(monthTrophy("2026-10", 30)).toBe("silver");
+    expect(monthTrophy("2026-10", 15)).toBe("silver");
+    expect(monthTrophy("2026-10", 14)).toBe("bronze");
+    expect(monthTrophy("2026-10", 7)).toBe("bronze");
+    expect(monthTrophy("2026-10", 6)).toBeNull();
+  });
+
+  it("counts each month once, at its best trophy", () => {
+    const month = (m: string, n: number) => Array.from({ length: n }, (_, i) => `${m}-${String(i + 1).padStart(2, "0")}`);
+    const dates = [...month("2026-02", 28), ...month("2026-03", 20), ...month("2026-04", 7), ...month("2026-05", 3), ...month("2026-06", 15)];
+    expect(trophyCounts(dates)).toEqual({ bronze: 1, silver: 2, gold: 1 });
+    expect(trophyCounts([])).toEqual({ bronze: 0, silver: 0, gold: 0 });
+    expect(calendar("2026-04", [...dates].reverse())).toEqual({
+      month: "2026-04",
+      days: month("2026-04", 7),
+      trophy: "bronze",
+      trophies: { bronze: 1, silver: 2, gold: 1 },
+    });
+    expect(calendar("2026-07", dates)).toMatchObject({ days: [], trophy: null });
   });
 });
