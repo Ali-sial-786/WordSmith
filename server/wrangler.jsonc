@@ -13,7 +13,7 @@
   },
   "vars": {
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
-    "LATEST_VERSION": "0.4.1",
+    "LATEST_VERSION": "0.4.2",
     "MIN_SUPPORTED_VERSION": "0.1.0",
     // The app downloads LATEST_VERSION's APK from here to update itself
     // ({version} is filled in). Publish the release before deploying a bump.
