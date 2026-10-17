@@ -6,6 +6,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
+import '../../ui/widgets/xp_award.dart';
 
 /// After a round: stars, team score, MVP, everyone's points, missed words.
 class ResultsView extends StatelessWidget {
@@ -112,11 +113,7 @@ class ResultsView extends StatelessWidget {
           ),
         if (mine != null) ...[
           const SizedBox(height: 10),
-          Text(
-            '+${mine.xp} XP${mine.levelUps > 0 ? ' · Level up! Now Smith Level ${mine.level}' : ''}',
-            textAlign: TextAlign.center,
-            style: text.titleMedium?.copyWith(color: Palette.molten),
-          ),
+          XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
           if (mine.scrapHammers > 0)
             Text(
               'Scrap Bin: +${mine.scrapHammers} Hammer Strike${mine.scrapHammers == 1 ? '' : 's'}',

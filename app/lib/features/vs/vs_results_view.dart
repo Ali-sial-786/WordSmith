@@ -8,6 +8,7 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
+import '../../ui/widgets/xp_award.dart';
 import 'vs_widgets.dart';
 
 /// The end of a Versus series: the podium, my XP and embers, and a rematch.
@@ -60,11 +61,7 @@ class VsResultsView extends StatelessWidget {
           ),
         if (mine != null) ...[
           const SizedBox(height: 14),
-          Text(
-            '+${mine.xp} XP${mine.levelUps > 0 ? ' · Level up! Now Smith Level ${mine.level}' : ''}',
-            textAlign: TextAlign.center,
-            style: text.titleMedium?.copyWith(color: Palette.molten),
-          ),
+          XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
           for (final line in _extras(mine))
             Text(line, textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: Palette.verdigris)),
         ],

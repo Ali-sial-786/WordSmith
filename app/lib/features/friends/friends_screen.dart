@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../game/account.dart';
 import '../../net/api_client.dart';
@@ -56,6 +57,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       _toast(e.friendly);
     }
   }
+
+  /// Joins the room a friend is in, if it has space and isn't mid-round.
+  Future<void> _join(String code) => _act(() async {
+    final mode = await ref.read(accountProvider.notifier).checkRoom(code);
+    if (mounted) context.push('/room/$code?mode=$mode');
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -151,10 +158,20 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             _PlayerTile(
               player: p,
               presence: account.presence[p.id] ?? 'offline',
-              trailing: PopupMenuButton<String>(
-                onSelected: (_) => _act(() => n.removeFriend(p.id)),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'remove', child: Text('Remove friend')),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if ((account.presence[p.id] ?? '').startsWith('in_room:'))
+                    TextButton(
+                      onPressed: () => _join(account.presence[p.id]!.substring('in_room:'.length)),
+                      child: const Text('Join'),
+                    ),
+                  PopupMenuButton<String>(
+                    onSelected: (_) => _act(() => n.removeFriend(p.id)),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'remove', child: Text('Remove friend')),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -158,8 +158,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         _cues
           ..fillDelay.clear()
           ..flash.clear();
-      case RoundEnd(:final completed):
+      case RoundEnd(:final completed, :final xp):
         sfx.play(completed ? SfxId.forged : SfxId.tick);
+        if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
+          Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
+        }
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
       case VsRoundEnd(:final winner):
