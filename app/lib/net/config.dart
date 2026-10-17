@@ -35,5 +35,7 @@ abstract final class AppConfig {
     messagingSenderId: '920525083065',
     projectId: 'wordsmith-8f550',
     storageBucket: 'wordsmith-8f550.firebasestorage.app',
+    // The browser version's Google sign-in popup runs on this domain.
+    authDomain: 'wordsmith-8f550.firebaseapp.com',
   );
 }

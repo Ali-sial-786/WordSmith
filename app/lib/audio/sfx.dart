@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/profile.dart';
 import 'background_audio.dart';
+import 'web_sound.dart';
 
 enum SfxId {
   clang('clang'),
@@ -88,6 +89,10 @@ class Sfx {
   final Map<String, _Voice> _voices = {};
   AudioPlayer? _ambience;
   AudioPlayer? _music;
+
+  /// In the browser, its own engine instead of audioplayers (web_sound.dart).
+  WebSound? _web;
+  bool _webAmbience = false;
   String? _track;
   Settings _settings;
 
@@ -108,6 +113,11 @@ class Sfx {
   /// Loads every sound in the background; sounds play once loaded.
   Future<void> preload() async {
     if (!_enabled) return;
+    if (kIsWeb && WebSound.supported) {
+      final web = _web = WebSound();
+      await web.load([for (var i = 1; i <= tinkCount; i++) 'tink_$i', for (final id in SfxId.values) id.file]);
+      return;
+    }
     try {
       await AudioPlayer.global.setAudioContext(
         AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build(),
@@ -133,6 +143,9 @@ class Sfx {
     _settings = settings;
     _ambience?.setVolume(_ambienceVolume).ignore();
     _music?.setVolume(_musicVolume).ignore();
+    _web
+      ?..setLoopVolume('music', _musicVolume)
+      ..setLoopVolume('ambience', _ambienceVolume);
     _syncBackground();
   }
 
@@ -145,6 +158,7 @@ class Sfx {
     if (!_enabled || track == _track) return;
     _track = track;
     _syncBackground();
+    if (_web != null) return _web!.loop('music', track, _musicVolume);
     try {
       final player = _music ??= _newPlayer();
       await player.stop();
@@ -173,13 +187,18 @@ class Sfx {
 
   void _play(String file, double volume) {
     if (!_enabled || _quiet || _settings.sfxVolume <= 0) return;
+    if (_web != null) return _web!.play(file, volume * _settings.sfxVolume);
     _voices[file]?.play(volume * _settings.sfxVolume).catchError((Object e) {
       debugPrint('sound $file failed: $e');
     });
   }
 
   Future<void> startAmbience() async {
-    if (!_enabled || _ambience != null) return;
+    if (_web != null && !_webAmbience) {
+      _webAmbience = true;
+      return _web!.loop('ambience', 'forge_ambience', _ambienceVolume);
+    }
+    if (!_enabled || _ambience != null || _web != null) return;
     try {
       final player = _newPlayer();
       _ambience = player;
@@ -204,7 +223,8 @@ class Sfx {
       case AppLifecycleState.hidden || AppLifecycleState.paused:
         if (_offScreen) return;
         _offScreen = true;
-        if (!_settings.backgroundAudio) await _setQuiet(away: true);
+        // A browser tab that's hidden goes quiet; iOS suspends it anyway.
+        if (!_settings.backgroundAudio || kIsWeb) await _setQuiet(away: true);
       case AppLifecycleState.resumed:
         if (!_offScreen) return;
         _offScreen = false;
@@ -240,6 +260,7 @@ class Sfx {
     _away = away ?? _away;
     _interrupted = interrupted ?? _interrupted;
     if (_quiet == was) return;
+    if (_web != null) return _web!.setQuiet(_quiet);
     try {
       if (_quiet) {
         await _music?.pause();
@@ -257,6 +278,7 @@ class Sfx {
   Future<void> shutDown() async {
     _away = true;
     _syncBackground();
+    await _web?.close();
     for (final p in [_music, _ambience]) {
       try {
         await p?.stop();

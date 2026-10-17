@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -49,8 +50,7 @@ abstract class AuthService {
 }
 
 class FirebaseAuthService implements AuthService {
-  FirebaseAuthService({FirebaseAuth? auth, this.googleClientId = ''})
-    : _auth = auth ?? FirebaseAuth.instance;
+  FirebaseAuthService({FirebaseAuth? auth, this.googleClientId = ''}) : _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
 
@@ -60,11 +60,7 @@ class FirebaseAuthService implements AuthService {
 
   static AuthUser? _map(User? u) => u == null
       ? null
-      : AuthUser(
-          uid: u.uid,
-          email: u.email,
-          usesPassword: u.providerData.any((p) => p.providerId == 'password'),
-        );
+      : AuthUser(uid: u.uid, email: u.email, usesPassword: u.providerData.any((p) => p.providerId == 'password'));
 
   @override
   AuthUser? get current => _map(_auth.currentUser);
@@ -89,8 +85,7 @@ class FirebaseAuthService implements AuthService {
       _guard(() => _auth.createUserWithEmailAndPassword(email: email.trim(), password: password));
 
   @override
-  Future<void> resetPassword(String email) =>
-      _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
+  Future<void> resetPassword(String email) => _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
   @override
   bool get googleAvailable => googleClientId.isNotEmpty;
@@ -116,8 +111,22 @@ class FirebaseAuthService implements AuthService {
     }
   }
 
+  /// The browser version signs in with Google in a Firebase popup (the
+  /// domain must be in Firebase's authorised domains). False if the player
+  /// closed it.
+  Future<bool> _googlePopup(Future<void> Function(GoogleAuthProvider provider) open) async {
+    try {
+      await open(GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'}));
+      return true;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled-popup-request') return false;
+      rethrow;
+    }
+  }
+
   @override
   Future<bool> signInWithGoogle() => _guard(() async {
+    if (kIsWeb) return _googlePopup(_auth.signInWithPopup);
     final credential = await _googleCredential();
     if (credential == null) return false;
     await _auth.signInWithCredential(credential);
@@ -130,9 +139,13 @@ class FirebaseAuthService implements AuthService {
     if (user == null) throw const AuthFailure('Not signed in.');
     if (password != null) {
       if (user.email == null) throw const AuthFailure('Not signed in.');
-      await user.reauthenticateWithCredential(
-        EmailAuthProvider.credential(email: user.email!, password: password),
-      );
+      await user.reauthenticateWithCredential(EmailAuthProvider.credential(email: user.email!, password: password));
+      return;
+    }
+    if (kIsWeb) {
+      if (!await _googlePopup(user.reauthenticateWithPopup)) {
+        throw const AuthFailure('Confirm with Google to continue.', code: 'canceled');
+      }
       return;
     }
     final credential = await _googleCredential();
@@ -144,7 +157,7 @@ class FirebaseAuthService implements AuthService {
 
   /// Forgets the Google account too, so the picker shows next time.
   Future<void> _googleSignOut() async {
-    if (!_googleReady) return;
+    if (!_googleReady || kIsWeb) return;
     try {
       await GoogleSignIn.instance.signOut();
     } on Object {
@@ -216,8 +229,7 @@ String describeAuthError(String code) => switch (code) {
 
 String describeGoogleError(GoogleSignInExceptionCode code, String? detail) => switch (code) {
   GoogleSignInExceptionCode.clientConfigurationError ||
-  GoogleSignInExceptionCode.providerConfigurationError =>
-    "Google sign-in isn't set up for this build yet.",
+  GoogleSignInExceptionCode.providerConfigurationError => "Google sign-in isn't set up for this build yet.",
   GoogleSignInExceptionCode.uiUnavailable => "Google sign-in can't open right now. Try again.",
   GoogleSignInExceptionCode.interrupted => 'Google sign-in was interrupted. Try again.',
   _ => 'Google sign-in failed${detail == null || detail.isEmpty ? '' : ' ($detail)'}.',

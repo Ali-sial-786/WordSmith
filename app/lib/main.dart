@@ -31,9 +31,7 @@ Future<void> main() async {
   final api = AppConfig.hasServer && auth is FirebaseAuthService
       ? ApiClient(baseUrl: AppConfig.apiBase, token: auth.idToken)
       : null;
-  final hub = api == null
-      ? null
-      : HubClient(baseUrl: AppConfig.apiBase, token: auth.idToken);
+  final hub = api == null ? null : HubClient(baseUrl: AppConfig.apiBase, token: auth.idToken);
   runApp(
     ProviderScope(
       overrides: [
@@ -44,12 +42,12 @@ Future<void> main() async {
         apiClientProvider.overrideWithValue(api),
         hubClientProvider.overrideWithValue(hub),
         roomClientFactoryProvider.overrideWithValue(
-          api == null
-              ? null
-              : (code) => RoomClient(baseUrl: AppConfig.apiBase, code: code, token: auth.idToken),
+          api == null ? null : (code) => RoomClient(baseUrl: AppConfig.apiBase, code: code, token: auth.idToken),
         ),
         videoCallFactoryProvider.overrideWithValue(api == null ? null : (me) => LiveKitCall(me: me)),
-        if (api != null && AppConfig.hasFirebase) pushServiceProvider.overrideWithValue(FirebasePushService()),
+        // Not in the browser: iOS only allows web push for Home Screen apps.
+        if (api != null && AppConfig.hasFirebase && !kIsWeb)
+          pushServiceProvider.overrideWithValue(FirebasePushService()),
       ],
       child: const WordsmithApp(),
     ),

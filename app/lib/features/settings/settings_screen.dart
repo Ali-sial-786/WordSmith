@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,17 +41,20 @@ class SettingsScreen extends ConsumerWidget {
             value: s.ambienceVolume,
             onChanged: (v) => n.update((s) => s.copyWith(ambienceVolume: v)),
           ),
-          SwitchListTile(
-            title: const Text('Keep playing in the background'),
-            subtitle: const Text('Music and sounds carry on when you switch apps or the screen turns off'),
-            value: s.backgroundAudio,
-            onChanged: (v) => n.update((s) => s.copyWith(backgroundAudio: v)),
-          ),
-          SwitchListTile(
-            title: const Text('Vibration'),
-            value: s.haptics,
-            onChanged: (v) => n.update((s) => s.copyWith(haptics: v)),
-          ),
+          // Browsers decide these themselves (and iPhones have no web vibration).
+          if (!kIsWeb)
+            SwitchListTile(
+              title: const Text('Keep playing in the background'),
+              subtitle: const Text('Music and sounds carry on when you switch apps or the screen turns off'),
+              value: s.backgroundAudio,
+              onChanged: (v) => n.update((s) => s.copyWith(backgroundAudio: v)),
+            ),
+          if (!kIsWeb)
+            SwitchListTile(
+              title: const Text('Vibration'),
+              value: s.haptics,
+              onChanged: (v) => n.update((s) => s.copyWith(haptics: v)),
+            ),
           SwitchListTile(
             title: const Text('Left-handed layout'),
             subtitle: const Text('Hint buttons on the left of the anvil'),
@@ -73,14 +77,14 @@ class SettingsScreen extends ConsumerWidget {
               value: s.videoChat,
               onChanged: (v) => n.update((s) => s.copyWith(videoChat: v)),
             ),
-          if (ref.watch(accountProvider).isReady)
+          if (ref.watch(accountProvider).isReady && !kIsWeb)
             SwitchListTile(
               title: const Text('Notifications'),
               subtitle: const Text('Room invites and gifts from friends, and your daily reminder'),
               value: s.inviteNotifications,
               onChanged: (v) => ref.read(accountProvider.notifier).setInviteNotifications(v),
             ),
-          if (ref.watch(accountProvider).isReady)
+          if (ref.watch(accountProvider).isReady && !kIsWeb)
             SwitchListTile(
               title: const Text('Daily reminder'),
               subtitle: Text(
