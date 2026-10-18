@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../engine/heat.dart';
 import '../../engine/hints.dart';
 import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
@@ -77,6 +78,18 @@ class VsResultsView extends StatelessWidget {
               if (mine != null) ...[
                 const SizedBox(height: 14),
                 XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
+                // What the series' heat added (playing up pays more).
+                if (mine.heatBonus > 0)
+                  Text(
+                    [
+                      'Includes +${mine.heatBonus} for '
+                          '${Heat.fromValue((session.round?.heat ?? session.lobby?.heat ?? 1).clamp(1, 6)).label}',
+                      if (mine.tiersAbove > 0) '${mine.tiersAbove} tier${mine.tiersAbove == 1 ? '' : 's'} above yours',
+                    ].join(', '),
+                    key: const ValueKey('heat-bonus'),
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: Palette.molten),
+                  ),
                 for (final line in _extras(mine))
                   Text(
                     line,

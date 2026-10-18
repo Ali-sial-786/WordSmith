@@ -182,7 +182,10 @@ class ResultsView extends StatelessWidget {
         if (session.lobby != null) ...[
           Text('Next round', textAlign: TextAlign.center, style: text.labelSmall),
           const SizedBox(height: 4),
-          if (session.isHost) HeatPicker(session: session) else HeatBanner(lobby: session.lobby!, me: session.myPlayer),
+          if (session.isHost)
+            HeatPicker(session: session)
+          else
+            HeatBanner(lobby: session.lobby!, me: session.myPlayer, hostName: session.nameOf(session.lobby!.hostId)),
           const SizedBox(height: 12),
         ],
         if (session.isHost)

@@ -47,7 +47,10 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),
         const SizedBox(height: 12),
-        if (session.isHost) HeatPicker(session: session) else HeatBanner(lobby: lobby, me: me),
+        if (session.isHost)
+          HeatPicker(session: session)
+        else
+          HeatBanner(lobby: lobby, me: me, hostName: session.nameOf(lobby.hostId)),
         const SizedBox(height: 12),
         _VariantPicker(session: session, survival: lobby.survival, vs: vs),
         if (vs && session is VsSession) ...[
@@ -126,23 +129,25 @@ class LobbyView extends ConsumerWidget {
 
 /// Who set the room's heat and what it pays [me]: "Auto · from host Ada's
 /// level · ×1.6 XP for you", after the heat's name if [named].
-String _heatCaption(RoomLobby lobby, RoomPlayer? me, {bool named = false}) {
+/// [hostName] is how this player knows the host (a nickname, if they gave one).
+String _heatCaption(RoomLobby lobby, RoomPlayer? me, {bool named = false, String? hostName}) {
   final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
   final host = lobby.player(lobby.hostId);
+  final name = hostName ?? host?.username;
   final mine = host != null && host.id == me?.id;
   final how = !lobby.autoHeatOn
       ? 'Picked by ${mine
             ? 'you'
             : host == null
             ? 'the host'
-            : 'host ${host.username}'}'
+            : 'host $name'}'
       : lobby.isVs
       ? 'Auto · from the middle level in the room'
       : "Auto · from ${mine
             ? 'your'
             : host == null
             ? "the host's"
-            : "host ${host.username}'s"} level";
+            : "host $name's"} level";
   final xp = me == null ? 1.0 : heat.xpMultiplierFor(me.level);
   return [if (named) heat.label, how, if (xp > 1) '×${xp.toStringAsFixed(1)} XP for you'].join(' · ');
 }
@@ -150,10 +155,11 @@ String _heatCaption(RoomLobby lobby, RoomPlayer? me, {bool named = false}) {
 /// The room's heat as everyone but the host sees it: the tier, in its
 /// colour, who set it (the host, or Auto from levels), and its XP for me.
 class HeatBanner extends StatelessWidget {
-  const HeatBanner({super.key, required this.lobby, required this.me});
+  const HeatBanner({super.key, required this.lobby, required this.me, this.hostName});
 
   final RoomLobby lobby;
   final RoomPlayer? me;
+  final String? hostName;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +176,11 @@ class HeatBanner extends StatelessWidget {
       child: Column(
         children: [
           Text(heat.label, textAlign: TextAlign.center, style: text.titleSmall),
-          Text(_heatCaption(lobby, me), textAlign: TextAlign.center, style: text.bodySmall),
+          Text(
+            _heatCaption(lobby, me, hostName: hostName),
+            textAlign: TextAlign.center,
+            style: text.bodySmall,
+          ),
         ],
       ),
     );

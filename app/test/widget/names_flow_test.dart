@@ -218,7 +218,7 @@ void main() {
     room.receive(_lobby());
     await _pumpRoom(tester);
     expect(find.text('Big Sam'), findsOneWidget);
-    expect(find.textContaining('set by host Big Sam'), findsOneWidget);
+    expect(find.textContaining('host Big Sam'), findsOneWidget);
     expect(find.text('Waiting for Big Sam to start…'), findsOneWidget);
     expect(find.text('Ali (you)'), findsOneWidget);
     expect(find.text('sam'), findsNothing);

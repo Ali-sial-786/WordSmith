@@ -105,6 +105,8 @@ final _seriesEnd = SeriesEnd.fromJson({
       'levelUps': 1,
       'rewards': {'hammer': 1},
       'scrapHammers': 1,
+      'heatBonus': 28,
+      'tiersAbove': 2,
       'pickups': {'chisel': 1},
     },
   },
@@ -330,6 +332,9 @@ void main() {
     await _pump(tester, VsResultsView(session: s, onLeave: () {}));
     expect(tester.takeException(), isNull);
     expect(find.text('YOU WIN THE SERIES!'), findsOneWidget);
+    expect(find.textContaining('Includes +28 for'), findsOneWidget);
+    expect(find.textContaining('2 tiers above yours'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Embers: +1 Chisel'), 100, scrollable: find.byType(Scrollable).first);
     expect(find.text('Embers: +1 Chisel'), findsOneWidget);
     expect(find.text('Rematch'), findsOneWidget);
   });
