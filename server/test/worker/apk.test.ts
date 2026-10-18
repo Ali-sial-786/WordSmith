@@ -44,7 +44,8 @@ function fakeSource(files: Record<string, Uint8Array>, options: { status?: numbe
   return { asked, fetch };
 }
 
-const sourceFor = (version: string) => env.APK_SOURCE_URL!.replaceAll("{version}", version);
+/** The URL the route asks for, as `fetch` sees it (the placeholders in the test config come out percent-encoded). */
+const sourceFor = (version: string) => new URL(env.APK_SOURCE_URL!.replaceAll("{version}", version)).href;
 
 function apk(size: number, seed = 7): Uint8Array {
   const bytes = new Uint8Array(size);
