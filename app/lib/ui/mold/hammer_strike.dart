@@ -127,8 +127,8 @@ class _HammerStrikeState extends State<HammerStrike> with SingleTickerProviderSt
                       gradient: RadialGradient(
                         colors: [
                           Colors.white.withValues(alpha: 0.9 * (1 - flash)),
-                          Palette.molten.withValues(alpha: 0.6 * (1 - flash)),
-                          Palette.ember.withValues(alpha: 0),
+                          Palette.fire.molten.withValues(alpha: 0.6 * (1 - flash)),
+                          Palette.fire.ember.withValues(alpha: 0),
                         ],
                         stops: const [0.0, 0.35, 1.0],
                       ),

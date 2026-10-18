@@ -4,7 +4,7 @@
 Plain Python 3 + Pillow + numpy (no bpy). Reads art/blender/_renders/,
 writes app/assets/images/ (and the UI kit to app/assets/ui/).
 
-    python3 post.py [tiles] [anvil] [cells] [icon] [bg] [ui]   (default: all)
+    python3 post.py [tiles] [anvil] [cells] [icon] [bg] [ui] [ui_faces]   (default: all)
     python3 post.py bg bg_iron bg_gold                      (only these backgrounds)
 """
 import json
@@ -530,6 +530,23 @@ def ui():
             alpha = alpha * (1 - (1 - UI_PANEL_FACE_ALPHA) * G.field(name, "w_face"))
         save_png(np.concatenate([np.clip(rgb, 0, 1), alpha[..., None]], -1),
                  os.path.join(UI_OUT, f"{name}.png"))
+    ui_faces()
+
+
+def ui_faces():
+    """Each kit piece's face alone (<name>_face.png), cut from the final PNG
+    with the exact face weight, so the app can recolour face and rim apart
+    for its colour schemes (app/lib/ui/widgets/forge_frame.dart)."""
+    print("ui faces")
+    import ui_geom as G
+    for name in G.PIECES:
+        src = os.path.join(UI_OUT, f"{name}.png")
+        if not os.path.exists(src):
+            print(f"  (skip {name}: no {name}.png)")
+            continue
+        a = load(src)
+        a[..., 3] *= G.field(name, "w_face")
+        save_png(a, os.path.join(UI_OUT, f"{name}_face.png"))
 
 
 # --------------------------------------------------------------------------
@@ -558,7 +575,7 @@ def hammer():
         print(f"  {k}: Offset({fx:.4f}, {fy:.4f})  (fraction of the sprite, from the top left)")
 
 
-STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg, "ui": ui, "hammer": hammer}
+STEPS = {"tiles": tiles, "anvil": anvil, "cells": cells, "icon": icon, "bg": bg, "ui": ui, "ui_faces": ui_faces, "hammer": hammer}
 
 
 def main():

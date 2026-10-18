@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import '../widgets/forge_frame.dart';
 
 /// The letter ring on the anvil face. Swipe across tiles to build a word;
 /// swipe back onto the previous tile to drop the last letter; lift to submit.
@@ -226,26 +227,34 @@ class LetterTile extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Palette.ember.withValues(alpha: 0.7),
+                        color: Palette.fire.ember.withValues(alpha: 0.7),
                         blurRadius: d * 0.35,
                         spreadRadius: d * 0.02,
                       ),
                     ],
                   ),
                 ),
-              Image.asset(
-                hot ? 'assets/images/tile_hot.png' : 'assets/images/tile_cold.png',
-                width: d,
-                height: d,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => _PaintedTile(hot: hot),
+              // The hot tile glows fire-orange in every scheme.
+              SchemeIron(
+                enabled: !hot,
+                child: Image.asset(
+                  hot ? 'assets/images/tile_hot.png' : 'assets/images/tile_cold.png',
+                  width: d,
+                  height: d,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => _PaintedTile(hot: hot),
+                ),
               ),
               Text(
                 letter,
                 style: letterStyle(d * 0.5, color: hot ? Palette.darkLetter : Palette.whiteHeat).copyWith(
                   shadows: [
                     Shadow(
-                      color: hot ? Palette.whiteHeat.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.7),
+                      color: hot
+                          ? Palette.fire.white.withValues(alpha: 0.5)
+                          : Palette.isLight
+                          ? Colors.white.withValues(alpha: 0.6)
+                          : Colors.black.withValues(alpha: 0.7),
                       offset: Offset(0, d * 0.015),
                       blurRadius: d * 0.03,
                     ),
@@ -272,11 +281,11 @@ class _PaintedTile extends StatelessWidget {
       gradient: RadialGradient(
         center: const Alignment(-0.3, -0.35),
         colors: hot
-            ? [Palette.whiteHeat, Palette.molten, Palette.ember]
+            ? [Palette.fire.white, Palette.fire.molten, Palette.fire.ember]
             : const [Color(0xFF5A5C62), Color(0xFF3A3B3F), Color(0xFF232427)],
         stops: const [0, 0.55, 1],
       ),
-      border: Border.all(color: hot ? Palette.molten : const Color(0xFF8A6A4A), width: 1.5),
+      border: Border.all(color: hot ? Palette.fire.molten : const Color(0xFF8A6A4A), width: 1.5),
     ),
   );
 }
@@ -290,17 +299,19 @@ class _AnvilFace extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      Image.asset(
-        'assets/images/anvil_face.webp',
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => const DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [Color(0xFF2E2A28), Color(0xFF221D1A), Color(0xFF151110)],
-              stops: [0, 0.8, 1],
+      SchemeIron(
+        child: Image.asset(
+          'assets/images/anvil_face.webp',
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => const DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [Color(0xFF2E2A28), Color(0xFF221D1A), Color(0xFF151110)],
+                stops: [0, 0.8, 1],
+              ),
+              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 24)],
             ),
-            boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 24)],
           ),
         ),
       ),
@@ -313,7 +324,7 @@ class _AnvilFace extends StatelessWidget {
           errorBuilder: (_, _, _) => DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Palette.ember.withValues(alpha: 0.5), width: 3),
+              border: Border.all(color: Palette.fire.ember.withValues(alpha: 0.5), width: 3),
             ),
           ),
         ),
@@ -345,10 +356,10 @@ class _TrailPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round
       ..maskFilter = blur > 0 ? MaskFilter.blur(BlurStyle.normal, blur) : null;
     canvas
-      ..drawPath(path, stroke(Palette.ember.withValues(alpha: 0.55), width * 1.8, width * 0.6))
-      ..drawPath(path, stroke(Palette.ember, width))
-      ..drawPath(path, stroke(Palette.molten, width * 0.55))
-      ..drawPath(path, stroke(Palette.whiteHeat.withValues(alpha: 0.9), width * 0.18));
+      ..drawPath(path, stroke(Palette.fire.ember.withValues(alpha: 0.55), width * 1.8, width * 0.6))
+      ..drawPath(path, stroke(Palette.fire.ember, width))
+      ..drawPath(path, stroke(Palette.fire.molten, width * 0.55))
+      ..drawPath(path, stroke(Palette.fire.white.withValues(alpha: 0.9), width * 0.18));
   }
 
   @override

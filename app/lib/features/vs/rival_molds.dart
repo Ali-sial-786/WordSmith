@@ -242,7 +242,7 @@ class _MoldTile extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF2C221C), Palette.soot, Color(0xFF1B1411)],
+                colors: Palette.cardShade,
               ),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
@@ -340,7 +340,7 @@ class _MiniMoldPainter extends CustomPainter {
     final gap = max(1.0, cell * 0.14);
     final radius = Radius.circular(cell * 0.24);
     // Straight from white heat: through molten, the cool colours turn muddy.
-    final metal = Color.lerp(Palette.whiteHeat, color, cool)!;
+    final metal = Color.lerp(Palette.fire.white, color, cool)!;
     final glow = 1 - cool;
     final stroke = Paint()
       ..style = PaintingStyle.stroke
@@ -379,13 +379,13 @@ class _MiniMoldPainter extends CustomPainter {
         canvas.drawRRect(
           r,
           Paint()
-            ..shader = const LinearGradient(
+            ..shader = LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFF0F0B09), Color(0xFF221A15)],
+              colors: [Palette.recess.top, Palette.recess.bottom],
             ).createShader(rect),
         );
-        canvas.drawRRect(r, stroke..color = const Color(0xFF3E322A));
+        canvas.drawRRect(r, stroke..color = Palette.recess.edge);
       }
     }
   }

@@ -190,18 +190,18 @@ class _ArmoryCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Armory', style: text.titleMedium),
+                  Text('Armory', style: text.titleMedium?.copyWith(color: current == null ? null : blueprintInk)),
                   Text(
                     current == null
                         ? 'All ${masterworkSpecs.length} Masterworks forged'
                         : '${name ?? 'Next Masterwork'}: ${progress.piecesInCurrent}/${current.pieces} pieces · '
                               '${progress.finished} forged',
-                    style: text.bodySmall,
+                    style: text.bodySmall?.copyWith(color: current == null ? null : blueprintInkDim),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Palette.steel),
+            Icon(Icons.chevron_right, color: current == null ? Palette.steel : blueprintInkDim),
           ],
         ),
       ),

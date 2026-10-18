@@ -46,17 +46,18 @@ class RoundMetalButton extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: active ? Palette.ember.withValues(alpha: 0.6) : Colors.black.withValues(alpha: 0.5),
+                      color: active
+                          ? Palette.ember.withValues(alpha: 0.6)
+                          : Colors.black.withValues(alpha: Palette.isLight ? 0.25 : 0.5),
                       blurRadius: active ? 14 : 6,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Image.asset(
+                child: KitImage(
                   active ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.low,
-                  gaplessPlayback: true,
+                  hot: active,
+                  gold: active,
                   errorBuilder: (_, _, _) => _PaintedRound(active: active),
                 ),
               ),
@@ -64,7 +65,7 @@ class RoundMetalButton extends StatelessWidget {
             Center(
               child: Opacity(
                 opacity: enabled ? 1 : 0.45,
-                child: GameIcon(icon, size: size * 0.5, color: active ? Palette.darkLetter : Palette.whiteHeat),
+                child: GameIcon(icon, size: size * 0.5, color: active ? Palette.onAccent : Palette.whiteHeat),
               ),
             ),
             if (locked)
@@ -116,18 +117,21 @@ class _PaintedRound extends StatelessWidget {
   final bool active;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(
-        center: const Alignment(-0.3, -0.4),
-        colors: active
-            ? [Palette.molten, Palette.ember, Color(0xFF7A2A0A)]
-            : const [Color(0xFF55504B), Color(0xFF34302C), Color(0xFF1E1B19)],
+  Widget build(BuildContext context) {
+    final s = Palette.scheme;
+    final colors = !active
+        ? Palette.roundFace
+        : s.asRendered
+        ? [Palette.molten, Palette.ember, const Color(0xFF7A2A0A)]
+        : [s.plate.$2, s.plate.$1, Color.lerp(s.plate.$1, const Color(0xFF000000), 0.3)!];
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(center: const Alignment(-0.3, -0.4), colors: colors),
+        border: Border.all(color: active ? Palette.fire.white : s.rim, width: 2),
       ),
-      border: Border.all(color: active ? Palette.whiteHeat : const Color(0xFF8C6B47), width: 2),
-    ),
-  );
+    );
+  }
 }
 
 /// A wide forged-plate button for menus.
@@ -152,7 +156,7 @@ class PlateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
-    final fg = primary ? Palette.darkLetter : Palette.whiteHeat;
+    final fg = primary ? Palette.onAccent : Palette.whiteHeat;
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: SizedBox(
@@ -186,9 +190,8 @@ class PlateButton extends StatelessWidget {
                               sublabel!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: primary ? Palette.darkLetter.withValues(alpha: 0.8) : Palette.steel,
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: primary ? Palette.onAccent.withValues(alpha: 0.8) : Palette.steel),
                             ),
                         ],
                       ),
@@ -216,7 +219,7 @@ class ForgeChipButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
-    final fg = primary ? Palette.darkLetter : Palette.whiteHeat;
+    final fg = primary ? Palette.onAccent : Palette.whiteHeat;
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: SizedBox(

@@ -161,10 +161,12 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       // phone's bigger or bold text settings would only misshape it.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
-        // Two fingers zoom anywhere. A new colour scheme or font builds every
-        // screen afresh to pick it up.
-        child: PinchZoom(
-          child: KeyedSubtree(key: ValueKey(look), child: child!),
+        // Status and navigation bar icons follow the scheme (app bars set their
+        // own). Two fingers zoom anywhere. A new colour scheme or font builds
+        // every screen afresh to pick it up.
+        child: AnnotatedRegion(
+          value: systemBarStyle(),
+          child: PinchZoom(child: KeyedSubtree(key: ValueKey(look), child: child!)),
         ),
       ),
     );

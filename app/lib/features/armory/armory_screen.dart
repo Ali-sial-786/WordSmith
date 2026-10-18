@@ -131,9 +131,15 @@ class _Tile extends StatelessWidget {
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
-                  style: text.labelLarge?.copyWith(color: state == _State.done ? Palette.gold : null),
+                  style: text.labelLarge?.copyWith(
+                    color: state == _State.done ? Palette.gold : (building ? blueprintInk : null),
+                  ),
                 ),
-                if (building) Text('$collected / ${info.spec.pieces} pieces', style: text.bodySmall),
+                if (building)
+                  Text(
+                    '$collected / ${info.spec.pieces} pieces',
+                    style: text.bodySmall?.copyWith(color: blueprintInkDim),
+                  ),
               ],
             ),
           ),

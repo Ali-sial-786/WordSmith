@@ -94,8 +94,7 @@ class _FirePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FirePainter old) =>
-      old.shader != shader || old.intensity != intensity;
+  bool shouldRepaint(_FirePainter old) => old.shader != shader || old.intensity != intensity;
 }
 
 /// Fallback: a warm glow from the bottom edge that flickers.
@@ -117,7 +116,7 @@ class _GlowPainter extends CustomPainter {
           center: Alignment.bottomCenter,
           radius: 1.1,
           colors: [
-            Palette.ember.withValues(alpha: 0.55 * intensity * flicker),
+            Palette.fire.ember.withValues(alpha: 0.55 * intensity * flicker),
             const Color(0xFF8A2A06).withValues(alpha: 0.25 * intensity * flicker),
             Colors.transparent,
           ],

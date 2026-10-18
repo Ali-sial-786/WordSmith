@@ -198,7 +198,7 @@ class _HeatPainter extends CustomPainter {
       Rect.fromCenter(center: Offset(first.left + w * 0.3, first.top - h * 0.15), width: w, height: h),
       Radius.circular(h / 2),
     );
-    final fill = urgent ? Color.lerp(Palette.quenchRed, Palette.ember, beat)! : Palette.molten;
+    final fill = urgent ? Color.lerp(Palette.quenchRed, Palette.fire.ember, beat)! : Palette.fire.molten;
     canvas
       ..drawRRect(
         box.inflate(2),
@@ -210,7 +210,7 @@ class _HeatPainter extends CustomPainter {
       ..drawRRect(
         box,
         Paint()
-          ..color = Palette.whiteHeat.withValues(alpha: 0.8)
+          ..color = Palette.fire.white.withValues(alpha: 0.8)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.2,
       );
@@ -279,9 +279,9 @@ class _MeltPainter extends CustomPainter {
 
   /// White heat → molten → ember → dull red, as [u] goes 0 → 1.
   static Color _molten(double u) {
-    if (u < 0.3) return Color.lerp(Palette.whiteHeat, Palette.molten, u / 0.3)!;
-    if (u < 0.65) return Color.lerp(Palette.molten, Palette.ember, (u - 0.3) / 0.35)!;
-    return Color.lerp(Palette.ember, _cooled, (u - 0.65) / 0.35)!;
+    if (u < 0.3) return Color.lerp(Palette.fire.white, Palette.fire.molten, u / 0.3)!;
+    if (u < 0.65) return Color.lerp(Palette.fire.molten, Palette.fire.ember, (u - 0.3) / 0.35)!;
+    return Color.lerp(Palette.fire.ember, _cooled, (u - 0.65) / 0.35)!;
   }
 
   /// Runs of melting cells stacked in one column: each melts as one mass,
@@ -334,7 +334,7 @@ class _MeltPainter extends CustomPainter {
           ..drawRRect(
             rr.deflate(1),
             Paint()
-              ..color = Palette.ember.withValues(alpha: 0.5 * (1 - u) + 0.15)
+              ..color = Palette.fire.ember.withValues(alpha: 0.5 * (1 - u) + 0.15)
               ..style = PaintingStyle.stroke
               ..strokeWidth = max(1.5, r.width * 0.04),
           );
@@ -344,7 +344,7 @@ class _MeltPainter extends CustomPainter {
         canvas.drawRRect(
           rr.inflate(r.width * 0.06 * flash),
           Paint()
-            ..color = Palette.molten.withValues(alpha: 0.55 * flash * (1 - u))
+            ..color = Palette.fire.molten.withValues(alpha: 0.55 * flash * (1 - u))
             ..maskFilter = MaskFilter.blur(BlurStyle.normal, r.width * 0.3),
         );
       }
@@ -360,7 +360,7 @@ class _MeltPainter extends CustomPainter {
   void _pour(Canvas canvas, Rect strip, double cell, int seed, double flash, double u) {
     final fade = 1 - ((u - 0.72) / 0.28).clamp(0.0, 1.0);
     if (fade <= 0) return;
-    final color = u == 0 ? Color.lerp(Palette.molten, Palette.whiteHeat, flash)! : _molten(u);
+    final color = u == 0 ? Color.lerp(Palette.fire.molten, Palette.fire.white, flash)! : _molten(u);
     final alpha = (u == 0 ? flash * 0.92 : 0.96) * fade;
     final rng = Random(seed * 7919 + 13);
     // Slumps down to a puddle a quarter of a cell deep, narrowing a little.
@@ -410,7 +410,7 @@ class _MeltPainter extends CustomPainter {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color.lerp(color, Palette.whiteHeat, 0.35)!.withValues(alpha: alpha),
+              Color.lerp(color, Palette.fire.white, 0.35)!.withValues(alpha: alpha),
               color.withValues(alpha: alpha),
               Color.lerp(color, _cooled, 0.35)!.withValues(alpha: alpha),
             ],

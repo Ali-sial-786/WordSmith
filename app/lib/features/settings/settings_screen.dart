@@ -349,6 +349,7 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
             TextField(
               controller: _password,
               obscureText: true,
+              style: fieldText(),
               decoration: const InputDecoration(labelText: 'Confirm your password'),
             ),
           if (_error != null) ...[

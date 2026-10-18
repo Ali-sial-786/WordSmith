@@ -47,11 +47,7 @@ class SeriesSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2C221C), Palette.soot, Color(0xFF1B1411)],
-        ),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: Palette.cardShade),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Palette.ash),
         boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 8, offset: Offset(0, 3))],

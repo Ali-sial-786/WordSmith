@@ -4,19 +4,11 @@ import '../theme/palette.dart';
 import 'game_icon.dart';
 
 /// The 16 emblem avatars (assets/icons/avatar_01.svg … avatar_16.svg).
-final avatarIds = [
-  for (var i = 1; i <= 16; i++) 'avatar_${i.toString().padLeft(2, '0')}',
-];
+final avatarIds = [for (var i = 1; i <= 16; i++) 'avatar_${i.toString().padLeft(2, '0')}'];
 
 /// An avatar emblem on a round metal badge.
 class AvatarBadge extends StatelessWidget {
-  const AvatarBadge({
-    super.key,
-    required this.avatar,
-    this.size = 48,
-    this.selected = false,
-    this.presence,
-  });
+  const AvatarBadge({super.key, required this.avatar, this.size = 48, this.selected = false, this.presence});
 
   final String avatar;
   final double size;
@@ -42,18 +34,9 @@ class AvatarBadge extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                center: Alignment(-0.3, -0.4),
-                colors: [Color(0xFF5A524B), Color(0xFF34302C), Color(0xFF1E1B19)],
-              ),
-              border: Border.all(
-                color: selected ? Palette.molten : const Color(0xFF8C6B47),
-                width: selected ? 3 : 1.5,
-              ),
-              boxShadow: [
-                if (selected)
-                  BoxShadow(color: Palette.ember.withValues(alpha: 0.6), blurRadius: 12),
-              ],
+              gradient: RadialGradient(center: const Alignment(-0.3, -0.4), colors: Palette.roundFace),
+              border: Border.all(color: selected ? Palette.molten : Palette.rim, width: selected ? 3 : 1.5),
+              boxShadow: [if (selected) BoxShadow(color: Palette.ember.withValues(alpha: 0.6), blurRadius: 12)],
             ),
             child: Center(
               child: GameIcon(avatar, size: size * 0.58, color: Palette.whiteHeat),

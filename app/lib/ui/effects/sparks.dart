@@ -57,7 +57,7 @@ class SparkFieldState extends State<SparkField> with SingleTickerProviderStateMi
     if (box == null || !box.attached) return;
     final local = box.globalToLocal(global);
     final n = (count * widget.intensity).round();
-    colors ??= [Palette.molten, Palette.ember, Palette.whiteHeat];
+    colors ??= [Palette.fire.molten, Palette.fire.ember, Palette.fire.white];
     for (var i = 0; i < n; i++) {
       final a = angle + (_rng.nextDouble() - 0.5) * spread;
       final s = speed * (0.35 + _rng.nextDouble() * 0.9);

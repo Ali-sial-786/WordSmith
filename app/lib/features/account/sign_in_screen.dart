@@ -145,6 +145,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
+                    style: fieldText(),
                     decoration: const InputDecoration(labelText: 'Email'),
                   ),
                   const SizedBox(height: 12),
@@ -152,6 +153,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     controller: _password,
                     obscureText: true,
                     autofillHints: [_create ? AutofillHints.newPassword : AutofillHints.password],
+                    style: fieldText(),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       helperText: _create ? 'At least 6 characters' : null,

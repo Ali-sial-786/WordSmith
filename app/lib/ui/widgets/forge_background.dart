@@ -42,6 +42,10 @@ class ForgeBackground extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
+    final light = Palette.isLight;
+    // Dark text needs a pale scene: a light scheme washes the picture out
+    // much more, and evenly from top to bottom.
+    final wash = light ? [0.5 + 0.3 * dim, 0.55 + 0.3 * dim, 0.6 + 0.3 * dim] : [dim * 0.8, dim, dim * 1.25];
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -50,7 +54,11 @@ class ForgeBackground extends ConsumerWidget {
             gradient: RadialGradient(
               center: Alignment(0, 0.9),
               radius: 1.3,
-              colors: [Color(0xFF4A2412), Palette.soot, Palette.forgeBlack],
+              colors: [
+                Palette.scheme.asRendered ? Color(0xFF4A2412) : Color.lerp(Palette.forgeBlack, Palette.ember, 0.25)!,
+                Palette.soot,
+                Palette.forgeBlack,
+              ],
               stops: [0, 0.45, 1],
             ),
           ),
@@ -58,14 +66,18 @@ class ForgeBackground extends ConsumerWidget {
         ImageFiltered(
           enabled: blur > 0,
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          // Warm grade: dimmed yellow firelight otherwise drifts olive.
+          // Warm grade: dimmed yellow firelight otherwise drifts olive. Other
+          // schemes tint the picture their own colour instead.
           child: ColorFiltered(
-            colorFilter: ColorFilter.matrix([
-              1 + 0.06 * warmth, 0, 0, 0, 0, //
-              0, 1 - 0.14 * warmth, 0, 0, 0, //
-              0, 0, 1 - 0.3 * warmth, 0, 0, //
-              0, 0, 0, 1, 0, //
-            ]),
+            colorFilter: ColorFilter.matrix(
+              SchemeFilters.scene() ??
+                  [
+                    1 + 0.06 * warmth, 0, 0, 0, 0, //
+                    0, 1 - 0.14 * warmth, 0, 0, 0, //
+                    0, 0, 1 - 0.3 * warmth, 0, 0, //
+                    0, 0, 0, 1, 0, //
+                  ],
+            ),
             child: Image.asset(
               image,
               fit: BoxFit.cover,
@@ -79,11 +91,7 @@ class ForgeBackground extends ConsumerWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Palette.forgeBlack.withValues(alpha: dim * 0.8),
-                Palette.forgeBlack.withValues(alpha: dim),
-                Palette.forgeBlack.withValues(alpha: dim * 1.25),
-              ],
+              colors: [for (final a in wash) Palette.forgeBlack.withValues(alpha: a.clamp(0.0, 1.0))],
             ),
           ),
         ),
@@ -93,12 +101,29 @@ class ForgeBackground extends ConsumerWidget {
             child: FractionallySizedBox(
               heightFactor: fireHeight,
               widthFactor: 1,
-              child: ForgeFire(intensity: fire, animate: !reducedMotion),
+              // On a pale scene the coals would be a dark smudge: a lower glow.
+              // Other schemes burn in their own accent (a gas forge's blue, say).
+              child: SchemeFire(
+                child: ForgeFire(intensity: light ? fire * 0.5 : fire, animate: !reducedMotion),
+              ),
             ),
           ),
         if (!reducedMotion) const EmberDrift(count: 22),
         child,
       ],
     );
+  }
+}
+
+/// The forge's fire burning in the scheme's accent (orange, as rendered, for the forge).
+class SchemeFire extends StatelessWidget {
+  const SchemeFire({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final matrix = SchemeFilters.fire();
+    return matrix == null ? child : ColorFiltered(colorFilter: ColorFilter.matrix(matrix), child: child);
   }
 }

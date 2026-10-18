@@ -135,6 +135,10 @@ Notes for the app:
   uniform along the stretch and keeps only part of the fine grain there (`UI_GRAIN_KEEP`).
   The silhouettes and the panel's face alpha (0.94) come from `ui_geom.py`, the same functions
   that built the meshes, so masks and renders line up exactly.
+* **UI kit faces** (`app/assets/ui/<name>_face.png`, `post.py ui_faces`, also run by `post.py ui`):
+  each piece's face alone, cut from the final PNG with `ui_geom`'s exact face weight (the panel's
+  brackets and rivets stay with the frame). The app's colour schemes recolour the frame and the face
+  apart (`KitImage` in app/lib/ui/widgets/forge_frame.dart); the forge's own scheme uses the PNGs as rendered.
 
 ## Render times
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'palette.dart';
 
@@ -141,16 +142,51 @@ TextStyle letterStyle(double size, {Color? color, FontChoice? font}) {
   );
 }
 
+/// Status and navigation bar icons that show on the scheme's background.
+SystemUiOverlayStyle systemBarStyle() {
+  final light = Palette.isLight;
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: light ? Brightness.dark : Brightness.light,
+    statusBarBrightness: light ? Brightness.light : Brightness.dark, // iOS
+    systemNavigationBarColor: Palette.forgeBlack,
+    systemNavigationBarIconBrightness: light ? Brightness.dark : Brightness.light,
+    systemNavigationBarDividerColor: Colors.transparent,
+  );
+}
+
 ThemeData buildTheme() {
-  final scheme = ColorScheme.dark(
-    primary: Palette.ember,
-    onPrimary: Palette.forgeBlack,
-    secondary: Palette.molten,
-    onSecondary: Palette.forgeBlack,
-    surface: Palette.soot,
-    onSurface: Palette.whiteHeat,
-    error: Palette.quenchRed,
-    outline: Palette.ash,
+  final light = Palette.isLight;
+  final scheme = light
+      ? ColorScheme.light(
+          primary: Palette.ember,
+          onPrimary: Palette.forgeBlack,
+          secondary: Palette.molten,
+          onSecondary: Palette.forgeBlack,
+          // Selected chips: dark on their pale tint, as they are dark on the dark schemes' tint.
+          onSecondaryContainer: Palette.whiteHeat,
+          surface: Palette.soot,
+          onSurface: Palette.whiteHeat,
+          error: Palette.quenchRed,
+          outline: Palette.ash,
+          // No orange-ish film over raised ivory.
+          surfaceTint: Colors.transparent,
+        )
+      : ColorScheme.dark(
+          primary: Palette.ember,
+          onPrimary: Palette.forgeBlack,
+          secondary: Palette.molten,
+          onSecondary: Palette.forgeBlack,
+          surface: Palette.soot,
+          onSurface: Palette.whiteHeat,
+          error: Palette.quenchRed,
+          outline: Palette.ash,
+        );
+  // A thin rim, so a pale dialog or snack bar doesn't melt into a pale scene.
+  final rim = BorderSide(color: Palette.rim.withValues(alpha: 0.7), width: 1.2);
+  OutlineInputBorder field(Color color, double width) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(color: color, width: width),
   );
   TextStyle ui(double size, double w, [Color? color]) => TextStyle(
     fontFamily: Fonts.ui,
@@ -184,7 +220,8 @@ ThemeData buildTheme() {
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected) ? Palette.molten : Palette.steel,
+        // A light scheme's molten is dark, like its track: a pale thumb instead.
+        (s) => s.contains(WidgetState.selected) ? (light ? Palette.soot : Palette.molten) : Palette.steel,
       ),
       trackColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.selected) ? Palette.ember : Palette.ash,
@@ -194,6 +231,48 @@ ThemeData buildTheme() {
       backgroundColor: Palette.soot,
       contentTextStyle: TextStyle(color: Palette.whiteHeat),
       behavior: SnackBarBehavior.floating,
+      shape: light ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: rim) : null,
+    ),
+    appBarTheme: AppBarTheme(systemOverlayStyle: systemBarStyle()),
+    dialogTheme: DialogThemeData(
+      shape: light ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: rim) : null,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      shape: light
+          ? RoundedRectangleBorder(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              side: rim,
+            )
+          : null,
+    ),
+    // Text boxes look like boxes in every scheme: a gold outline, brighter
+    // when focused, over a faint fill.
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Palette.panel.withValues(alpha: light ? 0.75 : 0.45),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      labelStyle: TextStyle(color: Palette.steel),
+      floatingLabelStyle: TextStyle(color: Palette.molten),
+      hintStyle: TextStyle(color: Palette.steel.withValues(alpha: 0.75)),
+      helperStyle: TextStyle(color: Palette.steel),
+      prefixIconColor: Palette.steel,
+      suffixIconColor: Palette.steel,
+      border: field(Palette.gold.withValues(alpha: 0.75), 1.4),
+      enabledBorder: field(Palette.gold.withValues(alpha: 0.75), 1.4),
+      focusedBorder: field(Palette.molten, 2.2),
+      disabledBorder: field(Palette.ash, 1.2),
+      errorBorder: field(Palette.quenchRed, 1.4),
+      focusedErrorBorder: field(Palette.quenchRed, 2.2),
+      errorStyle: TextStyle(color: Palette.quenchRed),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: Palette.molten,
+      selectionColor: Palette.gold.withValues(alpha: 0.35),
+      selectionHandleColor: Palette.molten,
     ),
   );
 }
+
+/// What's typed in a text box: the scheme's gold, to go with the box's gold
+/// outline ([InputDecorationTheme] can't set it).
+TextStyle fieldText() => TextStyle(color: Palette.gold);

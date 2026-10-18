@@ -29,6 +29,12 @@ enum ForgeFrameKind {
 
   final String asset;
 
+  /// The molten face of an accent button.
+  bool get hot => this == platePrimary;
+
+  /// Gold-rimmed.
+  bool get gold => this == platePrimary || this == panelGold;
+
   /// The image's size in logical pixels.
   final Size size;
 
@@ -41,36 +47,126 @@ enum ForgeFrameKind {
   /// The smallest box the nine slices fit in: the corners can't shrink.
   Size get minSize => Size(slice.left + size.width - slice.right, slice.top + size.height - slice.bottom);
 
-  BoxDecoration get fallback => switch (this) {
-    plate => BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      gradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF4A433D), Color(0xFF332D29), Color(0xFF241F1C)],
+  BoxDecoration get fallback {
+    final s = Palette.scheme;
+    final sheen = s.isLight ? const Color(0xFFFFFFFF) : Color.lerp(s.panel, s.rim, 0.25)!;
+    return switch (this) {
+      plate => BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: s.asRendered
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF4A433D), Color(0xFF332D29), Color(0xFF241F1C)],
+              )
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [sheen, Color.lerp(sheen, s.panel, 0.6)!, s.panel],
+              ),
+        border: Border.all(color: s.rim, width: 1.5),
       ),
-      border: Border.all(color: const Color(0xFF8C6B47), width: 1.5),
-    ),
-    platePrimary => BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFC45E), Palette.molten, Palette.ember],
+      platePrimary => BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: s.asRendered
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFC45E), Palette.molten, Palette.ember],
+              )
+            : LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [s.plate.$2, s.plate.$1]),
+        border: Border.all(color: Color.lerp(s.plate.$2, const Color(0xFFFFFFFF), 0.4)!, width: 1.5),
       ),
-      border: Border.all(color: const Color(0xFFFFE2A8), width: 1.5),
-    ),
-    panel || tab => BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      color: Palette.soot.withValues(alpha: 0.92),
-      border: Border.all(color: const Color(0xFF5C4733)),
-    ),
-    panelGold => BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      color: const Color(0xFF2A2116),
-      border: Border.all(color: Palette.gold.withValues(alpha: 0.8)),
-    ),
-  };
+      panel || tab => BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        color: (s.asRendered ? s.soot : s.panel).withValues(alpha: 0.92),
+        border: Border.all(color: s.asRendered ? const Color(0xFF5C4733) : s.rim),
+      ),
+      panelGold => BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        color: s.asRendered ? const Color(0xFF2A2116) : Color.lerp(s.panel, s.gold, 0.1),
+        border: Border.all(color: Palette.gold.withValues(alpha: 0.8)),
+      ),
+    };
+  }
+}
+
+/// A rendered hero object (the anvil, a letter tile, a mold cell) in the
+/// scheme's iron ([SchemeFilters.iron]).
+class SchemeIron extends StatelessWidget {
+  const SchemeIron({super.key, required this.child, this.enabled = true});
+
+  final Widget child;
+
+  /// Off leaves [child] as rendered, without changing the widget tree (a
+  /// letter tile heating up keeps its image).
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final matrix = SchemeFilters.iron();
+    if (matrix == null) return child;
+    return ColorFiltered(colorFilter: ColorFilter.matrix(enabled ? matrix : SchemeFilters.identity), child: child);
+  }
+}
+
+/// A piece of the rendered UI kit (`assets/ui/<name>.png`), in the colour
+/// scheme's metals: as rendered for the forge; otherwise the frame and the
+/// face (`<name>_face.png`, cut out by art/blender/post.py) are recoloured
+/// apart, each keeping the render's shading.
+class KitImage extends StatelessWidget {
+  const KitImage(
+    this.asset, {
+    super.key,
+    this.centerSlice,
+    this.hot = false,
+    this.gold = false,
+    this.warm = false,
+    this.errorBuilder,
+  });
+
+  final String asset;
+
+  /// For nine-slice frames (drawn at 3×).
+  final Rect? centerSlice;
+
+  /// A molten (accent) face.
+  final bool hot;
+
+  /// A gold rim.
+  final bool gold;
+
+  /// A warmer face (rewards waiting).
+  final bool warm;
+  final ImageErrorWidgetBuilder? errorBuilder;
+
+  Widget _image(String path) => Image.asset(
+    path,
+    centerSlice: centerSlice,
+    fit: BoxFit.fill,
+    scale: centerSlice == null ? 1 : 3,
+    filterQuality: FilterQuality.low,
+    gaplessPlayback: true,
+    errorBuilder: errorBuilder,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (Palette.scheme.asRendered) return _image(asset);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColorFiltered(
+          colorFilter: ColorFilter.matrix(SchemeFilters.rim(gold: gold)),
+          child: _image(asset),
+        ),
+        ColorFiltered(
+          colorFilter: ColorFilter.matrix(SchemeFilters.face(hot: hot, warm: warm)),
+          child: _image(asset.replaceFirst('.png', '_face.png')),
+        ),
+      ],
+    );
+  }
 }
 
 /// Draws [kind]'s frame behind [child].
@@ -104,7 +200,11 @@ class ForgeFrame extends StatelessWidget {
           if (shadow && kind == ForgeFrameKind.platePrimary)
             BoxShadow(color: Palette.ember.withValues(alpha: 0.45), blurRadius: 18, offset: const Offset(0, 3))
           else if (shadow)
-            BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: Palette.isLight ? 0.2 : 0.45),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: Stack(
@@ -118,13 +218,12 @@ class ForgeFrame extends StatelessWidget {
                 final painted = DecoratedBox(decoration: kind.fallback);
                 // Smaller than the corners (mid-animation, say): paint it.
                 if (c.maxWidth < kind.minSize.width || c.maxHeight < kind.minSize.height) return painted;
-                return Image.asset(
+                return KitImage(
                   kind.asset,
                   centerSlice: kind.slice,
-                  fit: BoxFit.fill,
-                  scale: 3,
-                  filterQuality: FilterQuality.low,
-                  gaplessPlayback: true,
+                  hot: kind.hot,
+                  gold: kind.gold,
+                  warm: kind == ForgeFrameKind.panelGold,
                   errorBuilder: (_, _, _) => painted,
                 );
               },

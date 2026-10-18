@@ -86,6 +86,10 @@ const _blueprintLine = Color(0x99CFE6FF);
 /// Blueprint paper behind a Masterwork in progress.
 const blueprintPaper = Color(0xFF173A5E);
 
+/// Writing on blueprint paper, which stays dark blue in every colour scheme.
+const blueprintInk = Color(0xFFFFF1D0);
+const blueprintInkDim = Color(0xFFA3ACB5);
+
 class _PiecesClipper extends CustomClipper<Path> {
   _PiecesClipper(this.cols, this.rows, this.cells);
 

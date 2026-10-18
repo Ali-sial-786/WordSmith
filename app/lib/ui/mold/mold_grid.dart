@@ -7,6 +7,7 @@ import '../../engine/puzzle.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
+import '../widgets/forge_frame.dart';
 import 'hammer_strike.dart';
 import 'mold_model.dart';
 import 'survival_overlay.dart';
@@ -293,9 +294,10 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
 
   Color _metalColor(double t) {
     // white heat → molten → ember → cooled metal
-    if (t < 0.25) return Color.lerp(Palette.whiteHeat, Palette.molten, t / 0.25)!;
-    if (t < 0.5) return Color.lerp(Palette.molten, Palette.ember, (t - 0.25) / 0.25)!;
-    return Color.lerp(Palette.ember, widget.metal.base, (t - 0.5) / 0.5)!;
+    const fire = Palette.fire;
+    if (t < 0.25) return Color.lerp(fire.white, fire.molten, t / 0.25)!;
+    if (t < 0.5) return Color.lerp(fire.molten, fire.ember, (t - 0.25) / 0.25)!;
+    return Color.lerp(fire.ember, widget.metal.base, (t - 0.5) / 0.5)!;
   }
 
   @override
@@ -324,22 +326,24 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
     final layers = <Widget>[];
     if (!filled || t < 1) {
       layers.add(
-        Image.asset(
-          'assets/images/cell_empty.png',
-          width: s,
-          height: s,
-          fit: BoxFit.fill,
-          errorBuilder: (_, _, _) => DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF14100D), Color(0xFF2A221C)],
+        SchemeIron(
+          child: Image.asset(
+            'assets/images/cell_empty.png',
+            width: s,
+            height: s,
+            fit: BoxFit.fill,
+            errorBuilder: (_, _, _) => DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF14100D), Color(0xFF2A221C)],
+                ),
+                border: Border.all(color: const Color(0xFF3E322A), width: 1),
               ),
-              border: Border.all(color: const Color(0xFF3E322A), width: 1),
+              child: SizedBox.square(dimension: s),
             ),
-            child: SizedBox.square(dimension: s),
           ),
         ),
       );
@@ -358,7 +362,7 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
               boxShadow: [
                 if (glow > 0.05)
                   BoxShadow(
-                    color: Palette.ember.withValues(alpha: 0.8 * glow),
+                    color: Palette.fire.ember.withValues(alpha: 0.8 * glow),
                     blurRadius: s * 0.5 * glow,
                   ),
               ],

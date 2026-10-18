@@ -16,7 +16,7 @@ class XpBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.forgeBlack,
         borderRadius: BorderRadius.circular(height),
-        border: Border.all(color: const Color(0xFF5C4733)),
+        border: Border.all(color: Palette.edge),
       ),
       child: LayoutBuilder(
         builder: (context, c) {
@@ -31,7 +31,10 @@ class XpBar extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(height),
                 gradient: LinearGradient(
-                  colors: [Palette.ember, Palette.molten, Palette.whiteHeat],
+                  // Light schemes' molten is the darker accent.
+                  colors: Palette.isLight
+                      ? [Palette.molten, Palette.ember, Palette.glint]
+                      : [Palette.ember, Palette.molten, Palette.glint],
                   stops: [0, 0.8, 1],
                 ),
                 boxShadow: [

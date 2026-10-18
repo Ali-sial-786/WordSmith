@@ -285,10 +285,10 @@ class _StokeStep extends StatelessWidget {
                 Positioned.fill(
                   child: Opacity(
                     opacity: done ? 0.55 : 1,
-                    child: Image.asset(
+                    child: KitImage(
                       today ? 'assets/ui/round_active.png' : 'assets/ui/round.png',
-                      fit: BoxFit.fill,
-                      filterQuality: FilterQuality.low,
+                      hot: today,
+                      gold: today,
                       errorBuilder: (_, _, _) => DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -306,7 +306,7 @@ class _StokeStep extends StatelessWidget {
                     icon,
                     size: big ? 20 : 16,
                     color: today
-                        ? Palette.darkLetter
+                        ? Palette.onAccent
                         : big
                         ? Palette.gold
                         : Palette.molten,

@@ -117,7 +117,7 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
                     FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
                     TextInputFormatter.withFunction((_, v) => v.copyWith(text: v.text.toUpperCase())),
                   ],
-                  style: letterStyle(22).copyWith(letterSpacing: 6),
+                  style: letterStyle(22, color: Palette.gold).copyWith(letterSpacing: 6),
                   decoration: const InputDecoration(labelText: 'Room code', counterText: ''),
                   onSubmitted: (v) => v.length == 6 ? _join(v) : null,
                 ),

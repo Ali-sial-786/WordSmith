@@ -54,14 +54,13 @@ class ChaptersScreen extends ConsumerWidget {
                               image: AssetImage(chapterBackground(ch.id)),
                               fit: BoxFit.cover,
                               alignment: const Alignment(0, -0.3),
-                              colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.55), BlendMode.darken),
+                              colorFilter: Palette.scheme.asRendered
+                                  ? ColorFilter.mode(Colors.black.withValues(alpha: 0.55), BlendMode.darken)
+                                  : ColorFilter.matrix(SchemeFilters.dimmed(Palette.isLight ? 0.74 : 0.55)),
                             )
                           : null,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: current ? Palette.molten : const Color(0xFF5C4733),
-                        width: current ? 2 : 1,
-                      ),
+                      border: Border.all(color: current ? Palette.molten : Palette.edge, width: current ? 2 : 1),
                     ),
                     child: Row(
                       children: [

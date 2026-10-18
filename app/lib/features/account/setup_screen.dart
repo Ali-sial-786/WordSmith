@@ -71,6 +71,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           TextField(
             controller: _name,
             maxLength: 16,
+            style: fieldText(),
             decoration: const InputDecoration(labelText: 'Smith name', helperText: '3–16 letters, numbers or _'),
             onChanged: (_) => setState(() => _error = null),
           ),

@@ -158,7 +158,7 @@ abstract class RoomSession extends ChangeNotifier {
 
   @protected
   void say(String text, Color color) {
-    feed.insert(0, FeedLine(text, color));
+    feed.insert(0, FeedLine(text, Palette.legible(color)));
     if (feed.length > 3) feed.removeLast();
   }
 
