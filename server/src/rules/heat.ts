@@ -4,6 +4,20 @@
 
 export type HeatTier = 1 | 2 | 3 | 4 | 5 | 6;
 
+/**
+ * The host's pick for a room's heat (CONFIG): a tier, or `"auto"`, which
+ * is the host's level in co-op and the median level in Versus.
+ */
+export type HeatChoice = HeatTier | "auto";
+
+export function isHeatTier(value: unknown): value is HeatTier {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 6;
+}
+
+export function isHeatChoice(value: unknown): value is HeatChoice {
+  return value === "auto" || isHeatTier(value);
+}
+
 export interface HeatTierInfo {
   readonly tier: HeatTier;
   readonly name: string;
@@ -77,4 +91,9 @@ export function medianLevel(levels: readonly number[]): number {
 /** Heat for a Versus room: the tier of the median level. */
 export function vsHeat(levels: readonly number[]): HeatTier {
   return heatForLevel(medianLevel(levels));
+}
+
+/** The heat a room plays: the host's pick, or what `"auto"` gives (`auto`). */
+export function chosenHeat(choice: HeatChoice, auto: HeatTier): HeatTier {
+  return choice === "auto" ? auto : choice;
 }

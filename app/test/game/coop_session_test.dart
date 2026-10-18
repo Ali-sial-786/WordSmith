@@ -41,7 +41,15 @@ Map<String, Object?> _lobby({String phase = 'lobby', bool samReady = false}) => 
   'heat': 3,
   'players': [
     {'id': 'u1', 'username': 'Ada', 'avatar': 'avatar_02', 'level': 12, 'color': 0, 'ready': true, 'connected': true},
-    {'id': 'u2', 'username': 'sam', 'avatar': 'avatar_05', 'level': 4, 'color': 1, 'ready': samReady, 'connected': true},
+    {
+      'id': 'u2',
+      'username': 'sam',
+      'avatar': 'avatar_05',
+      'level': 4,
+      'color': 1,
+      'ready': samReady,
+      'connected': true,
+    },
   ],
 };
 
@@ -188,7 +196,13 @@ void main() {
           {'slot': 2, 'word': 'TOE'},
         ],
         'xp': {
-          'u1': {'xp': 85, 'level': 13, 'levelUps': 1, 'rewards': {'hammer': 1}, 'scrapHammers': 1},
+          'u1': {
+            'xp': 85,
+            'level': 13,
+            'levelUps': 1,
+            'rewards': {'hammer': 1},
+            'scrapHammers': 1,
+          },
         },
       });
     await until(() => session.results != null);
@@ -336,5 +350,78 @@ void main() {
     session.setVariant('survival');
     await until(() => room.received.isNotEmpty);
     expect(room.received.single, {'op': 'CONFIG', 'variant': 'survival'});
+  });
+
+  test('the host picks the heat, a tier or Auto', () async {
+    await until(() => room.sockets.isNotEmpty);
+    room.send({..._lobby(), 'heatChoice': 'auto', 'autoHeat': 3});
+    await until(() => session.lobby != null);
+    expect(session.lobby!.autoHeatOn, isTrue);
+    expect(session.lobby!.autoHeat, 3);
+    session
+      ..setHeat(5)
+      ..setHeat(null);
+    await until(() => room.received.length == 2);
+    expect(room.received, [
+      {'op': 'CONFIG', 'heat': 5},
+      {'op': 'CONFIG', 'heat': 'auto'},
+    ]);
+    room.send({..._lobby(), 'heat': 5, 'heatChoice': 5, 'autoHeat': 3});
+    await until(() => session.lobby!.heat == 5);
+    expect(session.lobby!.chosenHeat, 5);
+    expect(session.lobby!.autoHeatOn, isFalse);
+    expect(session.lobby!.autoHeat, 3);
+  });
+
+  test('an older server without heatChoice reads as Auto at its heat', () {
+    final lobby = RoomLobby.fromJson({'code': 'K7Q2AB', 'hostId': 'u1', 'heat': 4, 'players': []});
+    expect(lobby.autoHeatOn, isTrue);
+    expect(lobby.autoHeat, 4);
+  });
+
+  test('the host role coming to me enables host controls, and says so once', () async {
+    final effects = <RoomEvent>[];
+    session.effects.listen(effects.add);
+    await until(() => room.sockets.isNotEmpty);
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': DateTime.now().millisecondsSinceEpoch})
+      ..send({..._lobby(), 'hostId': 'u2'});
+    await until(() => session.lobby != null);
+    expect(session.isHost, isFalse);
+    // sam leaves: the role comes to me.
+    room.send({
+      ..._lobby(),
+      'players': [(_lobby()['players']! as List).first],
+    });
+    await until(() => session.isHost);
+    room.send(_lobby());
+    await until(() => session.lobby!.players.length == 2);
+    expect(effects.whereType<BecameHost>(), hasLength(1));
+    session.again();
+    await until(() => room.received.isNotEmpty);
+    expect(room.received.single, {'op': 'AGAIN'});
+  });
+
+  test('results carry what the heat added to my XP', () {
+    final end = RoundEnd.fromJson({
+      'reason': 'complete',
+      'players': [],
+      'answers': [],
+      'xp': {
+        'u1': {
+          'xp': 108,
+          'level': 2,
+          'levelUps': 1,
+          'rewards': {},
+          'scrapHammers': 0,
+          'heatBonus': 48,
+          'tiersAbove': 2,
+        },
+        'u2': {'xp': 60, 'level': 9, 'levelUps': 0, 'rewards': {}},
+      },
+    });
+    expect(end.xp['u1']!.heatBonus, 48);
+    expect(end.xp['u1']!.tiersAbove, 2);
+    expect(end.xp['u2']!.heatBonus, 0, reason: 'older servers send no breakdown');
   });
 }

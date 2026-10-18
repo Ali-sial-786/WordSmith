@@ -70,6 +70,29 @@ describe("room parseClientMessage: CONFIG with a variant (shared/survival.md)", 
   );
 });
 
+describe("room parseClientMessage: CONFIG with a heat", () => {
+  it.each([
+    ['{"op":"CONFIG","heat":1}', { op: "CONFIG", heat: 1 }],
+    ['{"op":"CONFIG","heat":6}', { op: "CONFIG", heat: 6 }],
+    ['{"op":"CONFIG","heat":"auto"}', { op: "CONFIG", heat: "auto" }],
+    ['{"op":"CONFIG","heat":4,"variant":"survival","series":5}', { op: "CONFIG", variant: "survival", series: 5, heat: 4 }],
+  ])("reads %s", (raw, message) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: true, message });
+  });
+
+  it.each([
+    '{"op":"CONFIG","heat":0}',
+    '{"op":"CONFIG","heat":7}',
+    '{"op":"CONFIG","heat":2.5}',
+    '{"op":"CONFIG","heat":"3"}',
+    '{"op":"CONFIG","heat":"Auto"}',
+    '{"op":"CONFIG","heat":null}',
+    '{"op":"CONFIG","heat":3,"series":4}',
+  ])("refuses %j", (raw) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: false });
+  });
+});
+
 describe("parseIdentity", () => {
   it("reads what the Worker sends", () => {
     expect(parseIdentity('{"id":"u1","username":"Ali","avatar":"avatar_03","level":12}')).toEqual({

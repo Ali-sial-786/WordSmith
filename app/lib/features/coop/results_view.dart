@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../engine/heat.dart';
 import '../../game/coop_session.dart';
 import '../../ui/widgets/meaning_sheet.dart';
 import '../../ui/mold/mold_grid.dart';
@@ -9,8 +10,10 @@ import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
 import '../../ui/widgets/forge_frame.dart';
+import 'lobby_view.dart' show HeatBanner, HeatPicker;
 
-/// After a round: stars, team score, MVP, everyone's points, missed words.
+/// After a round: stars, team score, MVP, everyone's points and XP (with
+/// what the heat added), missed words, and the next round's heat.
 class ResultsView extends StatelessWidget {
   const ResultsView({super.key, required this.session, required this.cues, required this.onLeave});
 
@@ -137,6 +140,16 @@ class ResultsView extends StatelessWidget {
         if (mine != null) ...[
           const SizedBox(height: 10),
           XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
+          if (mine.heatBonus > 0)
+            Text(
+              [
+                'Includes +${mine.heatBonus} for ${Heat.fromValue((session.round?.heat ?? 1).clamp(1, 6)).label}',
+                if (mine.tiersAbove > 0) '${mine.tiersAbove} tier${mine.tiersAbove == 1 ? '' : 's'} above yours',
+              ].join(', '),
+              key: const ValueKey('heat-bonus'),
+              textAlign: TextAlign.center,
+              style: text.bodyMedium?.copyWith(color: Palette.molten),
+            ),
           if (mine.scrapHammers > 0)
             Text(
               'Scrap Bin: +${mine.scrapHammers} Hammer Strike${mine.scrapHammers == 1 ? '' : 's'}',
@@ -166,6 +179,12 @@ class ResultsView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 18),
+        if (session.lobby != null) ...[
+          Text('Next round', textAlign: TextAlign.center, style: text.labelSmall),
+          const SizedBox(height: 4),
+          if (session.isHost) HeatPicker(session: session) else HeatBanner(lobby: session.lobby!, me: session.myPlayer),
+          const SizedBox(height: 12),
+        ],
         if (session.isHost)
           PlateButton(
             label: 'Forge again',

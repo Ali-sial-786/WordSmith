@@ -157,6 +157,8 @@ describe("Versus rooms", () => {
         phase: "lobby",
         hostId: host.uid,
         heat: 1,
+        heatChoice: "auto",
+        autoHeat: 1,
         players: [{ id: host.uid, username: host.username, avatar: "avatar_01", level: 1, color: 0, ready: false, connected: true }],
         series: 3,
       },
@@ -381,13 +383,14 @@ describe("Versus rooms", () => {
         { id: d.uid, username: d.username, wins: 0, place: 3 },
         { id: e.uid, username: e.username, wins: 0, place: 3 },
       ]);
-      // 5 per round raced, 10 per round won, 30 for the series. B passes level 2 (60 XP).
+      // 5 per round raced, 10 per round won, 30 for the series, at Ember (×1.0). B passes level 2 (60 XP).
+      const ember = { scrapHammers: 0, heatBonus: 0, tiersAbove: 0, pickups: NO_HINTS };
       expect(series.xp).toEqual({
-        [b.uid]: { xp: 70, level: 2, levelUps: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 }, scrapHammers: 0, pickups: NO_HINTS },
-        [a.uid]: { xp: 30, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
-        [c.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
-        [d.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
-        [e.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
+        [b.uid]: { xp: 70, level: 2, levelUps: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 }, ...ember },
+        [a.uid]: { xp: 30, level: 1, levelUps: 0, rewards: NO_HINTS, ...ember },
+        [c.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, ...ember },
+        [d.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, ...ember },
+        [e.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, ...ember },
       });
       // Every round, sudden death included: how it went, everyone's mold with its shape, the
       // words, and each racer's Scrap Bin (A's bonus word in round 1).
@@ -524,7 +527,16 @@ describe("Versus rooms", () => {
       sb.ws.close();
       const back = await connect(b, `/v1/ws/room/${code}`);
       const snap = await back.next({ op: "SNAPSHOT" });
-      expect(snap.results.xp[a.uid]).toEqual({ xp: 60, level: 2, levelUps: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 }, scrapHammers: 0, pickups: { hammer: 1, chisel: 0, sparks: 0 } });
+      expect(snap.results.xp[a.uid]).toEqual({
+        xp: 60,
+        level: 2,
+        levelUps: 1,
+        rewards: { hammer: 1, chisel: 0, sparks: 0 },
+        scrapHammers: 0,
+        heatBonus: 0,
+        tiersAbove: 0,
+        pickups: { hammer: 1, chisel: 0, sparks: 0 },
+      });
       expect(snap.results.xp[b.uid]).toMatchObject({ xp: 10, pickups: { hammer: 1, chisel: 0, sparks: 0 } });
 
       // A write cut off after D1 had it, then repeated: nothing is paid twice.

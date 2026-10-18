@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   HEAT_TIERS,
   type HeatTier,
+  chosenHeat,
   coopTimerMs,
+  isHeatChoice,
+  isHeatTier,
   heatForLevel,
   heatInfo,
   heatName,
@@ -111,5 +114,19 @@ describe("vsHeat", () => {
     expect(vsHeat([1, 50, 90])).toBe(4);
     expect(vsHeat([5, 6])).toBe(1);
     expect(vsHeat([1, 1, 81, 81, 81])).toBe(6);
+  });
+});
+
+describe("the host's heat (CONFIG)", () => {
+  it("is a tier from 1 to 6, or auto", () => {
+    for (const ok of [1, 2, 3, 4, 5, 6, "auto"]) expect(isHeatChoice(ok)).toBe(true);
+    for (const bad of [0, 7, 2.5, "3", "Auto", null, undefined, true, {}]) expect(isHeatChoice(bad)).toBe(false);
+    expect(isHeatTier("auto")).toBe(false);
+  });
+
+  it("plays the tier picked, or what auto gives", () => {
+    expect(chosenHeat("auto", 2)).toBe(2);
+    expect(chosenHeat(5, 2)).toBe(5);
+    expect(chosenHeat(1, 6)).toBe(1);
   });
 });

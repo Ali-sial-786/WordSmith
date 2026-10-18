@@ -45,11 +45,7 @@ void main() {
       // chisel; sparks not unlocked until 12).
       expect(levelUpRewards(9, 10), {HintKind.hammer: 2, HintKind.chisel: 2});
       expect(levelUpRewards(11, 12), {HintKind.hammer: 1});
-      expect(levelUpRewards(19, 20), {
-        HintKind.hammer: 1,
-        HintKind.chisel: 1,
-        HintKind.sparks: 1,
-      });
+      expect(levelUpRewards(19, 20), {HintKind.hammer: 1, HintKind.chisel: 1, HintKind.sparks: 1});
       expect(levelUpRewards(1, 3), {HintKind.hammer: 2});
       expect(levelUpRewards(3, 3), isEmpty);
     });
@@ -70,6 +66,17 @@ void main() {
     expect(Heat.fromValue(3), Heat.cherryRed);
   });
 
+  test('room XP by heat matches shared/room-protocol.md', () {
+    // A level 90 smith gets just the heat's own: ×1.0 at Ember to ×2.0 at White Heat.
+    expect([for (final h in Heat.values) h.xpMultiplierFor(90)], [1.0, 1.2, 1.4, 1.6, 1.8, 2.0]);
+    // A newcomer gets 0.2 more for each tier above Ember.
+    expect(Heat.whiteHeat.xpMultiplierFor(1), 3.0);
+    expect(Heat.cherryRed.xpMultiplierFor(1), 1.8);
+    // Level 20 is Cherry Red: no bonus below it.
+    expect(Heat.ember.xpMultiplierFor(20), 1.0);
+    expect(Heat.yellow.xpMultiplierFor(20), 2.2);
+  });
+
   group('pickups match shared/pickups.md', () {
     test('hash and PRNG vectors', () {
       expect(fnv1a32(''), 0x811c9dc5);
@@ -82,48 +89,24 @@ void main() {
     });
 
     List<Pickup> p(String user, String puzzle, int cells, int level) =>
-        pickupsFor(
-          userId: user,
-          puzzleId: puzzle,
-          cellCount: cells,
-          level: level,
-        );
+        pickupsFor(userId: user, puzzleId: puzzle, cellCount: cells, level: level);
 
     test('pickup vectors', () {
-      expect(p('user-123', 'c-0010', 30, 20), [
-        const Pickup(10, HintKind.chisel),
-      ]);
-      expect(p('user-123', 'c-0010', 30, 1), [
-        const Pickup(10, HintKind.hammer),
-      ]);
-      expect(p('user-123', 'c-0032', 24, 3), [
-        const Pickup(7, HintKind.hammer),
-      ]);
+      expect(p('user-123', 'c-0010', 30, 20), [const Pickup(10, HintKind.chisel)]);
+      expect(p('user-123', 'c-0010', 30, 1), [const Pickup(10, HintKind.hammer)]);
+      expect(p('user-123', 'c-0032', 24, 3), [const Pickup(7, HintKind.hammer)]);
       expect(p('abc', 'c-0001', 12, 1), isEmpty);
-      expect(p('user-123', 'c-0012', 9, 50), [
-        const Pickup(0, HintKind.hammer),
-      ]);
-      expect(p('friend-7', 'm-00033', 40, 30), [
-        const Pickup(29, HintKind.hammer),
-        const Pickup(2, HintKind.hammer),
-      ]);
-      expect(p('user-123', 'c-0074', 30, 12), [
-        const Pickup(19, HintKind.sparks),
-      ]);
-      expect(p('user-123', 'c-0074', 30, 11), [
-        const Pickup(19, HintKind.hammer),
-      ]);
-      expect(p('user-123', 'c-0146', 3, 12), [
-        const Pickup(2, HintKind.hammer),
-        const Pickup(0, HintKind.hammer),
-      ]);
+      expect(p('user-123', 'c-0012', 9, 50), [const Pickup(0, HintKind.hammer)]);
+      expect(p('friend-7', 'm-00033', 40, 30), [const Pickup(29, HintKind.hammer), const Pickup(2, HintKind.hammer)]);
+      expect(p('user-123', 'c-0074', 30, 12), [const Pickup(19, HintKind.sparks)]);
+      expect(p('user-123', 'c-0074', 30, 11), [const Pickup(19, HintKind.hammer)]);
+      expect(p('user-123', 'c-0146', 3, 12), [const Pickup(2, HintKind.hammer), const Pickup(0, HintKind.hammer)]);
     });
 
     test('roughly one puzzle in five has a pickup', () {
       var hits = 0;
       for (var i = 1; i <= 2000; i++) {
-        if (p('someone', 'c-${i.toString().padLeft(4, '0')}', 30, 20)
-            .isNotEmpty) {
+        if (p('someone', 'c-${i.toString().padLeft(4, '0')}', 30, 20).isNotEmpty) {
           hits++;
         }
       }

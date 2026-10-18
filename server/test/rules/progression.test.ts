@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  HEAT_XP_TENTHS,
   HINT_KINDS,
   HINT_UNLOCK_LEVEL,
   type HintCounts,
+  PLAYING_UP_XP_TENTHS,
   RANK_UP_LEVELS,
   STARTING_HINTS,
   addToScrapBin,
   applyXp,
   coopRoundXp,
+  heatXp,
   isHintUnlocked,
   isRankUpLevel,
   levelFromTotalXp,
@@ -225,6 +228,33 @@ describe("XP per mode (DESIGN.md §4.2)", () => {
   it("versus: 5 per round played, +10 per round won, +30 for the series", () => {
     expect(vsSeriesXp({ roundsPlayed: 5, roundsWon: 0, wonSeries: false })).toBe(25);
     expect(vsSeriesXp({ roundsPlayed: 3, roundsWon: 2, wonSeries: true })).toBe(65);
+  });
+});
+
+describe("XP and heat", () => {
+  it("multiplies room XP by ×1.0 at Ember up to ×2.0 at White Heat", () => {
+    expect(HEAT_XP_TENTHS).toEqual({ 1: 10, 2: 12, 3: 14, 4: 16, 5: 18, 6: 20 });
+    // A level 81+ smith is at or above every heat: just the tier's multiplier.
+    expect(([1, 2, 3, 4, 5, 6] as const).map((h) => heatXp(50, h, 100).xp)).toEqual([50, 60, 70, 80, 90, 100]);
+    expect(heatXp(50, 6, 100)).toEqual({ xp: 100, heatBonus: 50, tiersAbove: 0 });
+  });
+
+  it("adds 0.2 for each tier above the player's own", () => {
+    // Level 1 is Ember: White Heat is 5 tiers up, ×(2.0 + 1.0).
+    expect(heatXp(50, 6, 1)).toEqual({ xp: 150, heatBonus: 100, tiersAbove: 5 });
+    expect(heatXp(50, 2, 1)).toEqual({ xp: 70, heatBonus: 20, tiersAbove: 1 });
+    // Level 20 is Cherry Red: Yellow is 2 up, ×(1.8 + 0.4); cooler heats add no bonus.
+    expect(heatXp(50, 5, 20)).toEqual({ xp: 110, heatBonus: 60, tiersAbove: 2 });
+    expect(heatXp(50, 3, 20)).toEqual({ xp: 70, heatBonus: 20, tiersAbove: 0 });
+    expect(heatXp(50, 1, 20)).toEqual({ xp: 50, heatBonus: 0, tiersAbove: 0 });
+    expect(PLAYING_UP_XP_TENTHS).toBe(2);
+  });
+
+  it("rounds to whole XP", () => {
+    expect(heatXp(25, 2, 1).xp).toBe(35); // 25 × 1.4
+    expect(heatXp(23, 2, 50).xp).toBe(28); // 27.6
+    expect(heatXp(21, 2, 50).xp).toBe(25); // 25.2
+    expect(heatXp(0, 6, 1)).toEqual({ xp: 0, heatBonus: 0, tiersAbove: 5 });
   });
 });
 

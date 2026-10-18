@@ -30,13 +30,13 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | Op | Fields |
 |---|---|
 | `WELCOME` | `you` (user id), `protocol: 1`, `serverNow` |
-| `LOBBY` | `code`, `mode`, `phase`, `hostId`, `heat` (1–6, from the host's level), `players`: `[{id, username, avatar, level, color, ready, connected}]`. `color` is 0–3 (copper, gold, verdigris, cobalt) and stays the same while the player is in the room. Sent whenever any of this changes, a player changing their username (`POST /v1/me/username`) included. The app shows a friend under the nickname its player gave them, if any; nicknames never reach the room. |
+| `LOBBY` | `code`, `mode`, `phase`, `hostId`, `heat` (1–6: what the next round plays, or the round's own while one is on), `heatChoice` (the host's pick: 1–6, or `"auto"`, the default), `autoHeat` (1–6: what `"auto"` gives now, from the host's level), `players`: `[{id, username, avatar, level, color, ready, connected}]`. `color` is 0–3 (copper, gold, verdigris, cobalt) and stays the same while the player is in the room. Sent whenever any of this changes, a player changing their username (`POST /v1/me/username`) included. The app shows a friend under the nickname its player gave them, if any; nicknames never reach the room. |
 | `ROUND_START` | `round` (1, 2, …), `heat`, `startsAt`, `endsAt`, `serverNow`, `letters` (anvil letters, shuffled), `cols`, `rows`, `slots`: `[{slot, x, y, d: "a" \| "d", len}]` (**no words**), `pickups`: `[{x, y}]` (cells holding an ember) |
 | `WORD_RESULT` | Sent only to the player who submitted. `seq` (echoed), `word`, `result`: `claimed` · `bonus` · `already` · `invalid` · `rate_limited` · `too_late`. `already` adds `by` (user id, or `null` if the word filled in by itself). `claimed` and `bonus` add `points`. |
 | `CLAIMED` | Sent to everyone. `slot`, `word`, `by`, `points`, `scores` (`{userId: points}`). `auto`: `[{slot, word}]` lists crossing slots that this claim completed: they fill in and score nothing. `pickup`: `"hammer" \| "chisel" \| "sparks"` if `by` collected an ember. |
 | `BONUS` | Sent to everyone. `word`, `by`, `points`, `scores` |
 | `REVEAL` | Sent to everyone after a hint. `by`, `kind`, `cells`: `[{x, y, letter}]`, `auto`: `[{slot, word}]` |
-| `ROUND_END` | `reason`: `complete` \| `timeout`; `teamScore`; `filled` and `total` (letters); `stars` (0–3); `players`: `[{id, username, points, words, longest, bonus}]` (`username` so players who left can still be named; `words` counts grid words, `bonus` bonus words; everyone who played the round is listed); `mvp` (user id or `null`, bonus points count); `answers`: `[{slot, word}]` (every grid word, so missed ones can be shown); `xp`: `{userId: {xp, level, levelUps, rewards: {hammer, chisel, sparks}, scrapHammers}}` (`rewards` are level-up rewards; `scrapHammers` are Hammer Strikes smelted from this round's bonus words). `xp` is `{}` if the results couldn't be saved yet; the server retries. |
+| `ROUND_END` | `reason`: `complete` \| `timeout`; `teamScore`; `filled` and `total` (letters); `stars` (0–3); `players`: `[{id, username, points, words, longest, bonus}]` (`username` so players who left can still be named; `words` counts grid words, `bonus` bonus words; everyone who played the round is listed); `mvp` (user id or `null`, bonus points count); `answers`: `[{slot, word}]` (every grid word, so missed ones can be shown); `xp`: `{userId: {xp, level, levelUps, rewards: {hammer, chisel, sparks}, scrapHammers, heatBonus, tiersAbove}}` (`rewards` are level-up rewards; `scrapHammers` are Hammer Strikes smelted from this round's bonus words; `heatBonus` is the part of `xp` the heat added and `tiersAbove` the tiers the round ran above the player's own, see "XP and heat"). `xp` is `{}` if the results couldn't be saved yet; the server retries. |
 | `SNAPSHOT` | Sent on join and rejoin. `lobby` (as `LOBBY`), plus `round` while a round is on (the `ROUND_START` fields plus `claims`: `[{slot, word, by, points}]`, `auto`: `[{slot, word}]`, `bonus`: `[{word, by}]`, `revealed`: `[{x, y, letter}]`, `scores`), plus `results` during results (as `ROUND_END`) |
 | `EMOTE` | `from`, `emote` |
 | `ERROR` | `code`: `not_host`, `not_enough_players`, `bad_message`, `no_hint`, `hint_locked`, `bad_cell`, `wrong_phase`, `no_puzzle` (the puzzle bank is empty) |
@@ -46,23 +46,48 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | Op | Fields | Notes |
 |---|---|---|
 | `READY` | `ready: bool` | In the lobby |
+| `CONFIG` | `heat`: 1–6 or `"auto"` | Host only, in the lobby or results. Applies from the next `START` or `AGAIN` and is kept through `AGAIN`. Survival adds `variant` (shared/survival.md) and Versus `series`. |
 | `START` | — | Host only, from the lobby. Needs at least 1 player; solo co-op is allowed. Starting doesn't require everyone to be ready. |
 | `SUBMIT` | `word`, `seq` | `seq` goes up by one each time. About 4 per second per player; past that the server answers `rate_limited` and may lock the player out for 3 s. In the lobby or countdown it gets `ERROR wrong_phase` (no `WORD_RESULT`); after the round it gets `too_late`. Other messages are limited per socket (a burst of 10, then 2 a second) and extras are dropped silently. |
 | `HINT` | `kind`, plus `x`, `y` for a chisel | Spends one of the sender's **own** hints (checked and taken in D1 straight away). Revealed letters score for no one. |
 | `AGAIN` | — | Host only, from results |
-| `LEAVE` | — | Leave the room (the host role moves to whoever joined earliest) |
+| `LEAVE` | — | Leave the room (the host role moves on, see "Host") |
 | `EMOTE` | `emote`: `nice` · `close` · `fire` · `hammer` · `gg` | |
 | `{"op":"PING"}` | — | Keep-alive; answered with `{"op":"PONG"}` |
 
 ## Rules worth spelling out
 
 - **Scoring:** a claimed grid word earns 10 points for each of its letters that a hint didn't reveal. A bonus word earns 3 per letter, and each bonus word can be claimed once per room per round.
-- **Size:** at `START` the room chooses a bank puzzle with `size` = number of players (1–4) and `heat` from the host's level, skipping puzzles any player has seen in the last 60 days.
+- **Heat:** the host picks it in the lobby, or in results for the next round (`CONFIG heat`), from Ember (1) to White Heat (6). `"auto"`, the default, is the tier for the host's level, so it follows the host if the role moves on. A round's heat is fixed when it starts.
+- **Size:** at `START` the room chooses a bank puzzle with `size` = number of players (1–4) at the room's heat (the nearest size, then the nearest heat, if the bank has none).
+- **Which puzzle:** chosen at random, never in a set order:
+  - among those nobody in the room has had in the last 60 days;
+  - if there are none, among the third of them seen longest ago by anyone in the room (by when anyone last had each).
+  - The room also remembers its latest 50 puzzles and skips them unless nothing else is left, so a series or a run of `AGAIN`s never repeats one.
+  - Every seated player is recorded as having seen it when the round starts (Versus: watchers too).
+- **Host:** the host keeps the role while they're seated, through a dropped connection's 30 s. When they leave (`LEAVE`, or their 30 s run out, in any phase), it goes to whoever joined earliest among the players connected, or among those still seated if nobody is. A host who comes back later doesn't take it back. `LOBBY` tells everyone.
 - **Pickups:** about 1 round in 5 has one ember, and occasionally two, on random cells. The claimer of the word through that cell gets the hint added to their inventory immediately, so it can be used in the same round.
 - **Disconnects:** a dropped player has 30 s to rejoin and keeps their points. `LOBBY` shows `connected: false` meanwhile. A player who leaves or runs out of time mid-round stays listed (disconnected) until the round ends, keeps their points and gets XP, and is then removed.
 - **Embers:** go to whoever claims the first word through the cell. An ember on a hinted cell stays until a word through it is forged; one on a slot that fills in by itself is lost.
 - **Open rooms (hub):** friends see `OPEN_ROOMS` entries `{code, mode, hostId, hostUsername, players, max}` for rooms in the lobby or results that aren't full.
 - **XP:** written by the server at `ROUND_END` (DESIGN §4.2) together with the match records, stats and level-up rewards, in one D1 batch.
+
+## XP and heat
+
+Co-op and Versus XP grow with the heat played (`heatXp` in `server/src/rules/progression.ts`):
+
+```
+xp = round(base × (HEAT_XP[heat] + 0.2 × tiersAbove))
+
+HEAT_XP   = {1: 1.0, 2: 1.2, 3: 1.4, 4: 1.6, 5: 1.8, 6: 2.0}
+tiersAbove = max(0, heat − heatForLevel(the player's level before this XP))
+```
+
+- `base` is the mode's XP: `coopRoundXp` plus any survival bonus, or `vsSeriesXp`.
+- Playing above your own tier adds 0.2 for each tier, up to +1.0 for a level 1–5 smith at White Heat (×3.0 in all).
+- Playing at or below your tier adds nothing beyond the heat's own multiplier, so a strong player who picks Ember gets ×1.0.
+- For example, a Versus series of 3 rounds with 1 win (25 XP at Ember) pays a level 3 newcomer 75 XP at White Heat. Their level 90 rival who won it 2–1 gets (15 + 20 + 30) × 2.0 = 130.
+- `xp.heatBonus` is `xp − base`, and `xp.tiersAbove` is as above. A retried write that only kept the XP sends both as 0.
 
 ---
 
@@ -91,7 +116,7 @@ Everything above applies unless this section says otherwise. Game rules are in
 
 | Op | Fields | Notes |
 |---|---|---|
-| `CONFIG` | `series`: 3 · 5 · 7 · 10 | Host only, in the lobby. Default 3. |
+| `CONFIG` | `series`: 3 · 5 · 7 · 10, and/or `heat` | Host only. `series` in the lobby (default 3); `heat` in the lobby or results, as in co-op, for the next series. |
 | `START` | — | Host only. Needs at least **2** connected players (`not_enough_players`). |
 | `SUBMIT` | `word`, `seq` | Only players racing this round. Someone watching a sudden-death round gets `ERROR not_playing`. |
 | `HINT` | — | Not allowed in VS: `ERROR no_hints`. (Turn is local to the app.) |
@@ -101,23 +126,23 @@ Everything above applies unless this section says otherwise. Game rules are in
 
 | Op | Fields |
 |---|---|
-| `LOBBY` | adds `series` (3, 5, 7 or 10). `heat` comes from the **median** level of the seated players (`vsHeat`). |
+| `LOBBY` | adds `series` (3, 5, 7 or 10). `"auto"` (`autoHeat`) is the tier of the **median** level of the seated players (`vsHeat`); during a series `heat` is the series' own. |
 | `ROUND_START` | the co-op fields (`slots` without words, `letters`, `pickups`, `startsAt`, `endsAt`, `serverNow`, …) plus `series` (length), `regular` (1…`series` for a regular round, `null` for sudden death), `suddenDeath` (bool), `players` (ids racing this round; everyone else watches) and `tally` (`{userId: wins}`). Everyone gets the same puzzle and letters. |
 | `WORD_RESULT` | Sent to the submitter only. `claimed` adds `slot` and `auto`: `[{slot, word}]` (crossing slots this completed on **your** mold; they fill in too), plus `pickup` if an ember was collected (granted after the series). `already` means you've already got that word. `bonus` means a bonus word (it goes to the Scrap Bin and never counts as progress). No `points` in VS. |
 | `PROGRESS` | Sent to everyone whenever a racer's count changes: `id`, `filled` (letter cells filled on their mold), `total`. Never words or cells. |
 | `ROUND_END` | `reason`: `finished` \| `timeout`; `winner` (user id or `null`); `how`: `finished` \| `timeout` \| `none`; `progress`: `[{id, filled, total}]` for the racers; `molds`: `{userId: [slot, …]}` for the racers (the slots complete on their own mold, forged or filled in by themselves, sorted); `tally` (after this round); `answers`: `[{slot, word}]`; `next`: `{round, suddenDeath, players}` for the round coming after the standings, or `null` if the series is over; `standingsEndsAt` (ms, when the next countdown starts; `null` if the series is over). |
-| `SERIES_END` | `winner` (user id or `null`), `early` (clinched before the last regular round), `forfeit` (everyone else left), `rounds` (rounds played, sudden death included), `podium`: `[{id, username, wins, place}]` (equal wins share a place), `history`: `[{round, suddenDeath, reason, winner, how, cols, rows, slots: [{slot, x, y, d, len}], progress: [{id, filled, total}], molds, letters, answers: [{slot, word}], bins: {userId: [word, …]}}]` (one entry per round played, in order; `reason`, `winner`, `how`, `progress`, `molds` and `answers` as in that round's `ROUND_END`, the shape and `letters` as in its `ROUND_START`; `bins` is each racer's Scrap Bin for the round: their bonus words in the order found, `[]` for none), `xp`: `{userId: {xp, level, levelUps, rewards, scrapHammers, pickups: {hammer, chisel, sparks}}}` (`{}` if the write failed; retried like co-op). |
+| `SERIES_END` | `winner` (user id or `null`), `early` (clinched before the last regular round), `forfeit` (everyone else left), `rounds` (rounds played, sudden death included), `podium`: `[{id, username, wins, place}]` (equal wins share a place), `history`: `[{round, suddenDeath, reason, winner, how, cols, rows, slots: [{slot, x, y, d, len}], progress: [{id, filled, total}], molds, letters, answers: [{slot, word}], bins: {userId: [word, …]}}]` (one entry per round played, in order; `reason`, `winner`, `how`, `progress`, `molds` and `answers` as in that round's `ROUND_END`, the shape and `letters` as in its `ROUND_START`; `bins` is each racer's Scrap Bin for the round: their bonus words in the order found, `[]` for none), `xp`: `{userId: {xp, level, levelUps, rewards, scrapHammers, heatBonus, tiersAbove, pickups: {hammer, chisel, sparks}}}` (`{}` if the write failed; retried like co-op; `heatBonus` and `tiersAbove` as in co-op). |
 | `SNAPSHOT` | `lobby`; during `countdown`/`round`: `round` = the `ROUND_START` fields plus `mine`: `{claims: [{slot, word}], auto: [{slot, word}]}` (the receiver's own mold) and `progress`: `[{id, filled, total}]`; during `standings`: `standings` = the last `ROUND_END`; during `results`: `results` = the `SERIES_END` (and `standings` = the last `ROUND_END`). |
 | `ERROR` | adds `not_playing`, `no_hints`. |
 
 ## Rules worth spelling out (VS)
 
-- **Puzzle:** one bank puzzle per round with `size` 1 at the room's heat, skipping ones any racer saw in the last 60 days. Each racer fills their **own** copy. The round timer is `vsRoundTimerMs(heat)`.
+- **Puzzle:** one bank puzzle per round with `size` 1 at the series' heat, chosen as in co-op ("Which puzzle") from what everyone seated has seen, watchers included. Each racer fills their **own** copy. The round timer is `vsRoundTimerMs(heat)`.
 - **Winning a round:** the first racer to fill every letter wins at once (`finished`); the round ends for everyone and boards freeze. At the timer, the most letters filled wins, a tie going to whoever reached that count first (`timeout`). Nobody filled anything: no winner (`none`). Use a server-side counter as `reachedAt` so it never ties.
 - **Series:** after each round use `seriesStatus`. Clinched → `SERIES_END`. All regular rounds played and tied → **sudden death** between the tied leaders only; a sudden-death round with no winner is played again with the same players.
 - **Disconnects:** a dropped racer's mold freezes and they have 30 s to come back and carry on. A racer who leaves or runs out of time can't win any more rounds but keeps their wins on the podium. If only one racer is left, they win by **forfeit**.
 - **Embers:** the same cells for everyone. Each racer who forges a word through an ember collects it once; it's granted after the series, not usable during it.
-- **XP** (one D1 batch at `SERIES_END`): `vsSeriesXp` (5 per round played, 10 per round won, 30 for winning the series), plus level-up rewards, Scrap Bin hammers from bonus words, ember pickups, and stats (VS series played and won, VS rounds won).
+- **XP** (one D1 batch at `SERIES_END`): `vsSeriesXp` (5 per round played, 10 per round won, 30 for winning the series) at the series' heat ("XP and heat"), plus level-up rewards, Scrap Bin hammers from bonus words, ember pickups, and stats (VS series played and won, VS rounds won).
 - **Open rooms:** VS rooms in `lobby` or `results` that aren't full are listed to friends like co-op ones (`mode: "vs"`, `max: 5`).
 
 ## As built (VS details beyond the tables above)
@@ -132,4 +157,5 @@ Everything above applies unless this section says otherwise. Game rules are in
 - When people leaving decides the series: mid-round, the round is resolved among those left (`ROUND_END` with `reason: "timeout"`), then `SERIES_END`; during a countdown, the round is dropped (no `ROUND_END`) and `SERIES_END` follows; during standings, only `SERIES_END` follows. A forfeit always has `early: false`.
 - A racer who left can reconnect and watch; their `SUBMIT` gets `not_playing`. `SUBMIT` during standings gets `too_late`. `CONFIG` in a co-op room or with a bad value gets `bad_message`. `HINT` gets `no_hints` in every phase.
 - If the room idle-closes mid-series, `SERIES_END` goes out with what was played (`winner: null` unless already decided) and XP is still written.
-- Heat is fixed at `START` for the whole series. The series length can only be changed in the lobby (before the first series).
+- Heat is fixed at `START` (or `AGAIN`) for the whole series, sudden death included. The series length can only be changed in the lobby (before the first series); the heat also in results, for the next series.
+- `CONFIG` checks, as in survival.md: no field, a bad value, or `series` in co-op is `bad_message`; then `wrong_phase`; then `not_host`. An unchanged value sends no `LOBBY`.

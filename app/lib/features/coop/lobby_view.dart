@@ -17,7 +17,7 @@ import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
 
 /// Before a round (co-op or Versus): the code to share, who's in, ready
-/// checks, the series length in Versus, and the host's start.
+/// checks, the heat, the series length in Versus, and the host's start.
 class LobbyView extends ConsumerWidget {
   const LobbyView({super.key, required this.session, required this.onLeave, this.video = RoomVideo.none});
 
@@ -29,7 +29,6 @@ class LobbyView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lobby = session.lobby!;
     final text = Theme.of(context).textTheme;
-    final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
     final host = lobby.player(lobby.hostId);
     final hostName = host == null ? null : session.nameOf(host.id);
     final me = session.myPlayer;
@@ -48,21 +47,7 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Palette.heat(heat).withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Palette.heat(heat)),
-          ),
-          child: Text(
-            vs
-                ? '${heat.title} heat · from the middle level in the room'
-                : '${heat.title} heat · set by host ${hostName ?? '?'} (Lv ${host?.level ?? '?'})',
-            textAlign: TextAlign.center,
-            style: text.titleSmall,
-          ),
-        ),
+        if (session.isHost) HeatPicker(session: session) else HeatBanner(lobby: lobby, me: me),
         const SizedBox(height: 12),
         _VariantPicker(session: session, survival: lobby.survival, vs: vs),
         if (vs && session is VsSession) ...[
@@ -135,6 +120,185 @@ class LobbyView extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Who set the room's heat and what it pays [me]: "Auto · from host Ada's
+/// level · ×1.6 XP for you", after the heat's name if [named].
+String _heatCaption(RoomLobby lobby, RoomPlayer? me, {bool named = false}) {
+  final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
+  final host = lobby.player(lobby.hostId);
+  final mine = host != null && host.id == me?.id;
+  final how = !lobby.autoHeatOn
+      ? 'Picked by ${mine
+            ? 'you'
+            : host == null
+            ? 'the host'
+            : 'host ${host.username}'}'
+      : lobby.isVs
+      ? 'Auto · from the middle level in the room'
+      : "Auto · from ${mine
+            ? 'your'
+            : host == null
+            ? "the host's"
+            : "host ${host.username}'s"} level";
+  final xp = me == null ? 1.0 : heat.xpMultiplierFor(me.level);
+  return [if (named) heat.label, how, if (xp > 1) '×${xp.toStringAsFixed(1)} XP for you'].join(' · ');
+}
+
+/// The room's heat as everyone but the host sees it: the tier, in its
+/// colour, who set it (the host, or Auto from levels), and its XP for me.
+class HeatBanner extends StatelessWidget {
+  const HeatBanner({super.key, required this.lobby, required this.me});
+
+  final RoomLobby lobby;
+  final RoomPlayer? me;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
+    return Container(
+      key: const ValueKey('heat-banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Palette.heat(heat).withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Palette.heat(heat)),
+      ),
+      child: Column(
+        children: [
+          Text(heat.label, textAlign: TextAlign.center, style: text.titleSmall),
+          Text(_heatCaption(lobby, me), textAlign: TextAlign.center, style: text.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+/// The host's pick of heat, for the next START or AGAIN: Auto (in the
+/// colour of the tier it gives now) or Ember to White Heat, each named in
+/// its own colour, with the banner's line under them.
+class HeatPicker extends StatelessWidget {
+  const HeatPicker({super.key, required this.session});
+
+  final RoomSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final lobby = session.lobby!;
+    final auto = Heat.fromValue(lobby.autoHeat.clamp(1, 6));
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: _HeatTile(
+                key: const ValueKey('heat-auto'),
+                heat: auto,
+                lines: ['Auto', auto.title],
+                semantics: 'Auto heat, ${auto.title} now',
+                selected: lobby.autoHeatOn,
+                onTap: () => session.setHeat(null),
+              ),
+            ),
+            for (final h in Heat.values) ...[
+              const SizedBox(width: 4),
+              Expanded(
+                child: _HeatTile(
+                  key: ValueKey('heat-${h.value}'),
+                  heat: h,
+                  lines: h.title.split(' '),
+                  semantics: h.label,
+                  selected: lobby.chosenHeat == h.value,
+                  onTap: () => session.setHeat(h.value),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _heatCaption(lobby, session.myPlayer, named: true),
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+/// One heat: a swatch of its colour with its name on it, ticked when picked.
+class _HeatTile extends StatelessWidget {
+  const _HeatTile({
+    super.key,
+    required this.heat,
+    required this.lines,
+    required this.semantics,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Heat heat;
+  final List<String> lines;
+  final String semantics;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Palette.heat(heat);
+    final ink = ThemeData.estimateBrightnessForColor(color) == Brightness.dark ? Palette.whiteHeat : Palette.darkLetter;
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 10, height: 1.1, color: ink);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semantics,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          fit: StackFit.passthrough,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: selected ? Palette.molten : Palette.ash, width: selected ? 3 : 1),
+                boxShadow: selected ? [BoxShadow(color: Palette.ember.withValues(alpha: 0.7), blurRadius: 10)] : null,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final line in lines)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(line, maxLines: 1, style: style),
+                    ),
+                ],
+              ),
+            ),
+            if (selected)
+              Positioned(
+                top: -6,
+                right: -5,
+                child: Container(
+                  width: 15,
+                  height: 15,
+                  decoration: BoxDecoration(color: Palette.molten, shape: BoxShape.circle),
+                  child: Icon(Icons.check, size: 11, color: Palette.forgeBlack),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

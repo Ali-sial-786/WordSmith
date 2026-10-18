@@ -3,7 +3,7 @@
  * over one `wordsmith.v1` WebSocket per room. Pure, so it's unit-tested in
  * Node.
  *
- * Client → server: READY, CONFIG (the variant, and the Versus series),
+ * Client → server: READY, CONFIG (the variant, the heat, and the Versus series),
  * START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, and the exact text
  * `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime without waking
  * the room).
@@ -17,7 +17,7 @@
  */
 
 import type { CoopResults, RevealedCell, RoundSnapshot, RoundStartFields, SlotWord } from "../rules/coop-round";
-import type { HeatTier } from "../rules/heat";
+import { isHeatChoice, type HeatChoice, type HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
 import type { RoomMode, RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
@@ -38,8 +38,8 @@ export type HintRequest = { readonly kind: "hammer" | "sparks" } | { readonly ki
 
 export type ClientMessage =
   | { readonly op: "READY"; readonly ready: boolean }
-  /** The host's choices: the variant (lobby or results), and the Versus series length (lobby). At least one. */
-  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength }
+  /** The host's choices: the variant and the heat (lobby or results), and the Versus series length (lobby). At least one. */
+  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength; readonly heat?: HeatChoice }
   | { readonly op: "START" }
   | { readonly op: "SUBMIT"; readonly word: string; readonly seq: number }
   | { readonly op: "HINT"; readonly hint: HintRequest }
@@ -85,13 +85,15 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
     case "CONFIG": {
-      if (m.variant === undefined && m.series === undefined) return BAD;
+      if (m.variant === undefined && m.series === undefined && m.heat === undefined) return BAD;
       if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
       if (m.series !== undefined && !isSeriesLength(m.series)) return BAD;
+      if (m.heat !== undefined && !isHeatChoice(m.heat)) return BAD;
       const message: ClientMessage = {
         op: "CONFIG",
         ...(m.variant === undefined ? {} : { variant: m.variant }),
         ...(m.series === undefined ? {} : { series: m.series }),
+        ...(m.heat === undefined ? {} : { heat: m.heat }),
       };
       return { ok: true, message };
     }
@@ -137,8 +139,15 @@ export interface LobbyFields {
   readonly phase: RoomPhase;
   /** `null` only while the room is empty. */
   readonly hostId: string | null;
-  /** Co-op: from the host's level. Versus: from the median level of the seated players, or the series' heat while one is on. */
+  /**
+   * The heat the next round or series plays (the round's or series' own
+   * while one is on): `heatChoice`, or what `"auto"` gives.
+   */
   readonly heat: HeatTier;
+  /** The host's pick (CONFIG): a tier, or `"auto"` (the default). Kept through AGAIN. */
+  readonly heatChoice: HeatChoice;
+  /** What `"auto"` gives with the room as it is: co-op, the host's level; Versus, the median level of the seated players. */
+  readonly autoHeat: HeatTier;
   readonly players: readonly LobbyPlayer[];
   /** Versus only: the series length (3, 5, 7 or 10). */
   readonly series?: SeriesLength;
@@ -156,6 +165,10 @@ export interface XpBody {
   readonly rewards: HintCounts;
   /** Not in the contract: Hammer Strikes smelted from this round's bonus words (Scrap Bin). */
   readonly scrapHammers: number;
+  /** The part of `xp` the heat added (0 when only the XP survived a retried write). */
+  readonly heatBonus: number;
+  /** Tiers the heat was above the player's own, each adding to the bonus. */
+  readonly tiersAbove: number;
 }
 
 export interface ResultsPlayer {

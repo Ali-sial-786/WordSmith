@@ -118,7 +118,9 @@ class RoomLobby extends RoomEvent {
     required this.players,
     this.series = 3,
     this.variant = 'classic',
-  });
+    this.chosenHeat,
+    int? autoHeat,
+  }) : autoHeat = autoHeat ?? heat;
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
     code: j['code'] as String,
@@ -131,14 +133,25 @@ class RoomLobby extends RoomEvent {
     ],
     series: j['series'] as int? ?? 3,
     variant: j['variant'] as String? ?? 'classic',
+    // `heatChoice` is a tier or "auto"; older servers send neither field.
+    chosenHeat: j['heatChoice'] is int ? j['heatChoice'] as int : null,
+    autoHeat: j['autoHeat'] as int?,
   );
 
   final String code;
   final String mode;
   final String phase;
   final String hostId;
+
+  /// The heat the next round or series plays (the current one's while it's on).
   final int heat;
   final List<RoomPlayer> players;
+
+  /// The tier the host picked (1–6), or null while the room is on Auto.
+  final int? chosenHeat;
+
+  /// What Auto gives right now: the host's level in co-op, the middle level in Versus.
+  final int autoHeat;
 
   /// Versus: best of this many rounds.
   final int series;
@@ -148,6 +161,7 @@ class RoomLobby extends RoomEvent {
 
   bool get isVs => mode == 'vs';
   bool get survival => variant == 'survival';
+  bool get autoHeatOn => chosenHeat == null;
   int get maxPlayers => isVs ? 5 : 4;
 
   RoomPlayer? player(String id) {
@@ -612,7 +626,16 @@ class RoundPlayerResult {
 }
 
 class XpAward {
-  const XpAward(this.xp, this.level, this.levelUps, this.rewards, {this.scrapHammers = 0, this.pickups = const {}});
+  const XpAward(
+    this.xp,
+    this.level,
+    this.levelUps,
+    this.rewards, {
+    this.scrapHammers = 0,
+    this.pickups = const {},
+    this.heatBonus = 0,
+    this.tiersAbove = 0,
+  });
 
   final int xp;
   final int level;
@@ -626,6 +649,11 @@ class XpAward {
 
   /// Versus: embers collected during the series, granted at the end.
   final Map<String, int> pickups;
+
+  /// The part of [xp] the heat added, and how many tiers it ran above this
+  /// smith's own (shared/room-protocol.md "XP and heat").
+  final int heatBonus;
+  final int tiersAbove;
 }
 
 Map<String, XpAward> _xpAwards(Object? j) => {
@@ -637,6 +665,8 @@ Map<String, XpAward> _xpAwards(Object? j) => {
       _scores(e.value['rewards']),
       scrapHammers: (e.value['scrapHammers'] as num?)?.toInt() ?? 0,
       pickups: _scores(e.value['pickups']),
+      heatBonus: (e.value['heatBonus'] as num?)?.toInt() ?? 0,
+      tiersAbove: (e.value['tiersAbove'] as num?)?.toInt() ?? 0,
     ),
 };
 
@@ -782,6 +812,12 @@ class RoomError extends RoomEvent {
   final String code;
 }
 
+/// Not from the server: the host role has just moved to me (the host left,
+/// or was away too long). [RoomSession] adds it to its effects.
+class BecameHost extends RoomEvent {
+  const BecameHost();
+}
+
 /// The connection to one room. Rejoins automatically for a while after a
 /// drop (the server keeps your seat for 30 s).
 class RoomClient {
@@ -840,9 +876,10 @@ class RoomClient {
 
   void ready(bool ready) => _send({'op': 'READY', 'ready': ready});
 
-  /// Host only: best of [series] rounds (Versus), and the variant
-  /// (`classic` or `survival`).
-  void config({int? series, String? variant}) => _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant});
+  /// Host only: best of [series] rounds (Versus), the variant (`classic` or
+  /// `survival`), and the [heat]: a tier 1–6, or `'auto'`.
+  void config({int? series, String? variant, Object? heat}) =>
+      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant, 'heat': ?heat});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});

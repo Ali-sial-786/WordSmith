@@ -17,7 +17,7 @@ words that aren't in the grid are bonus words.
 On top of that solo game, Wordsmith adds:
 
 - **Accounts and levels.** XP is earned in every mode, and your Smith Level rises with it.
-- **Co-op (2–4 players):** one shared, timed puzzle. Whoever enters a word first gets the points, and the host's level sets the difficulty.
+- **Co-op (2–4 players):** one shared, timed puzzle. Whoever enters a word first gets the points, and the host sets the difficulty (by default, from their level).
 - **Versus (2–5 players):** everyone gets the same puzzle and races on their own copy. The first to finish wins the round, and matches are best-of-3/5/7/10 series.
 
 The theme is blacksmithing. You **forge** words on the **anvil**, and they're
@@ -181,6 +181,13 @@ on the phone.
 | Co-op round | 20 for taking part, plus 1 per 10 points you scored, plus 20 if the team fills the mold, plus 10 for MVP |
 | Versus series | 5 per round played, plus 10 per round won, plus 30 for winning the series |
 
+**Hotter games pay more.** Co-op and Versus XP are multiplied by the heat
+played (§5): ×1.0 at Ember, ×1.2 Dull Red, ×1.4 Cherry Red, ×1.6 Orange,
+×1.8 Yellow and ×2.0 White Heat. Playing above your own tier (the heat
+for your level) adds 0.2 more for each tier, so a newcomer in a White Heat
+game gets ×3.0. A strong player who picks a cool heat gets only that
+heat's multiplier.
+
 **XP to reach the next level:** `50 + 10 × current level`. For example, Lv 1→2 takes 60 XP, Lv 10→11 takes 150, and Lv 50→51 takes 550.
 
 | Rank | Smith Level |
@@ -204,8 +211,7 @@ Puzzle difficulty is a **heat tier**, named after the colours a blacksmith reads
 in hot metal.
 
 - **Campaign:** the heat comes from where you are in the campaign.
-- **Co-op:** the heat comes from the **host's Smith Level**.
-- **Versus:** the heat comes from the **median Smith Level** in the room.
+- **Co-op and Versus:** the **host picks the heat** in the lobby. **Auto**, the default, is the **host's Smith Level** in co-op and the **median Smith Level** in the room in Versus.
 
 | Heat | Smith Level | Anvil letters | Grid words | Word pool | Co-op timer | VS round timer |
 |---|---|---|---|---|---|---|
@@ -216,7 +222,7 @@ in hot metal.
 | Yellow | 51–80 | 7 | 11–15 | + uncommon | 4:00 | 3:00 |
 | White Heat | 81+ | 7–8 | 14–20 | uncommon, longer words | 4:00 | 3:00 |
 
-**Co-op scales with team size.** It uses a puzzle from the host's heat tier
+**Co-op scales with team size.** It uses a puzzle from the room's heat tier
 with about **2 more grid words for each player after the first**, so four
 people don't finish it in seconds. Two practical limits apply:
 - A 4-letter Ember anvil can't support that many common words, so Ember rooms of 3–4 get puzzles of 6–11 words.
@@ -272,7 +278,7 @@ One shared mold, one timer, everyone forging together.
 
 ### Flow
 1. The **host** creates a Co-op room, and friends join.
-2. **Lobby:** the player list shows levels and ready checks, with a heat banner ("Cherry Red — set by host Ali, Lv 34"). Only the host can start.
+2. **Lobby:** the player list shows levels and ready checks. The host picks the heat (Auto or a tier) and everyone sees it ("Cherry Red heat · picked by Ali"). Only the host can start.
 3. A **3-2-1 countdown** starts the round. Everyone sees the **same mold and the same letters**, and each player can Turn (shuffle) their own anvil.
 4. **Forging.** The server referees every word:
    - **A grid word nobody has found yet:** it goes to that player. It fills in **that player's colour** on every screen, and a line appears in the feed: "Ali forged THREAD +60".
@@ -301,7 +307,7 @@ the player's initial, so it's still readable for colour-blind players.
 - Under the mold there's a **feed line** showing the last 2–3 claims.
 
 ### Disconnects
-- **Host leaves in the lobby:** the host role passes to whoever has been in the room longest. Their level now sets the heat, and the banner updates.
+- **Host leaves (or drops for more than 30 seconds):** the host role passes to whoever has been in the room longest among those still connected. On Auto, their level now sets the heat, and the banner updates. The old host doesn't get it back by returning.
 - **Host leaves mid-round:** the round carries on, because it runs on the server, not on the host's phone.
 - **Anyone drops:** they have **30 seconds to rejoin** and keep their points. They get the full current board when they're back.
 

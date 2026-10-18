@@ -242,9 +242,11 @@ describe("co-op survival rounds", () => {
   it("pay 2 XP per word saved on top of co-op XP, up to +30", () => {
     const player = { id: "a", points: 40, words: 1, longest: "TEAR", bonus: 0 };
     const profile = { totalXp: 0, scrapBin: 0 };
-    expect(coopAward(player, { reason: "melted", mvp: "a", saved: 4 }, profile).amount).toBe(20 + 4 + 10 + 8);
-    expect(coopAward(player, { reason: "complete", mvp: null, saved: 20 }, profile).amount).toBe(20 + 4 + 20 + 30);
-    expect(coopAward(player, { reason: "timeout", mvp: null }, profile).amount).toBe(24);
+    expect(coopAward(player, { reason: "melted", mvp: "a", saved: 4 }, profile, 1).amount).toBe(20 + 4 + 10 + 8);
+    expect(coopAward(player, { reason: "complete", mvp: null, saved: 20 }, profile, 1).amount).toBe(20 + 4 + 20 + 30);
+    expect(coopAward(player, { reason: "timeout", mvp: null }, profile, 1).amount).toBe(24);
+    // The heat multiplies the saved-word bonus too: Dull Red, a tier above level 1, is ×1.4.
+    expect(coopAward(player, { reason: "melted", mvp: "a", saved: 4 }, profile, 2).amount).toBe(Math.round((20 + 4 + 10 + 8) * 1.4));
   });
 });
 

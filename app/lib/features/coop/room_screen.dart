@@ -283,6 +283,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         if (message != null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         }
+      case BecameHost():
+        _toast("You're the host now: you pick the heat and start the next round.");
       case RoomEmote(:final from, :final emote):
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

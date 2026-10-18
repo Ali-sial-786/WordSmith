@@ -17,6 +17,7 @@ import {
 } from "../../src/rules/coop-round";
 import { parseMpPuzzle, type Pos } from "../../src/rules/mold";
 import { mulberry32 } from "../../src/rules/pickups";
+import { totalXpForLevel } from "../../src/rules/progression";
 import { EXAMPLE, playback } from "./fixtures";
 
 const T0 = 1_800_000_000_000;
@@ -244,10 +245,27 @@ describe("forgedWords", () => {
 describe("coopAward", () => {
   it("adds co-op XP, level-ups and the Scrap Bin", () => {
     const player = { id: "a", points: 80, words: 2, longest: "RATE", bonus: 2 };
-    const award = coopAward(player, { reason: "complete", mvp: "a" }, { totalXp: 10, scrapBin: 9 });
-    expect(award.amount).toBe(20 + 8 + 20 + 10);
+    const award = coopAward(player, { reason: "complete", mvp: "a" }, { totalXp: 10, scrapBin: 9 }, 1);
+    expect(award).toMatchObject({ amount: 20 + 8 + 20 + 10, heatBonus: 0, tiersAbove: 0 });
     expect(award.xp).toMatchObject({ totalXp: 68, level: 2, levelsGained: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 } });
     expect(award.scrap).toEqual({ bin: 1, hammers: 1 });
-    expect(coopAward({ ...player, points: 0, bonus: 0 }, { reason: "timeout", mvp: null }, { totalXp: 0, scrapBin: 0 }).amount).toBe(20);
+    expect(coopAward({ ...player, points: 0, bonus: 0 }, { reason: "timeout", mvp: null }, { totalXp: 0, scrapBin: 0 }, 1).amount).toBe(20);
+  });
+
+  it("grows with the heat, more so above the player's own tier", () => {
+    const player = { id: "a", points: 100, words: 3, longest: "RATE", bonus: 0 };
+    const results = { reason: "complete", mvp: "a" } as const;
+    // 20 + 10 + 20 + 10 = 60 at Ember.
+    const newcomer = { totalXp: 0, scrapBin: 0 };
+    // Cherry Red is 2 tiers above level 1: ×1.4 + 0.4.
+    expect(coopAward(player, results, newcomer, 3)).toMatchObject({ amount: 108, heatBonus: 48, tiersAbove: 2 });
+    // White Heat: ×2.0 + 1.0.
+    expect(coopAward(player, results, newcomer, 6)).toMatchObject({ amount: 180, heatBonus: 120, tiersAbove: 5 });
+    // A level 40 (Orange) smith: no bonus for a cooler heat, just its own multiplier.
+    const strong = { totalXp: totalXpForLevel(40), scrapBin: 0 };
+    expect(coopAward(player, results, strong, 1)).toMatchObject({ amount: 60, heatBonus: 0, tiersAbove: 0 });
+    expect(coopAward(player, results, strong, 3)).toMatchObject({ amount: 84, heatBonus: 24, tiersAbove: 0 });
+    expect(coopAward(player, results, strong, 4)).toMatchObject({ amount: 96, tiersAbove: 0 });
+    expect(coopAward(player, results, strong, 5)).toMatchObject({ amount: 120, tiersAbove: 1 });
   });
 });

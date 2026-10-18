@@ -4,6 +4,8 @@
  * XP is stored as a running lifetime total; the level is derived from it.
  */
 
+import { heatForLevel, type HeatTier } from "./heat";
+
 // ---------------------------------------------------------------------------
 // Hint types and unlocks (DESIGN.md §3.1)
 // ---------------------------------------------------------------------------
@@ -206,6 +208,36 @@ export interface VsXpInput {
 /** Versus series: 5 per round played, +10 per round won, +30 for winning the series. */
 export function vsSeriesXp(input: VsXpInput): number {
   return 5 * input.roundsPlayed + 10 * input.roundsWon + (input.wonSeries ? 30 : 0);
+}
+
+// ---------------------------------------------------------------------------
+// XP and heat (shared/room-protocol.md "XP and heat")
+// ---------------------------------------------------------------------------
+
+/** Co-op and Versus XP multiplier by heat tier, in tenths: ×1.0 at Ember up to ×2.0 at White Heat. */
+export const HEAT_XP_TENTHS: Readonly<Record<HeatTier, number>> = { 1: 10, 2: 12, 3: 14, 4: 16, 5: 18, 6: 20 };
+/** Added to the multiplier, in tenths, for each tier the game ran above the player's own (+1.0 at most, 5 tiers up). */
+export const PLAYING_UP_XP_TENTHS = 2;
+
+export interface HeatXp {
+  /** The XP at this heat. */
+  readonly xp: number;
+  /** What the heat added: `xp` less the XP before it. */
+  readonly heatBonus: number;
+  /** Tiers the game ran above the player's own (the tier for their level); 0 at or below it. */
+  readonly tiersAbove: number;
+}
+
+/**
+ * Room XP at the heat played: `base` times the tier's multiplier, plus 0.2
+ * for each tier above the tier for the player's `level`, rounded. So a
+ * newcomer in a hot game earns clearly more, and a strong player who picks
+ * a cool heat gets only that heat's multiplier.
+ */
+export function heatXp(base: number, heat: HeatTier, level: number): HeatXp {
+  const tiersAbove = Math.max(0, heat - heatForLevel(level));
+  const xp = Math.round((base * (HEAT_XP_TENTHS[heat] + PLAYING_UP_XP_TENTHS * tiersAbove)) / 10);
+  return { xp, heatBonus: xp - base, tiersAbove };
 }
 
 // ---------------------------------------------------------------------------

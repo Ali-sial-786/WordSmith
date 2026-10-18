@@ -28,7 +28,19 @@ import { decideClaim } from "./coop";
 import { lenOf, roundStartFields, type RoundStartFields, type SlotWord } from "./coop-round";
 import { vsRoundTimerMs, type HeatTier } from "./heat";
 import { cellKey, indexMold, newlyComplete, placeEmbers, shuffleLetters, type CellKey, type MoldIndex, type MpPuzzle, type Pos, type Rand } from "./mold";
-import { addToScrapBin, applyXp, HINT_KINDS, noHints, vsSeriesXp, type HintCounts, type HintKind, type ScrapBinResult, type XpAward } from "./progression";
+import {
+  addToScrapBin,
+  applyXp,
+  heatXp,
+  HINT_KINDS,
+  levelFromTotalXp,
+  noHints,
+  vsSeriesXp,
+  type HintCounts,
+  type HintKind,
+  type ScrapBinResult,
+  type XpAward,
+} from "./progression";
 import {
   applyHeatProgress,
   firstClock,
@@ -726,6 +738,9 @@ export function vsSeriesResults(s: VsSeries, outcome: VsSeriesOutcome): VsSeries
 
 export interface VsAward {
   readonly amount: number;
+  /** What the heat added to `amount`, and how many tiers it ran above the player's own (progression.ts `heatXp`). */
+  readonly heatBonus: number;
+  readonly tiersAbove: number;
   readonly xp: XpAward;
   readonly scrap: ScrapBinResult;
   /** Every hint to add: level-up rewards, Scrap Bin hammers and embers. */
@@ -734,16 +749,23 @@ export interface VsAward {
 
 /**
  * What one player gets for the series: VS XP (5 per round raced, 10 per
- * round won, 30 for the series) with any level-ups and their rewards, the
+ * round won, 30 for the series) at the series' `heat` (more so above the
+ * player's own tier, `heatXp`) with any level-ups and their rewards, the
  * series' bonus words smelted in the Scrap Bin, and the embers collected.
  */
-export function vsAward(player: VsPlayerResult, winner: string | null, profile: { readonly totalXp: number; readonly scrapBin: number }): VsAward {
-  const amount = vsSeriesXp({ roundsPlayed: player.rounds, roundsWon: player.wins, wonSeries: winner === player.id });
-  const xp = applyXp(profile.totalXp, amount);
+export function vsAward(
+  player: VsPlayerResult,
+  winner: string | null,
+  profile: { readonly totalXp: number; readonly scrapBin: number },
+  heat: HeatTier,
+): VsAward {
+  const base = vsSeriesXp({ roundsPlayed: player.rounds, roundsWon: player.wins, wonSeries: winner === player.id });
+  const hot = heatXp(base, heat, levelFromTotalXp(profile.totalXp));
+  const xp = applyXp(profile.totalXp, hot.xp);
   const scrap = addToScrapBin(profile.scrapBin, player.bonus);
   const gained = noHints();
   for (const kind of HINT_KINDS) gained[kind] = xp.rewards[kind] + player.pickups[kind];
   gained.hammer += scrap.hammers;
-  return { amount, xp, scrap, gained };
+  return { amount: hot.xp, heatBonus: hot.heatBonus, tiersAbove: hot.tiersAbove, xp, scrap, gained };
 }
 

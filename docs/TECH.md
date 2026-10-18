@@ -140,9 +140,9 @@ below are the M4 plan.
 | Op | Direction | Payload |
 |---|---|---|
 | `WELCOME` | S→C | your user ID, protocol version, `serverNow` |
-| `LOBBY` | S→C | players (ID, name, avatar, level, colour, ready, connected), host, mode, phase, heat, VS series length |
+| `LOBBY` | S→C | players (ID, name, avatar, level, colour, ready, connected), host, mode, phase, heat (the host's pick or auto, and what auto gives), VS series length |
 | `READY` | C→S | `{ready: bool}` |
-| `CONFIG` | C→S (host) | VS series length (3 / 5 / 7 / 10) |
+| `CONFIG` | C→S (host) | heat (1–6 or auto), VS series length (3 / 5 / 7 / 10), variant |
 | `START` | C→S (host) | — |
 | `ROUND_START` | S→C | round number, grid size, slots (x, y, direction, length; **never the words**), letters, pickup cells, `startsAt`, `endsAt`, `serverNow`. VS also gets the series tally and the list of players in this round (for sudden death). |
 | `SUBMIT` | C→S | `{word, seq}` |
@@ -191,13 +191,14 @@ below are the M4 plan.
 - **Ordering:** a Durable Object handles one message at a time, in arrival order. The first `SUBMIT` of a word that nobody has found wins. Nothing else is needed.
 - **Persistence:** in-memory state is **lost when the DO hibernates**, so all room state lives in the DO's SQLite storage. That covers players, scores, the puzzle with its answers, claims, the series tally and deadlines. It's reloaded on wake, and a busy round stays in memory anyway.
 - **Alarms:** a DO has a single alarm, so it's always set to the **nearest deadline** (countdown end, `endsAt`, a rejoin grace period, or idle cleanup). Each time the alarm fires, the DO checks every deadline that has passed.
-- **Choosing a puzzle at the start of a round:** query D1 for the heat tier (and, for co-op, the size for the team), excluding puzzles any player has seen in the last 60 days. One is chosen at random.
+- **Choosing a puzzle at the start of a round:** query D1 for the heat tier the host picked (or auto: the host's level in co-op, the median in VS) and, for co-op, the size for the team, with when anyone seated last had each one. One is chosen at random among those nobody has had in the last 60 days, or, once a player has had them all, among the third seen longest ago, so the order never repeats. The room also skips its own latest 50 puzzles while it can, so a series never repeats one even if a `puzzle_seen` write was lost.
 - **Pickups in multiplayer:** the server picks pickup cells at random when the round starts. In VS everyone gets the same cells, because it's the same puzzle.
 - **Checking a word:** normalise it to uppercase A–Z, check it's 3+ letters and can be made from the anvil's letters, then look it up in this puzzle's answer set and its bonus set (both precomputed by the generator, so no full dictionary is needed on the server).
 - **Rate limit:** words use a token bucket of 4 per second **per player** (so a second socket doesn't double it); 10 invalid words within 5 seconds triggers a 3-second lockout. Other messages: a burst of 10, then 2 a second, per socket.
 - **Writing results:** at the end of a round or series the server writes match records, XP, stats and hint changes to D1 in **one batch**, and the XP goes out in `ROUND_END` (retried by the alarm if the write fails).
 - **Rejoining:** a socket that closes mid-round starts a 30-second grace period. A player who reconnects with the same user ID gets a `SNAPSHOT`.
-- **Host handoff:** in the lobby, if the host leaves, the player who joined earliest becomes host and the heat is recalculated.
+- **Host handoff:** in any phase, when the host leaves or their 30-second grace runs out, the player who joined earliest among those connected becomes host (anyone still seated if nobody is), and an auto heat is recalculated. A returning host doesn't take it back.
+- **XP and heat:** co-op and VS XP are multiplied by the heat played, ×1.0 at Ember up to ×2.0 at White Heat, plus 0.2 for each tier above the player's own (up to ×3.0). See `shared/room-protocol.md` "XP and heat".
 
 ### Game rules as pure functions
 All the rules are plain, side-effect-free TypeScript in `server/src/rules/`:

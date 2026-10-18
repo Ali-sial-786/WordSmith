@@ -38,7 +38,7 @@ import {
   type Pos,
   type Rand,
 } from "./mold";
-import { addToScrapBin, applyXp, coopRoundXp, type HintKind, type ScrapBinResult, type XpAward } from "./progression";
+import { addToScrapBin, applyXp, coopRoundXp, heatXp, levelFromTotalXp, type HintKind, type ScrapBinResult, type XpAward } from "./progression";
 import {
   applyHeatProgress,
   firstClock,
@@ -512,6 +512,9 @@ export function forgedWords(r: CoopRound): Record<string, string[]> {
 
 export interface CoopAward {
   readonly amount: number;
+  /** What the heat added to `amount`, and how many tiers it ran above the player's own (progression.ts `heatXp`). */
+  readonly heatBonus: number;
+  readonly tiersAbove: number;
   readonly xp: XpAward;
   readonly scrap: ScrapBinResult;
 }
@@ -519,17 +522,26 @@ export interface CoopAward {
 /**
  * What one player gets for a round: co-op XP (with any level-ups and their
  * rewards), and their bonus words smelted in the Scrap Bin. A survival
- * round adds 2 per word the team saved, up to +30.
+ * round adds 2 per word the team saved, up to +30. All of it grows with
+ * the round's `heat`, more so above the player's own tier (`heatXp`).
  */
 export function coopAward(
   player: CoopPlayerResult,
   results: Pick<CoopResults, "reason" | "mvp" | "saved">,
   profile: { readonly totalXp: number; readonly scrapBin: number },
+  heat: HeatTier,
 ): CoopAward {
-  const amount =
+  const base =
     coopRoundXp({ points: player.points, teamFilledMold: results.reason === "complete", isMvp: results.mvp === player.id }) +
     survivalCoopBonusXp(results.saved ?? 0);
-  return { amount, xp: applyXp(profile.totalXp, amount), scrap: addToScrapBin(profile.scrapBin, player.bonus) };
+  const hot = heatXp(base, heat, levelFromTotalXp(profile.totalXp));
+  return {
+    amount: hot.xp,
+    heatBonus: hot.heatBonus,
+    tiersAbove: hot.tiersAbove,
+    xp: applyXp(profile.totalXp, hot.xp),
+    scrap: addToScrapBin(profile.scrapBin, player.bonus),
+  };
 }
 
 // ---------------------------------------------------------------------------

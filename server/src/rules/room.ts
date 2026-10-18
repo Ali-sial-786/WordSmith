@@ -84,23 +84,72 @@ export interface Seat {
   readonly joinedAt: number;
   /** False once the player has left (LEAVE or rejoin time ran out) but is still listed. */
   readonly present: boolean;
+  /** Has a socket open (or is opening one) right now. */
+  readonly connected: boolean;
 }
 
 /**
- * Who should be host: the current host if they're still present, otherwise
- * whoever joined earliest among those present. `null` if nobody is.
+ * Who should be host: the current host while they're still present (a
+ * dropped host keeps it through their rejoin time), otherwise whoever
+ * joined earliest among those connected, or among those present if nobody
+ * is connected. `null` if nobody is present. A host who comes back after
+ * losing it doesn't take it back.
  */
 export function pickHost(current: string | null, seats: readonly Seat[]): string | null {
   const present = seats.filter((s) => s.present);
   if (current !== null && present.some((s) => s.id === current)) return current;
+  const connected = present.filter((s) => s.connected);
   let earliest: Seat | null = null;
-  for (const s of present) if (earliest === null || s.joinedAt < earliest.joinedAt) earliest = s;
+  for (const s of connected.length > 0 ? connected : present) if (earliest === null || s.joinedAt < earliest.joinedAt) earliest = s;
   return earliest?.id ?? null;
 }
 
 /** Puzzle size for a team: one per player, 1–4 (shared/puzzle-format.md). */
 export function puzzleSizeFor(players: number): number {
   return Math.min(4, Math.max(1, players));
+}
+
+// ---------------------------------------------------------------------------
+// Choosing a puzzle
+// ---------------------------------------------------------------------------
+
+/** Puzzles a room remembers having played, newest last, so it doesn't play them again while it can help it. */
+export const RECENT_PUZZLES = 50;
+
+export interface PuzzleCandidate {
+  readonly id: string;
+  /** When any player in the room last had it (epoch ms), or `null` if none of them ever has. */
+  readonly last: number | null;
+}
+
+/**
+ * The round's puzzle among the bank's `candidates` (one heat and size), at
+ * random:
+ *
+ * - among those nobody in the room has had since `seenSince`;
+ * - if there are none, among the third of them seen longest ago, so a
+ *   player who has had them all still gets a different run every time,
+ *   never the same order.
+ *
+ * Puzzles in `avoid` (the room's own latest) are left out unless nothing
+ * else is left. `null` if there are no candidates.
+ */
+export function choosePuzzle(
+  candidates: readonly PuzzleCandidate[],
+  seenSince: number,
+  avoid: readonly string[],
+  rand: () => number,
+): string | null {
+  const allowed = candidates.filter((c) => !avoid.includes(c.id));
+  const pool = allowed.length > 0 ? allowed : candidates;
+  const fresh = pool.filter((c) => c.last === null || c.last <= seenSince);
+  const from = fresh.length > 0 ? fresh : [...pool].sort((a, b) => a.last! - b.last!).slice(0, Math.ceil(pool.length / 3));
+  return from[Math.min(from.length - 1, Math.floor(rand() * from.length))]?.id ?? null;
+}
+
+/** `ids` with `id` added as the newest, keeping the latest {@link RECENT_PUZZLES}. */
+export function rememberPuzzle(ids: readonly string[], id: string): string[] {
+  return [...ids.filter((x) => x !== id), id].slice(-RECENT_PUZZLES);
 }
 
 // ---------------------------------------------------------------------------

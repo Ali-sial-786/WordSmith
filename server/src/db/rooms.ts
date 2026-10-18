@@ -16,7 +16,7 @@ import type { HeatTier } from "../rules/heat";
 import { parseMpPuzzle, type MpPuzzle } from "../rules/mold";
 import { HINT_KINDS, levelFromTotalXp, noHints, type HintCounts, type HintKind } from "../rules/progression";
 import type { PlayFacts } from "../rules/orders";
-import type { RoomMode } from "../rules/room";
+import { choosePuzzle, type PuzzleCandidate, type RoomMode } from "../rules/room";
 import type { SeriesLength } from "../rules/vs";
 import { vsAward, type VsSeriesResults } from "../rules/vs-round";
 import type { VsXpBody, XpBody } from "../room/protocol";
@@ -28,37 +28,48 @@ import type { VsXpBody, XpBody } from "../room/protocol";
 export interface PuzzleChoice {
   readonly heat: HeatTier;
   readonly size: number;
+  /** Everyone who will see the answers: their recent puzzles are skipped if possible. */
   readonly playerIds: readonly string[];
   /** Puzzles any player saw after this (epoch ms) are skipped if possible. */
   readonly seenSince: number;
+  /** The room's own latest puzzles, skipped unless nothing else is left (so a series never repeats one). */
+  readonly avoid?: readonly string[];
+  /** For tests; `Math.random` otherwise. */
+  readonly rand?: () => number;
 }
 
 /**
- * A random bank puzzle for the team. Prefers, in order: the right heat,
- * the right size (or the nearest), not seen by any player since
- * `seenSince` (else the one they saw longest ago). `null` if the bank is empty.
+ * A random bank puzzle for the team, from the right heat and size, or the
+ * nearest size at that heat, or (no puzzle at that heat at all) the
+ * nearest heat. Among those it's random: one nobody in the room has seen
+ * since `seenSince`, else one of the third they saw longest ago (rules/room.ts
+ * `choosePuzzle`). `null` if the bank is empty.
  */
 export async function pickPuzzle(db: D1Database, choice: PuzzleChoice): Promise<MpPuzzle | null> {
-  // `last`: when any of the players last had it. Recent ones go last, oldest first.
-  const select = `SELECT p.data,
-                         (SELECT MAX(s.seen_at) FROM puzzle_seen s
-                           WHERE s.puzzle_id = p.id AND s.user_id IN (SELECT value FROM json_each(?3))) AS last
-                    FROM puzzles p`;
-  const recent = "(last IS NOT NULL AND last > ?4)";
-  const ids = JSON.stringify(choice.playerIds);
-  const row =
-    (await db
+  // `last`: when any of the players last had it.
+  const candidates = (heat: number, size: number) =>
+    db
       .prepare(
-        `${select} WHERE p.pool = 'mp' AND p.heat = ?1
-          ORDER BY abs(p.size - ?2), ${recent}, CASE WHEN ${recent} THEN last ELSE 0 END, random() LIMIT 1`,
+        `SELECT p.id,
+                (SELECT MAX(s.seen_at) FROM puzzle_seen s
+                  WHERE s.puzzle_id = p.id AND s.user_id IN (SELECT value FROM json_each(?3))) AS last
+           FROM puzzles p WHERE p.pool = 'mp' AND p.heat = ?1 AND p.size = ?2`,
       )
-      .bind(choice.heat, choice.size, ids, choice.seenSince)
-      .first<{ data: string }>()) ??
-    // Nothing at this heat at all: take the nearest heat rather than fail.
-    (await db
-      .prepare(`${select} WHERE p.pool = 'mp' ORDER BY abs(p.heat - ?1), abs(p.size - ?2), ${recent}, random() LIMIT 1`)
-      .bind(choice.heat, choice.size, ids, choice.seenSince)
-      .first<{ data: string }>());
+      .bind(heat, size, JSON.stringify(choice.playerIds))
+      .all<PuzzleCandidate>();
+
+  let { results } = await candidates(choice.heat, choice.size);
+  if (results.length === 0) {
+    // None of this size and heat: the nearest size at this heat, or else the nearest heat, rather than fail.
+    const nearest = await db
+      .prepare("SELECT heat, size FROM puzzles WHERE pool = 'mp' ORDER BY abs(heat - ?1), heat, abs(size - ?2), size LIMIT 1")
+      .bind(choice.heat, choice.size)
+      .first<{ heat: number; size: number }>();
+    if (nearest === null) return null;
+    ({ results } = await candidates(nearest.heat, nearest.size));
+  }
+  const id = choosePuzzle(results, choice.seenSince, choice.avoid ?? [], choice.rand ?? Math.random);
+  const row = id === null ? null : await db.prepare("SELECT data FROM puzzles WHERE id = ?1").bind(id).first<{ data: string }>();
   return row === null ? null : parseMpPuzzle(JSON.parse(row.data));
 }
 
@@ -279,7 +290,8 @@ function placements(results: CoopResults): Map<string, number> {
  * Writes a finished co-op round (see {@link writeMatch}): stats are
  * `coop_rounds`, `coop_mvps`, `words_forged` and `longest_word`; hints won
  * are level-up rewards and Scrap Bin hammers. A survival round's XP has
- * its bonus for words saved (`coopAward`). Returns each written player's XP.
+ * its bonus for words saved, and all of it grows with the round's heat
+ * (`coopAward`). Returns each written player's XP.
  */
 export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, now: number): Promise<Record<string, XpBody>> {
   const { results } = record;
@@ -307,7 +319,7 @@ export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, no
     now,
     (uid, profile) => {
       const player = results.players.find((p) => p.id === uid)!;
-      const award = coopAward(player, results, profile);
+      const award = coopAward(player, results, profile, record.heat);
       const gained = { ...award.xp.rewards };
       gained.hammer += award.scrap.hammers;
       return {
@@ -322,10 +334,18 @@ export async function writeCoopRound(db: D1Database, record: CoopRoundRecord, no
         statsSet: `coop_rounds = coop_rounds + 1, coop_mvps = coop_mvps + ?3, words_forged = words_forged + ?4, ${longestWordSet(5)}`,
         statsBinds: [results.mvp === uid ? 1 : 0, player.words, player.longest],
         facts: { coopRounds: 1, bonusWords: player.bonus, forged: record.forged?.[uid] ?? [] },
-        body: { xp: award.amount, level: award.xp.level, levelUps: award.xp.levelsGained, rewards: award.xp.rewards, scrapHammers: award.scrap.hammers },
+        body: {
+          xp: award.amount,
+          level: award.xp.level,
+          levelUps: award.xp.levelsGained,
+          rewards: award.xp.rewards,
+          scrapHammers: award.scrap.hammers,
+          heatBonus: award.heatBonus,
+          tiersAbove: award.tiersAbove,
+        },
       };
     },
-    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0 }),
+    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0, heatBonus: 0, tiersAbove: 0 }),
   );
 }
 
@@ -350,8 +370,8 @@ export interface VsSeriesRecord {
 
 /**
  * Writes a finished series as one match (see {@link writeMatch}), for
- * everyone who raced in it, including racers who left: `vsSeriesXp`,
- * level-up rewards, Scrap Bin hammers from the series' bonus words, the
+ * everyone who raced in it, including racers who left: `vsSeriesXp` at
+ * the series' heat (`vsAward`), level-up rewards, Scrap Bin hammers from the series' bonus words, the
  * embers collected, and stats `vs_series`, `vs_series_won`,
  * `vs_rounds_won`, `words_forged` and `longest_word`. `match_players` gets
  * the podium place and round wins. Returns each written player's XP.
@@ -378,7 +398,7 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     now,
     (uid, profile) => {
       const player = results.players.find((p) => p.id === uid)!;
-      const award = vsAward(player, results.winner, profile);
+      const award = vsAward(player, results.winner, profile, record.heat);
       return {
         xp: award.amount,
         totalXp: award.xp.totalXp,
@@ -398,10 +418,12 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
           levelUps: award.xp.levelsGained,
           rewards: award.xp.rewards,
           scrapHammers: award.scrap.hammers,
+          heatBonus: award.heatBonus,
+          tiersAbove: award.tiersAbove,
           pickups: { ...player.pickups },
         },
       };
     },
-    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0, pickups: noHints() }),
+    (xp, totalXp) => ({ xp, level: levelFromTotalXp(totalXp), levelUps: 0, rewards: noHints(), scrapHammers: 0, heatBonus: 0, tiersAbove: 0, pickups: noHints() }),
   );
 }

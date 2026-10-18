@@ -70,7 +70,7 @@ import {
   type RoundEndReason,
   type SlotWord,
 } from "../rules/coop-round";
-import { heatForLevel, vsHeat, type HeatTier } from "../rules/heat";
+import { chosenHeat, heatForLevel, vsHeat, type HeatTier } from "../rules/heat";
 import { emberKind, type MpPuzzle } from "../rules/mold";
 import { isHintUnlocked, type HintKind } from "../rules/progression";
 import {
@@ -89,6 +89,7 @@ import {
   PUZZLE_REPEAT_WINDOW_MS,
   puzzleSizeFor,
   REJOIN_GRACE_MS,
+  rememberPuzzle,
   SubmitLimiter,
   type RoomMode,
   type RoomPhase,
@@ -209,6 +210,10 @@ interface Room {
   series?: SeriesLength;
   /** The variant the next START or AGAIN plays (CONFIG); classic while absent. */
   variant?: Variant;
+  /** The heat the host picked for the next START or AGAIN (CONFIG); `"auto"` while absent. */
+  heat?: HeatTier;
+  /** The latest puzzles this room has played, newest last (rules/room.ts `RECENT_PUZZLES`). */
+  recent?: string[];
 }
 
 /** Where a round's clock stands, whatever the mode. */
@@ -276,10 +281,6 @@ function closeSocket(ws: WebSocket, code: number, reason: string): void {
 
 function httpError(status: number, error: string): Response {
   return Response.json({ error }, { status });
-}
-
-function seats(room: Room): Seat[] {
-  return room.players.map((p) => ({ id: p.id, joinedAt: p.joinedAt, present: !p.left }));
 }
 
 /** Players holding a seat (not left), in join order. */
@@ -479,7 +480,8 @@ export class RoomDO extends DurableObject<Env> {
       // Versus: a racer who left mid-series comes back to watch; they stay out of it.
       Object.assign(player, { username: me.username, avatar: me.avatar, level: me.level, graceUntil: null, left: false });
     }
-    room.hostId = pickHost(room.hostId, seats(room));
+    // A host who lost the role while away doesn't take it back.
+    room.hostId = pickHost(room.hostId, this.seats(room, me.id));
     room.lastActivity = now;
     room.emptySince = null;
     this.write(ROOM, room);
@@ -592,7 +594,7 @@ export class RoomDO extends DurableObject<Env> {
       case "CONFIG": {
         // Co-op has no series to configure.
         if (message.series !== undefined && room.mode !== "vs") return this.error(ws, "bad_message");
-        // The series is chosen in the lobby; the variant in the lobby or results, for the next START or AGAIN.
+        // The series is chosen in the lobby; the variant and heat in the lobby or results, for the next START or AGAIN.
         if (message.series !== undefined ? room.phase !== "lobby" : !isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
         let changed = false;
@@ -602,6 +604,11 @@ export class RoomDO extends DurableObject<Env> {
         }
         if (message.variant !== undefined && (room.variant ?? "classic") !== message.variant) {
           room.variant = message.variant;
+          changed = true;
+        }
+        if (message.heat !== undefined && (room.heat ?? "auto") !== message.heat) {
+          if (message.heat === "auto") delete room.heat;
+          else room.heat = message.heat;
           changed = true;
         }
         if (changed) {
@@ -646,9 +653,10 @@ export class RoomDO extends DurableObject<Env> {
    * LEAVE, or a dropped player's rejoin time ran out. In the lobby or
    * results their seat goes at once; mid-game they stay listed (not
    * connected) until the co-op round or Versus series ends, keeping their
-   * points or wins, and XP. The host role moves to whoever joined
-   * earliest. In Versus a racer who goes mid-series is out of it, which
-   * may decide it ({@link racerOut}).
+   * points or wins, and XP. If they were host, the role moves to whoever
+   * joined earliest among those connected, so nobody is left waiting on a
+   * host who isn't there. In Versus a racer who goes mid-series is out of
+   * it, which may decide it ({@link racerOut}).
    */
   private removePlayer(room: Room, player: Player, now: number): void {
     const midGame = isPlayingPhase(room.phase);
@@ -659,7 +667,7 @@ export class RoomDO extends DurableObject<Env> {
     } else {
       room.players = room.players.filter((p) => p !== player);
     }
-    room.hostId = pickHost(room.hostId, seats(room));
+    room.hostId = pickHost(room.hostId, this.seats(room));
     for (const ws of this.socketsOf(player.id)) closeSocket(ws, CLOSE_LEFT, "left");
     if (this.openSockets().length === 0) room.emptySince ??= now;
     this.submitLimits.delete(player.id);
@@ -679,9 +687,8 @@ export class RoomDO extends DurableObject<Env> {
     this.starting = true;
     try {
       const room = this.room()!;
-      const host = room.players.find((p) => p.id === room.hostId);
-      const heat = heatForLevel(host?.level ?? 1);
-      const ids = room.players.filter((p) => !p.left).map((p) => p.id);
+      const heat = this.nextHeat(room);
+      const ids = seated(room).map((p) => p.id);
       let puzzle: MpPuzzle | null = null;
       try {
         puzzle = await pickPuzzle(this.env.DB, {
@@ -689,6 +696,7 @@ export class RoomDO extends DurableObject<Env> {
           size: puzzleSizeFor(ids.length),
           playerIds: ids,
           seenSince: Date.now() - PUZZLE_REPEAT_WINDOW_MS,
+          avoid: room.recent ?? [],
         });
       } catch (err) {
         console.error("room: choosing a puzzle failed", err);
@@ -712,6 +720,7 @@ export class RoomDO extends DurableObject<Env> {
       });
       fresh.rounds = round.round;
       fresh.phase = "countdown";
+      fresh.recent = rememberPuzzle(fresh.recent ?? [], puzzle.id);
       for (const p of fresh.players) p.ready = false;
       this.write(ROUND, round);
       this.write(RESULTS, null);
@@ -845,7 +854,7 @@ export class RoomDO extends DurableObject<Env> {
     const usernames = Object.fromEntries(room.players.map((p) => [p.id, p.username]));
     room.phase = "results";
     room.players = room.players.filter((p) => !p.left);
-    room.hostId = pickHost(room.hostId, seats(room));
+    room.hostId = pickHost(room.hostId, this.seats(room));
     const award: CoopPendingAward = {
       record: {
         matchId: round.matchId,
@@ -880,15 +889,15 @@ export class RoomDO extends DurableObject<Env> {
     this.starting = true;
     try {
       const room = this.room()!;
-      const players = seated(room);
-      const heat = vsHeat(players.map((p) => p.level));
+      const heat = this.nextHeat(room);
       let puzzle: MpPuzzle | null = null;
       try {
         puzzle = await pickPuzzle(this.env.DB, {
           heat,
           size: 1,
-          playerIds: players.map((p) => p.id),
+          playerIds: seated(room).map((p) => p.id),
           seenSince: Date.now() - PUZZLE_REPEAT_WINDOW_MS,
+          avoid: room.recent ?? [],
         });
       } catch (err) {
         console.error("room: choosing a puzzle failed", err);
@@ -931,14 +940,16 @@ export class RoomDO extends DurableObject<Env> {
     this.starting = true;
     try {
       const series = this.series()!;
+      const before = this.room()!;
       let puzzle: MpPuzzle | null = null;
       try {
-        // Everyone still in the series sees the answers at the end, watchers included.
+        // Everyone seated sees the answers at the end, watchers included (sudden death, or out of the series).
         puzzle = await pickPuzzle(this.env.DB, {
           heat: series.heat,
           size: 1,
-          playerIds: activeRacers(series),
+          playerIds: seated(before).map((p) => p.id),
           seenSince: Date.now() - PUZZLE_REPEAT_WINDOW_MS,
+          avoid: before.recent ?? [],
         });
       } catch (err) {
         console.error("room: choosing a puzzle failed", err);
@@ -964,7 +975,7 @@ export class RoomDO extends DurableObject<Env> {
       await this.schedule();
 
       try {
-        await recordSeen(this.env.DB, puzzle.id, activeRacers(fresh), at);
+        await recordSeen(this.env.DB, puzzle.id, seated(room).map((p) => p.id), at);
       } catch (err) {
         console.error("room: recording puzzle_seen failed", err);
       }
@@ -987,6 +998,7 @@ export class RoomDO extends DurableObject<Env> {
     });
     series.standingsEndsAt = null;
     room.phase = "countdown";
+    room.recent = rememberPuzzle(room.recent ?? [], puzzle.id);
     this.write(ROUND, round);
     this.write(SERIES, series);
     this.write(ROOM, room);
@@ -1096,7 +1108,7 @@ export class RoomDO extends DurableObject<Env> {
     series.standingsEndsAt = null;
     room.phase = "results";
     room.players = room.players.filter((p) => !p.left);
-    room.hostId = pickHost(room.hostId, seats(room));
+    room.hostId = pickHost(room.hostId, this.seats(room));
     const award: VsPendingAward = {
       kind: "vs",
       record: {
@@ -1482,21 +1494,31 @@ export class RoomDO extends DurableObject<Env> {
   // Messages
   // -------------------------------------------------------------------------
 
-  /**
-   * Co-op: the round's heat, else the host's level. Versus: the series'
-   * heat while one is on, else the median level of the seated players.
-   */
+  /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus, the median level of the seated players. */
+  private autoHeat(room: Room): HeatTier {
+    if (room.mode === "vs") {
+      const levels = seated(room).map((p) => p.level);
+      return levels.length === 0 ? heatForLevel(1) : vsHeat(levels);
+    }
+    const host = room.players.find((p) => p.id === room.hostId);
+    return heatForLevel(host?.level ?? 1);
+  }
+
+  /** The heat the next START or AGAIN plays: the host's pick (CONFIG), or what `"auto"` gives. */
+  private nextHeat(room: Room): HeatTier {
+    return chosenHeat(room.heat ?? "auto", this.autoHeat(room));
+  }
+
+  /** The co-op round's heat or the Versus series' while one is on, else {@link nextHeat}. */
   private heatOf(room: Room): HeatTier {
     if (room.mode === "vs") {
       const series = this.series();
       if (series !== null && isPlayingPhase(room.phase)) return series.heat;
-      const levels = seated(room).map((p) => p.level);
-      return levels.length === 0 ? heatForLevel(1) : vsHeat(levels);
+      return this.nextHeat(room);
     }
     const clock = this.clock();
     if (clock !== null && (room.phase === "countdown" || room.phase === "round")) return clock.heat;
-    const host = room.players.find((p) => p.id === room.hostId);
-    return heatForLevel(host?.level ?? 1);
+    return this.nextHeat(room);
   }
 
   /** The LOBBY fields; `except` is a socket that is closing. */
@@ -1507,6 +1529,8 @@ export class RoomDO extends DurableObject<Env> {
       phase: room.phase,
       hostId: room.hostId,
       heat: this.heatOf(room),
+      heatChoice: room.heat ?? "auto",
+      autoHeat: this.autoHeat(room),
       players: [...room.players]
         .sort((a, b) => a.joinedAt - b.joinedAt)
         .map((p) => ({
@@ -1609,6 +1633,16 @@ export class RoomDO extends DurableObject<Env> {
 
   private connectedPlayers(room: Room): Player[] {
     return room.players.filter((p) => !p.left && this.socketsOf(p.id).length > 0);
+  }
+
+  /** Everyone's seat, for {@link pickHost}. `joining` is a player whose socket is opening, so counts as connected. */
+  private seats(room: Room, joining?: string): Seat[] {
+    return room.players.map((p) => ({
+      id: p.id,
+      joinedAt: p.joinedAt,
+      present: !p.left,
+      connected: p.id === joining || this.socketsOf(p.id).length > 0,
+    }));
   }
 
   private broadcast(message: ServerMessage, except?: WebSocket): void {

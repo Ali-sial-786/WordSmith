@@ -202,6 +202,8 @@ describe("a co-op round", () => {
       phase: "lobby",
       hostId: a.uid,
       heat: 1,
+      heatChoice: "auto",
+      autoHeat: 1,
       players: [{ id: a.uid, username: a.username, avatar: "avatar_01", level: 1, color: 0, ready: false, connected: true }],
     });
 
@@ -402,7 +404,9 @@ describe("a co-op round", () => {
     expect(end.total).toBeGreaterThan(0);
     expect(end.answers).toHaveLength(start.slots.length);
     expect(end.players).toEqual([{ id: a.uid, username: a.username, points: 0, words: 0, longest: "", bonus: 0 }]);
-    expect(end.xp).toEqual({ [a.uid]: { xp: 20, level: 1, levelUps: 0, rewards: { hammer: 0, chisel: 0, sparks: 0 }, scrapHammers: 0 } });
+    expect(end.xp).toEqual({
+      [a.uid]: { xp: 20, level: 1, levelUps: 0, rewards: { hammer: 0, chisel: 0, sparks: 0 }, scrapHammers: 0, heatBonus: 0, tiersAbove: 0 },
+    });
     expect((await sa.next({ op: "LOBBY" })).phase).toBe("results");
 
     const match = await env.DB.prepare("SELECT ended_at, started_at FROM matches WHERE id = ?1").bind(round.matchId).first<Message>();

@@ -46,7 +46,7 @@ For example, at heat 1 a 3-letter word gets 21.6 s and a 6-letter word gets
 
 | Op | Fields | Notes |
 |---|---|---|
-| `CONFIG` | `variant`: `classic` · `survival`, and/or `series` (Versus only) | Host only, in `lobby` or `results`. At least one field. Co-op with `series`, or a bad value, gets `bad_message`. A changed variant applies from the next `START` or `AGAIN`. The `series` rule from room-protocol.md (lobby only) is unchanged. |
+| `CONFIG` | `variant`: `classic` · `survival`, and/or `heat` (room-protocol.md), and/or `series` (Versus only) | Host only, in `lobby` or `results`. At least one field. Co-op with `series`, or a bad value, gets `bad_message`. A changed variant or heat applies from the next `START` or `AGAIN`. The `series` rule from room-protocol.md (lobby only) is unchanged. |
 
 ### Server → client
 
@@ -74,8 +74,8 @@ For example, at heat 1 a 3-letter word gets 21.6 s and a 6-letter word gets
   - A racer who leaves the series can no longer melt.
 - **Hints (co-op):** allowed as in classic. Letters they reveal can complete the heated word, which counts as saved.
 - **XP:**
-  - Co-op: `coopRoundXp` plus 2 per saved word, up to +30.
-  - Versus: unchanged.
+  - Co-op: `coopRoundXp` plus 2 per saved word, up to +30, all of it at the round's heat (room-protocol.md "XP and heat").
+  - Versus: unchanged (at the series' heat, as in classic).
 - **Records:** match records keep `variant` if they have room for it. Classic rooms behave exactly as before.
 
 ## Solo: The Crucible
@@ -145,7 +145,7 @@ sends it when it can.
 Rooms:
 
 - **Classic is untouched:** survival fields (`variant`, `heated`, `saved`, `melted`) only appear in survival rooms and rounds, and `LOBBY.variant` only while it's `survival`. A message without `variant` is classic. (Existing clients and tests pin the classic messages exactly.)
-- **CONFIG:** `variant` in the lobby or results, `series` (Versus) in the lobby only; with both, the lobby only. No field, a bad value, or `series` in co-op is `bad_message`; then `wrong_phase`, then `not_host`. An unchanged value sends no `LOBBY`. A Versus series keeps the variant it started with, sudden death included.
+- **CONFIG:** `variant` and `heat` in the lobby or results, `series` (Versus) in the lobby only; with `series`, the lobby only. No field, a bad value, or `series` in co-op is `bad_message`; then `wrong_phase`, then `not_host`. An unchanged value sends no `LOBBY`. A Versus series keeps the variant it started with, sudden death included.
 - **`heated`** in `ROUND_START` and `SNAPSHOT` has the `HEATED` fields, `serverNow` included. In Versus everyone gets `ROUND_START.heated`, watchers too.
 - **Order:** co-op `CLAIMED` or `REVEAL`, then `HEATED` to everyone. Versus `WORD_RESULT`, `PROGRESS`, then `HEATED` to each of the racer's open sockets. On a rejoin that resumes a countdown: `WELCOME`, `SNAPSHOT` (already resumed), then `HEATED`.
 - **Grace:** the melt is the alarm at `deadline` + 300 ms, so anything handled before it counts. A co-op `HINT` still waiting on D1 when the melt comes is refunded (`wrong_phase`).

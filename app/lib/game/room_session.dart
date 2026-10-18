@@ -163,6 +163,7 @@ abstract class RoomSession extends ChangeNotifier {
   }
 
   void _onEvent(RoomEvent e) {
+    final hostBefore = lobby?.hostId;
     switch (e) {
       case RoomWelcome(:final you, :final serverNow):
         me = you;
@@ -181,6 +182,8 @@ abstract class RoomSession extends ChangeNotifier {
     }
     _survival(e);
     _effects.add(e);
+    // The host role came to me while I was in the room: say so.
+    if (hostBefore != null && hostBefore != me && isHost) _effects.add(const BecameHost());
     notifyListeners();
   }
 
@@ -194,6 +197,9 @@ abstract class RoomSession extends ChangeNotifier {
 
   /// Host only, in the lobby or results: `classic` or `survival`.
   void setVariant(String variant) => client.config(variant: variant);
+
+  /// Host only, in the lobby or results: a heat tier 1–6, or null for Auto.
+  void setHeat(int? tier) => client.config(heat: tier ?? 'auto');
   void startRound() => client.startRound();
   void again() => client.again();
   void emote(String id) => client.emote(id);
