@@ -98,6 +98,10 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 | `GET /friends` | My friends (with the nicknames I gave them) and pending requests |
 | `POST /friends/request` · `POST /friends/respond` · `DELETE /friends/:id` | Manage friends |
 | `PUT /friends/:id/nickname` | My private nickname for a friend, or none; the app shows it instead of their username everywhere |
+| `GET /me/blocks` | The players I've blocked, newest first (`shared/safety.md`) |
+| `PUT /me/blocks/:id` | Block a player: ends any friendship or friend request between us, and refuses new ones either way (`shared/safety.md`) |
+| `DELETE /me/blocks/:id` | Unblock a player; the friendship doesn't come back (`shared/safety.md`) |
+| `POST /reports` | Report a player (a reason, optional details, the room and their chat lines I saw), stored for review and never shown to them (`shared/safety.md`) |
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
 | `POST /rooms/:code/video` | A LiveKit token for the room's optional video chat (§6, "Video chat") |
@@ -268,6 +272,9 @@ work_orders  (user_id, period TEXT /*d:<date> | w:<week>*/, slot TEXT, kind TEXT
 weekly_xp    (user_id, week TEXT /*YYYY-Www*/, xp INT, PRIMARY KEY(user_id, week))  -- kept by a trigger on xp_events
 trial_claims (user_id, week TEXT, claimed_at INT, PRIMARY KEY(user_id, week))
 gifts        (id INTEGER PK, from_user, to_user, sent_date TEXT, sent_at INT, claimed_at INT, UNIQUE(from_user, to_user, sent_date))
+blocks       (user_id, blocked_id, created_at INT, PRIMARY KEY(user_id, blocked_id))  -- shared/safety.md
+reports      (id INTEGER PK, reporter_id, reported_id, reported_username TEXT /*at the time*/, reason TEXT, details TEXT, room TEXT,
+              lines TEXT /*json*/, created_at INT, status TEXT /*open*/)
 ```
 
 `profiles` also has `stoke_claims` and `stoke_last` (the Daily Stoke),

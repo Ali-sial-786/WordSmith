@@ -3,7 +3,8 @@
  *
  * - `GET /v1/friends` → {friends, incoming, outgoing}
  * - `POST /v1/friends/request {username}` → {status: "pending" | "accepted", user}
- *   (asking someone who already asked you accepts their request)
+ *   (asking someone who already asked you accepts their request; refused
+ *   while either has blocked the other, shared/safety.md)
  * - `POST /v1/friends/respond {userId, accept}` → {status: "accepted" | "declined", user}
  * - `DELETE /v1/friends/:id` → {ok: true}: removes a friend, cancels my
  *   request, or declines theirs
@@ -25,7 +26,9 @@ import {
   setNickname,
   unlink,
   type LimitHit,
+  type Link,
 } from "../db/friends";
+import { blockBetween } from "../db/safety";
 import { ApiError, json, readJsonObject } from "../http";
 import { notifyHub, requireSetUp, type AuthedContext } from "./context";
 
@@ -54,6 +57,15 @@ export async function postFriendRequest(c: AuthedContext): Promise<Response> {
   const target = looksLikeUsername(username) ? await findUser(db, { username }) : null;
   if (target === null) throw new ApiError(404, "user_not_found");
   if (target.id === c.uid) throw new ApiError(400, "cannot_friend_self");
+  // To a player who blocked me, I typed a wrong name (shared/safety.md).
+  switch (await blockBetween(db, c.uid, target.id)) {
+    case "blocked_them":
+      throw new ApiError(409, "blocked", "You blocked them; unblock them first");
+    case "blocked_by_them":
+      throw new ApiError(404, "user_not_found");
+    case "none":
+      break;
+  }
 
   switch (await linkBetween(db, c.uid, target.id)) {
     case "friends":
@@ -92,6 +104,8 @@ export async function postFriendRespond(c: AuthedContext): Promise<Response> {
     await deleteRequest(db, userId, c.uid);
     return json({ status: "declined", user });
   }
+  // Blocking deletes requests both ways; this catches one sent just as the block was made.
+  if ((await blockBetween(db, c.uid, userId)) !== "none") throw new ApiError(404, "request_not_found");
   const hit = await acceptLimit(db, c.uid, userId);
   if (hit !== null) throw limitError(hit);
   if (!(await acceptRequest(db, userId, c.uid, c.now))) throw new ApiError(404, "request_not_found");
@@ -101,11 +115,20 @@ export async function postFriendRespond(c: AuthedContext): Promise<Response> {
 
 export async function deleteFriend(c: AuthedContext): Promise<Response> {
   await requireSetUp(c);
-  const other = c.params.id ?? "";
-  const before = await unlink(c.env.DB, c.uid, other);
-  if (before === "none") throw new ApiError(404, "not_found", "No friend or request with that user");
-  if (before === "friends") await notifyHub(c.env, (hub) => hub.friendshipChanged(c.uid, other, false));
+  if ((await endLink(c, c.params.id ?? "")) === "none") throw new ApiError(404, "not_found", "No friend or request with that user");
   return json({ ok: true });
+}
+
+/**
+ * Ends whatever is between me and `other`, either way: a friendship (and
+ * tells the hub, so both stop seeing each other online and in open rooms),
+ * my request or theirs. Returns what there was. Blocking ends links this
+ * way too (src/routes/safety.ts).
+ */
+export async function endLink(c: AuthedContext, other: string): Promise<Link> {
+  const before = await unlink(c.env.DB, c.uid, other);
+  if (before === "friends") await notifyHub(c.env, (hub) => hub.friendshipChanged(c.uid, other, false));
+  return before;
 }
 
 /**
