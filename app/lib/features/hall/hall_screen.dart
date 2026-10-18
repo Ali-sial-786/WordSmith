@@ -27,6 +27,7 @@ import '../../ui/widgets/xp_bar.dart';
 import '../../update/app_updater.dart';
 import '../coop/coop_entry.dart';
 import '../update/update_sheet.dart';
+import 'help_sheet.dart';
 import '../../ui/widgets/forge_frame.dart';
 
 /// Home screen.
@@ -63,6 +64,7 @@ class HallScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        const Align(alignment: Alignment.centerRight, child: HelpButton()),
                         Text(
                           'WORDSMITH',
                           textAlign: TextAlign.center,
@@ -96,7 +98,7 @@ class HallScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 20),
                         PlateButton(
-                          label: finished ? 'Campaign complete' : 'Forge',
+                          label: finished ? 'Campaign complete' : 'Forge (Solo play)',
                           sublabel: finished
                               ? 'Every puzzle forged ten times over!'
                               : campaign.isMaster(stage)
