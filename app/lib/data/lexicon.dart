@@ -27,7 +27,15 @@ class Sense {
 /// What a word means. [base] is set when the word is a form of another
 /// (FORGED → FORGE), whose senses these are.
 class Meaning {
-  const Meaning({required this.word, required this.senses, this.base, this.source});
+  const Meaning({
+    required this.word,
+    required this.senses,
+    this.base,
+    this.source,
+    this.sourceUrl,
+    this.license,
+    this.licenseUrl,
+  });
 
   final String word;
   final String? base;
@@ -37,6 +45,17 @@ class Meaning {
   /// `GET /v1/define`: "wiktionary" or "dictionaryapi.dev"); null for the
   /// offline lexicon's.
   final String? source;
+
+  /// The Wiktionary entry online senses came from, and its licence: CC BY-SA
+  /// asks for both to be shown with the text. A server from before 0.7 sends
+  /// none, so these fall back to the entry for [word] and CC BY-SA 4.0.
+  final String? sourceUrl;
+  final String? license;
+  final String? licenseUrl;
+
+  String get sourcePage => sourceUrl ?? 'https://en.wiktionary.org/wiki/${Uri.encodeComponent(word.toLowerCase())}';
+  String get licenseName => license ?? 'CC BY-SA 4.0';
+  String get licensePage => licenseUrl ?? 'https://creativecommons.org/licenses/by-sa/4.0/';
 }
 
 /// The offline dictionary (tools/dictgen, from WordNet). It's split into one
@@ -89,15 +108,10 @@ class _Shard {
 
 _Shard _decode(Uint8List gz) {
   final json = jsonDecode(utf8.decode(const GZipDecoder().decodeBytes(gz))) as Map<String, dynamic>;
-  return _Shard(
-    {
-      for (final e in (json['entries'] as Map<String, dynamic>).entries)
-        e.key: [
-          for (final s in (e.value as List).cast<List>()) Sense(s[0] as String, s[1] as String),
-        ],
-    },
-    (json['forms'] as Map<String, dynamic>).cast<String, String>(),
-  );
+  return _Shard({
+    for (final e in (json['entries'] as Map<String, dynamic>).entries)
+      e.key: [for (final s in (e.value as List).cast<List>()) Sense(s[0] as String, s[1] as String)],
+  }, (json['forms'] as Map<String, dynamic>).cast<String, String>());
 }
 
 final lexiconProvider = Provider<Lexicon>((_) => Lexicon(rootBundle));

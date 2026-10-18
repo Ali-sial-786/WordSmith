@@ -1,8 +1,7 @@
 # Wordsmith
 
-Wordsmith is a blacksmith-themed word puzzle for Android, in the style of
-Wordscapes and Word Trails. You swipe letters on the **anvil** to forge words
-into the **mold**, level up your **Smith Level**, and play with friends:
+Wordsmith is a blacksmith-themed word puzzle for Android and the browser. You
+swipe letters on the **anvil** to forge words into the **mold**, level up your **Smith Level**, and play with friends:
 
 - **Co-op:** up to 4 players on one timed puzzle. Whoever enters a word first gets its points.
 - **Versus:** up to 5 players race on the same puzzle. First to finish wins the round, over best-of-3/5/7/10 series.

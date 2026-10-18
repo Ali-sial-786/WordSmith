@@ -129,7 +129,15 @@ class ApiClient {
       for (final s in (j['senses'] as List).cast<Map<String, dynamic>>())
         Sense(s['pos'] as String? ?? '', s['gloss'] as String),
     ];
-    return senses.isEmpty ? null : Meaning(word: word.toUpperCase(), senses: senses, source: j['source'] as String?);
+    if (senses.isEmpty) return null;
+    return Meaning(
+      word: word.toUpperCase(),
+      senses: senses,
+      source: j['source'] as String?,
+      sourceUrl: j['sourceUrl'] as String?,
+      license: j['license'] as String?,
+      licenseUrl: j['licenseUrl'] as String?,
+    );
   }
 
   Future<ServerProfile> me() async => ServerProfile.fromJson(await _send('GET', '/me'));

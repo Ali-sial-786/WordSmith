@@ -14,8 +14,8 @@ ACROSS = 1
 DOWN = 2
 MAX_SIDE = 10
 
-# Wordscapes-like shape: a bit wider than tall (the mold area on a phone in
-# portrait is wider than tall).
+# A bit wider than tall (the mold area on a phone in portrait is wider than
+# tall).
 ASPECT_LO = 0.8
 ASPECT_HI = 1.6
 ASPECT_IDEAL = 1.15

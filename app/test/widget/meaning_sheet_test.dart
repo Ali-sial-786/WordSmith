@@ -130,14 +130,16 @@ void main() {
       find.text('noun  The opening in the hearth where such a nozzle enters.', findRichText: true),
       findsOneWidget,
     );
-    expect(find.text('From Wiktionary'), findsOneWidget);
+    expect(find.text('Wiktionary'), findsOneWidget);
+    expect(find.text('CC BY-SA 4.0'), findsOneWidget);
+    expect(find.text(', shortened · '), findsOneWidget);
     // Signed out works too: the lookup carries no token.
     expect(server.asked.single.url.path, '/v1/define/tuyere');
     expect(server.asked.single.headers['Authorization'], isNull);
 
     await _close(tester);
     await _open(tester);
-    expect(find.text('From Wiktionary'), findsOneWidget);
+    expect(find.text('Wiktionary'), findsOneWidget);
     expect(server.asked, hasLength(1), reason: 'kept for the session');
   });
 
@@ -162,7 +164,7 @@ void main() {
     server.down = false;
     await _close(tester);
     await _open(tester);
-    expect(find.text('From Wiktionary'), findsOneWidget);
+    expect(find.text('Wiktionary'), findsOneWidget);
     expect(server.asked, hasLength(2));
   });
 

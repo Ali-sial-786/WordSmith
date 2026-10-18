@@ -95,6 +95,11 @@ function idRanges(rows) {
  * Each statement is one line and stays small (D1 refuses statements over
  * 100 KB): one per puzzle, and the DELETE names the kept ids as ranges
  * rather than one by one, so it doesn't grow with the bank.
+ *
+ * Every deploy runs this, so a puzzle that hasn't changed must cost no
+ * write: D1's free plan allows 100,000 rows written a day, and rewriting
+ * the whole bank (each row and its index entries) took about a sixth of it.
+ * So each puzzle is an upsert that only updates when something differs.
  */
 export function bankSql(rows) {
   const kept = idRanges(rows)
@@ -107,7 +112,10 @@ export function bankSql(rows) {
   ];
   for (const row of rows) {
     lines.push(
-      `INSERT OR REPLACE INTO puzzles (id, pool, heat, size, letters, data) VALUES (${sqlString(row.id)}, 'mp', ${row.heat}, ${row.size}, ${sqlString(row.letters)}, ${sqlString(row.data)});`,
+      `INSERT INTO puzzles (id, pool, heat, size, letters, data) VALUES (${sqlString(row.id)}, 'mp', ${row.heat}, ${row.size}, ${sqlString(row.letters)}, ${sqlString(row.data)})` +
+        " ON CONFLICT (id) DO UPDATE SET pool = excluded.pool, heat = excluded.heat, size = excluded.size, letters = excluded.letters, data = excluded.data" +
+        " WHERE puzzles.pool IS NOT excluded.pool OR puzzles.heat IS NOT excluded.heat OR puzzles.size IS NOT excluded.size" +
+        " OR puzzles.letters IS NOT excluded.letters OR puzzles.data IS NOT excluded.data;",
     );
   }
   return lines.join("\n") + "\n";

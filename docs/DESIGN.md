@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-Wordsmith is a Wordscapes / Word Trails–style word puzzle for Android. A ring
+Wordsmith is a crossword-style word puzzle for Android and the browser. A ring
 of letters sits at the bottom of the screen, you swipe across them to build
 words, and each valid word fills its slot in a crossword grid above. Valid
 words that aren't in the grid are bonus words.
@@ -30,7 +30,7 @@ The theme is blacksmithing. You **forge** words on the **anvil**, and they're
 - **Free to run.** There are no ads, no purchases and no currency.
 
 ### Design pillars
-1. **Plays like the original.** The swipe, the grid, bonus words, shuffle and hints all behave the way Wordscapes players expect.
+1. **Easy to pick up.** The swipe, the grid, bonus words, shuffle and hints work the way word-puzzle players expect.
 2. **Feels like a forge.** Every action has weight: clangs, sparks, glowing metal cooling down.
 3. **Friends first.** Rooms take seconds to set up, every player's contribution is visible in co-op, and versus results are clear and fair.
 
@@ -40,7 +40,7 @@ The theme is blacksmithing. You **forge** words on the **anvil**, and they're
 
 ### 2.1 Mechanics and how they map to the theme
 
-| Wordscapes / Word Trails | Wordsmith | Behaviour |
+| Common word-puzzle feature | Wordsmith | Behaviour |
 |---|---|---|
 | Letter wheel | **The Anvil** | 4–8 letter tiles sit in a ring on the anvil face. Swipe through them, and a molten trail follows your finger. Release to submit. |
 | Crossword grid | **The Mold** | Empty slots. A found word pours in as glowing metal and cools to its colour. |
@@ -348,8 +348,8 @@ titanium).
 
 ## 10. Everyday extras (the genre's daily loop)
 
-Features Wordscapes and Word Trails players expect, in forge clothes. The
-exact rules live in the shared contracts.
+Everyday features word-puzzle players expect, in forge clothes. The exact
+rules live in the shared contracts.
 
 | Genre feature | Wordsmith | Contract |
 |---|---|---|
@@ -381,10 +381,10 @@ Also: a left-handed layout (hints on the left of the anvil).
 
 ---
 
-## 12. About copying the original
+## 12. Originality
 
 Game mechanics can't be copyrighted, so the swipe ring, crossword grid, bonus
-words, shuffle and hints can follow the genre closely. The **art, sounds,
-puzzle data, names and exact screen designs** of Wordscapes and Word Trails are
-protected, so all of ours are original or properly licensed (see
-[ART_AND_AUDIO.md](ART_AND_AUDIO.md)). Nothing is taken from those games.
+words, shuffle and hints follow common word-puzzle conventions. Other games'
+**art, sounds, puzzle data, names and screen designs** are protected, so all
+of ours are original or properly licensed (see
+[ART_AND_AUDIO.md](ART_AND_AUDIO.md)). Nothing is taken from any other game.

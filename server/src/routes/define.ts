@@ -1,6 +1,6 @@
 /**
- * `GET /v1/define/:word` → `{word, senses: [{pos, gloss}], source}`: what a
- * word the app's offline lexicon lacks means, from an online dictionary
+ * `GET /v1/define/:word` → `{word, senses: [{pos, gloss}], source, sourceUrl,
+ * license, licenseUrl}`: what a word the app's offline lexicon lacks means, from an online dictionary
  * (src/dictionary/define.ts). Open, like `/v1/version`, since meanings work
  * signed out.
  *
@@ -22,8 +22,8 @@ import type { RequestContext } from "./context";
 export const HIT_TTL_SECONDS = 30 * 86_400;
 export const MISS_TTL_SECONDS = 86_400;
 
-/** Part of the cache key: bump it when the cached body or the sense picking changes (2: names left out). */
-const CACHE_VERSION = 2;
+/** Part of the cache key: bump it when the cached body or the sense picking changes (2: names left out; 3: source page and licence). */
+const CACHE_VERSION = 3;
 
 /** What the cache holds for a word: its definition, or null for a miss. */
 interface Cached {

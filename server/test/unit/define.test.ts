@@ -3,6 +3,7 @@ import {
   cleanGloss,
   define,
   DICTIONARY_API_URL,
+  dictionaryApiAttribution,
   DictionaryUnavailable,
   isProperNoun,
   MAX_GLOSS,
@@ -202,6 +203,31 @@ describe("pickSenses", () => {
     }
   });
 
+  it("credits the Free Dictionary API's text with the licence and Wiktionary page it gives", () => {
+    const body = [
+      { word: "Forge", license: { name: "Bad", url: "https://x.example" }, sourceUrls: ["https://en.wiktionary.org/wiki/Forge"] },
+      {
+        word: "forge",
+        meanings: [],
+        license: { name: "CC BY-SA 3.0", url: "https://creativecommons.org/licenses/by-sa/3.0" },
+        sourceUrls: ["javascript:alert(1)", "https://en.wiktionary.org/wiki/forge"],
+      },
+    ];
+    expect(dictionaryApiAttribution(body, "forge")).toEqual({
+      sourceUrl: "https://en.wiktionary.org/wiki/forge",
+      license: "CC BY-SA 3.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0",
+    });
+    // Nothing usable: Wiktionary's entry and the licence the API normally gives.
+    for (const junk of [null, [], [{ word: "forge", license: { name: "<b>x</b>", url: "http://x" }, sourceUrls: "x" }]]) {
+      expect(dictionaryApiAttribution(junk, "forge")).toEqual({
+        sourceUrl: "https://en.wiktionary.org/wiki/forge",
+        license: "CC BY-SA 3.0",
+        licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0",
+      });
+    }
+  });
+
   it("leaves out the Free Dictionary API's capitalised entries and proper nouns", () => {
     expect(parseDictionaryApi(OMAR_API)).toEqual([]);
     const china = [
@@ -235,6 +261,9 @@ describe("define", () => {
       word: "tuyere",
       senses: [{ pos: "n", gloss: "A nozzle through which air is blown into a furnace or forge." }],
       source: "wiktionary",
+      sourceUrl: "https://en.wiktionary.org/wiki/tuyere",
+      license: "CC BY-SA 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
     });
     expect(calls.map((c) => c.url)).toEqual([`${DICTIONARY_API_URL}tuyere`, `${WIKTIONARY_URL}tuyere`]);
     expect(calls.every((c) => c.headers.get("user-agent") === USER_AGENT)).toBe(true);

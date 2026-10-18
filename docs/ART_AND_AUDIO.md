@@ -5,7 +5,7 @@
 > **Approach:** use free, properly licensed assets where they fit and look
 > good. Where they don't, make our own in **Blender** (3D renders) or
 > **Inkscape** (vector), or generate them in code (shaders and particles).
-> Nothing is taken from Wordscapes, Word Trails or any other commercial game.
+> Nothing is taken from any other game.
 
 ---
 

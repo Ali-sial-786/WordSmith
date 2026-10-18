@@ -70,6 +70,9 @@ describe("GET /v1/define/:word", () => {
         { pos: "v", gloss: "To satisfy thirst." },
       ],
       source: "dictionaryapi.dev",
+      sourceUrl: "https://en.wiktionary.org/wiki/quench",
+      license: "CC BY-SA 3.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0",
     });
     expect(res.headers.get("cache-control")).toBe(`public, max-age=${HIT_TTL_SECONDS}`);
     expect(asked).toEqual([{ url: `${DICTIONARY_API_URL}quench`, userAgent: USER_AGENT }]);
@@ -85,6 +88,9 @@ describe("GET /v1/define/:word", () => {
       word: "tuyere",
       senses: [{ pos: "n", gloss: "A nozzle through which air is blown into a forge." }],
       source: "wiktionary",
+      sourceUrl: "https://en.wiktionary.org/wiki/tuyere",
+      license: "CC BY-SA 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
     });
     expect(asked.map((a) => a.url)).toEqual([`${DICTIONARY_API_URL}tuyere`, `${WIKTIONARY_URL}tuyere`]);
     expect(asked.every((a) => a.userAgent === USER_AGENT)).toBe(true);

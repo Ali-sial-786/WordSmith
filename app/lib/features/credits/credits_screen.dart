@@ -26,6 +26,12 @@ class CreditsScreen extends StatelessWidget {
       'https://github.com/globalwordnet/english-wordnet',
     ),
     (
+      'Wiktionary (meanings of rarer words, looked up online)',
+      'Wiktionary contributors, some through the Free Dictionary API (dictionaryapi.dev)',
+      'CC BY-SA 4.0 (shortened); each meaning links its entry',
+      'https://en.wiktionary.org/',
+    ),
+    (
       'List of Dirty, Naughty, Obscene and Otherwise Bad Words',
       'Shutterstock and contributors',
       'CC BY 4.0',
@@ -51,7 +57,10 @@ class CreditsScreen extends StatelessWidget {
         future: _load(),
         builder: (context, snap) {
           // The dictionary is listed with the word lists.
-          final assets = [for (final a in snap.data ?? const <Map<String, dynamic>>[]) if (a['file'] != 'dict/*.json.gz') a];
+          final assets = [
+            for (final a in snap.data ?? const <Map<String, dynamic>>[])
+              if (a['file'] != 'dict/*.json.gz') a,
+          ];
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -69,11 +78,8 @@ class CreditsScreen extends StatelessWidget {
                 _Entry(title: title, author: author, licence: licence, url: url),
               const SizedBox(height: 16),
               OutlinedButton(
-                onPressed: () => showLicensePage(
-                  context: context,
-                  applicationName: 'Wordsmith',
-                  applicationVersion: appVersion,
-                ),
+                onPressed: () =>
+                    showLicensePage(context: context, applicationName: 'Wordsmith', applicationVersion: appVersion),
                 child: const Text('Full licence texts'),
               ),
               const SizedBox(height: 16),
@@ -94,12 +100,7 @@ class CreditsScreen extends StatelessWidget {
 }
 
 class _Entry extends StatelessWidget {
-  const _Entry({
-    required this.title,
-    required this.author,
-    required this.licence,
-    required this.url,
-  });
+  const _Entry({required this.title, required this.author, required this.licence, required this.url});
 
   final String title;
   final String author;

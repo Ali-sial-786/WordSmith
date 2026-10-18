@@ -18,13 +18,16 @@ enum WebPage {
 }
 
 /// Opens [page] in the browser; says so if nothing could open it.
-Future<void> openWebPage(BuildContext context, WebPage page) async {
+Future<void> openWebPage(BuildContext context, WebPage page) => openLink(context, page.uri);
+
+/// Opens [uri] in the browser; says so if nothing could open it.
+Future<void> openLink(BuildContext context, Uri uri) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   var opened = false;
   try {
-    opened = await launchUrl(page.uri, mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank');
+    opened = await launchUrl(uri, mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank');
   } on Object {
     opened = false;
   }
-  if (!opened) messenger?.showSnackBar(SnackBar(content: Text("Couldn't open ${page.uri}")));
+  if (!opened) messenger?.showSnackBar(SnackBar(content: Text("Couldn't open $uri")));
 }

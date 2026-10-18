@@ -42,11 +42,35 @@ export interface Sense {
 
 export type DefinitionSource = "dictionaryapi.dev" | "wiktionary";
 
+/**
+ * Where a definition's text comes from, shown with it. Both sources serve
+ * Wiktionary's text, which is CC BY-SA: crediting it means naming it, linking
+ * the entry and the licence, and saying the text was shortened.
+ */
+export interface Attribution {
+  /** The Wiktionary entry the senses came from. */
+  readonly sourceUrl: string;
+  /** e.g. "CC BY-SA 4.0". */
+  readonly license: string;
+  readonly licenseUrl: string;
+}
+
 /** The body of `GET /v1/define/:word`. */
-export interface Definition {
+export interface Definition extends Attribution {
   readonly word: string;
   readonly senses: readonly Sense[];
   readonly source: DefinitionSource;
+}
+
+/** Wiktionary's licence for its text (with the GFDL), which its REST API serves. */
+export const WIKTIONARY_LICENSE = { license: "CC BY-SA 4.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/" } as const;
+
+/** What the Free Dictionary API says its (Wiktionary) text is under, when an answer doesn't say. */
+export const DICTIONARY_API_LICENSE = { license: "CC BY-SA 3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0" } as const;
+
+/** The English Wiktionary entry for a (lowercase) word. */
+export function wiktionaryPage(word: string): string {
+  return `https://en.wiktionary.org/wiki/${encodeURIComponent(word)}`;
 }
 
 /** `raw` lowercased if it's 2–15 letters A–Z (either case), else null. */
@@ -283,6 +307,29 @@ export function parseDictionaryApi(body: unknown): Sense[] {
   return out;
 }
 
+const isHttps = (v: unknown): v is string => typeof v === "string" && /^https:\/\/[^\s]+$/.test(v) && v.length <= 300;
+
+/**
+ * The licence and source page a Free Dictionary API answer gives (each entry
+ * carries `license: {name, url}` and `sourceUrls`), from the first entry that
+ * has them; Wiktionary's entry and CC BY-SA 3.0 otherwise.
+ */
+export function dictionaryApiAttribution(body: unknown, word: string): Attribution {
+  let sourceUrl: string | null = null;
+  let licence: { license: string; licenseUrl: string } | null = null;
+  if (Array.isArray(body)) {
+    for (const entry of body) {
+      if (!isRecord(entry) || capitalised(entry.word)) continue;
+      if (sourceUrl === null && Array.isArray(entry.sourceUrls)) sourceUrl = entry.sourceUrls.find(isHttps) ?? null;
+      const l = entry.license;
+      if (licence === null && isRecord(l) && typeof l.name === "string" && /^[\w .-]{1,40}$/.test(l.name) && isHttps(l.url)) {
+        licence = { license: l.name, licenseUrl: l.url };
+      }
+    }
+  }
+  return { sourceUrl: sourceUrl ?? wiktionaryPage(word), ...(licence ?? DICTIONARY_API_LICENSE) };
+}
+
 /** Every English sense but proper nouns in a Wiktionary REST definitions answer (`{en: [{partOfSpeech, language, definitions}], …}`). */
 export function parseWiktionary(body: unknown): Sense[] {
   const out: Sense[] = [];
@@ -323,17 +370,23 @@ async function getJson(url: string): Promise<unknown> {
   return res.json();
 }
 
-async function fromDictionaryApi(word: string): Promise<Sense[]> {
-  return pickSenses(parseDictionaryApi(await getJson(DICTIONARY_API_URL + word)));
+interface Found extends Attribution {
+  readonly senses: Sense[];
 }
 
-async function fromWiktionary(word: string): Promise<Sense[]> {
+async function fromDictionaryApi(word: string): Promise<Found> {
+  const body = await getJson(DICTIONARY_API_URL + word);
+  return { senses: pickSenses(parseDictionaryApi(body)), ...dictionaryApiAttribution(body, word) };
+}
+
+async function fromWiktionary(word: string): Promise<Found> {
   // Titles are case-sensitive, and only the lowercase one is asked: "Omar"
   // and "Boston" are names, while "boston" (a card game) is a word.
-  return pickSenses(parseWiktionary(await getJson(WIKTIONARY_URL + encodeURIComponent(word))));
+  const senses = pickSenses(parseWiktionary(await getJson(WIKTIONARY_URL + encodeURIComponent(word))));
+  return { senses, sourceUrl: wiktionaryPage(word), ...WIKTIONARY_LICENSE };
 }
 
-const SOURCES: readonly { readonly name: DefinitionSource; readonly lookUp: (word: string) => Promise<Sense[]> }[] = [
+const SOURCES: readonly { readonly name: DefinitionSource; readonly lookUp: (word: string) => Promise<Found> }[] = [
   { name: "dictionaryapi.dev", lookUp: fromDictionaryApi },
   { name: "wiktionary", lookUp: fromWiktionary },
 ];
@@ -355,8 +408,8 @@ export async function define(word: string): Promise<Definition | null> {
   const failures: unknown[] = [];
   for (const source of SOURCES) {
     try {
-      const senses = await source.lookUp(word);
-      if (senses.length > 0) return { word, senses, source: source.name };
+      const { senses, ...attribution } = await source.lookUp(word);
+      if (senses.length > 0) return { word, senses, source: source.name, ...attribution };
     } catch (err) {
       failures.push(err);
     }

@@ -5,7 +5,7 @@ update the relevant plan document too.
 
 | Date | Decision | Notes |
 |---|---|---|
-| 2026-10-17 | **Game:** Wordscapes / Word Trails–style word puzzle called **Wordsmith**, with a blacksmithing theme. | Mechanics follow the genre closely. Art, sounds and puzzles are our own or properly licensed. |
+| 2026-10-17 | **Game:** a crossword-style word puzzle called **Wordsmith**, with a blacksmithing theme. | Mechanics follow common word-puzzle conventions. Art, sounds and puzzles are our own or properly licensed. |
 | 2026-10-17 | **Platform:** Android only for v1, built with **Flutter**. | Flutter keeps iOS and a browser version open for later. |
 | 2026-10-17 | **Audience:** just the owner and their friends. **No Play Store.** | The APK is shared through Firebase App Distribution, using Google's free limited distribution account (up to 20 devices) to meet developer verification. |
 | 2026-10-17 | **Backend:** Cloudflare Workers + **Durable Objects** (one referee per room) + D1, with **Firebase Authentication**. Target cost **$0/month**. | Chosen over Nakama on a paid server (cost) and Supabase or Firebase-only (no game loop, pauses, connection caps). |

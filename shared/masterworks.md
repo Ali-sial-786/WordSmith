@@ -4,8 +4,7 @@ Some campaign puzzles hide a **gilded cell**: a grid cell with a gold edge.
 Forging the word that covers it (the same way you collect an ember pickup)
 earns a **blueprint piece**. Pieces build twelve legendary **Masterworks** in
 order; finishing one grants a reward, and the finished pieces hang in the
-**Armory** on your profile. This is Wordsmith's take on Word Trails' gold
-tiles and jigsaw pieces.
+**Armory** on your profile.
 
 ## Gilded cells
 

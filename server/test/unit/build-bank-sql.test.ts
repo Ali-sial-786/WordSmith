@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { bankRows, bankSql, loadBankRows } from "../../scripts/build-bank-sql.mjs";
 import { loadCampaignRows } from "../../scripts/build-campaign-sql.mjs";
@@ -36,14 +37,37 @@ describe("build-bank-sql", () => {
     expect(() => bankRows({ puzzles: [puzzle(1, { words: [{ w: "TEAR", x: 0, y: 0, d: "x" }] })] })).toThrow(/bad slot/);
   });
 
-  it("writes SQL that replaces each puzzle and drops ones no longer in the bank", () => {
+  it("writes SQL that upserts each puzzle and drops ones no longer in the bank", () => {
     const sql = bankSql(bankRows({ puzzles: [puzzle(1, { bonus: ["IT'S"] }), puzzle(7), puzzle(3), puzzle(2)] }));
     expect(sql).toContain("DELETE FROM puzzles WHERE pool = 'mp' AND NOT (id BETWEEN 'm-00001' AND 'm-00003' OR id = 'm-00007');");
-    expect(sql).toContain("INSERT OR REPLACE INTO puzzles (id, pool, heat, size, letters, data) VALUES ('m-00001', 'mp', 1, 2, 'RTAE', '");
+    expect(sql).toContain("INSERT INTO puzzles (id, pool, heat, size, letters, data) VALUES ('m-00001', 'mp', 1, 2, 'RTAE', '");
+    expect(sql).toContain("ON CONFLICT (id) DO UPDATE SET");
     expect(sql).toContain(`"IT''S"`);
     expect(sql.endsWith("\n")).toBe(true);
     expect(bankSql([])).toContain("DELETE FROM puzzles WHERE pool = 'mp';");
     expect(bankSql(bankRows({ puzzles: [puzzle(1)] }))).toBe(bankSql(bankRows({ puzzles: [puzzle(1)] })));
+  });
+
+  it("loading it again writes nothing unless a puzzle changed (deploys run it every time)", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec(`CREATE TABLE puzzles (id TEXT PRIMARY KEY, pool TEXT NOT NULL DEFAULT 'mp', heat INTEGER NOT NULL,
+      size INTEGER NOT NULL, letters TEXT NOT NULL, data TEXT NOT NULL);
+      CREATE INDEX puzzles_by_heat_size ON puzzles (heat, size);`);
+    /** Rows changed by running `sql` one statement (line) at a time. */
+    const load = (sql: string) =>
+      sql
+        .split("\n")
+        .filter((line) => line !== "" && !line.startsWith("--"))
+        .reduce((n, line) => n + Number(db.prepare(line).run().changes), 0);
+    const bank = [puzzle(1), puzzle(2), puzzle(3, { bonus: ["IT'S"] })];
+    expect(load(bankSql(bankRows({ puzzles: bank })))).toBe(3);
+    expect(load(bankSql(bankRows({ puzzles: bank })))).toBe(0);
+    // One changed, one gone: one update and one delete.
+    expect(load(bankSql(bankRows({ puzzles: [puzzle(1), puzzle(2, { heat: 5 })] })))).toBe(2);
+    expect(db.prepare("SELECT id, heat FROM puzzles ORDER BY id").all()).toEqual([
+      { id: "m-00001", heat: 1 },
+      { id: "m-00002", heat: 5 },
+    ]);
   });
 
   it("reads the real bank: the first 960 are 40 for every heat and size, then more for Versus and co-op", () => {

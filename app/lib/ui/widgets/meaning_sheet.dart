@@ -7,6 +7,7 @@ import '../../game/account.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
 import 'game_icon.dart';
+import 'web_links.dart';
 
 /// Says a word aloud with the phone's text-to-speech.
 class Speaker {
@@ -173,12 +174,10 @@ class _Senses extends StatelessWidget {
 
   final Meaning meaning;
 
-  /// Both dictionaries serve Wiktionary's text (CC BY-SA), so it's credited.
-  static String _from(String source) => switch (source) {
-    'wiktionary' => 'From Wiktionary',
-    'dictionaryapi.dev' => 'From Wiktionary, via the Free Dictionary API',
-    _ => 'From an online dictionary',
-  };
+  /// Both dictionaries serve Wiktionary's text, which is CC BY-SA: it's
+  /// credited with links to the entry and the licence, and marked shortened
+  /// (the server keeps three senses and trims long ones).
+  static String _via(String source) => source == 'dictionaryapi.dev' ? ', via the Free Dictionary API' : '';
 
   @override
   Widget build(BuildContext context) {
@@ -225,19 +224,54 @@ class _Senses extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 14),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GameIcon('book', size: 15, color: Palette.steel),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: GameIcon('book', size: 15, color: Palette.steel),
+                ),
                 const SizedBox(width: 6),
                 Flexible(
-                  child: Text(
-                    _from(source),
-                    style: text.labelMedium?.copyWith(color: Palette.steel, fontStyle: FontStyle.italic),
+                  child: Builder(
+                    builder: (context) {
+                      final style = text.labelMedium?.copyWith(color: Palette.steel, fontStyle: FontStyle.italic);
+                      return Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('From ', style: style),
+                          _Link('Wiktionary', meaning.sourcePage, style: style),
+                          Text('${_via(source)}, shortened · ', style: style),
+                          _Link(meaning.licenseName, meaning.licensePage, style: style),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Underlined words that open [url] in the browser.
+class _Link extends StatelessWidget {
+  const _Link(this.label, this.url, {required this.style});
+
+  final String label;
+  final String url;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final uri = Uri.tryParse(url);
+    return Semantics(
+      link: true,
+      child: InkWell(
+        onTap: uri == null ? null : () => openLink(context, uri),
+        child: Text(label, style: style?.copyWith(decoration: TextDecoration.underline)),
+      ),
     );
   }
 }

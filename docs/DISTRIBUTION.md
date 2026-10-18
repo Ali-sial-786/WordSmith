@@ -235,7 +235,7 @@ means they didn't leave one).
 
 The owner decided (2026-10-18) to stay on GitHub Releases and the browser for
 now. When a Play version is made, it is a **separate build** with only these
-two differences from the friends' APK; everything else stays the same:
+three differences from the friends' APK; everything else stays the same:
 
 1. **No background voice.** Voice and video chat stop when the game leaves the
    screen (switching apps or locking the phone) and reconnect when it comes
@@ -245,6 +245,13 @@ two differences from the friends' APK; everything else stays the same:
 2. **No in-app updater.** Play updates the app itself: the update banner, the
    Settings "check for updates" row and the `REQUEST_INSTALL_PACKAGES`
    permission are left out (Play doesn't allow apps to update themselves).
+3. **Microphone muted by default.** Joining a room never turns the
+   microphone on: every time players join a room they start muted and tap the
+   mic to talk (the friends' APK starts with it on, then remembers the last
+   choice).
+   Others' voices still play. Voice chat that's on by default is what the US
+   FTC fined Epic for (Fortnite, 2022), and app stores and child-safety rules
+   expect it off. The privacy policy's voice section says so for that build.
 
 Already done for it (in every version): report and block buttons, a privacy
 policy (`/privacy`), terms and chat rules (`/terms`) and an account-deletion
@@ -256,6 +263,9 @@ Still to do on the Play Console when the time comes:
   row** before going public (an organisation account is exempt).
 - Upload an **Android App Bundle** (`.aab`) signed with the existing key; Play
   App Signing then holds the release key.
+- Countries: leave out the EU and the UK (the owner's decision, 2026-10-18),
+  which keeps the EU Digital Services Act, the UK Online Safety Act and the
+  UK Children's Code out of scope.
 - Store listing, content rating questionnaire (13+ is simplest with chat and
   voice), target audience, **Data safety** form (matching `/privacy`), the
   privacy policy URL and the account-deletion URL.
