@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../data/lexicon.dart' show Meaning, Sense;
 import 'board.dart';
 import 'models.dart';
 
@@ -117,6 +118,24 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> version() => _send('GET', '/version', auth: false);
+
+  /// What [word] means, from an online dictionary (the Free Dictionary API,
+  /// then Wiktionary), for words the offline lexicon lacks. Needs no
+  /// sign-in, like [version]. Null when neither dictionary has the word.
+  Future<Meaning?> define(String word) async {
+    final Map<String, dynamic> j;
+    try {
+      j = await _send('GET', '/define/${Uri.encodeComponent(word.toLowerCase())}', auth: false);
+    } on ApiException catch (e) {
+      if (e.code == 'word_not_found') return null;
+      rethrow;
+    }
+    final senses = [
+      for (final s in (j['senses'] as List).cast<Map<String, dynamic>>())
+        Sense(s['pos'] as String? ?? '', s['gloss'] as String),
+    ];
+    return senses.isEmpty ? null : Meaning(word: word.toUpperCase(), senses: senses, source: j['source'] as String?);
+  }
 
   Future<ServerProfile> me() async => ServerProfile.fromJson(await _send('GET', '/me'));
 

@@ -9,7 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class Sense {
   const Sense(this.pos, this.gloss);
 
-  /// "n", "v", "a" or "r".
+  /// "n", "v", "a" or "r". Online definitions can also have another part
+  /// of speech spelled out ("proper noun", "interjection"), or "".
   final String pos;
   final String gloss;
 
@@ -18,6 +19,7 @@ class Sense {
     'v' => 'verb',
     'a' => 'adjective',
     'r' => 'adverb',
+    _ when pos.length > 1 => pos,
     _ => '',
   };
 }
@@ -25,11 +27,16 @@ class Sense {
 /// What a word means. [base] is set when the word is a form of another
 /// (FORGED → FORGE), whose senses these are.
 class Meaning {
-  const Meaning({required this.word, required this.senses, this.base});
+  const Meaning({required this.word, required this.senses, this.base, this.source});
 
   final String word;
   final String? base;
   final List<Sense> senses;
+
+  /// Which online dictionary these senses came from (the server's
+  /// `GET /v1/define`: "wiktionary" or "dictionaryapi.dev"); null for the
+  /// offline lexicon's.
+  final String? source;
 }
 
 /// The offline dictionary (tools/dictgen, from WordNet). It's split into one

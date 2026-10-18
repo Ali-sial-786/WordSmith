@@ -92,7 +92,8 @@ class MoldGrid extends StatelessWidget {
   final bool chiselMode;
   final ValueChanged<CellPos>? onCellTap;
 
-  /// Outside chisel mode: a tap on a filled cell (to look up its words).
+  /// Outside chisel mode: a tap on a filled or revealed cell (to look up its
+  /// words, including the answers shown after a round that nobody found).
   final ValueChanged<CellPos>? onFilledTap;
   final double maxCell;
 
@@ -161,7 +162,7 @@ class MoldGrid extends StatelessWidget {
       highlight: chiselMode && empty,
       onTap: chiselMode
           ? (empty && onCellTap != null ? () => onCellTap!(pos) : null)
-          : (fill == CellFill.filled && onFilledTap != null ? () => onFilledTap!(pos) : null),
+          : (!empty && onFilledTap != null ? () => onFilledTap!(pos) : null),
     );
   }
 }

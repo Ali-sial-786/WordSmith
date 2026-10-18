@@ -98,12 +98,33 @@ class ResultsView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(session.nameOf(p.id) + (p.id == session.me ? ' (you)' : ''), style: text.titleSmall),
-                      Text(
-                        [
-                          '${p.words} ${p.words == 1 ? 'word' : 'words'}',
-                          if (p.bonus > 0) '${p.bonus} bonus',
-                          if (p.longest.isNotEmpty) 'longest ${p.longest}',
-                        ].join(' · '),
+                      Text.rich(
+                        TextSpan(
+                          text: [
+                            '${p.words} ${p.words == 1 ? 'word' : 'words'}',
+                            if (p.bonus > 0) '${p.bonus} bonus',
+                            if (p.longest.isNotEmpty) 'longest ',
+                          ].join(' · '),
+                          children: [
+                            // Tap it for its meaning.
+                            if (p.longest.isNotEmpty)
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.baseline,
+                                baseline: TextBaseline.alphabetic,
+                                child: GestureDetector(
+                                  onTap: () => showMeanings(context, [p.longest]),
+                                  child: Text(
+                                    p.longest,
+                                    style: text.bodySmall?.copyWith(
+                                      color: Palette.molten,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Palette.molten,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         style: text.bodySmall,
                       ),
                     ],

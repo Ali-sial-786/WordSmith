@@ -67,6 +67,14 @@ void main() {
     expect(bundle.loads.where((k) => k.endsWith('f.json.gz')).length, 1, reason: 'shards are cached');
   });
 
+  test("online definitions' other parts of speech show as spelled", () {
+    expect(const Sense('n', 'x').posLabel, 'noun');
+    expect(const Sense('proper noun', 'x').posLabel, 'proper noun');
+    expect(const Sense('interjection', 'x').posLabel, 'interjection');
+    expect(const Sense('', 'x').posLabel, '');
+    expect(const Sense('s', 'x').posLabel, '');
+  });
+
   test('the bundled dictionary has the forge words', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
     final lexicon = Lexicon(rootBundle);

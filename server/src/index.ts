@@ -2,9 +2,10 @@
  * Wordsmith API Worker: the router for the REST routes in docs/TECH.md §4,
  * and the hourly Cron Trigger that sends daily reminders (shared/push.md).
  *
- * Every route except `/v1/version` and `/v1/health` needs a Firebase ID
- * token (`Authorization: Bearer <token>`; the WebSocket route reads it from
- * `Sec-WebSocket-Protocol` instead). Errors are JSON `{error, message?}`.
+ * Every route except `/v1/version`, `/v1/health` and `/v1/define/:word`
+ * needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
+ * route reads it from `Sec-WebSocket-Protocol` instead). Errors are JSON
+ * `{error, message?}`.
  */
 
 import { authenticate } from "./auth/request";
@@ -19,6 +20,7 @@ import { sendDailyReminders } from "./push/reminder";
 import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, putReminder } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
+import { getDefine } from "./routes/define";
 import { postSync } from "./routes/solo";
 import { postSurvivalSolo } from "./routes/survival";
 import { getHubSocket } from "./routes/ws";
@@ -37,6 +39,8 @@ const authed = (run: (c: AuthedContext) => Response | Promise<Response>): Handle
 const router = new Router<Handler>([
   { method: "GET", path: "/v1/version", handler: open((c) => json(versionInfo(c.env))) },
   { method: "GET", path: "/v1/health", handler: open(() => json({ ok: true })) },
+  // Meanings work signed out (src/routes/define.ts).
+  { method: "GET", path: "/v1/define/:word", handler: open(getDefine) },
 
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
   { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },

@@ -15,6 +15,7 @@ contract.
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
 | `src/room/` | RoomDO (`room.ts`), the co-op and Versus referee, and its message protocol (`protocol.ts`) |
+| `src/dictionary/` | Online definitions for words the app's offline lexicon lacks (`define.ts`): the Free Dictionary API, then Wiktionary, and picking and filtering their senses (below) |
 | `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), the invite and gift messages (`invite.ts`, `gift.ts`), and the daily reminders' hourly run (`reminder.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
 | `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql`, `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) and `0006_survival.sql` (The Crucible's runs and best runs) |
@@ -45,10 +46,10 @@ contract.
 
 ## Routes
 
-Everything is under `/v1`. Every route except `/version` and `/health` needs
-`Authorization: Bearer <Firebase ID token>`; the WebSocket route reads the
-token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
-`{"error": "<code>", "message"?: "..."}`. A missing or bad token is
+Everything is under `/v1`. Every route except `/version`, `/health` and
+`/define/:word` needs `Authorization: Bearer <Firebase ID token>`; the
+WebSocket route reads the token from `Sec-WebSocket-Protocol` instead.
+Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or bad token is
 `401 {"error": "unauthorized", "message": "<reason>"}` (`missing_token`,
 `expired`, `bad_signature`, `unknown_kid`, `bad_audience`, …).
 
@@ -56,6 +57,7 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 |---|---|
 | `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself (`APK_URL`), or null |
 | `GET /health` | `{ok: true}` |
+| `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it, `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
 | `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). The username can't change (`409 already_set`), but repeating it with another avatar changes the avatar. |
 | `DELETE /me` | `{ok: true}`. Deletes all my rows (push tokens too). Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
@@ -88,6 +90,17 @@ token from `Sec-WebSocket-Protocol` instead. Errors are always JSON
 
 Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board and push tokens need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync`, `/survival/solo` and `/users/:username` don't.
+
+### Definitions
+
+`GET /v1/define/:word` (`src/routes/define.ts`, `src/dictionary/define.ts`) is
+the app's fallback when its offline WordNet lexicon has no entry, which is
+often the case for names and rarer words:
+
+- **Sources:** the Free Dictionary API (`https://api.dictionaryapi.dev/api/v2/entries/en/<word>`) first; when it has nothing, Wiktionary's REST definitions (`https://en.wiktionary.org/api/rest_v1/page/definition/<word>`), the lowercase title and then the capitalised one (`Ali`), English entries only, with the HTML stripped. Both serve Wiktionary's text (CC BY-SA), and the app says which one a meaning came from. Requests carry a descriptive `User-Agent` with the repository's URL, as Wikimedia's API policy asks, and time out after 5 s.
+- **Senses** are picked as `tools/dictgen` picks the lexicon's: at most 3, round robin across parts of speech (the one with more senses first), duplicates dropped, glosses cleaned and cut to 160 characters. Slur and sexual senses are left out with the patterns of `tools/dictgen/data/gloss_filter.txt`, plus Wiktionary's `(vulgar)`, `(offensive)` and `(slur)` labels (`(derogatory)` only when there's another sense to show).
+- **`pos`** is the app's `Sense.pos`: `n`, `v`, `a` or `r` for noun, verb, adjective and adverb; another part of speech spelled out in lowercase (`proper noun`, `interjection`, `pronoun`, …); or `""`.
+- **Caching:** answers are kept in the Workers Cache API (`caches.default`, per data centre) under the word: definitions for 30 days, misses (the 404) for a day. A `502` isn't kept, so the next ask tries again. Responses also carry a matching `Cache-Control`.
 
 ### Profile
 
@@ -324,8 +337,8 @@ npx vitest run --project worker   # just the Worker
 
 The tests run as two Vitest projects:
 
-- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, Survival's rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
-- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus, `survival.test.ts` for Survival rooms; `survival-solo.test.ts` is The Crucible's endpoint) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` and `board.test.ts` move the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks, Work Orders and Weekly Trials across days and weeks run without waiting. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
+- **`rules`** (`test/rules/`, `test/unit/`) runs plain unit tests in Node: the game rules (with every vector in `shared/pickups.md`), the co-op round and mold rules (every bank puzzle is parsed), the Versus round and series rules, Survival's rules, the Daily Commission rules, sync checks, usernames, the hub and room protocols, the router, the campaign and bank SQL scripts, LiveKit tokens, online definitions (parsing both dictionaries, picking and filtering senses, the fallback order, with `setDictionaryFetcher()` standing in for the network), and the FCM sender (the JWT, checked against a generated key's public half; the access-token cache; the invite message; which tokens to forget).
+- **`worker`** (`test/worker/`) runs the Worker, HubDO and RoomDO inside the real `workerd` runtime using `@cloudflare/vitest-plugin` (the new name of `@cloudflare/vitest-pool-workers`). Before each test file, `test/worker/setup.ts` applies `migrations/` and loads the real campaign and bank into the test D1 database. Tests sign their own Firebase-style tokens with a generated RSA key, which `test/worker/helpers.ts` installs with `setJwksFetcher()`. Room tests (`rooms.test.ts` for co-op, `vs.test.ts` for Versus, `survival.test.ts` for Survival rooms; `survival-solo.test.ts` is The Crucible's endpoint) drive real WebSockets; they run the DO's alarm early with `runDurableObjectAlarm()` (the room treats an alarm as "the planned deadline has come"), evict it with `evictDurableObject()`, and read or adjust its storage with `runInDurableObject()`. `daily.test.ts` and `board.test.ts` move the clock with Vitest's fake `Date` (only `Date` is faked, and each test signs fresh tokens at the new time), so streaks, Work Orders and Weekly Trials across days and weeks run without waiting. `define.test.ts` answers the dictionaries with `setDictionaryFetcher()` and checks the Cache API keeps hits and misses. The test env has no `FCM_SERVICE_ACCOUNT`, so push is off everywhere except `push.test.ts`, which installs a generated key with `setFcmServiceAccount()` and catches the requests to Google with `setFcmFetcher()` (both in `src/push/fcm.ts`; the HubDO runs in the test's isolate, so it sees them).
 
 ## Changing the schema
 
