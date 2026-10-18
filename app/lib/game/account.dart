@@ -81,7 +81,8 @@ enum AccountPhase {
   signedOut,
   loading,
 
-  /// Signed in, but no username yet.
+  /// Signed in, but no username yet, or no birth month and year
+  /// (shared/age.md): the setup screen asks for what's missing.
   needsSetup,
   ready,
 
@@ -177,6 +178,11 @@ class AccountController extends Notifier<AccountState> {
 
   Future<void> _onUser(AuthUser? user) async {
     if (!ref.mounted) return;
+    if (user != null && ref.read(storeProvider).onlineAgeBlocked) {
+      // Online play is closed on this phone (an under-13; shared/age.md).
+      await _auth.signOut();
+      return;
+    }
     if (user == null) {
       // Set the state before any await, so a sign-in that lands meanwhile
       // can't be overwritten by this older event.
@@ -204,11 +210,7 @@ class AccountController extends Notifier<AccountState> {
     try {
       final profile = await _api!.me();
       if (!_current(uid)) return;
-      if (profile.needsSetup) {
-        state = state.copyWith(phase: AccountPhase.needsSetup, server: profile, clearError: true);
-      } else {
-        await _becomeReady(profile);
-      }
+      await _arrive(profile);
     } on ApiException catch (e) {
       if (_current(uid)) state = state.copyWith(phase: AccountPhase.failed, error: e.friendly);
     }
@@ -237,10 +239,58 @@ class AccountController extends Notifier<AccountState> {
     await _auth.signOut();
   }
 
-  /// Picks the username and avatar. Throws [ApiException] (e.g. taken).
-  Future<void> setup(String username, String avatar) async {
-    final profile = await _api!.setup(username, avatar);
-    await _becomeReady(profile);
+  /// Picks the username and avatar, with the birth month and year
+  /// (shared/age.md). Throws [ApiException] (e.g. taken); `under_13` after
+  /// the server deleted the account and this phone closed online play.
+  Future<void> setup(String username, String avatar, {required int birthYear, required int birthMonth}) =>
+      _ageChecked(() => _api!.setup(username, avatar, birthYear: birthYear, birthMonth: birthMonth));
+
+  /// The birth month and year of an account made before ages were asked.
+  /// Throws [ApiException] like [setup].
+  Future<void> confirmAge({required int birthYear, required int birthMonth}) =>
+      _ageChecked(() => _api!.confirmAge(birthYear, birthMonth));
+
+  Future<void> _ageChecked(Future<ServerProfile> Function() call) async {
+    final ServerProfile profile;
+    try {
+      profile = await call();
+    } on ApiException catch (e) {
+      if (e.code == 'under_13') await _closeOnlineForAge();
+      rethrow;
+    }
+    await _arrive(profile);
+  }
+
+  /// Ready, or still asking for a username or an age.
+  Future<void> _arrive(ServerProfile profile) async {
+    if (profile.needsSetup || profile.needsAge) {
+      state = state.copyWith(phase: AccountPhase.needsSetup, server: profile, clearError: true);
+    } else {
+      await _becomeReady(profile);
+    }
+  }
+
+  /// An under-13 (shared/age.md): the server has already deleted the
+  /// account. Closes online play on this phone, removes the sign-in as far
+  /// as Firebase allows without a fresh sign-in, and signs out. Solo
+  /// progress on the phone stays.
+  Future<void> _closeOnlineForAge() async {
+    await ref.read(storeProvider).blockOnlineForAge();
+    await _stopHub();
+    await _pushRefresh?.cancel();
+    _pushRefresh = null;
+    _pushToken = null;
+    try {
+      await _auth.deleteUser();
+    } on Object {
+      // Needs a recent sign-in; signing out below still ends it here.
+    }
+    try {
+      await _auth.signOut();
+    } on Object {
+      // Already signed out by the deletion.
+    }
+    if (ref.mounted) state = const AccountState(phase: AccountPhase.signedOut);
   }
 
   /// A new smith name. Throws [ApiException]: taken or not allowed.

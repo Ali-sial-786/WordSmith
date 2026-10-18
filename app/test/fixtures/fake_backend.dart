@@ -224,11 +224,34 @@ class FakeServer {
   bool deletedMe = false;
   final calls = <String>[];
 
+  /// When the player was born (shared/age.md): an adult unless a test says
+  /// otherwise; null for an account made before ages were asked.
+  int? birthYear = 1990;
+  int? birthMonth = 5;
+
+  /// Whole years old, counting a birthday once its month is over (UTC), as the server does.
+  static int ageOf(int year, int month) {
+    final now = DateTime.now().toUtc();
+    return now.year - year - (now.month <= month ? 1 : 0);
+  }
+
+  /// `403 under_13` after deleting the account, or null if old enough.
+  http.Response? _refuseUnder13(int year, int month) {
+    if (ageOf(year, month) >= 13) return null;
+    deletedMe = true;
+    username = null;
+    birthYear = null;
+    birthMonth = null;
+    return _json(403, {'error': 'under_13'});
+  }
+
   Map<String, Object?> profile(String uid) => {
     'id': uid,
     'username': username,
     'avatar': username == null ? null : avatar,
     'needsSetup': username == null,
+    'needsAge': birthYear == null,
+    'minor': birthYear != null && ageOf(birthYear!, birthMonth!) < 18,
     'totalXp': totalXp,
     'level': 1,
     'xpIntoLevel': totalXp,
@@ -261,8 +284,23 @@ class FakeServer {
         if (takenNames.contains(name.toLowerCase())) {
           return _json(409, {'error': 'username_taken'});
         }
+        final (year, month) = (body['birthYear'] as int?, body['birthMonth'] as int?);
+        if (year != null && month != null) {
+          if (_refuseUnder13(year, month) case final refused?) return refused;
+        }
         username = name;
         avatar = body['avatar'] as String;
+        if (year != null && month != null && birthYear == null) {
+          birthYear = year;
+          birthMonth = month;
+        }
+        return _json(200, profile(token));
+      case 'POST /me/age':
+        if (birthYear != null) return _json(409, {'error': 'age_already_set'});
+        final (year, month) = (body['birthYear'] as int, body['birthMonth'] as int);
+        if (_refuseUnder13(year, month) case final refused?) return refused;
+        birthYear = year;
+        birthMonth = month;
         return _json(200, profile(token));
       case 'POST /me/username':
         final name = body['username'] as String? ?? '';

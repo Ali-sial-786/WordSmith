@@ -4,6 +4,7 @@
  */
 
 import { DELETED_NAME } from "../account/username";
+import { ADULT_AGE, ageAt, type Birth } from "../rules/age";
 import { levelProgress, rankForLevel, STARTING_HINTS, type HintCounts } from "../rules/progression";
 import type { SurvivalBest } from "../rules/survival";
 
@@ -29,6 +30,8 @@ export interface Account {
   readonly createdAt: number;
   /** When the username last changed (`POST /v1/me/username`), or `null` if it hasn't since setup. */
   readonly usernameChangedAt: number | null;
+  /** The month and year they were born (shared/age.md), or `null` if not given yet. */
+  readonly birth: Birth | null;
   readonly totalXp: number;
   /** Highest campaign stage completed (0 = none). */
   readonly campaignCompleted: number;
@@ -57,6 +60,8 @@ interface AccountRow {
   avatar: string | null;
   created_at: number;
   username_changed_at: number | null;
+  birth_year: number | null;
+  birth_month: number | null;
   xp: number;
   campaign_stage: number;
   scrap_bin: number;
@@ -83,7 +88,7 @@ interface AccountRow {
 }
 
 const ACCOUNT_SQL = `
-SELECT u.id, u.username, u.avatar, u.created_at, u.username_changed_at,
+SELECT u.id, u.username, u.avatar, u.created_at, u.username_changed_at, u.birth_year, u.birth_month,
        p.xp, p.campaign_stage, p.scrap_bin, p.updated_at, p.stoke_claims, p.stoke_last, p.masterwork_pieces, p.reminder_hour,
        s.words_forged, s.longest_word, s.solo_done, s.coop_rounds, s.coop_mvps,
        s.vs_series, s.vs_series_won, s.vs_rounds_won,
@@ -104,6 +109,7 @@ function toAccount(row: AccountRow): Account {
     avatar: row.avatar,
     createdAt: row.created_at,
     usernameChangedAt: row.username_changed_at,
+    birth: row.birth_year === null || row.birth_month === null ? null : { year: row.birth_year, month: row.birth_month },
     totalXp: row.xp,
     campaignCompleted: row.campaign_stage,
     scrapBin: row.scrap_bin,
@@ -166,6 +172,10 @@ export interface ProfileBody {
   readonly avatar: string | null;
   /** True until `POST /v1/me/setup` has set a username and avatar. */
   readonly needsSetup: boolean;
+  /** True until the month and year they were born are known (shared/age.md). */
+  readonly needsAge: boolean;
+  /** Under 18 today (false while the age isn't known): the microphone starts muted in rooms. */
+  readonly minor: boolean;
   readonly totalXp: number;
   readonly level: number;
   readonly xpIntoLevel: number;
@@ -187,13 +197,15 @@ export interface ProfileBody {
   readonly createdAt: number;
 }
 
-export function profileBody(account: Account): ProfileBody {
+export function profileBody(account: Account, now = Date.now()): ProfileBody {
   const progress = levelProgress(account.totalXp);
   return {
     id: account.id,
     username: account.username,
     avatar: account.avatar,
     needsSetup: !isSetUp(account),
+    needsAge: account.birth === null,
+    minor: account.birth !== null && ageAt(account.birth, now) < ADULT_AGE,
     totalXp: account.totalXp,
     level: progress.level,
     xpIntoLevel: progress.xpIntoLevel,
@@ -249,6 +261,18 @@ export type SetupResult = "ok" | "taken" | "already_set";
  * (ignoring case) just updates the avatar, so a retried request and later
  * avatar changes both work.
  */
+/**
+ * Records when `uid` was born, unless it's already known (it's given once).
+ * Returns false if it was.
+ */
+export async function setBirth(db: D1Database, uid: string, birth: Birth): Promise<boolean> {
+  const res = await db
+    .prepare("UPDATE users SET birth_year = ?2, birth_month = ?3 WHERE id = ?1 AND birth_year IS NULL")
+    .bind(uid, birth.year, birth.month)
+    .run();
+  return res.meta.changes > 0;
+}
+
 export async function setupAccount(db: D1Database, account: Account, username: string, avatar: string): Promise<SetupResult> {
   if (account.username !== null) {
     if (account.username.toLowerCase() !== username.toLowerCase()) return "already_set";

@@ -63,6 +63,43 @@ Future<void> _pumpApp(
   await tester.pumpAndSettle();
 }
 
+/// Picks the birth month and year on the setup screen.
+Future<void> _pickBirth(WidgetTester tester, {required int year, String month = 'May'}) async {
+  await tester.ensureVisible(find.text('Month'));
+  await tester.tap(find.text('Month'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(month).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Year'));
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.text('$year'), 120, scrollable: find.byType(Scrollable).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('$year').last);
+  await tester.pumpAndSettle();
+}
+
+/// Scrolls the setup form to its button and taps it.
+Future<void> _tapStart(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.text('Start forging').hitTestable(),
+    200,
+    scrollable: find.ancestor(of: find.text('When were you born?'), matching: find.byType(Scrollable)).first,
+  );
+  await tester.tap(find.text('Start forging'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _signUp(WidgetTester tester) async {
+  await tester.tap(find.text('Sign in'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('New here? Create an account'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.widgetWithText(TextField, 'Email'), 'ali@example.com');
+  await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret1');
+  await tester.tap(find.text('Create account'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('sign up from the Forge Hall, pick a name, and see it at home', (tester) async {
     final auth = FakeAuth();
@@ -82,18 +119,69 @@ void main() {
 
     expect(find.text('Pick a name'), findsOneWidget, reason: 'new accounts pick a name');
     await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'no');
-    await tester.tap(find.text('Start forging'));
+    await _tapStart(tester);
     await tester.pumpAndSettle();
     expect(find.text('Use 3–16 letters, numbers or _.'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'Ali_Smith');
-    await tester.ensureVisible(find.text('Start forging'));
-    await tester.tap(find.text('Start forging'));
+    await _tapStart(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Choose the month and year you were born.'), findsOneWidget, reason: 'the age is asked too');
+
+    await _pickBirth(tester, year: 1998);
+    await _tapStart(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Ali_Smith'), findsOneWidget, reason: 'the Forge Hall shows the name');
     expect(find.text('0 online'), findsOneWidget, reason: 'Friends is now available');
     expect(server.username, 'Ali_Smith');
+    expect((server.birthYear, server.birthMonth), (1990, 5), reason: "the fake keeps its adult; it got 1998's month");
+  });
+
+  testWidgets('an under-13 is turned away: no account, and sign-in closed on this phone', (tester) async {
+    final auth = FakeAuth();
+    final server = FakeServer()..birthYear = null;
+    await _pumpApp(tester, auth, server);
+    await _signUp(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'Kiddo');
+    await _pickBirth(tester, year: DateTime.now().year - 10);
+    await _tapStart(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Online play is for 13 and over'), findsOneWidget);
+    expect(server.deletedMe, isTrue);
+    expect(auth.deleted, isTrue, reason: 'the fresh sign-in is removed');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in to keep your progress safe and play with friends.'), findsOneWidget);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Online play is for 13 and over'), findsOneWidget, reason: 'sign-in stays closed here');
+    expect(find.text('Create account'), findsNothing);
+  });
+
+  testWidgets('an account made before ages were asked confirms its age once', (tester) async {
+    final auth = FakeAuth(
+      signedIn: const AuthUser(uid: 'u1', email: 'ali@example.com'),
+    );
+    final server = FakeServer()
+      ..username = 'Ali'
+      ..birthYear = null;
+    await _pumpApp(tester, auth, server);
+
+    expect(find.text('Confirm your age to keep playing online.'), findsOneWidget);
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('One more thing'), findsOneWidget);
+    expect(find.text('Pick a name'), findsNothing, reason: 'only the age is asked');
+
+    await _pickBirth(tester, year: DateTime.now().year - 15, month: 'January');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(server.birthYear, DateTime.now().year - 15);
+    expect(find.text('0 online'), findsOneWidget, reason: 'online play is open');
   });
 
   testWidgets('Continue with Google goes straight to picking a name', (tester) async {

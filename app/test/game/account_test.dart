@@ -58,17 +58,20 @@ void main() {
     expect(c.read(accountProvider).phase, AccountPhase.needsSetup);
 
     await expectLater(
-      c.read(accountProvider.notifier).setup('taken', 'avatar_02'),
+      c.read(accountProvider.notifier).setup('taken', 'avatar_02', birthYear: 1990, birthMonth: 5),
       throwsA(isA<ApiException>().having((e) => e.code, 'code', 'username_taken')),
     );
 
-    await c.read(accountProvider.notifier).setup('Ali', 'avatar_03');
+    await c.read(accountProvider.notifier).setup('Ali', 'avatar_03', birthYear: 1990, birthMonth: 5);
     await _settle();
     final state = c.read(accountProvider);
     expect(state.phase, AccountPhase.ready);
     expect(state.server?.username, 'Ali');
-    expect(c.read(profileProvider).userId, 'uid-ali@example.com',
-        reason: 'new puzzles seed pickups with the account id');
+    expect(
+      c.read(profileProvider).userId,
+      'uid-ali@example.com',
+      reason: 'new puzzles seed pickups with the account id',
+    );
   });
 
   test('offline solo results sync and the server profile is taken', () async {
@@ -210,10 +213,7 @@ void main() {
     await c.read(accountProvider.notifier).signIn('a@b.c', 'secret1');
     await _settle();
 
-    await expectLater(
-      c.read(accountProvider.notifier).deleteAccount(password: 'wrong'),
-      throwsA(isA<AuthFailure>()),
-    );
+    await expectLater(c.read(accountProvider.notifier).deleteAccount(password: 'wrong'), throwsA(isA<AuthFailure>()));
     expect(server.deletedMe, isFalse, reason: 'nothing deleted without the password');
 
     await c.read(accountProvider.notifier).deleteAccount(password: 'secret1');
@@ -243,7 +243,7 @@ void main() {
     expect(c.read(accountProvider).phase, AccountPhase.needsSetup);
     expect(c.read(accountProvider).user?.usesPassword, isFalse);
 
-    await c.read(accountProvider.notifier).setup('Sam', 'avatar_04');
+    await c.read(accountProvider.notifier).setup('Sam', 'avatar_04', birthYear: 1990, birthMonth: 5);
     await _settle();
     expect(c.read(accountProvider).phase, AccountPhase.ready);
   });
@@ -256,10 +256,7 @@ void main() {
     await _settle();
 
     auth.googleEmail = null; // backs out of the picker
-    await expectLater(
-      c.read(accountProvider.notifier).deleteAccount(),
-      throwsA(isA<AuthFailure>()),
-    );
+    await expectLater(c.read(accountProvider.notifier).deleteAccount(), throwsA(isA<AuthFailure>()));
     expect(server.deletedMe, isFalse);
 
     auth.googleEmail = 'sam@gmail.com';
@@ -339,7 +336,9 @@ void main() {
       prefs: {
         'settings.v1': jsonEncode({'reminderHour': 8}),
       },
-      auth: FakeAuth(signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com')),
+      auth: FakeAuth(
+        signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com'),
+      ),
     );
     server.username = 'Ali';
     await _settle();

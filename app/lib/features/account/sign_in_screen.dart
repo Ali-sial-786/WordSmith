@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/auth_service.dart';
 import '../../game/account.dart';
+import '../../game/providers.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/forge_background.dart';
@@ -98,6 +99,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (next.phase == AccountPhase.ready && context.canPop()) context.pop();
     });
     final text = Theme.of(context).textTheme;
+    if (ref.read(storeProvider).onlineAgeBlocked) return const _OnlineClosed();
     final google = ref.read(accountProvider.notifier).googleAvailable;
     return Scaffold(
       appBar: AppBar(backgroundColor: Colors.transparent),
@@ -186,6 +188,53 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                   if (!_create) TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot password?')),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sign-in on a phone where an under-13 was turned away (shared/age.md).
+class _OnlineClosed extends StatelessWidget {
+  const _OnlineClosed();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.transparent),
+      extendBodyBehindAppBar: true,
+      body: ForgeBackground(
+        image: 'assets/images/bg_hall.webp',
+        fire: 0.6,
+        dim: 0.7,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Online play is for 13 and over',
+                      textAlign: TextAlign.center,
+                      style: displayStyle(24, color: Palette.molten),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Signing in isn't available on this phone. Solo play and your progress here are still yours.",
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium?.copyWith(color: Palette.steel),
+                    ),
+                    const SizedBox(height: 24),
+                    PlateButton(label: 'Back to the forge', primary: true, onPressed: () => context.go('/')),
+                  ],
+                ),
               ),
             ),
           ),

@@ -19,7 +19,7 @@ import { getBoard, postFriendGift, postGiftsClaim, postOrderClaim, postOrderSwap
 import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond, putNickname } from "./routes/friends";
 import { sendDailyReminders } from "./push/reminder";
-import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, postUsername, putReminder } from "./routes/me";
+import { deleteMe, deletePushToken, getMe, getUser, postAge, postPushToken, postSetup, postUsername, putReminder } from "./routes/me";
 import { getApk } from "./routes/apk";
 import { postContact } from "./routes/contact";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
@@ -55,6 +55,7 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
   { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
   { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
+  { method: "POST", path: "/v1/me/age", handler: authed(postAge) },
   { method: "POST", path: "/v1/me/username", handler: authed(postUsername) },
   { method: "POST", path: "/v1/me/push-token", handler: authed(postPushToken) },
   { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },

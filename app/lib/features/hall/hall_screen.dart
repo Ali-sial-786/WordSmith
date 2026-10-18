@@ -436,6 +436,11 @@ class _AccountBanner extends ConsumerWidget {
         'Sign in',
         () => context.push('/sign-in'),
       ),
+      AccountPhase.needsSetup when state.server?.needsSetup == false => (
+        'Confirm your age to keep playing online.',
+        'Confirm',
+        () => context.push('/setup'),
+      ),
       AccountPhase.needsSetup => ('Pick your smith name to finish setting up.', 'Set up', () => context.push('/setup')),
       AccountPhase.failed => (
         state.error ?? "Can't reach the forge right now.",

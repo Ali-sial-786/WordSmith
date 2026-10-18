@@ -1,7 +1,7 @@
 /**
- * `GET /v1/me`, `POST /v1/me/setup`, `POST /v1/me/username`, `DELETE /v1/me`,
- * `GET /v1/users/:username`, `POST`/`DELETE /v1/me/push-token` and
- * `PUT /v1/me/reminder` (shared/push.md).
+ * `GET /v1/me`, `POST /v1/me/setup`, `POST /v1/me/age` (shared/age.md),
+ * `POST /v1/me/username`, `DELETE /v1/me`, `GET /v1/users/:username`,
+ * `POST`/`DELETE /v1/me/push-token` and `PUT /v1/me/reminder` (shared/push.md).
  */
 
 import { checkUsername, isAvatar, looksLikeUsername, AVATARS } from "../account/username";
@@ -13,6 +13,7 @@ import {
   loadAccount,
   profileBody,
   publicProfileBody,
+  setBirth,
   setupAccount,
   userIdByUsername,
 } from "../db/accounts";
@@ -21,6 +22,7 @@ import { isPushToken, registerPushToken, unregisterPushToken } from "../db/push"
 import { setReminderHour } from "../db/reminders";
 import { ApiError, json, readJsonObject } from "../http";
 import { isReminderHour } from "../push/reminder";
+import { ageAt, MIN_AGE, parseBirth, type Birth } from "../rules/age";
 import { notifyHub, requireSetUp, type AuthedContext } from "./context";
 import { roomStub } from "./rooms";
 
@@ -29,7 +31,11 @@ export async function getMe(c: AuthedContext): Promise<Response> {
   return json(profileBody(await ensureAccount(c.env.DB, c.uid, c.now)));
 }
 
-/** `{username, avatar}` → my profile. */
+/**
+ * `{username, avatar, birthYear, birthMonth}` → my profile. The birth date
+ * may be left out (apps before 0.7 don't ask), and the profile then says
+ * `needsAge`. Under 13: the account is deleted, and `403 under_13`.
+ */
 export async function postSetup(c: AuthedContext): Promise<Response> {
   const body = await readJsonObject(c.request);
   const name = checkUsername(body.username);
@@ -37,12 +43,51 @@ export async function postSetup(c: AuthedContext): Promise<Response> {
   if (!isAvatar(body.avatar)) {
     throw new ApiError(400, "invalid_avatar", `Avatar must be one of ${AVATARS[0]} … ${AVATARS[AVATARS.length - 1]}`);
   }
+  const birth = body.birthYear === undefined && body.birthMonth === undefined ? null : birthOf(body, c.now);
+  if (birth !== null) await refuseUnder13(c, birth);
 
   const account = await ensureAccount(c.env.DB, c.uid, c.now);
   const result = await setupAccount(c.env.DB, account, name.username, body.avatar);
   if (result === "taken") throw new ApiError(409, "username_taken", "That username is taken");
   if (result === "already_set") throw new ApiError(409, "already_set", "Your username is already set");
-  return json(profileBody((await loadAccount(c.env.DB, c.uid))!));
+  if (birth !== null) await setBirth(c.env.DB, c.uid, birth);
+  return json(profileBody((await loadAccount(c.env.DB, c.uid))!, c.now));
+}
+
+/**
+ * `{birthYear, birthMonth}` → my profile: when I was born, for an account
+ * made before ages were asked. Given once: `409 age_already_set` after.
+ * Under 13: the account is deleted, and `403 under_13`.
+ */
+export async function postAge(c: AuthedContext): Promise<Response> {
+  const birth = birthOf(await readJsonObject(c.request), c.now);
+  const account = await ensureAccount(c.env.DB, c.uid, c.now);
+  if (account.birth !== null) throw new ApiError(409, "age_already_set", "Your age is already set; write to us if it's wrong");
+  await refuseUnder13(c, birth);
+  await setBirth(c.env.DB, c.uid, birth);
+  return json(profileBody((await loadAccount(c.env.DB, c.uid))!, c.now));
+}
+
+function birthOf(body: Record<string, unknown>, now: number): Birth {
+  const birth = parseBirth(body.birthYear, body.birthMonth, now);
+  if (birth === null) throw new ApiError(400, "invalid_birth", "Expected birthYear and birthMonth (1-12), not in the future");
+  return birth;
+}
+
+/**
+ * Online play is for 13 and over (shared/age.md). A younger player's
+ * account, and everything it holds, is deleted on the spot, as
+ * `DELETE /v1/me` would.
+ */
+async function refuseUnder13(c: AuthedContext, birth: Birth): Promise<void> {
+  if (ageAt(birth, c.now) >= MIN_AGE) return;
+  await removeAccount(c);
+  throw new ApiError(403, "under_13", "Online play is for players 13 and over");
+}
+
+async function removeAccount(c: AuthedContext): Promise<void> {
+  const { formerFriends } = await deleteAccount(c.env.DB, c.uid);
+  await notifyHub(c.env, (hub) => hub.userRemoved(c.uid, formerFriends));
 }
 
 /**
@@ -96,8 +141,7 @@ async function renamedEverywhere(c: AuthedContext, username: string): Promise<vo
  * user; until it does, calling `GET /v1/me` again would start a new, empty account.
  */
 export async function deleteMe(c: AuthedContext): Promise<Response> {
-  const { formerFriends } = await deleteAccount(c.env.DB, c.uid);
-  await notifyHub(c.env, (hub) => hub.userRemoved(c.uid, formerFriends));
+  await removeAccount(c);
   return json({ ok: true });
 }
 

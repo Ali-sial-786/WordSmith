@@ -49,6 +49,9 @@ class ApiException implements Exception {
     'already_sent' => 'You already sent them a gift today.',
     'not_friends' => "That smith isn't on your friends list any more.",
     'invalid_run' => "The forge couldn't count that run.",
+    'under_13' => 'Online play is for players 13 and over. Solo play is all yours.',
+    'invalid_birth' => 'Choose the month and year you were born.',
+    'age_already_set' => 'Your age is already set. Write to us through Contact us if it needs fixing.',
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
     _ => message ?? 'Something went wrong ($code).',
@@ -142,8 +145,20 @@ class ApiClient {
 
   Future<ServerProfile> me() async => ServerProfile.fromJson(await _send('GET', '/me'));
 
-  Future<ServerProfile> setup(String username, String avatar) async =>
-      ServerProfile.fromJson(await _send('POST', '/me/setup', body: {'username': username, 'avatar': avatar}));
+  /// The username and avatar, and at first setup the birth month and year
+  /// (shared/age.md): `403 under_13` deletes the account.
+  Future<ServerProfile> setup(String username, String avatar, {int? birthYear, int? birthMonth}) async =>
+      ServerProfile.fromJson(
+        await _send(
+          'POST',
+          '/me/setup',
+          body: {'username': username, 'avatar': avatar, 'birthYear': ?birthYear, 'birthMonth': ?birthMonth},
+        ),
+      );
+
+  /// The birth month and year of an account made before ages were asked.
+  Future<ServerProfile> confirmAge(int birthYear, int birthMonth) async =>
+      ServerProfile.fromJson(await _send('POST', '/me/age', body: {'birthYear': birthYear, 'birthMonth': birthMonth}));
 
   /// A new username, as often as the player likes.
   Future<ServerProfile> changeUsername(String username) async =>

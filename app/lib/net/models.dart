@@ -43,6 +43,8 @@ class ServerProfile {
     required this.username,
     required this.avatar,
     required this.needsSetup,
+    this.needsAge = false,
+    this.minor = false,
     required this.totalXp,
     required this.level,
     required this.rank,
@@ -59,6 +61,8 @@ class ServerProfile {
     username: j['username'] as String?,
     avatar: j['avatar'] as String?,
     needsSetup: j['needsSetup'] as bool? ?? false,
+    needsAge: j['needsAge'] as bool? ?? false,
+    minor: j['minor'] as bool? ?? false,
     totalXp: j['totalXp'] as int? ?? 0,
     level: j['level'] as int? ?? 1,
     rank: j['rank'] as String? ?? '',
@@ -77,6 +81,13 @@ class ServerProfile {
   final String? username;
   final String? avatar;
   final bool needsSetup;
+
+  /// Asked for the birth month and year yet? (shared/age.md; servers before
+  /// 0.7 don't say, which reads as known.)
+  final bool needsAge;
+
+  /// Under 18: the microphone starts muted in rooms (shared/age.md).
+  final bool minor;
   final int totalXp;
   final int level;
   final String rank;

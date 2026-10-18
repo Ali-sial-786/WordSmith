@@ -186,7 +186,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       setState(() => _video = call);
       final s = ref.read(settingsProvider);
       // The camera starts off: video is each player's own choice, in the room.
-      await call.join(url: grant.url, token: grant.token, camera: false, mic: s.videoMic);
+      // Players under 18 also start muted, every room (shared/age.md).
+      final minor = ref.read(accountProvider).server?.minor ?? false;
+      await call.join(url: grant.url, token: grant.token, camera: false, mic: s.videoMic && !minor);
     } on ApiException catch (e) {
       // Turn the setting back off so we don't ask again on every update.
       if (e.code == 'video_unavailable') _settings.update((s) => s.copyWith(videoChat: false));

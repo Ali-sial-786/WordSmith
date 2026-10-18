@@ -138,6 +138,7 @@ class Store {
   static const _savedKey = 'saved_puzzle.v1';
   static const _syncKey = 'sync_queue.v1';
   static const _tipsKey = 'tips_seen.v1';
+  static const _ageGateKey = 'age_gate.v1';
   static const _errorsKey = 'errors.v1';
   static const _crashSeenKey = 'crash_seen.v1';
   static const _historyKey = 'history.v1';
@@ -229,6 +230,13 @@ class Store {
   }
 
   Future<void> saveSurvivalBest(Map<String, Object?> best) => _prefs.setString(_survivalBestKey, jsonEncode(best));
+
+  /// Whether online play is closed on this phone because the player said
+  /// they're under 13 (shared/age.md). Kept through sign-outs and resets, so
+  /// another birth year can't simply be tried.
+  bool get onlineAgeBlocked => _prefs.getBool(_ageGateKey) ?? false;
+
+  Future<void> blockOnlineForAge() => _prefs.setBool(_ageGateKey, true);
 
   /// One-time tips the player has already been shown.
   bool seenTip(String id) => _prefs.getStringList(_tipsKey)?.contains(id) ?? false;

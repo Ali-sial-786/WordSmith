@@ -89,7 +89,8 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 | `GET /apk/:version` | The Android APK for a version or `latest`, streamed from where releases are published, so the in-app updater (and anyone given the link) downloads from our server |
 | `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks (never names: a word with only name senses is a 404). No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
 | `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
-| `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
+| `POST /me/setup` | Set my username, avatar and birth month and year on first sign-in (profanity-checked, must be unique; under 13 is refused and the account deleted, `shared/age.md`) |
+| `POST /me/age` | My birth month and year, once, for an account made before ages were asked (`shared/age.md`) |
 | `POST /me/username` | Change my username: the same rules, as often as I like |
 | `DELETE /me` | Delete my account data |
 | `POST /me/push-token` · `DELETE /me/push-token` | This phone's FCM token for notifications (`shared/push.md`) |
