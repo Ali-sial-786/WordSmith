@@ -56,10 +56,8 @@ class RivalStrip extends StatelessWidget {
       for (final id in round.racers)
         if (id != session.me) id,
     ];
-    // Taller when the phone uses bigger text, so names still fit.
-    final textExtra = MediaQuery.textScalerOf(context).scale(14) - 14;
     return SizedBox(
-      height: (call == null ? 74 : 86) + textExtra,
+      height: call == null ? 74 : 86,
       child: Row(
         children: [
           for (final id in ids.take(5))

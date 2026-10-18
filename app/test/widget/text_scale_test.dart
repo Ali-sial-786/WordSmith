@@ -12,10 +12,11 @@ import 'package:wordsmith/game/providers.dart';
 
 import '../fixtures/puzzles.dart';
 
-/// Big system text on a small phone: every main screen must still fit.
+/// The phone's bigger and bold text settings don't reach the game, whose
+/// lettering is sized to its art: every main screen looks as it does at 100%.
 void main() {
   for (final location in ['/', '/play/1', '/chapters', '/profile', '/settings', '/credits']) {
-    testWidgets('$location fits with 130% text on a small phone', (tester) async {
+    testWidgets('$location ignores 200% bold system text on a small phone', (tester) async {
       SharedPreferences.setMockInitialValues({
         'profile.v1': jsonEncode({'userId': 'abc'}),
         'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
@@ -36,18 +37,25 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(boldText: true);
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       await tester.binding.setSurfaceSize(const Size(360, 720));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: WordsmithApp(router: GoRouter(initialLocation: location, routes: appRouter.configuration.routes)),
+          child: WordsmithApp(
+            router: GoRouter(initialLocation: location, routes: appRouter.configuration.routes),
+          ),
         ),
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      final text = tester.element(find.byType(Text).first);
+      expect(MediaQuery.textScalerOf(text), TextScaler.noScaling);
+      expect(MediaQuery.boldTextOf(text), isFalse);
     });
   }
 }

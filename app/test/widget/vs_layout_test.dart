@@ -186,9 +186,7 @@ Future<FakeVideoCall> _call() async {
 RoomVideo _video(VideoCall? call) =>
     RoomVideo(available: true, call: call, onEnable: () {}, onDisable: () {}, onCamera: () {}, onMic: () {});
 
-Future<void> _pump(WidgetTester tester, Widget child, {double textScale = 1}) async {
-  tester.platformDispatcher.textScaleFactorTestValue = textScale;
-  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+Future<void> _pump(WidgetTester tester, Widget child) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -310,17 +308,11 @@ void main() {
       ..mold = RemoteMold(start, () => _lobby('standings'))
       ..standings = end
       ..tally = end.tally;
-    for (final scale in [1.0, 1.3]) {
-      await _pump(
-        tester,
-        VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}),
-        textScale: scale,
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('You'), findsOneWidget, reason: 'my own mold is in the row');
-      expect(find.text('7/7'), findsOneWidget);
-      expect(find.text('0/7'), findsOneWidget, reason: 'and the mold of someone who left');
-    }
+    await _pump(tester, VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.text('You'), findsOneWidget, reason: 'my own mold is in the row');
+    expect(find.text('7/7'), findsOneWidget);
+    expect(find.text('0/7'), findsOneWidget, reason: 'and the mold of someone who left');
 
     s.lobby = _lobby('round');
     await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}));
@@ -340,42 +332,36 @@ void main() {
   });
 
   testWidgets('the podium sums up twelve rounds among five on a small phone', (tester) async {
-    for (final scale in [1.0, 1.3]) {
-      final s = _session('results')..seriesEnd = _longSeries();
-      await _pump(
-        tester,
-        VsResultsView(session: s, onLeave: () {}),
-        textScale: scale,
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('Round by round'), findsOneWidget);
-      expect(find.text('Rematch'), findsOneWidget, reason: 'the actions stay in reach below');
+    final s = _session('results')..seriesEnd = _longSeries();
+    await _pump(tester, VsResultsView(session: s, onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Round by round'), findsOneWidget);
+    expect(find.text('Rematch'), findsOneWidget, reason: 'the actions stay in reach below');
 
-      // Down to the last rounds and the totals.
-      await tester.drag(find.byType(ListView), const Offset(0, -4000));
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-      expect(find.textContaining('Sudden death', findRichText: true), findsNWidgets(2));
-      expect(find.textContaining('most letters on time', findRichText: true), findsOneWidget);
-      expect(find.text('Letters'), findsOneWidget);
-      // The last round starts open, with its two racers' molds: mine (CAT, COT) and sam's (TOE).
-      expect(find.byType(RivalMolds), findsOneWidget);
-      final tiles = find.byType(RivalMolds);
-      expect(find.descendant(of: tiles, matching: find.text('5/7')), findsOneWidget);
-      expect(find.descendant(of: tiles, matching: find.text('3/7')), findsOneWidget);
-      expect(find.descendant(of: tiles, matching: find.text('You')), findsOneWidget);
+    // Down to the last rounds and the totals.
+    await tester.drag(find.byType(ListView), const Offset(0, -4000));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Sudden death', findRichText: true), findsNWidgets(2));
+    expect(find.textContaining('most letters on time', findRichText: true), findsOneWidget);
+    expect(find.text('Letters'), findsOneWidget);
+    // The last round starts open, with its two racers' molds: mine (CAT, COT) and sam's (TOE).
+    expect(find.byType(RivalMolds), findsOneWidget);
+    final tiles = find.byType(RivalMolds);
+    expect(find.descendant(of: tiles, matching: find.text('5/7')), findsOneWidget);
+    expect(find.descendant(of: tiles, matching: find.text('3/7')), findsOneWidget);
+    expect(find.descendant(of: tiles, matching: find.text('You')), findsOneWidget);
 
-      // Rounds open and close with a tap.
-      await tester.tap(find.text('11').first);
-      await tester.pumpAndSettle();
-      expect(find.byType(RivalMolds), findsNWidgets(2));
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.text('12').first);
-      await tester.pumpAndSettle();
-      expect(find.byType(RivalMolds), findsOneWidget);
-      // From the top again for the next text size.
-      await tester.pumpWidget(const SizedBox());
-    }
+    // Rounds open and close with a tap.
+    await tester.tap(find.text('11').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(RivalMolds), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('12').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(RivalMolds), findsOneWidget);
+    // From the top again for the next text size.
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('a podium from an older server shows the last round\'s molds, if this phone saw it', (tester) async {
@@ -412,22 +398,5 @@ void main() {
     await _pump(tester, VsResultsView(session: s, onLeave: () {}));
     expect(tester.takeException(), isNull);
     expect(find.text('Final round'), findsNothing);
-  });
-
-  testWidgets('the lobby and a round still fit with 130% text', (tester) async {
-    await _pump(tester, LobbyView(session: _session('lobby'), onLeave: () {}, video: _video(null)), textScale: 1.3);
-    expect(tester.takeException(), isNull);
-
-    final start = _start();
-    final s = _session('round')
-      ..round = start
-      ..mold = RemoteMold(start, () => _lobby('round'))
-      ..tally = start.tally;
-    await _pump(
-      tester,
-      VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(await _call())),
-      textScale: 1.3,
-    );
-    expect(tester.takeException(), isNull);
   });
 }

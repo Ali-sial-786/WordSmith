@@ -152,6 +152,12 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       theme: buildTheme(),
       scrollBehavior: const ForgeScrollBehavior(),
       routerConfig: _router,
+      // The game's lettering is sized to its plates, frames and molds, so the
+      // phone's bigger or bold text settings would only misshape it.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
+        child: child!,
+      ),
     );
   }
 }
