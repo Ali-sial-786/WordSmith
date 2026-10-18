@@ -13,10 +13,10 @@ describe("routes", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^application\/json/);
     expect(await res.json()).toEqual({
-      latest: "0.5.0",
+      latest: "0.6.0",
       minSupported: "0.1.0",
       protocol: 1,
-      apk: "https://github.com/Ali-sial-786/WordSmith/releases/download/v0.5.0/wordsmith-0.5.0.apk",
+      apk: "https://github.com/Ali-sial-786/WordSmith/releases/download/v0.6.0/wordsmith-0.6.0.apk",
     });
   });
 
