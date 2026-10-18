@@ -149,7 +149,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     // ambience and sounds carry the game. The hall music is back on leaving.
     ref.read(sfxProvider).music(null);
     _podiumSounds();
-    // Video joins once the room has seated us.
+    // Voice chat joins once the room has seated us.
     if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
       _videoAutoTried = true;
       _startVideo();
@@ -174,7 +174,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       final call = ref.read(videoCallFactoryProvider)!(_session!.me)..addListener(_videoChanged);
       setState(() => _video = call);
       final s = ref.read(settingsProvider);
-      await call.join(url: grant.url, token: grant.token, camera: s.videoCamera, mic: s.videoMic);
+      // The camera starts off: video is each player's own choice, in the room.
+      await call.join(url: grant.url, token: grant.token, camera: false, mic: s.videoMic);
     } on ApiException catch (e) {
       // Turn the setting back off so we don't ask again on every update.
       if (e.code == 'video_unavailable') _settings.update((s) => s.copyWith(videoChat: false));
@@ -211,7 +212,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final call = _video;
     if (call == null) return;
     await call.setCamera(!call.cameraOn);
-    _settings.update((s) => s.copyWith(videoCamera: call.cameraOn));
   }
 
   Future<void> _toggleMic() async {

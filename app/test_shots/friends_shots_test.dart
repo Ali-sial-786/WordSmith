@@ -174,10 +174,10 @@ void main() {
   });
 
   testWidgets('change username', (tester) async {
-    await _pump(tester, _server(), '/settings');
+    await _pump(tester, _server(), '/profile');
     await tester.scrollUntilVisible(find.text('Change username'), 300, scrollable: find.byType(Scrollable).first);
     await _wait(tester);
-    await _shot('settings_account');
+    await _shot('profile_account');
     await tester.tap(find.text('Change username'));
     await _wait(tester);
     await tester.enterText(find.byKey(const ValueKey('new-username')), 'taken');

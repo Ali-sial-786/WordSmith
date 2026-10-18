@@ -117,8 +117,7 @@ class Settings {
     this.ambienceVolume = 0.4,
     this.haptics = true,
     this.reducedMotion = false,
-    this.videoChat = false,
-    this.videoCamera = true,
+    this.videoChat = true,
     this.videoMic = true,
     this.inviteNotifications = true,
     this.leftHanded = false,
@@ -133,8 +132,8 @@ class Settings {
     ambienceVolume: (json['ambience'] as num?)?.toDouble() ?? 0.4,
     haptics: json['haptics'] as bool? ?? true,
     reducedMotion: json['reducedMotion'] as bool? ?? false,
-    videoChat: json['videoChat'] as bool? ?? false,
-    videoCamera: json['videoCamera'] as bool? ?? true,
+    // A new key: chat in rooms used to be off by default, and is on now.
+    videoChat: json['roomChat'] as bool? ?? true,
     videoMic: json['videoMic'] as bool? ?? true,
     inviteNotifications: json['inviteNotifications'] as bool? ?? true,
     leftHanded: json['leftHanded'] as bool? ?? false,
@@ -150,12 +149,12 @@ class Settings {
   final bool haptics;
   final bool reducedMotion;
 
-  /// Video chat with friends in Co-op and Versus rooms (opt-in).
+  /// Voice chat with friends in Co-op and Versus rooms, on unless turned
+  /// off. The camera always starts off; players turn it on in the room.
   final bool videoChat;
 
-  /// Whether the camera and mic start on when joining a room's video chat
-  /// (the last choice made in a room).
-  final bool videoCamera;
+  /// Whether the mic starts on when joining a room's chat (the last choice
+  /// made in a room).
   final bool videoMic;
 
   /// Phone notifications when a friend invites you to a room.
@@ -180,7 +179,6 @@ class Settings {
     bool? haptics,
     bool? reducedMotion,
     bool? videoChat,
-    bool? videoCamera,
     bool? videoMic,
     bool? inviteNotifications,
     bool? leftHanded,
@@ -194,7 +192,6 @@ class Settings {
     haptics: haptics ?? this.haptics,
     reducedMotion: reducedMotion ?? this.reducedMotion,
     videoChat: videoChat ?? this.videoChat,
-    videoCamera: videoCamera ?? this.videoCamera,
     videoMic: videoMic ?? this.videoMic,
     inviteNotifications: inviteNotifications ?? this.inviteNotifications,
     leftHanded: leftHanded ?? this.leftHanded,
@@ -209,8 +206,7 @@ class Settings {
     'ambience': ambienceVolume,
     'haptics': haptics,
     'reducedMotion': reducedMotion,
-    'videoChat': videoChat,
-    'videoCamera': videoCamera,
+    'roomChat': videoChat,
     'videoMic': videoMic,
     'inviteNotifications': inviteNotifications,
     'leftHanded': leftHanded,

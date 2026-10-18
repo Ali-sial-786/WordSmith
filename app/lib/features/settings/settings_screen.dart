@@ -14,7 +14,6 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/crash_notice.dart';
 import '../../update/app_updater.dart';
-import '../account/change_username_screen.dart';
 import '../update/update_sheet.dart';
 import 'font_picker.dart';
 import 'scheme_picker.dart';
@@ -68,10 +67,10 @@ class SettingsScreen extends ConsumerWidget {
           ),
           if (ref.watch(accountProvider).phase != AccountPhase.unavailable)
             SwitchListTile(
-              title: const Text('Video chat in Co-op and Versus'),
+              title: const Text('Voice chat in Co-op and Versus'),
               subtitle: const Text(
-                'Friends in your room see you in a small bubble, and you hear each other. '
-                'Uses more data, so Wi-Fi is best.',
+                'On when you join a room, so friends hear each other. Your camera stays off until you turn it '
+                'on in the room. Video uses more data, so Wi-Fi is best.',
               ),
               value: s.videoChat,
               onChanged: (v) => n.update((s) => s.copyWith(videoChat: v)),
@@ -269,14 +268,6 @@ class _AccountSection extends ConsumerWidget {
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.sync), onPressed: n.sync),
           ),
-          if (account.isReady)
-            ListTile(
-              title: const Text('Change username'),
-              subtitle: const Text('Pick a new smith name'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () =>
-                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChangeUsernameScreen())),
-            ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
           ListTile(
             title: Text('Delete account', style: TextStyle(color: Palette.quenchRed)),

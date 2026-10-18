@@ -73,7 +73,7 @@ void main() {
     );
 
     await tester.pumpWidget(_wrap(VideoBar(video: video(null))));
-    await tester.tap(find.text('Turn on video chat'));
+    await tester.tap(find.text('Turn on voice chat'));
     expect(taps, ['enable']);
 
     final call = FakeVideoCall();
@@ -92,20 +92,21 @@ void main() {
       ..error = "Couldn't use the camera."
       ..status = VideoStatus.failed;
     await tester.pump();
-    expect(find.text('Video chat is off'), findsOneWidget);
+    expect(find.text('Voice chat is off'), findsOneWidget);
     expect(find.text("Couldn't use the camera."), findsOneWidget);
   });
 
   testWidgets('builds without online play show no video bar', (tester) async {
     await tester.pumpWidget(_wrap(const VideoBar(video: RoomVideo.none)));
-    expect(find.text('Turn on video chat'), findsNothing);
+    expect(find.text('Turn on voice chat'), findsNothing);
   });
 
-  test('video settings are saved', () {
-    final s = Settings.fromJson(const Settings().copyWith(videoChat: true, videoMic: false).toJson());
-    expect((s.videoChat, s.videoCamera, s.videoMic), (true, true, false));
-    final old = Settings.fromJson(const {'sfx': 0.5});
-    expect((old.videoChat, old.videoCamera, old.videoMic), (false, true, true), reason: 'off until chosen');
+  test('room chat settings are saved, and voice chat is on unless turned off', () {
+    final s = Settings.fromJson(const Settings().copyWith(videoChat: false, videoMic: false).toJson());
+    expect((s.videoChat, s.videoMic), (false, false));
+    expect(Settings.fromJson(const {'sfx': 0.5}).videoChat, isTrue);
+    // Players who had left video chat off before get voice chat now.
+    expect(Settings.fromJson(const {'videoChat': false}).videoChat, isTrue);
   });
 
   test('the API hands out a room video token, or says video is not set up', () async {

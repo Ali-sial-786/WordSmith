@@ -38,7 +38,8 @@ class RoomVideo {
   final VoidCallback onMic;
 }
 
-/// The lobby's video chat row: a switch to join, then camera and mic toggles.
+/// The lobby's voice and video chat row: a button to join, then camera and
+/// mic toggles.
 class VideoBar extends StatelessWidget {
   const VideoBar({super.key, required this.video});
 
@@ -52,7 +53,7 @@ class VideoBar extends StatelessWidget {
     if (call == null) {
       return OutlinedButton.icon(
         icon: const Icon(Icons.videocam_outlined),
-        label: const Text('Turn on video chat'),
+        label: const Text('Turn on voice chat'),
         onPressed: video.onEnable,
       );
     }
@@ -60,10 +61,10 @@ class VideoBar extends StatelessWidget {
       listenable: call,
       builder: (context, _) {
         final label = switch (call.status) {
-          VideoStatus.connecting => 'Connecting video…',
-          VideoStatus.reconnecting => 'Video reconnecting…',
-          VideoStatus.failed => 'Video chat is off',
-          _ => 'Video chat on',
+          VideoStatus.connecting => 'Connecting…',
+          VideoStatus.reconnecting => 'Reconnecting…',
+          VideoStatus.failed => 'Voice chat is off',
+          _ => call.cameraOn ? 'Video chat on' : 'Voice chat on',
         };
         return Container(
           padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),

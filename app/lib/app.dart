@@ -91,6 +91,9 @@ class WordsmithApp extends ConsumerStatefulWidget {
 class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _opened;
 
+  /// The colour scheme and fonts the app was last built with.
+  String? _look;
+
   GoRouter get _router => widget.router ?? appRouter;
 
   @override
@@ -145,12 +148,29 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
     if (daily != null && daily.date != todayUtc()) ref.invalidate(dailyProvider);
   }
 
+  /// A new colour scheme or font: every widget builds and paints again, as on
+  /// a hot reload. Colours and fonts are read as widgets build and paint, and
+  /// widgets that don't depend on the theme (const ones above all) would
+  /// otherwise keep the old ones until something else rebuilt them. Screens
+  /// keep their state.
+  void _rebuildEverything() {
+    void visit(Element e) {
+      e.markNeedsBuild();
+      if (e is RenderObjectElement) e.renderObject.markNeedsPaint();
+      e.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(accountProvider); // keep the account alive for the whole app
     // Only a new look rebuilds the app, not every volume change.
     final look = ref.watch(settingsProvider.select(appearanceKey));
     applyAppearance(ref.read(settingsProvider));
+    if (_look != null && _look != look) WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildEverything());
+    _look = look;
     return MaterialApp.router(
       title: 'Wordsmith',
       debugShowCheckedModeBanner: false,
@@ -162,11 +182,10 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
         // Status and navigation bar icons follow the scheme (app bars set their
-        // own). Two fingers zoom anywhere. A new colour scheme or font builds
-        // every screen afresh to pick it up.
+        // own). Two fingers zoom anywhere.
         child: AnnotatedRegion(
           value: systemBarStyle(),
-          child: PinchZoom(child: KeyedSubtree(key: ValueKey(look), child: child!)),
+          child: PinchZoom(child: child!),
         ),
       ),
     );

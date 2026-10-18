@@ -99,7 +99,7 @@ Map<String, Object?> _lobby() => {
   ],
 };
 
-/// Scrolls Settings down to its account section.
+/// Finds the Change username button at the top of the profile.
 Future<void> _scrollToAccount(WidgetTester tester) async {
   await tester.scrollUntilVisible(find.text('Change username'), 300, scrollable: find.byType(Scrollable).first);
   await tester.ensureVisible(find.text('Change username'));
@@ -114,12 +114,13 @@ Future<void> _pumpRoom(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('changing my username from Settings, with its rules and errors, as often as I like', (tester) async {
+  testWidgets('changing my username from the profile, with its rules and errors, as often as I like', (tester) async {
     final server = FakeServer()..username = 'Ali';
-    await _pumpApp(tester, server, '/settings');
+    await _pumpApp(tester, server, '/profile');
 
     await _scrollToAccount(tester);
-    expect(find.text('Pick a new smith name'), findsOneWidget);
+    // The profile shows who I am to friends.
+    expect(find.text('Ali'), findsOneWidget);
     await tester.tap(find.text('Change username'));
     await tester.pumpAndSettle();
     expect(find.text('Friends know you as'), findsOneWidget);

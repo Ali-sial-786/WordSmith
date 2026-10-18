@@ -15,7 +15,9 @@ import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/masterwork_art.dart';
 import '../../ui/widgets/rank_badge.dart';
 import '../../ui/widgets/xp_bar.dart';
+import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/forge_frame.dart';
+import '../account/change_username_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -35,6 +37,7 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (account.isReady) ...[const _Identity(), const SizedBox(height: 20)],
           Center(child: RankBadge(rank: p.rank, size: 72)),
           const SizedBox(height: 6),
           Center(
@@ -135,6 +138,46 @@ class ProfileScreen extends ConsumerWidget {
     HintKind.chisel => 'Reveals the letter in a cell you pick',
     HintKind.sparks => 'Reveals up to $sparkShowerLetters letters',
   };
+}
+
+/// Who I am to friends: my emblem and smith name, which I can change here.
+class _Identity extends ConsumerWidget {
+  const _Identity();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final server = ref.watch(accountProvider.select((a) => a.server));
+    final text = Theme.of(context).textTheme;
+    return ForgePanel(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          AvatarBadge(avatar: server?.avatar ?? avatarIds.first, size: 52),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Friends know you as', style: text.labelMedium?.copyWith(color: Palette.steel)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(server?.username ?? '?', style: displayStyle(22, color: Palette.gold)),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                  onPressed: () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChangeUsernameScreen())),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Change username'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Stat extends StatelessWidget {

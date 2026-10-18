@@ -174,24 +174,28 @@ class PlateButton extends StatelessWidget {
                 child: Row(
                   children: [
                     if (icon != null) ...[GameIcon(icon!, size: 26, color: fg), const SizedBox(width: 14)],
+                    // Words shrink to fit the plate rather than being cut off.
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: displayStyle(primary ? 19 : 16, color: fg),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(label, maxLines: 1, style: displayStyle(primary ? 19 : 16, color: fg)),
                           ),
                           if (sublabel != null)
-                            Text(
-                              sublabel!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: primary ? Palette.onAccent.withValues(alpha: 0.8) : Palette.steel),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                sublabel!,
+                                maxLines: 1,
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: primary ? Palette.onAccent.withValues(alpha: 0.8) : Palette.steel,
+                                ),
+                              ),
                             ),
                         ],
                       ),

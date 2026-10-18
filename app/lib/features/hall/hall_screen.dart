@@ -294,7 +294,7 @@ class _DailyButton extends ConsumerWidget {
 
 /// Survival's solo mode: the best run so far, or what it is.
 String _crucibleLine(SurvivalBest? best) => best == null || best.puzzles + best.words == 0
-    ? 'Survival: forge the heated word before it melts'
+    ? 'Survival: forge words before they melt'
     : 'Survival · Best: ${best.puzzles} cleared, ${best.words} words';
 
 /// The Forge Board, with a badge for rewards waiting. The first time the
