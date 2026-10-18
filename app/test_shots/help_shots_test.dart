@@ -16,18 +16,21 @@ import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/features/hall/help_sheet.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/game/providers.dart';
+import 'package:wordsmith/ui/theme/theme.dart';
 
 import '../test/fixtures/fake_backend.dart';
 import '../test/fixtures/puzzles.dart';
 
 import 'shot_fonts.dart';
 
-/// The Hall of a signed-in smith partway through Bronze, on a [size] phone.
-Future<void> _pumpHall(WidgetTester tester, Size size) async {
+/// The Hall of a signed-in smith partway through Bronze, on a [size] phone,
+/// in the [font] set.
+Future<void> _pumpHall(WidgetTester tester, Size size, {String font = 'forge'}) async {
   SharedPreferences.setMockInitialValues({
     'profile.v1': jsonEncode({'userId': 'abc', 'totalXp': 2600, 'campaignStage': 132}),
-    'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+    'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false, 'font': font}),
   });
+  addTearDown(() => Fonts.choice = FontChoice.forge);
   final store = await Store.open();
   final auth = FakeAuth(
     signedIn: const AuthUser(uid: 'uid-ali', email: 'ali@example.com'),
@@ -79,6 +82,14 @@ void main() {
       await _pumpHall(tester, size);
       await _shot('help_hall_$tag');
     });
+
+    // Every label fits its plate in every font set.
+    for (final font in FontChoice.all) {
+      testWidgets('hall in the ${font.name} fonts at $tag', (tester) async {
+        await _pumpHall(tester, size, font: font.id);
+        await _shot('hall_font_${font.id}_$tag');
+      });
+    }
 
     // The top of the guide, then each section's heading at the top, then the end.
     for (final (i, heading) in [null, 'Play with friends', 'Forge Board', 'Your smith', 'In a puzzle', ''].indexed) {
