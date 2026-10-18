@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Terms of use · Wordsmith</title>
+  <meta name="description" content="The rules for playing Wordsmith, including the rules for chat, voice and video in Co-op and Versus rooms.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#140F0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F7EFE2" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <!-- Served at /terms (Cloudflare drops ".html"). The same styles are in
+       privacy.html and delete-account.html: change all three together. -->
+  <style>
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html) */
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #140F0C;
+      --card: #1E1612;
+      --card-edge: rgba(255, 178, 63, 0.18);
+      --rule: rgba(255, 178, 63, 0.14);
+      --text: #F4E8D4;
+      --muted: #C7B59D;
+      --heading: #FFB23F;
+      --gold: #E9B949;
+      --ember: #FF6A13;
+      --link: #FFC266;
+      --link-hover: #FFE3AE;
+      --glow: rgba(255, 106, 19, 0.17);
+      --button-top: #FFC35C;
+      --button-bottom: #FF8A1F;
+      --button-text: #1C1007;
+      --display: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #F7EFE2;
+        --card: #FFFAF2;
+        --card-edge: rgba(140, 78, 18, 0.22);
+        --rule: rgba(140, 78, 18, 0.18);
+        --text: #2A1C12;
+        --muted: #5E4A3A;
+        --heading: #9A4708;
+        --gold: #85600C;
+        --ember: #C2410C;
+        --link: #A14600;
+        --link-hover: #6A2E00;
+        --glow: rgba(255, 150, 60, 0.20);
+        --button-top: #FFC35C;
+        --button-bottom: #FF9A3C;
+        --button-text: #1C1007;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 900px 380px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 400 17px/1.65 var(--body);
+      overflow-wrap: break-word;
+    }
+    @media (min-width: 640px) { body { font-size: 18px; } }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+    a:hover { color: var(--link-hover); }
+    a:focus-visible { outline: 2px solid var(--heading); outline-offset: 2px; border-radius: 4px; }
+
+    /* Header: the name and Play on top, the pages under them on a phone;
+       one row from 640px. */
+    .site-head { border-bottom: 1px solid var(--rule); }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-bottom: 12px;
+    }
+    .brand {
+      order: 1;
+      margin-right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--heading);
+    }
+    .brand img { width: 34px; height: auto; display: block; }
+    .brand span {
+      font: 700 19px/1 var(--display);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--heading);
+    }
+    .site-nav { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+    .site-nav a {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .site-nav a:hover { color: var(--text); border-color: var(--rule); }
+    .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    .play {
+      order: 2;
+      display: inline-block;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play:hover { filter: brightness(1.06); color: var(--button-text); }
+    @media (min-width: 640px) {
+      .site-nav { order: 2; flex-basis: auto; }
+      .play { order: 3; }
+    }
+
+    main { padding-top: 30px; padding-bottom: 24px; }
+
+    h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.2; color: var(--heading); }
+    h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.02em; }
+    @media (min-width: 640px) { h1 { font-size: 42px; } }
+    @media not all and (prefers-color-scheme: light) {
+      h1 {
+        background: linear-gradient(180deg, #FFF1D0 0%, #FFB23F 55%, #FF7A24 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+    h2 {
+      margin: 40px 0 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 24px;
+      scroll-margin-top: 16px;
+    }
+    h3 { margin: 26px 0 6px; font-size: 1.06em; line-height: 1.35; color: var(--gold); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3em; }
+    li { margin: 0 0 8px; }
+    li::marker { color: var(--ember); }
+    strong { color: var(--text); font-weight: 650; }
+    code {
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--card);
+      font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 0.9em; letter-spacing: 0.02em; }
+    .lead { font-size: 1.06em; }
+
+    .card {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      background: var(--card);
+    }
+    .card > :last-child { margin-bottom: 0; }
+    .card h2 { margin-top: 0; padding-top: 0; border-top: 0; font-size: 21px; }
+
+    .contents { margin: 22px 0 8px; }
+    .contents p { margin: 0 0 8px; color: var(--muted); font-size: 0.9em; }
+    .contents ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .contents li { margin: 0; }
+    .contents a {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-size: 0.86em;
+      text-decoration: none;
+    }
+
+    .who { margin: 0 0 16px; }
+    .who div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .who div:first-child { padding-top: 4px; }
+    .who dt { font-weight: 650; color: var(--gold); }
+    .who dd { margin: 4px 0 0; }
+
+    .contact { border-color: var(--heading); }
+
+    .site-foot {
+      padding-top: 18px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+    .site-foot p { margin: 0 0 8px; }
+    .site-foot a { color: var(--muted); white-space: nowrap; }
+    .site-foot a:hover { color: var(--text); }
+    /* END shared styles */
+    .rules { margin: 0 0 16px; padding: 0; list-style: none; }
+    .rules li {
+      position: relative;
+      margin: 0;
+      padding: 9px 0 9px 30px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .rules li:last-child { border-bottom: 0; }
+    .rules li::before {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 1.05em;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--ember);
+      transform: rotate(45deg);
+      box-shadow: 0 0 8px rgba(255, 106, 19, 0.55);
+    }
+    .be-kind { font: 700 22px/1.3 var(--display); color: var(--heading); margin: 0 0 6px; }
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="brand" href="/"><img src="/icons/anvil.webp" alt="" width="34" height="26"><span>Wordsmith</span></a>
+      <a class="play" href="/">Play</a>
+      <nav class="site-nav" aria-label="Wordsmith pages">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms" aria-current="page">Terms</a>
+        <a href="/delete-account">Delete account</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Terms of use</h1>
+    <p class="updated">Last updated 18 October 2026</p>
+
+    <p class="lead">These are the rules for playing Wordsmith, in the Android app and in the browser. By playing, you agree to them. They're short, so please read them, especially the chat rules.</p>
+
+    <h2 id="using">Using Wordsmith</h2>
+    <ul>
+      <li>Wordsmith is free to play. It has no ads and nothing to buy.</li>
+      <li>Play fairly. Don't try to break, overload or get around how the game works, for example with modified apps, bots or scripts, or by attacking our servers.</li>
+      <li>Wordsmith isn't designed for children under 13.</li>
+      <li>How we handle your information is explained in the <a href="/privacy">privacy policy</a>.</li>
+    </ul>
+
+    <h2 id="account">Your account</h2>
+    <ul>
+      <li>One person per account. Don't share your account or use anyone else's.</li>
+      <li>Keep your sign-in safe. You're responsible for what's done with your account. If you think someone else has got into it, change your password (<em>Forgot password?</em> on the sign-in screen) and <a href="#contact">tell us</a>.</li>
+      <li>Your username must follow the rules below. Offensive usernames aren't allowed, even if one gets past the filter.</li>
+    </ul>
+
+    <h2 id="chat-rules">Chat and voice rules</h2>
+    <p>These apply to everything you share with other players: text chat, voice, video, emotes and your username.</p>
+    <div class="card">
+      <p class="be-kind">Be kind.</p>
+      <p>Treat other players the way you'd like to be treated. These are not allowed:</p>
+      <ul class="rules">
+        <li><strong>Bullying or harassment</strong>, including ganging up on someone or following them from room to room.</li>
+        <li><strong>Hate:</strong> attacking or mocking anyone for who they are, such as their race, ethnicity, religion, nationality, gender, sexuality or disability.</li>
+        <li><strong>Sexual content</strong> of any kind, in words or on camera.</li>
+        <li><strong>Threats</strong>, or encouraging anyone to hurt themselves or others.</li>
+        <li><strong>Spam</strong>, advertising, or links to scams.</li>
+        <li><strong>Cheating</strong>, or helping others cheat.</li>
+        <li><strong>Impersonation:</strong> pretending to be another player, a real person or the developer.</li>
+        <li><strong>Sharing personal details</strong> such as a real name, address, phone number, school or photo, whether they're someone else's or your own.</li>
+        <li><strong>Offensive usernames.</strong></li>
+      </ul>
+    </div>
+
+    <h2 id="what-we-do">What we do to keep it friendly</h2>
+    <ul>
+      <li>Swear words in chat are starred out automatically, and usernames containing them aren't accepted.</li>
+      <li>You can <strong>mute</strong> anyone in a room by holding down one of their messages, <strong>block</strong> them (their messages and emotes are hidden everywhere, and you stop being friends), and <strong>report</strong> them from room chat, the lobby or your friends list.</li>
+      <li>Reports are looked at, and accounts that break these rules can be removed.</li>
+      <li>Voice and video aren't recorded, so if someone breaks the rules there, report them and say what happened.</li>
+      <li>If you think someone is in danger, contact your local emergency services.</li>
+    </ul>
+
+    <h2 id="as-is">The game is provided as is</h2>
+    <ul>
+      <li>Wordsmith is a free game from an independent developer, provided “as is”. We work to keep it running and fair, but we can't promise it will always be available or free of mistakes, or that progress will never be lost.</li>
+      <li>We may change, pause or stop the game, or any part of it, at any time.</li>
+      <li>As far as the law allows, the developer isn't responsible for any loss from using Wordsmith or from not being able to use it. Nothing in these terms takes away rights you have by law.</li>
+    </ul>
+
+    <h2 id="content">Our content, and other people's</h2>
+    <ul>
+      <li>Wordsmith's own art, sounds, puzzles and code are the developer's work. Please don't copy them into other games or apps without asking.</li>
+      <li>Many of the fonts, sounds, icons and word lists are made by other people and used under open licences, such as the SIL Open Font License, Creative Commons (CC0, CC BY 3.0 and CC BY 4.0) and the Apache License 2.0. Their creators are named in the game under <strong>Settings › Credits</strong>, which also has the full licence texts.</li>
+      <li>Word meanings come from Open English WordNet (CC BY 4.0) and, for rarer words, from Wiktionary (CC BY-SA).</li>
+      <li>What you write and say is yours, and you're responsible for it. By sending it, you let the game show it to the other players in the room.</li>
+    </ul>
+
+    <h2 id="ending">Ending your use</h2>
+    <ul>
+      <li>You can stop playing and delete your account at any time: in the app under <strong>Settings › Delete account</strong>, or at <a href="/delete-account">/delete-account</a>.</li>
+      <li>We can suspend or remove accounts that break these terms.</li>
+    </ul>
+
+    <h2 id="changes">Changes to these terms</h2>
+    <p>If we change these terms, we'll update them here and change the date at the top. If you keep playing after a change, the new terms apply.</p>
+
+    <!-- CONTACT: the one place on this page with contact details. Swap it
+         for an email address when there is one (and in privacy.html and
+         delete-account.html too). -->
+    <section id="contact" class="card contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Contact</h2>
+      <p>Questions about these terms: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>. To report a player, use <strong>Report</strong> in the game rather than posting about them there.</p>
+      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+    </section>
+  </main>
+
+  <footer class="wrap site-foot">
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p>Wordsmith is a free, independent word game.</p>
+  </footer>
+</body>
+</html>
