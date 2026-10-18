@@ -119,6 +119,7 @@ class Settings {
     this.reducedMotion = false,
     this.videoChat = true,
     this.videoMic = true,
+    this.textChat = true,
     this.inviteNotifications = true,
     this.leftHanded = false,
     this.reminderHour,
@@ -135,6 +136,7 @@ class Settings {
     // A new key: chat in rooms used to be off by default, and is on now.
     videoChat: json['roomChat'] as bool? ?? true,
     videoMic: json['videoMic'] as bool? ?? true,
+    textChat: json['textChat'] as bool? ?? true,
     inviteNotifications: json['inviteNotifications'] as bool? ?? true,
     leftHanded: json['leftHanded'] as bool? ?? false,
     reminderHour: json['reminderHour'] as int?,
@@ -156,6 +158,10 @@ class Settings {
   /// Whether the mic starts on when joining a room's chat (the last choice
   /// made in a room).
   final bool videoMic;
+
+  /// Text chat in Co-op and Versus rooms: the chat button and new lines
+  /// popping up over the game.
+  final bool textChat;
 
   /// Phone notifications when a friend invites you to a room.
   final bool inviteNotifications;
@@ -180,6 +186,7 @@ class Settings {
     bool? reducedMotion,
     bool? videoChat,
     bool? videoMic,
+    bool? textChat,
     bool? inviteNotifications,
     bool? leftHanded,
     int? Function()? reminderHour,
@@ -193,6 +200,7 @@ class Settings {
     reducedMotion: reducedMotion ?? this.reducedMotion,
     videoChat: videoChat ?? this.videoChat,
     videoMic: videoMic ?? this.videoMic,
+    textChat: textChat ?? this.textChat,
     inviteNotifications: inviteNotifications ?? this.inviteNotifications,
     leftHanded: leftHanded ?? this.leftHanded,
     reminderHour: reminderHour == null ? this.reminderHour : reminderHour(),
@@ -208,6 +216,7 @@ class Settings {
     'reducedMotion': reducedMotion,
     'roomChat': videoChat,
     'videoMic': videoMic,
+    'textChat': textChat,
     'inviteNotifications': inviteNotifications,
     'leftHanded': leftHanded,
     'reminderHour': ?reminderHour,

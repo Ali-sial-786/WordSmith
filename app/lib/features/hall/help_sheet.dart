@@ -176,7 +176,8 @@ List<_Section> _sections() => [
     intro:
         'Tap **Co-op** or **Versus** and light a forge to host: you get a 6-letter room code to share, or '
         "invite friends straight in. To join, type a friend's code or tap their open room. In a room you "
-        'can send quick emotes and talk over voice chat, and turn your camera on there for video.',
+        'can write in the chat, send quick emotes and talk over voice chat, and turn your camera on there '
+        'for video.',
     [
       _Entry(
         'tongs',

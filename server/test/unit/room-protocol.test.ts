@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseClientMessage, parseIdentity } from "../../src/room/protocol";
+import { cleanChatText, parseClientMessage, parseIdentity } from "../../src/room/protocol";
 
 describe("room parseClientMessage", () => {
   it.each([
@@ -90,6 +90,37 @@ describe("room parseClientMessage: CONFIG with a heat", () => {
     '{"op":"CONFIG","heat":3,"series":4}',
   ])("refuses %j", (raw) => {
     expect(parseClientMessage(raw)).toEqual({ ok: false });
+  });
+});
+
+describe("room parseClientMessage: CHAT", () => {
+  it.each([
+    ['{"op":"CHAT","text":"gg, again?"}', "gg, again?"],
+    ['{"op":"CHAT","text":"  so\\nclose   "}', "so close"],
+    ['{"op":"CHAT","text":"🔥🔥 nice"}', "🔥🔥 nice"],
+  ])("reads %s", (raw, text) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: true, message: { op: "CHAT", text } });
+  });
+
+  it.each(['{"op":"CHAT"}', '{"op":"CHAT","text":7}', '{"op":"CHAT","text":""}', '{"op":"CHAT","text":"   "}', '{"op":"CHAT","text":"\\u202e\\u0007"}'])(
+    "refuses %j",
+    (raw) => {
+      expect(parseClientMessage(raw)).toEqual({ ok: false });
+    },
+  );
+});
+
+describe("cleanChatText", () => {
+  it("drops control and invisible characters, but not the joiners inside emoji", () => {
+    expect(cleanChatText("a\u0000b\u202ec\u200bd")).toBe("abcd");
+    expect(cleanChatText("👩\u200d🔬 ok")).toBe("👩\u200d🔬 ok");
+    expect(cleanChatText("🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}")).toBe("🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}");
+  });
+
+  it("cuts long lines at 160 characters, emoji counting as one", () => {
+    expect(cleanChatText("a".repeat(200))).toBe("a".repeat(160));
+    expect([...cleanChatText("🔥".repeat(170))!]).toHaveLength(160);
+    expect(cleanChatText(`${"a".repeat(159)} b`)).toBe("a".repeat(159));
   });
 });
 

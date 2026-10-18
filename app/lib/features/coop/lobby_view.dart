@@ -13,6 +13,7 @@ import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
+import 'room_chat.dart';
 import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
 
@@ -39,10 +40,13 @@ class LobbyView extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Text(
-          vs ? 'Anvil Clash' : 'The Guild Forge',
-          textAlign: TextAlign.center,
-          style: displayStyle(24, color: Palette.molten),
+        ChatTitle(
+          session: session,
+          child: Text(
+            vs ? 'Anvil Clash' : 'The Guild Forge',
+            textAlign: TextAlign.center,
+            style: displayStyle(24, color: Palette.molten),
+          ),
         ),
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),

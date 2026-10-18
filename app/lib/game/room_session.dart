@@ -79,6 +79,79 @@ abstract class RoomSession extends ChangeNotifier {
   /// The melt is still playing: the round view stays up until it's done.
   bool get melting => melt != null && DateTime.now().isBefore(melt!.until);
 
+  // ---- Chat ----
+
+  /// The room's chat as this phone has it, oldest first (the server keeps
+  /// the latest 50 for anyone joining; this keeps up to [_chatKept]).
+  final List<ChatLine> chat = [];
+  static const _chatKept = 100;
+
+  /// Shows the chat button, its count and new lines (Settings); lines still
+  /// arrive while it's off, so turning it on shows what was said.
+  bool chatEnabled = true;
+
+  /// The chat is open on screen: new lines count as read.
+  bool get chatOpen => _chatOpen;
+  bool _chatOpen = false;
+
+  /// Lines up to this id have been seen. What was said before I joined
+  /// isn't news; what came while I was reconnecting is.
+  int _readUpTo = 0;
+  bool _chatJoined = false;
+
+  /// Players whose lines I've hidden in this room.
+  final Set<String> muted = {};
+
+  /// Lines I can see: not from a player I've muted.
+  List<ChatLine> get visibleChat => [
+    for (final l in chat)
+      if (!muted.contains(l.from)) l,
+  ];
+
+  /// Lines from others that came since I last looked.
+  int get unreadChat => chat.where((l) => l.id > _readUpTo && l.from != me && !muted.contains(l.from)).length;
+
+  /// A line's sender as I know them, even if they've left the room.
+  String chatName(ChatLine line) =>
+      nicknameOf(line.from) ?? lobby?.player(line.from)?.username ?? departedName(line.from) ?? line.username;
+
+  void _addChat(Iterable<ChatLine> lines) {
+    final known = {for (final l in chat) l.id};
+    chat
+      ..addAll(lines.where((l) => !known.contains(l.id)))
+      ..sort((a, b) => a.id.compareTo(b.id));
+    if (chat.length > _chatKept) chat.removeRange(0, chat.length - _chatKept);
+    if (_chatOpen || !_chatJoined) _readUpTo = chat.isEmpty ? 0 : chat.last.id;
+    _chatJoined = true;
+  }
+
+  void openChat() {
+    _chatOpen = true;
+    if (chat.isNotEmpty) _readUpTo = chat.last.id;
+    notifyListeners();
+  }
+
+  void closeChat() {
+    _chatOpen = false;
+    if (!_disposed) notifyListeners();
+  }
+
+  /// Sends a line; the server tidies it, stars out profanity and sends it to everyone, me too.
+  void sendChat(String text) {
+    final line = text.trim();
+    if (line.isNotEmpty) client.chat(line);
+  }
+
+  void mute(String id) {
+    muted.add(id);
+    notifyListeners();
+  }
+
+  void unmute(String id) {
+    muted.remove(id);
+    notifyListeners();
+  }
+
   /// How long the heated word has left, from the server's deadline.
   int get heatRemainingMs => heated == null ? 0 : max(0, heated!.deadline - serverNow);
 
@@ -174,9 +247,12 @@ abstract class RoomSession extends ChangeNotifier {
       case RoundStart():
         if (lobby?.phase != 'countdown' && lobby?.phase != 'round') _phaseAhead = 'countdown';
         handle(e);
-      case RoomSnapshot():
+      case RoomSnapshot(:final chat):
         _phaseAhead = null;
+        _addChat(chat);
         handle(e);
+      case RoomChat(:final line):
+        _addChat([line]);
       default:
         handle(e);
     }

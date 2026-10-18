@@ -156,6 +156,7 @@ below are the M4 plan.
 | `SERIES_END` | S→C (VS) | podium, tiebreak details if a sudden-death round was needed, XP |
 | `SNAPSHOT` | S→C | full room and round state, sent on join or rejoin |
 | `EMOTE` | C→S→C | preset emote ID |
+| `CHAT` | C→S→C (to everyone, the sender too) | a line of text, tidied, profanity starred out and rate-limited by the room; the room keeps its latest 50 for `SNAPSHOT` (shared/room-protocol.md, "Chat") |
 | `ERROR` | S→C | code (e.g. `not_host`, `wrong_phase`, `no_hint`). Joining a full room or one mid-round is refused before the WebSocket upgrade. |
 
 ### Clock

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../ui/theme/palette.dart';
 
-/// The preset emotes (there's no text chat).
+/// The preset emotes, for a quick reaction without opening the chat.
 const emoteIds = ['nice', 'close', 'fire', 'hammer', 'gg'];
 
 String emoteText(String id) => switch (id) {

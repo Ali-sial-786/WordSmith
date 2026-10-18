@@ -4,13 +4,13 @@
  * Node.
  *
  * Client → server: READY, CONFIG (the variant, the heat, and the Versus series),
- * START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, and the exact text
+ * START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, CHAT, and the exact text
  * `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime without waking
  * the room).
  *
  * Server → client: WELCOME, LOBBY, ROUND_START, WORD_RESULT, CLAIMED, BONUS,
  * REVEAL, PROGRESS (Versus), HEATED and MELT (survival), ROUND_END,
- * SERIES_END (Versus), SNAPSHOT, EMOTE, ERROR.
+ * SERIES_END (Versus), SNAPSHOT, EMOTE, CHAT, ERROR.
  *
  * Survival (shared/survival.md) adds its fields only to survival rooms and
  * rounds: a message without `variant` is classic, exactly as before.
@@ -19,7 +19,7 @@
 import type { CoopResults, RevealedCell, RoundSnapshot, RoundStartFields, SlotWord } from "../rules/coop-round";
 import { isHeatChoice, type HeatChoice, type HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
-import type { RoomMode, RoomPhase } from "../rules/room";
+import { MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isSeriesLength, type SeriesLength } from "../rules/vs";
 import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields, VsRoundSummary } from "../rules/vs-round";
@@ -45,7 +45,9 @@ export type ClientMessage =
   | { readonly op: "HINT"; readonly hint: HintRequest }
   | { readonly op: "AGAIN" }
   | { readonly op: "LEAVE" }
-  | { readonly op: "EMOTE"; readonly emote: Emote };
+  | { readonly op: "EMOTE"; readonly emote: Emote }
+  /** `text` is already tidied ({@link cleanChatText}); the room stars out profanity before sending it on. */
+  | { readonly op: "CHAT"; readonly text: string };
 
 export type RoomErrorCode =
   | "not_host"
@@ -60,11 +62,31 @@ export type RoomErrorCode =
   /** Versus: a SUBMIT from someone watching this round (sudden death, or out of the series). */
   | "not_playing"
   /** Versus: HINT isn't allowed. */
-  | "no_hints";
+  | "no_hints"
+  /** CHAT faster than the chat limit (rules/room.ts `CHAT_BURST`). */
+  | "chat_limit";
 
 export type ParseResult = { readonly ok: true; readonly message: ClientMessage } | { readonly ok: false };
 
 const BAD: ParseResult = { ok: false };
+
+/**
+ * A chat line as the room keeps it: control, private-use and invisible
+ * formatting characters removed, right-to-left overrides among them (the
+ * joiners and tags inside emoji stay), line breaks and runs of spaces made
+ * one space, trimmed, and cut to {@link MAX_CHAT_LENGTH} characters.
+ * `null` if nothing is left.
+ */
+export function cleanChatText(text: string): string | null {
+  const tidy = text
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/(?![\u200d\u{e0020}-\u{e007f}])[\p{Cc}\p{Cf}\p{Co}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (tidy === "") return null;
+  const chars = [...tidy];
+  return chars.length > MAX_CHAT_LENGTH ? chars.slice(0, MAX_CHAT_LENGTH).join("").trimEnd() : tidy;
+}
 
 function isCoord(v: unknown): v is number {
   return typeof v === "number" && Number.isInteger(v) && v >= 0 && v < 10;
@@ -113,6 +135,10 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
       return BAD;
     case "EMOTE":
       return (EMOTES as readonly unknown[]).includes(m.emote) ? { ok: true, message: { op: "EMOTE", emote: m.emote as Emote } } : BAD;
+    case "CHAT": {
+      const text = typeof m.text === "string" ? cleanChatText(m.text) : null;
+      return text === null ? BAD : { ok: true, message: { op: "CHAT", text } };
+    }
     default:
       return BAD;
   }
@@ -216,6 +242,19 @@ export interface SeriesEndFields {
   readonly xp: Readonly<Record<string, VsXpBody>>;
 }
 
+/** One chat line (CHAT, and SNAPSHOT `chat`). */
+export interface ChatLine {
+  /** Counts up from 1 in each room. */
+  readonly id: number;
+  readonly from: string;
+  /** The sender's username when they sent it, so a player who has left can still be named. */
+  readonly username: string;
+  /** Profanity starred out. */
+  readonly text: string;
+  /** Server time, ms. */
+  readonly at: number;
+}
+
 export type ServerMessage =
   | { readonly op: "WELCOME"; readonly you: string; readonly protocol: number; readonly serverNow: number }
   | ({ readonly op: "LOBBY" } & LobbyFields)
@@ -260,6 +299,8 @@ export type ServerMessage =
       /** The round during countdown and play, and the finished board during results. */
       readonly round?: RoundSnapshot;
       readonly results?: ResultsFields;
+      /** The room's latest chat lines, oldest first; left out while there are none. */
+      readonly chat?: readonly ChatLine[];
     }
   | {
       readonly op: "SNAPSHOT";
@@ -270,8 +311,10 @@ export type ServerMessage =
       readonly standings?: VsRoundEndFields;
       /** Versus, during results: the SERIES_END. */
       readonly results?: SeriesEndFields;
+      readonly chat?: readonly ChatLine[];
     }
   | { readonly op: "EMOTE"; readonly from: string; readonly emote: Emote }
+  | ({ readonly op: "CHAT" } & ChatLine)
   | { readonly op: "ERROR"; readonly code: RoomErrorCode };
 
 // ---------------------------------------------------------------------------

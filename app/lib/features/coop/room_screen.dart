@@ -22,6 +22,7 @@ import '../vs/vs_standings_view.dart';
 import 'emotes.dart';
 import 'lobby_view.dart';
 import 'results_view.dart';
+import 'room_chat.dart';
 import 'room_video.dart';
 import 'round_view.dart';
 
@@ -54,6 +55,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 
   /// Video starts by itself once per room (when the setting is on).
   bool _videoAutoTried = false;
+
+  /// The newest chat line from someone else, shown over the room for a
+  /// moment while the chat is closed.
+  ChatLine? _chatToast;
+  Timer? _chatToastTimer;
 
   @override
   void initState() {
@@ -105,6 +111,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     setState(() {
       _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
         ..nicknameOf = _account.nicknameOf
+        ..chatEnabled = ref.read(settingsProvider).textChat
         ..addListener(_changed);
     });
     _sub = _session!.effects.listen(_onEffect);
@@ -285,6 +292,15 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         }
       case BecameHost():
         _toast("You're the host now: you pick the heat and start the next round.");
+      case RoomChat(:final line):
+        final s = _session;
+        if (s == null || line.from == s.me || s.muted.contains(line.from) || !s.chatEnabled || s.chatOpen) break;
+        sfx.play(SfxId.tap, volume: 0.5);
+        _chatToastTimer?.cancel();
+        _chatToastTimer = Timer(const Duration(seconds: 4), () {
+          if (mounted) setState(() => _chatToast = null);
+        });
+        setState(() => _chatToast = line);
       case RoomEmote(:final from, :final emote):
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -326,6 +342,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   @override
   void dispose() {
     _hubErrors?.cancel();
+    _chatToastTimer?.cancel();
     final video = _video;
     if (video != null) {
       video.removeListener(_videoChanged);
@@ -351,6 +368,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   Widget build(BuildContext context) {
     final session = _session;
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
+    session?.chatEnabled = ref.watch(settingsProvider.select((s) => s.textChat));
     return PopScope(
       // Nothing joined yet (checking, or a problem): back just goes back.
       canPop: session == null,
@@ -421,9 +439,31 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       },
       _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
     };
+    final toast = _chatToast;
     return Stack(
       children: [
         Positioned.fill(child: view),
+        Positioned(
+          top: 56,
+          left: 16,
+          right: 16,
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: toast == null || s.chatOpen || s.muted.contains(toast.from) || !s.chatEnabled
+                  ? const SizedBox.shrink()
+                  : ChatToast(
+                      key: ValueKey(toast.id),
+                      session: s,
+                      line: toast,
+                      onTap: () {
+                        setState(() => _chatToast = null);
+                        showRoomChat(context, s);
+                      },
+                    ),
+            ),
+          ),
+        ),
         if (s.connection == RoomConnection.reconnecting)
           Positioned(
             top: 0,

@@ -268,7 +268,8 @@ room codes.
   - Friends join with the code, through an **invite**, or from the open rooms list.
   - Co-op rooms hold 2–4 players and Versus rooms hold 2–5. A Co-op room with just the host is allowed for testing.
 - **Invites:** in-app while the app is open. Push notifications for invites come later (Firebase Cloud Messaging is free).
-- **Emotes:** preset reactions in rooms ("Nice strike!", "So close!", a fire emoji, a hammer emoji). There's no free-text chat.
+- **Emotes:** preset reactions in rooms ("Nice strike!", "So close!", a fire emoji, a hammer emoji).
+- **Chat:** text chat for everyone in a Co-op or Versus room, in the lobby, during rounds and at results. New lines pop up over the game for a moment, and the chat button counts the ones not yet read. Quick phrases send in one tap. Holding down someone's line mutes them for the rest of the room, and Settings can turn chat off (shared/room-protocol.md, "Chat").
 
 ---
 
@@ -375,7 +376,7 @@ Also: a left-handed layout (hints on the left of the anvil).
 - The server holds every multiplayer answer and referees every guess. Phones only get the shape of the grid and the letters.
 - **Rate limit:** about 4 guesses per second per player. A burst of invalid guesses triggers a 3-second cool-down, which stops anyone spamming every letter combination.
 - XP, levels, hints and stats are only ever written by the server.
-- Only preset emotes, so there's no chat to moderate. Usernames go through a profanity filter.
+- Room chat goes through the same profanity filter as usernames: bad words are starred out on the server. Lines are limited to 160 characters and a burst of 5, then one every 2 seconds. Players can mute each other, and chat is never stored beyond the room. There's no reporting or moderation team yet. Usernames go through the profanity filter too.
 
 ---
 

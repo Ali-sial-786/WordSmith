@@ -715,6 +715,67 @@ describe("rooms and players coming and going", () => {
   });
 });
 
+describe("room chat", () => {
+  it("sends a line to everyone, starred, and keeps it for whoever joins later", async () => {
+    const a = await setUpClient();
+    const b = await setUpClient();
+    const c = await setUpClient();
+    const code = await createRoom(a);
+    const sa = await join(a, code);
+    const sb = await join(b, code);
+
+    sa.send({ op: "CHAT", text: "  ready when\nyou are " });
+    const line = await sb.next({ op: "CHAT" });
+    expect(line).toEqual({ op: "CHAT", id: 1, from: a.uid, username: a.username, text: "ready when you are", at: expect.any(Number) });
+    expect(await sa.next({ op: "CHAT" })).toEqual(line);
+    sb.send({ op: "CHAT", text: "what the fuck, start!" });
+    expect(await sa.next({ op: "CHAT" })).toMatchObject({ id: 2, from: b.uid, text: "what the ****, start!" });
+
+    // History survives eviction and reaches a late joiner, oldest first.
+    await evictDurableObject(stub(code));
+    const sc = await connect(c, `/v1/ws/room/${code}`);
+    const snapshot = await sc.next({ op: "SNAPSHOT" });
+    expect(snapshot.chat.map((l: Message) => [l.id, l.text])).toEqual([
+      [1, "ready when you are"],
+      [2, "what the ****, start!"],
+    ]);
+
+    // Chat carries on mid-round.
+    await startRound(sa, code, [sb, sc]);
+    sc.send({ op: "CHAT", text: "gl" });
+    expect(await sa.next({ op: "CHAT" })).toMatchObject({ id: 3, from: c.uid, text: "gl" });
+    for (const raw of ['{"op":"CHAT","text":"   "}', '{"op":"CHAT"}']) {
+      sa.send(raw);
+      expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "bad_message" });
+    }
+    await closeAll(sa, sb, sc);
+  });
+
+  it("slows down a flood, keeping the latest 50 lines", async () => {
+    const a = await setUpClient();
+    const code = await createRoom(a);
+    const sa = await join(a, code);
+    for (let i = 1; i <= 7; i++) sa.send({ op: "CHAT", text: `line ${i}` });
+    for (let i = 1; i <= 5; i++) expect(await sa.next({ op: "CHAT" })).toMatchObject({ text: `line ${i}` });
+    expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "chat_limit" });
+    expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "chat_limit" });
+
+    // A long-running room keeps only its latest lines.
+    await runInDurableObject(stub(code), (_i, state) => {
+      const lines = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, from: a.uid, username: a.username, text: `old ${i + 1}`, at: 0 }));
+      state.storage.kv.put("chat", { next: 51, lines });
+    });
+    await evictDurableObject(stub(code));
+    await sleep(2100);
+    sa.send({ op: "CHAT", text: "newest" });
+    expect(await sa.next({ op: "CHAT" })).toMatchObject({ id: 51, text: "newest" });
+    const chat = await runInDurableObject(stub(code), (_i, state) => state.storage.kv.get<{ lines: Message[] }>("chat")!.lines);
+    expect(chat).toHaveLength(50);
+    expect([chat[0]!.text, chat[49]!.text]).toEqual(["old 2", "newest"]);
+    sa.ws.close();
+  });
+});
+
 describe("open rooms in the hub", () => {
   it("lists a friend's joinable room until it starts", async () => {
     const host = await setUpClient();

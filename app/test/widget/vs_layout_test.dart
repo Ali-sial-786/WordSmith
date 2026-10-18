@@ -226,7 +226,8 @@ void main() {
       final call = withVideo ? await _call() : null;
       await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}, video: _video(call)));
       expect(tester.takeException(), isNull);
-      expect(find.text('Round 3 of up to 5'), findsOneWidget);
+      expect(find.text('Round 3'), findsOneWidget);
+      expect(find.text('of up to 5'), findsOneWidget);
       expect(find.text('1/7'), findsNothing, reason: 'my count comes from my own mold');
       expect(find.text('0/7'), findsOneWidget);
       // With video on, my own bubble too, but no bar as if I were a rival.

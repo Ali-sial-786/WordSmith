@@ -734,6 +734,25 @@ describe("Versus rooms", () => {
     30_000,
   );
 
+  it("chats while racing, and a racer who drops gets the chat back in their SNAPSHOT", async () => {
+    const a = await setUpClient();
+    const b = await setUpClient();
+    const code = await createVsRoom(a);
+    const sa = await join(a, code);
+    const sb = await join(b, code);
+    await start(sa, code, [sa, sb]);
+    sa.send({ op: "CHAT", text: "you're going down" });
+    expect(await sb.next({ op: "CHAT" })).toMatchObject({ id: 1, from: a.uid, username: a.username, text: "you're going down" });
+
+    sb.ws.close();
+    await sb.closed;
+    const back = await connect(b, `/v1/ws/room/${code}`);
+    const snapshot = await back.next({ op: "SNAPSHOT" });
+    expect(snapshot.round).toBeDefined();
+    expect(snapshot.chat).toEqual([{ id: 1, from: a.uid, username: a.username, text: "you're going down", at: expect.any(Number) }]);
+    await closeAll(sa, back);
+  });
+
   it("ends the series with what was played if the room closes in the middle of it", async () => {
     const a = await setUpClient();
     const b = await setUpClient();

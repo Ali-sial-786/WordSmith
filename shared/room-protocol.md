@@ -37,9 +37,10 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | `BONUS` | Sent to everyone. `word`, `by`, `points`, `scores` |
 | `REVEAL` | Sent to everyone after a hint. `by`, `kind`, `cells`: `[{x, y, letter}]`, `auto`: `[{slot, word}]` |
 | `ROUND_END` | `reason`: `complete` \| `timeout`; `teamScore`; `filled` and `total` (letters); `stars` (0–3); `players`: `[{id, username, points, words, longest, bonus}]` (`username` so players who left can still be named; `words` counts grid words, `bonus` bonus words; everyone who played the round is listed); `mvp` (user id or `null`, bonus points count); `answers`: `[{slot, word}]` (every grid word, so missed ones can be shown); `xp`: `{userId: {xp, level, levelUps, rewards: {hammer, chisel, sparks}, scrapHammers, heatBonus, tiersAbove}}` (`rewards` are level-up rewards; `scrapHammers` are Hammer Strikes smelted from this round's bonus words; `heatBonus` is the part of `xp` the heat added and `tiersAbove` the tiers the round ran above the player's own, see "XP and heat"). `xp` is `{}` if the results couldn't be saved yet; the server retries. |
-| `SNAPSHOT` | Sent on join and rejoin. `lobby` (as `LOBBY`), plus `round` while a round is on (the `ROUND_START` fields plus `claims`: `[{slot, word, by, points}]`, `auto`: `[{slot, word}]`, `bonus`: `[{word, by}]`, `revealed`: `[{x, y, letter}]`, `scores`), plus `results` during results (as `ROUND_END`) |
+| `SNAPSHOT` | Sent on join and rejoin. `lobby` (as `LOBBY`), plus `round` while a round is on (the `ROUND_START` fields plus `claims`: `[{slot, word, by, points}]`, `auto`: `[{slot, word}]`, `bonus`: `[{word, by}]`, `revealed`: `[{x, y, letter}]`, `scores`), plus `results` during results (as `ROUND_END`), plus `chat`: the room's latest 50 lines, oldest first, as in `CHAT` without `op` (left out while there are none; Versus too) |
 | `EMOTE` | `from`, `emote` |
-| `ERROR` | `code`: `not_host`, `not_enough_players`, `bad_message`, `no_hint`, `hint_locked`, `bad_cell`, `wrong_phase`, `no_puzzle` (the puzzle bank is empty) |
+| `CHAT` | Sent to everyone, the sender too. `id` (counts up from 1 in each room), `from`, `username` (the sender's when they wrote it, so a player who has left can still be named), `text` (profanity starred out), `at` (server ms). See "Chat". |
+| `ERROR` | `code`: `not_host`, `not_enough_players`, `bad_message`, `no_hint`, `hint_locked`, `bad_cell`, `wrong_phase`, `no_puzzle` (the puzzle bank is empty), `chat_limit` (CHAT too fast) |
 
 ## Client → server
 
@@ -53,6 +54,7 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | `AGAIN` | — | Host only, from results |
 | `LEAVE` | — | Leave the room (the host role moves on, see "Host") |
 | `EMOTE` | `emote`: `nice` · `close` · `fire` · `hammer` · `gg` | |
+| `CHAT` | `text` | Any phase, Versus rounds included. See "Chat". A `text` that's missing, not a string or empty once tidied is `bad_message`. |
 | `{"op":"PING"}` | — | Keep-alive; answered with `{"op":"PONG"}` |
 
 ## Rules worth spelling out
@@ -71,6 +73,15 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 - **Embers:** go to whoever claims the first word through the cell. An ember on a hinted cell stays until a word through it is forged; one on a slot that fills in by itself is lost.
 - **Open rooms (hub):** friends see `OPEN_ROOMS` entries `{code, mode, hostId, hostUsername, players, max}` for rooms in the lobby or results that aren't full.
 - **XP:** written by the server at `ROUND_END` (DESIGN §4.2) together with the match records, stats and level-up rewards, in one D1 batch.
+
+## Chat
+
+- **Who and when:** anyone seated in the room, in every phase, in co-op and Versus alike. Lines go to everyone in the room, the sender included (the app shows a line once the server echoes it). There are no private messages.
+- **Tidying:** control, private-use and invisible formatting characters are removed, right-to-left overrides among them (the joiners and tags inside emoji stay). Line breaks and runs of spaces become one space, and the ends are trimmed. Lines are cut to 160 characters (code points).
+- **Profanity:** every word the username filter would refuse (`account/profanity.ts`) is starred out, keeping its length: `what the ****`. Words are runs of letters, digits and `_`, so look-alike digits are caught (`sh1t`); short words such as `ass` are only caught on their own or with a plain ending (`asses`), never inside another word (`class`).
+- **Limit:** a burst of 5 lines per player, then one every 2 s. Past that the server answers `ERROR chat_limit` and drops the line. The socket's general limit applies first.
+- **History:** the room keeps its latest 50 lines in its storage, through hibernation, for `SNAPSHOT`. They go when the room closes; chat is never written to D1.
+- **On the phone:** what was said before you joined isn't counted as new; lines that came while you were reconnecting are. You can mute a player for the rest of the room (on your phone only), and turn text chat off in Settings.
 
 ## XP and heat
 

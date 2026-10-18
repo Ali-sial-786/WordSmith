@@ -98,6 +98,59 @@ void main() {
     expect(ok(), isTrue);
   }
 
+  test('chat: history on joining is read, lines missed while reconnecting count, muted ones never', () async {
+    Map<String, Object?> line(int id, String from, String text) => {
+      'id': id,
+      'from': from,
+      'username': from == 'u2' ? 'sam' : 'Ada',
+      'text': text,
+      'at': id,
+    };
+    Map<String, Object?> snapshot(List<Map<String, Object?>> chat) => {
+      'op': 'SNAPSHOT',
+      'lobby': _lobby(),
+      'chat': chat,
+    };
+    await until(() => room.sockets.isNotEmpty);
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': DateTime.now().millisecondsSinceEpoch})
+      ..send(snapshot([line(1, 'u2', 'hi')]));
+    await until(() => session.chat.isNotEmpty);
+    expect(session.unreadChat, 0);
+
+    room.send({'op': 'CHAT', ...line(2, 'u1', 'hey sam')});
+    await until(() => session.chat.length == 2);
+    expect(session.unreadChat, 0, reason: 'my own lines are never news');
+
+    // Back from a drop: the SNAPSHOT has what was said meanwhile, once each.
+    room.send(
+      snapshot([line(1, 'u2', 'hi'), line(2, 'u1', 'hey sam'), line(3, 'u2', 'you there?'), line(4, 'u2', '??')]),
+    );
+    await until(() => session.chat.length == 4);
+    expect(session.unreadChat, 2);
+    expect(session.chat.map((l) => l.id), [1, 2, 3, 4]);
+    expect(session.chatName(session.chat.last), 'sam');
+
+    session.mute('u2');
+    expect(session.unreadChat, 0);
+    expect(session.visibleChat.map((l) => l.text), ['hey sam']);
+    session.unmute('u2');
+    session.openChat();
+    expect(session.unreadChat, 0);
+    room.send({'op': 'CHAT', ...line(5, 'u2', 'ok')});
+    await until(() => session.chat.length == 5);
+    expect(session.unreadChat, 0, reason: 'read while the chat is open');
+    session.closeChat();
+
+    session.sendChat('  on my way  ');
+    session.sendChat('   ');
+    await until(() => room.received.isNotEmpty);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(room.received, [
+      {'op': 'CHAT', 'text': 'on my way'},
+    ]);
+  });
+
   test('joins the room, shows the lobby and sends ready and start', () async {
     await until(() => room.sockets.isNotEmpty);
     expect(room.paths.single, '/v1/ws/room/K7Q2AB');

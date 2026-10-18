@@ -58,3 +58,30 @@ export function nameProblem(username: string): NameProblem | null {
   for (const part of parts) if (BLOCKED_WORDS.includes(part)) return "profanity";
   return null;
 }
+
+/** Endings stripped before {@link BLOCKED_WORDS} are checked in chat ("tits", "dicks"). */
+const ENDINGS = ["es", "s", "ing", "ed", "er", "ers", "y"];
+
+function blockedToken(token: string): boolean {
+  const lower = token.toLowerCase();
+  const squashed = deLeet(lower.replace(/_/g, ""));
+  if (BLOCKED_ANYWHERE.some((term) => squashed.includes(term))) return true;
+  for (const word of new Set([lower, squashed])) {
+    if (BLOCKED_WORDS.includes(word)) return true;
+    for (const end of ENDINGS) {
+      if (word.length > end.length + 2 && word.endsWith(end) && BLOCKED_WORDS.includes(word.slice(0, -end.length))) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Room chat (shared/room-protocol.md, "Chat"): each word the username
+ * filter would refuse is starred out, keeping its length ("what the ****").
+ * Words are runs of letters, digits and `_`, so look-alike digits are
+ * caught ("sh1t") and innocent words that contain a short one aren't
+ * ("class", "analysis").
+ */
+export function maskProfanity(text: string): string {
+  return text.replace(/[\p{L}\p{N}_]+/gu, (token) => (blockedToken(token) ? "*".repeat([...token].length) : token));
+}

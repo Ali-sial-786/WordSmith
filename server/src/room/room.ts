@@ -11,8 +11,9 @@
  *   synchronous KV API, cached in memory): the room and its players
  *   (`room`), the round with its answers (`round`), a Versus series
  *   (`series`) and its last round's results (`standings`), the last
- *   results (`results`), results still to be written to D1 (`award`) and
- *   the planned alarm (`alarm`). Only rate limits live in memory.
+ *   results (`results`), results still to be written to D1 (`award`), the
+ *   latest chat lines (`chat`) and the planned alarm (`alarm`). Only rate
+ *   limits live in memory.
  * - **One alarm**, always set to the nearest deadline: the end of the
  *   countdown, the end of the round, a survival melt, the end of the
  *   Versus standings, a dropped player's rejoin time, the empty-room and
@@ -50,6 +51,7 @@ import {
   type CoopRoundRecord,
   type VsSeriesRecord,
 } from "../db/rooms";
+import { maskProfanity } from "../account/profanity";
 import type { Env } from "../env";
 import { RateLimiter, type RoomListing } from "../hub/protocol";
 import {
@@ -74,6 +76,9 @@ import { chosenHeat, heatForLevel, vsHeat, type HeatTier } from "../rules/heat";
 import { emberKind, type MpPuzzle } from "../rules/mold";
 import { isHintUnlocked, type HintKind } from "../rules/progression";
 import {
+  CHAT_BURST,
+  CHAT_HISTORY,
+  CHAT_PER_SECOND,
   COLORS,
   COUNTDOWN_MS,
   EMPTY_CLOSE_MS,
@@ -131,6 +136,7 @@ import {
   parseIdentity,
   PING,
   PONG,
+  type ChatLine,
   type ClientMessage,
   type HintRequest,
   type LobbyFields,
@@ -169,7 +175,8 @@ const AWARD = "award";
 const ALARM = "alarm";
 const SERIES = "series";
 const STANDINGS = "standings";
-const KEYS = [ROOM, ROUND, RESULTS, AWARD, ALARM, SERIES, STANDINGS];
+const CHAT = "chat";
+const KEYS = [ROOM, ROUND, RESULTS, AWARD, ALARM, SERIES, STANDINGS, CHAT];
 
 interface Player {
   readonly id: string;
@@ -249,6 +256,12 @@ interface VsPendingAward extends AwardProgress {
 
 type PendingAward = CoopPendingAward | VsPendingAward;
 
+/** The room's chat: the latest lines, oldest first, and the id the next one gets. */
+interface ChatLog {
+  next: number;
+  lines: ChatLine[];
+}
+
 /** What each socket carries through hibernation. */
 interface Attachment {
   /** User ID. */
@@ -291,8 +304,9 @@ function seated(room: Room): Player[] {
 export class RoomDO extends DurableObject<Env> {
   /** Storage values by key, as last read or written. */
   private readonly cache = new Map<string, unknown>();
-  /** Per-player SUBMIT limits and per-socket limits for everything else. In memory only. */
+  /** Per-player SUBMIT and CHAT limits, and per-socket limits for everything else. In memory only. */
   private readonly submitLimits = new Map<string, SubmitLimiter>();
+  private readonly chatLimits = new Map<string, RateLimiter>();
   private readonly otherLimits = new WeakMap<WebSocket, RateLimiter>();
   /** Per-player queue of hint-stock writes, so a collected ember is in D1 before the next spend. */
   private readonly stockQueue = new Map<string, Promise<unknown>>();
@@ -646,7 +660,24 @@ export class RoomDO extends DurableObject<Env> {
       case "EMOTE":
         this.broadcast({ op: "EMOTE", from: player.id, emote: message.emote });
         return;
+
+      case "CHAT":
+        return this.chat(ws, player, message.text, now);
     }
+  }
+
+  /** CHAT, in any phase: starred, kept for SNAPSHOT and sent to everyone, the sender too. */
+  private chat(ws: WebSocket, player: Player, text: string, now: number): void {
+    let limiter = this.chatLimits.get(player.id);
+    if (limiter === undefined) {
+      limiter = new RateLimiter(CHAT_BURST, CHAT_PER_SECOND, now);
+      this.chatLimits.set(player.id, limiter);
+    }
+    if (!limiter.take(now)) return this.error(ws, "chat_limit");
+    const log = this.read<ChatLog>(CHAT) ?? { next: 1, lines: [] };
+    const line: ChatLine = { id: log.next, from: player.id, username: player.username, text: maskProfanity(text), at: now };
+    this.write(CHAT, { next: log.next + 1, lines: [...log.lines, line].slice(-CHAT_HISTORY) } satisfies ChatLog);
+    this.broadcast({ op: "CHAT", ...line });
   }
 
   /**
@@ -671,6 +702,7 @@ export class RoomDO extends DurableObject<Env> {
     for (const ws of this.socketsOf(player.id)) closeSocket(ws, CLOSE_LEFT, "left");
     if (this.openSockets().length === 0) room.emptySince ??= now;
     this.submitLimits.delete(player.id);
+    this.chatLimits.delete(player.id);
     this.write(ROOM, room);
     this.syncHeat(room, now);
     this.broadcast(this.lobbyMessage(room));
@@ -1448,6 +1480,7 @@ export class RoomDO extends DurableObject<Env> {
     this.cache.clear();
     for (const key of KEYS) this.cache.set(key, null);
     this.submitLimits.clear();
+    this.chatLimits.clear();
     if (room.listed !== null) await this.tellHub(room.code, null);
   }
 
@@ -1561,7 +1594,14 @@ export class RoomDO extends DurableObject<Env> {
       lobby: this.lobbyFields(room),
       ...(round !== null && room.phase !== "lobby" ? { round: roundSnapshot(round, now, room.phase === "countdown" || room.phase === "round") } : {}),
       ...(results !== null && room.phase === "results" ? { results } : {}),
+      ...this.chatFields(),
     };
+  }
+
+  /** SNAPSHOT `chat`, while the room has any. */
+  private chatFields(): { readonly chat?: readonly ChatLine[] } {
+    const lines = this.read<ChatLog>(CHAT)?.lines ?? [];
+    return lines.length === 0 ? {} : { chat: lines };
   }
 
   /**
@@ -1582,6 +1622,7 @@ export class RoomDO extends DurableObject<Env> {
       ...(live && round !== null && series !== null ? { round: vsRoundSnapshot(round, series, receiver, now) } : {}),
       ...(after && standings !== null ? { standings } : {}),
       ...(room.phase === "results" && results !== null ? { results } : {}),
+      ...this.chatFields(),
     };
   }
 

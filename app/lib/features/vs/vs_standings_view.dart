@@ -11,6 +11,7 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../coop/emotes.dart';
+import '../coop/room_chat.dart';
 import 'rival_molds.dart';
 import 'round_flash.dart';
 import 'vs_widgets.dart';
@@ -121,6 +122,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
                     icon: Icon(Icons.close, color: Palette.steel),
                   ),
                   const Spacer(),
+                  ChatButton(session: s),
                   EmoteButton(onEmote: s.emote),
                 ],
               ),

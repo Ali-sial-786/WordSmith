@@ -10,6 +10,7 @@ import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
+import '../coop/room_chat.dart';
 import 'rival_molds.dart';
 import 'series_summary.dart';
 import 'vs_widgets.dart';
@@ -135,8 +136,8 @@ class VsResultsView extends StatelessWidget {
   ];
 }
 
-/// Leave, and the host's rematch, kept in reach below however long the
-/// series was.
+/// Leave, the host's rematch and the chat, kept in reach below however
+/// long the series was.
 class _Actions extends StatelessWidget {
   const _Actions({required this.session, required this.onLeave});
 
@@ -178,6 +179,7 @@ class _Actions extends StatelessWidget {
                       style: text.bodyMedium?.copyWith(color: Palette.steel),
                     ),
             ),
+            if (session.chatEnabled) ...[const SizedBox(width: 4), ChatButton(session: session)],
           ],
         ),
       ),

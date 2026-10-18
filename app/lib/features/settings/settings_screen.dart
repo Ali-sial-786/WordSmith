@@ -75,6 +75,16 @@ class SettingsScreen extends ConsumerWidget {
               value: s.videoChat,
               onChanged: (v) => n.update((s) => s.copyWith(videoChat: v)),
             ),
+          if (ref.watch(accountProvider).phase != AccountPhase.unavailable)
+            SwitchListTile(
+              title: const Text('Text chat in Co-op and Versus'),
+              subtitle: const Text(
+                "Write to everyone in the room, and see their messages pop up over the game. Swear words are "
+                "starred out, and you can mute anyone in the room by holding down one of their messages.",
+              ),
+              value: s.textChat,
+              onChanged: (v) => n.update((s) => s.copyWith(textChat: v)),
+            ),
           if (ref.watch(accountProvider).isReady && !kIsWeb)
             SwitchListTile(
               title: const Text('Notifications'),

@@ -22,6 +22,7 @@ import '../../ui/widgets/video_bubble.dart';
 import '../../ui/widgets/word_preview.dart';
 import '../../video/video_call.dart';
 import 'emotes.dart';
+import 'room_chat.dart';
 import 'room_video.dart';
 
 /// The co-op round: one shared mold, everyone's anvil has the same letters.
@@ -381,9 +382,12 @@ class _TopStrip extends StatelessWidget {
             onPressed: onLeave,
             icon: Icon(Icons.close, color: Palette.steel),
           ),
-          Expanded(child: Text('Team $team', style: displayStyle(18))),
+          Expanded(
+            child: Text('Team $team', maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(18)),
+          ),
           if (video.call != null)
             VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
+          ChatButton(session: session, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

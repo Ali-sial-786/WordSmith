@@ -11,6 +11,7 @@ import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
 import '../../ui/widgets/forge_frame.dart';
 import 'lobby_view.dart' show HeatBanner, HeatPicker;
+import 'room_chat.dart';
 
 /// After a round: stars, team score, MVP, everyone's points and XP (with
 /// what the heat added), missed words, and the next round's heat.
@@ -29,17 +30,23 @@ class ResultsView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
       children: [
-        Text(
-          r.completed
-              ? 'MOLD FILLED!'
-              : r.melted
-              ? 'IT MELTED!'
-              : "TIME'S UP",
-          textAlign: TextAlign.center,
-          style: displayStyle(
-            32,
-            color: r.completed ? Palette.molten : Palette.steel,
-          ).copyWith(shadows: r.completed ? [Shadow(color: Palette.ember, blurRadius: 20)] : null),
+        ChatTitle(
+          session: session,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              r.completed
+                  ? 'MOLD FILLED!'
+                  : r.melted
+                  ? 'IT MELTED!'
+                  : "TIME'S UP",
+              textAlign: TextAlign.center,
+              style: displayStyle(
+                32,
+                color: r.completed ? Palette.molten : Palette.steel,
+              ).copyWith(shadows: r.completed ? [Shadow(color: Palette.ember, blurRadius: 20)] : null),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         Row(

@@ -19,6 +19,7 @@ import '../../ui/widgets/toast_line.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../ui/widgets/word_preview.dart';
 import '../coop/emotes.dart';
+import '../coop/room_chat.dart';
 import '../coop/room_video.dart';
 import 'rival_molds.dart';
 import 'vs_widgets.dart';
@@ -342,16 +343,32 @@ class _VsTopStrip extends StatelessWidget {
             onPressed: onLeave,
             icon: Icon(Icons.close, color: Palette.steel),
           ),
+          // On two short lines, shrinking rather than cut short beside the buttons.
           Expanded(
-            child: Text(
-              roundLabel(session),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: displayStyle(16, color: sudden ? Palette.quenchRed : Palette.whiteHeat),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: sudden || session.round == null
+                  ? Text(roundLabel(session), style: displayStyle(16, color: Palette.quenchRed))
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Round ${session.round!.regular ?? session.round!.round}',
+                          style: displayStyle(16, color: Palette.whiteHeat).copyWith(height: 1.1),
+                        ),
+                        Text(
+                          'of up to ${session.series}',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Palette.steel, height: 1.1),
+                        ),
+                      ],
+                    ),
             ),
           ),
           if (video.call != null)
             VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
+          ChatButton(session: session, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
           // Survival has no round clock: the heated word is the clock.
           if (!session.survival)

@@ -54,6 +54,7 @@ sealed class RoomEvent {
     'SERIES_END' => SeriesEnd.fromJson(m),
     'SNAPSHOT' => RoomSnapshot.fromJson(m),
     'EMOTE' => RoomEmote(m['from'] as String, m['emote'] as String),
+    'CHAT' => RoomChat(ChatLine.fromJson(m)),
     'ERROR' => RoomError(m['code'] as String? ?? 'unknown'),
     _ => null,
   };
@@ -742,6 +743,7 @@ class RoomSnapshot extends RoomEvent {
     this.seriesEnd,
     this.heated,
     this.saved = 0,
+    this.chat = const [],
   });
 
   factory RoomSnapshot.fromJson(Map<String, dynamic> j) {
@@ -775,6 +777,7 @@ class RoomSnapshot extends RoomEvent {
       seriesEnd: vsResults ? SeriesEnd.fromJson(results) : null,
       heated: round?['heated'] is Map ? HeatedSlot.fromJson((round!['heated'] as Map).cast()) : null,
       saved: (round?['saved'] as num?)?.toInt() ?? 0,
+      chat: [for (final l in ((j['chat'] as List?) ?? const []).cast<Map<String, dynamic>>()) ChatLine.fromJson(l)],
     );
   }
 
@@ -799,12 +802,44 @@ class RoomSnapshot extends RoomEvent {
   /// and the words saved so far.
   final HeatedSlot? heated;
   final int saved;
+
+  /// The room's latest chat lines, oldest first.
+  final List<ChatLine> chat;
 }
 
 class RoomEmote extends RoomEvent {
   const RoomEmote(this.from, this.emote);
   final String from;
   final String emote;
+}
+
+/// One line of room chat, profanity already starred out by the server.
+class ChatLine {
+  const ChatLine({required this.id, required this.from, required this.username, required this.text, required this.at});
+
+  factory ChatLine.fromJson(Map<String, dynamic> j) => ChatLine(
+    id: (j['id'] as num).toInt(),
+    from: j['from'] as String,
+    username: j['username'] as String? ?? '',
+    text: j['text'] as String? ?? '',
+    at: (j['at'] as num?)?.toInt() ?? 0,
+  );
+
+  /// Counts up from 1 in each room.
+  final int id;
+  final String from;
+
+  /// The sender's username when they wrote it, for players who have left.
+  final String username;
+  final String text;
+
+  /// Server time, ms.
+  final int at;
+}
+
+class RoomChat extends RoomEvent {
+  const RoomChat(this.line);
+  final ChatLine line;
 }
 
 class RoomError extends RoomEvent {
@@ -883,6 +918,7 @@ class RoomClient {
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});
+  void chat(String text) => _send({'op': 'CHAT', 'text': text});
 
   /// Sends a word; returns its sequence number (echoed in [WordResult]).
   int submit(String word) {

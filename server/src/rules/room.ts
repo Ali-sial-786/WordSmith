@@ -211,3 +211,11 @@ export class SubmitLimiter {
 /** Token bucket for everything else a socket sends (READY, EMOTE, …): dropped past this. */
 export const OTHER_BURST = 10;
 export const OTHER_PER_SECOND = 2;
+
+/** Chat (shared/room-protocol.md): the longest line, in characters (code points); longer ones are cut. */
+export const MAX_CHAT_LENGTH = 160;
+/** Chat lines a room keeps for SNAPSHOT, newest last. */
+export const CHAT_HISTORY = 50;
+/** Per player: a burst of 5 lines, then one every 2 s; past that, ERROR `chat_limit`. */
+export const CHAT_BURST = 5;
+export const CHAT_PER_SECOND = 0.5;
