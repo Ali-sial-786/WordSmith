@@ -29,7 +29,7 @@ class CoopSession extends RoomSession {
     results = null;
     scores = {};
     feed.clear();
-    mold = RemoteMold(start, () => lobby!);
+    mold = RemoteMold(start, () => lobby!, nameOf: nameOf);
     syncClock(start.serverNow);
   }
 
@@ -53,7 +53,12 @@ class CoopSession extends RoomSession {
         for (final (s, w) in auto) {
           mold?.claim(s, w, null);
         }
-        say('${nameOf(by)} used a ${e.kind == 'hammer' ? 'Hammer Strike' : e.kind == 'chisel' ? 'Chisel' : 'Spark Shower'}', colorOf(by));
+        final hint = switch (e.kind) {
+          'hammer' => 'Hammer Strike',
+          'chisel' => 'Chisel',
+          _ => 'Spark Shower',
+        };
+        say('${nameOf(by)} used a $hint', colorOf(by));
       case RoundEnd(:final answers):
         results = e;
         mold?.showAnswers(answers);

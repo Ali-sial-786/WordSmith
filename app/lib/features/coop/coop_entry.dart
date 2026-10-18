@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../game/account.dart';
+import '../../game/names.dart';
 import '../../net/api_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -72,6 +73,7 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
   Widget build(BuildContext context) {
     final account = ref.watch(accountProvider);
     final rooms = account.openRooms.where((r) => r.mode == widget.mode).toList();
+    final names = ref.watch(displayNamesProvider);
     final text = Theme.of(context).textTheme;
     return Padding(
       padding: EdgeInsets.fromLTRB(22, 22, 22, 22 + MediaQuery.viewInsetsOf(context).bottom),
@@ -100,7 +102,8 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
             primary: true,
             onPressed: _busy
                 ? null
-                : () => _run(() async => (await ref.read(accountProvider.notifier).createRoom(widget.mode), widget.mode)),
+                : () =>
+                      _run(() async => (await ref.read(accountProvider.notifier).createRoom(widget.mode), widget.mode)),
           ),
           const SizedBox(height: 18),
           Row(
@@ -112,9 +115,7 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
                   maxLength: 6,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                    TextInputFormatter.withFunction(
-                      (_, v) => v.copyWith(text: v.text.toUpperCase()),
-                    ),
+                    TextInputFormatter.withFunction((_, v) => v.copyWith(text: v.text.toUpperCase())),
                   ],
                   style: letterStyle(22).copyWith(letterSpacing: 6),
                   decoration: const InputDecoration(labelText: 'Room code', counterText: ''),
@@ -148,7 +149,7 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
             for (final r in rooms)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(_vs ? "${r.hostUsername}'s clash" : "${r.hostUsername}'s forge"),
+                title: Text("${names.of(r.hostId, r.hostUsername)}'s ${_vs ? 'clash' : 'forge'}"),
                 subtitle: Text('${r.players}/${r.max} smiths · ${r.code}'),
                 trailing: TextButton(
                   onPressed: _busy || r.players >= r.max ? null : () => _join(r.code),

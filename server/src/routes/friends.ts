@@ -7,9 +7,11 @@
  * - `POST /v1/friends/respond {userId, accept}` → {status: "accepted" | "declined", user}
  * - `DELETE /v1/friends/:id` → {ok: true}: removes a friend, cancels my
  *   request, or declines theirs
+ * - `PUT /v1/friends/:id/nickname {nickname}` → {ok: true, nickname}: my
+ *   private name for a friend, or `null` to clear it
  */
 
-import { looksLikeUsername } from "../account/username";
+import { checkNickname, looksLikeUsername } from "../account/username";
 import {
   acceptLimit,
   acceptRequest,
@@ -20,6 +22,7 @@ import {
   linkBetween,
   listFriends,
   requestLimit,
+  setNickname,
   unlink,
   type LimitHit,
 } from "../db/friends";
@@ -103,6 +106,23 @@ export async function deleteFriend(c: AuthedContext): Promise<Response> {
   if (before === "none") throw new ApiError(404, "not_found", "No friend or request with that user");
   if (before === "friends") await notifyHub(c.env, (hub) => hub.friendshipChanged(c.uid, other, false));
   return json({ ok: true });
+}
+
+/**
+ * My nickname for a friend, shown to me instead of their username (and in
+ * the notifications they send me). Nobody else sees it: it's on my own
+ * friends row, and only `GET /v1/friends` returns it, to me.
+ */
+export async function putNickname(c: AuthedContext): Promise<Response> {
+  await requireSetUp(c);
+  const body = await readJsonObject(c.request);
+  const nick = "nickname" in body ? checkNickname(body.nickname) : null;
+  if (nick === null) throw new ApiError(400, "invalid_nickname", "Expected {nickname}: 1-20 characters, or null to clear it");
+  if (!nick.ok) throw new ApiError(400, nick.error, nick.message);
+  if (!(await setNickname(c.env.DB, c.uid, c.params.id ?? "", nick.nickname))) {
+    throw new ApiError(404, "not_friends", "Nicknames are for accepted friends");
+  }
+  return json({ ok: true, nickname: nick.nickname });
 }
 
 /**

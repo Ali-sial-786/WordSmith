@@ -419,6 +419,24 @@ export class RoomDO extends DurableObject<Env> {
     };
   }
 
+  /**
+   * A player changed their username (`POST /v1/me/username`): the room
+   * shows the new one from the next LOBBY on (and in the open-rooms listing,
+   * and in results still to come). Results already sent keep the old name.
+   */
+  async renamed(userId: string, username: string): Promise<void> {
+    await this.catchUp(Date.now());
+    const room = this.room();
+    const player = room?.players.find((p) => p.id === userId);
+    if (room == null || player === undefined) return;
+    if (player.username !== username) {
+      player.username = username;
+      this.write(ROOM, room);
+      this.broadcast(this.lobbyMessage(room));
+    }
+    await this.settle();
+  }
+
   // -------------------------------------------------------------------------
   // Joining
   // -------------------------------------------------------------------------

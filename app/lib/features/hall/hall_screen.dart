@@ -9,6 +9,7 @@ import '../../engine/hints.dart';
 import '../../engine/progression.dart';
 import '../../game/account.dart';
 import '../../game/forge_board.dart';
+import '../../game/names.dart';
 import '../../net/api_client.dart';
 import '../../net/board.dart';
 import '../../net/hub_client.dart';
@@ -401,7 +402,8 @@ class _InviteBanner extends ConsumerWidget {
         children: [
           Expanded(
             child: Text(
-              '${invite.fromUsername} invited you to ${invite.mode == 'vs' ? 'Versus' : 'Co-op'}',
+              '${ref.watch(displayNamesProvider).of(invite.from, invite.fromUsername)} invited you to '
+              '${invite.mode == 'vs' ? 'Versus' : 'Co-op'}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),

@@ -11,6 +11,8 @@ export interface InviteNotice {
   /** The inviter's user ID. */
   readonly from: string;
   readonly fromUsername: string;
+  /** The nickname the invited friend gave the inviter, shown instead of their username. */
+  readonly nickname?: string | null;
   /** The room code. */
   readonly code: string;
   readonly mode: RoomMode;
@@ -23,7 +25,7 @@ export function inviteMessage(token: string, invite: InviteNotice): FcmMessage {
   return {
     token,
     notification: {
-      title: `${invite.fromUsername} invited you to ${invite.mode === "vs" ? "Versus" : "Co-op"}`,
+      title: `${invite.nickname ?? invite.fromUsername} invited you to ${invite.mode === "vs" ? "Versus" : "Co-op"}`,
       body: `Tap to join room ${invite.code}`,
     },
     data: { type: "invite", code: invite.code, mode: invite.mode, from: invite.from },

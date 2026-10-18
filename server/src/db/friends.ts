@@ -3,7 +3,8 @@
  *
  * A request from A to B is the row (A, B, pending). Accepting it makes the
  * friendship symmetric: (A, B, accepted) and (B, A, accepted). Declining,
- * cancelling and removing delete the rows in both directions.
+ * cancelling and removing delete the rows in both directions. Each side's
+ * row can carry the nickname that side gave the other (migrations/0007).
  */
 
 import { levelFromTotalXp, rankForLevel } from "../rules/progression";
@@ -23,6 +24,8 @@ export interface UserSummary {
 export interface FriendEntry extends UserSummary {
   /** When the request was made (for friends: when they became friends, roughly). */
   readonly since: number;
+  /** The nickname I gave this friend (only I see it), or `null`. Always `null` for requests. */
+  readonly nickname: string | null;
 }
 
 /** Body of `GET /v1/friends`. Online status comes from the hub, not here. */
@@ -48,29 +51,46 @@ function summary(row: SummaryRow): UserSummary {
 
 const byName = (a: UserSummary, b: UserSummary) => a.username.toLowerCase().localeCompare(b.username.toLowerCase());
 
+/** Friends by the name I see: my nickname for them, else their username. */
+const byShownName = (a: FriendEntry, b: FriendEntry) =>
+  (a.nickname ?? a.username).toLowerCase().localeCompare((b.nickname ?? b.username).toLowerCase());
+
 export async function listFriends(db: D1Database, uid: string): Promise<FriendsList> {
   const { results } = await db
     .prepare(
-      `SELECT f.friend_id AS id, f.status, f.created_at, 'out' AS dir, u.username, u.avatar, p.xp
+      `SELECT f.friend_id AS id, f.status, f.created_at, f.nickname, 'out' AS dir, u.username, u.avatar, p.xp
          FROM friends f JOIN users u ON u.id = f.friend_id JOIN profiles p ON p.user_id = f.friend_id
         WHERE f.user_id = ?1 AND u.username IS NOT NULL
        UNION ALL
-       SELECT f.user_id AS id, f.status, f.created_at, 'in' AS dir, u.username, u.avatar, p.xp
+       SELECT f.user_id AS id, f.status, f.created_at, NULL AS nickname, 'in' AS dir, u.username, u.avatar, p.xp
          FROM friends f JOIN users u ON u.id = f.user_id JOIN profiles p ON p.user_id = f.user_id
         WHERE f.friend_id = ?1 AND f.status = 'pending' AND u.username IS NOT NULL`,
     )
     .bind(uid)
-    .all<SummaryRow & { status: string; created_at: number; dir: "in" | "out" }>();
+    .all<SummaryRow & { status: string; created_at: number; nickname: string | null; dir: "in" | "out" }>();
   const friends: FriendEntry[] = [];
   const incoming: FriendEntry[] = [];
   const outgoing: FriendEntry[] = [];
   for (const row of results) {
-    const entry = { ...summary(row), since: row.created_at };
+    const entry = { ...summary(row), since: row.created_at, nickname: row.status === "accepted" ? row.nickname : null };
     if (row.dir === "in") incoming.push(entry);
     else if (row.status === "accepted") friends.push(entry);
     else outgoing.push(entry);
   }
-  return { friends: friends.sort(byName), incoming: incoming.sort(byName), outgoing: outgoing.sort(byName) };
+  return { friends: friends.sort(byShownName), incoming: incoming.sort(byName), outgoing: outgoing.sort(byName) };
+}
+
+/**
+ * Sets (or with `null` clears) the nickname `uid` gave `friend`. Returns
+ * false unless they're accepted friends. Only `uid`'s own row changes, so
+ * nobody else ever sees it.
+ */
+export async function setNickname(db: D1Database, uid: string, friend: string, nickname: string | null): Promise<boolean> {
+  const res = await db
+    .prepare("UPDATE friends SET nickname = ?3 WHERE user_id = ?1 AND friend_id = ?2 AND status = 'accepted'")
+    .bind(uid, friend, nickname)
+    .run();
+  return res.meta.changes > 0;
 }
 
 /** A set-up user's summary, looked up by ID or by username (ignoring case). */

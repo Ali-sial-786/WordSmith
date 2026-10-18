@@ -9,14 +9,23 @@ import 'models.dart';
 
 /// An error response from the server, or no response at all.
 class ApiException implements Exception {
-  const ApiException(this.status, this.code, [this.message]);
+  const ApiException(this.status, this.code, [this.message, this.data = const {}]);
 
   /// 0 when the server couldn't be reached.
   final int status;
   final String code;
   final String? message;
 
+  /// The whole error body, for codes that carry more (e.g. `too_soon`'s `nextChangeAt`).
+  final Map<String, dynamic> data;
+
   bool get offline => status == 0;
+
+  /// `too_soon`: when the username may change again.
+  DateTime? get nextChangeAt => switch (data['nextChangeAt']) {
+    final num at => DateTime.fromMillisecondsSinceEpoch(at.toInt()),
+    _ => null,
+  };
 
   /// Words for players.
   String get friendly => switch (code) {
@@ -24,6 +33,8 @@ class ApiException implements Exception {
     'username_taken' => 'That name is taken. Try another.',
     'invalid_username' => 'Use 3–16 letters, numbers or _.',
     'username_not_allowed' => "That name isn't allowed. Try another.",
+    'too_soon' => 'You can change your name once a week.',
+    'invalid_nickname' => 'Nicknames are 1–20 characters, on one line.',
     'user_not_found' => 'No smith by that name.',
     'cannot_friend_self' => "That's you!",
     'already_friends' => "You're already friends.",
@@ -57,11 +68,7 @@ class ApiException implements Exception {
 /// REST client for the Worker (server/README.md). [token] supplies a fresh
 /// Firebase ID token for each call.
 class ApiClient {
-  ApiClient({
-    required this.baseUrl,
-    required this.token,
-    http.Client? client,
-  }) : _http = client ?? http.Client();
+  ApiClient({required this.baseUrl, required this.token, http.Client? client}) : _http = client ?? http.Client();
 
   final String baseUrl;
   final Future<String?> Function() token;
@@ -69,12 +76,7 @@ class ApiClient {
 
   static const _timeout = Duration(seconds: 15);
 
-  Future<Map<String, dynamic>> _send(
-    String method,
-    String path, {
-    Object? body,
-    bool auth = true,
-  }) async {
+  Future<Map<String, dynamic>> _send(String method, String path, {Object? body, bool auth = true}) async {
     final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) headers['Content-Type'] = 'application/json';
     if (auth) {
@@ -88,8 +90,7 @@ class ApiClient {
       if (t == null) throw const ApiException(401, 'unauthorized', 'not_signed_in');
       headers['Authorization'] = 'Bearer $t';
     }
-    final request = http.Request(method, Uri.parse('$baseUrl/v1$path'))
-      ..headers.addAll(headers);
+    final request = http.Request(method, Uri.parse('$baseUrl/v1$path'))..headers.addAll(headers);
     if (body != null) request.body = jsonEncode(body);
     http.Response res;
     try {
@@ -112,6 +113,7 @@ class ApiClient {
         res.statusCode,
         json['error'] as String? ?? 'http_${res.statusCode}',
         json['message'] as String?,
+        json,
       );
     }
     return json;
@@ -139,9 +141,12 @@ class ApiClient {
 
   Future<ServerProfile> me() async => ServerProfile.fromJson(await _send('GET', '/me'));
 
-  Future<ServerProfile> setup(String username, String avatar) async => ServerProfile.fromJson(
-    await _send('POST', '/me/setup', body: {'username': username, 'avatar': avatar}),
-  );
+  Future<ServerProfile> setup(String username, String avatar) async =>
+      ServerProfile.fromJson(await _send('POST', '/me/setup', body: {'username': username, 'avatar': avatar}));
+
+  /// A new username, at most once a week (`too_soon` carries when it's allowed).
+  Future<ServerProfile> changeUsername(String username) async =>
+      ServerProfile.fromJson(await _send('POST', '/me/username', body: {'username': username}));
 
   Future<void> deleteMe() => _send('DELETE', '/me');
 
@@ -156,22 +161,28 @@ class ApiClient {
 
   /// Returns "pending" or "accepted".
   Future<String> requestFriend(String username) async =>
-      (await _send('POST', '/friends/request', body: {'username': username}))['status']
-          as String;
+      (await _send('POST', '/friends/request', body: {'username': username}))['status'] as String;
 
   Future<void> respondFriend(String userId, {required bool accept}) =>
       _send('POST', '/friends/respond', body: {'userId': userId, 'accept': accept});
 
-  Future<void> removeFriend(String userId) =>
-      _send('DELETE', '/friends/${Uri.encodeComponent(userId)}');
+  Future<void> removeFriend(String userId) => _send('DELETE', '/friends/${Uri.encodeComponent(userId)}');
+
+  /// My private nickname for a friend, or null to clear it. Returns it as stored (trimmed).
+  Future<String?> setNickname(String friendId, String? nickname) async =>
+      (await _send(
+            'PUT',
+            '/friends/${Uri.encodeComponent(friendId)}/nickname',
+            body: {'nickname': nickname},
+          ))['nickname']
+          as String?;
 
   /// Creates a room and returns its code.
   Future<String> createRoom(String mode) async =>
       (await _send('POST', '/rooms', body: {'mode': mode}))['code'] as String;
 
   /// Room summary; throws `room_not_found` for a bad code.
-  Future<Map<String, dynamic>> room(String code) =>
-      _send('GET', '/rooms/${Uri.encodeComponent(code)}');
+  Future<Map<String, dynamic>> room(String code) => _send('GET', '/rooms/${Uri.encodeComponent(code)}');
 
   /// Today's Daily Commission, or an earlier [date] (`YYYY-MM-DD`) to play late.
   Future<DailyInfo> daily({String? date}) async =>
@@ -185,8 +196,7 @@ class ApiClient {
 
   Future<ForgeBoard> board() async => ForgeBoard.fromJson(await _send('GET', '/me/board'));
 
-  Future<BoardClaim> claimStoke() async =>
-      BoardClaim.fromJson(await _send('POST', '/me/stoke/claim', body: const {}));
+  Future<BoardClaim> claimStoke() async => BoardClaim.fromJson(await _send('POST', '/me/stoke/claim', body: const {}));
 
   /// [slot] is `d0`–`d2`, `w0`, `w1` or `chest`.
   Future<BoardClaim> claimOrder(String slot) async =>
@@ -198,8 +208,7 @@ class ApiClient {
   Future<BoardClaim> claimTrials() async =>
       BoardClaim.fromJson(await _send('POST', '/me/trials/claim', body: const {}));
 
-  Future<BoardClaim> claimGifts() async =>
-      BoardClaim.fromJson(await _send('POST', '/me/gifts/claim', body: const {}));
+  Future<BoardClaim> claimGifts() async => BoardClaim.fromJson(await _send('POST', '/me/gifts/claim', body: const {}));
 
   /// The Daily Commission reminder's UTC hour, or null for none (shared/push.md).
   Future<void> setReminder(int? utcHour) => _send('PUT', '/me/reminder', body: {'hour': utcHour});
@@ -238,8 +247,7 @@ class ApiClient {
   }
 
   Future<List<LeaderboardEntry>> leaderboard() async => [
-    for (final e in ((await _send('GET', '/leaderboard'))['entries'] as List)
-        .cast<Map<String, dynamic>>())
+    for (final e in ((await _send('GET', '/leaderboard'))['entries'] as List).cast<Map<String, dynamic>>())
       LeaderboardEntry.fromJson(e),
   ];
 }

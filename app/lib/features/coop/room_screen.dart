@@ -104,6 +104,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final client = factory(widget.code);
     setState(() {
       _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
+        ..nicknameOf = _account.nicknameOf
         ..addListener(_changed);
     });
     _sub = _session!.effects.listen(_onEffect);

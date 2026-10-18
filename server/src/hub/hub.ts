@@ -26,7 +26,7 @@
  */
 
 import { DurableObject } from "cloudflare:workers";
-import { pushTokensOf } from "../db/push";
+import { pushTargetOf } from "../db/push";
 import type { Env } from "../env";
 import { fcmSender } from "../push/fcm";
 import { pushInvite, type InviteNotice } from "../push/invite";
@@ -237,8 +237,9 @@ export class HubDO extends DurableObject<Env> {
    * Relays an invite to the friend's open sockets and, once push is set up
    * (shared/push.md), to each of their phones as well, online or not.
    * `friend_offline` only when it can reach them neither way. Without push
-   * there's no D1 read; with it, one (the friend's tokens), which only holds
-   * up the answer when they have no open socket.
+   * there's no D1 read; with it, one (the friend's tokens, and the nickname
+   * they gave the inviter for the title), which only holds up the answer
+   * when they have no open socket.
    */
   private async invite(ws: WebSocket, me: Attachment, message: InviteMessage): Promise<void> {
     // Only between accepted friends, and without revealing anything
@@ -255,13 +256,15 @@ export class HubDO extends DurableObject<Env> {
     }
     const notice: InviteNotice = { from: me.u, fromUsername: me.n, code: message.code, mode: message.mode };
     if (relayed > 0) {
-      this.ctx.waitUntil(this.tokensOf(to).then((tokens) => pushInvite(push, this.env.DB, tokens, notice)));
+      this.ctx.waitUntil(
+        this.targetOf(to, me.u).then(({ tokens, nickname }) => pushInvite(push, this.env.DB, tokens, { ...notice, nickname })),
+      );
       return;
     }
-    const tokens = await this.tokensOf(to);
+    const { tokens, nickname } = await this.targetOf(to, me.u);
     // They may have connected while the tokens were being read.
     if (this.relay(to, relay) === 0 && tokens.length === 0) return this.error(ws, "friend_offline");
-    if (tokens.length > 0) this.ctx.waitUntil(pushInvite(push, this.env.DB, tokens, notice));
+    if (tokens.length > 0) this.ctx.waitUntil(pushInvite(push, this.env.DB, tokens, { ...notice, nickname }));
   }
 
   /** Sends to each of a player's open sockets; returns how many there were. */
@@ -271,13 +274,16 @@ export class HubDO extends DurableObject<Env> {
     return sockets.length;
   }
 
-  /** A player's FCM tokens; none if D1 can't be read (a notification is best-effort). */
-  private async tokensOf(uid: string): Promise<string[]> {
+  /**
+   * A player's FCM tokens, and the nickname they gave `from`; none if D1
+   * can't be read (a notification is best-effort).
+   */
+  private async targetOf(uid: string, from: string): Promise<{ tokens: string[]; nickname: string | null }> {
     try {
-      return await pushTokensOf(this.env.DB, uid);
+      return await pushTargetOf(this.env.DB, uid, from);
     } catch (err) {
       console.error("reading push tokens failed", err);
-      return [];
+      return { tokens: [], nickname: null };
     }
   }
 
@@ -391,6 +397,32 @@ export class HubDO extends DurableObject<Env> {
         // Already closed.
       }
     }
+  }
+
+  /**
+   * A player changed their username (`POST /v1/me/username`). Their open
+   * sockets send invites under the new name from now on, and the rooms they
+   * host are listed under it: their connected friends get a fresh
+   * OPEN_ROOMS. Returns the codes of the rooms they're in (by their status)
+   * or host, so the Worker can tell those rooms too.
+   */
+  async usernameChanged(uid: string, username: string): Promise<string[]> {
+    const codes = new Set<string>();
+    for (const ws of this.socketsOf(uid)) {
+      const me = attachmentOf(ws);
+      if (me === null) continue;
+      ws.serializeAttachment({ ...me, n: username } satisfies Attachment);
+      if (me.s.startsWith("in_room:")) codes.add(me.s.slice("in_room:".length));
+    }
+    const hosted = this.ctx.storage.sql.exec<{ code: string }>("SELECT code FROM rooms WHERE host_id = ?", uid).toArray();
+    if (hosted.length > 0) {
+      this.ctx.storage.sql.exec("UPDATE rooms SET host_username = ? WHERE host_id = ?", username, uid);
+      for (const r of this.ctx.storage.sql.exec<{ user_id: string }>("SELECT user_id FROM links WHERE friend_id = ?", uid)) {
+        this.sendOpenRooms(r.user_id);
+      }
+    }
+    for (const r of hosted) codes.add(r.code);
+    return [...codes];
   }
 
   /** A player's current presence (for tests and, later, rooms). */

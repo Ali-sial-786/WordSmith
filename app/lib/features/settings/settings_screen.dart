@@ -14,6 +14,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/crash_notice.dart';
 import '../../update/app_updater.dart';
+import '../account/change_username_screen.dart';
 import '../update/update_sheet.dart';
 import 'font_picker.dart';
 import 'scheme_picker.dart';
@@ -268,6 +269,18 @@ class _AccountSection extends ConsumerWidget {
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.sync), onPressed: n.sync),
           ),
+          if (account.isReady)
+            ListTile(
+              title: const Text('Change username'),
+              subtitle: Text(
+                account.server!.usernameLocked
+                    ? 'You can change it again on ${nextChangeLabel(context, account.server!.nextUsernameChangeAt!)}'
+                    : 'Pick a new smith name (once a week)',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChangeUsernameScreen())),
+            ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
           ListTile(
             title: Text('Delete account', style: TextStyle(color: Palette.quenchRed)),

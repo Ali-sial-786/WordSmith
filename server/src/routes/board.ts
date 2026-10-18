@@ -32,7 +32,7 @@ import {
   type ClaimMarks,
 } from "../db/board";
 import { linkBetween } from "../db/friends";
-import { pushTokensOf } from "../db/push";
+import { pushTargetOf } from "../db/push";
 import { ApiError, json, readJsonObject } from "../http";
 import { fcmSender } from "../push/fcm";
 import { pushGift } from "../push/gift";
@@ -182,8 +182,8 @@ export async function postFriendGift(c: AuthedContext): Promise<Response> {
   if (push !== null) {
     const notice = { from: account.id, fromUsername: account.username };
     c.ctx.waitUntil(
-      pushTokensOf(db, to)
-        .then((tokens) => pushGift(push, db, tokens, notice))
+      pushTargetOf(db, to, account.id)
+        .then(({ tokens, nickname }) => pushGift(push, db, tokens, { ...notice, nickname }))
         .catch((err: unknown) => console.error("gift notification failed", err)),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/forge_board.dart';
+import '../../game/names.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
 import '../../net/board.dart';
@@ -103,6 +104,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                   const SizedBox(height: 16),
                   _TrialsCard(
                     trials: value.trials,
+                    names: ref.watch(displayNamesProvider),
                     busy: _busy == 'trials',
                     onClaim: () => _run('trials', (c) => c.claimTrials(), title: 'Trial prize!'),
                   ),
@@ -476,6 +478,7 @@ class _GiftsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final friends = ref.watch(accountProvider.select((a) => a.friends.friends));
+    final names = ref.watch(displayNamesProvider);
     final left = gifts.claimLimit - gifts.claimedToday;
     return _Panel(
       icon: 'gift',
@@ -489,7 +492,7 @@ class _GiftsCard extends ConsumerWidget {
                 gifts.pending.isEmpty
                     ? 'No gifts waiting.'
                     : '${gifts.pending.length} waiting from '
-                          '${{for (final g in gifts.pending) g.fromName}.join(', ')}',
+                          '${{for (final g in gifts.pending) names.of(g.fromId, g.fromName)}.join(', ')}',
                 style: text.bodyMedium,
               ),
             ),
@@ -518,7 +521,7 @@ class _GiftsCard extends ConsumerWidget {
                 children: [
                   AvatarBadge(avatar: f.avatar, size: 34),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(f.username, style: text.bodyMedium)),
+                  Expanded(child: Text(names.of(f.id, f.username), style: text.bodyMedium)),
                   if (gifts.sentToday.contains(f.id))
                     Text('Sent', style: text.labelMedium?.copyWith(color: Palette.verdigris))
                   else
@@ -537,9 +540,12 @@ class _GiftsCard extends ConsumerWidget {
 }
 
 class _TrialsCard extends StatelessWidget {
-  const _TrialsCard({required this.trials, required this.busy, required this.onClaim});
+  const _TrialsCard({required this.trials, required this.names, required this.busy, required this.onClaim});
 
   final TrialsInfo trials;
+
+  /// My nicknames for friends in the standings.
+  final DisplayNames names;
   final bool busy;
   final VoidCallback onClaim;
 
@@ -617,7 +623,7 @@ class _TrialsCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    s.me ? '${s.username} (you)' : s.username,
+                    s.me ? '${s.username} (you)' : names.of(s.id, s.username),
                     overflow: TextOverflow.ellipsis,
                     style: text.bodyMedium,
                   ),

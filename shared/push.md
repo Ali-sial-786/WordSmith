@@ -39,7 +39,9 @@ FCM HTTP v1 message:
 }
 ```
 
-An invite that only reached the friend's phones gets no reply, like a relayed
+The title names the inviter by the nickname the invited friend gave them
+(`PUT /v1/friends/:id/nickname`), if any, otherwise by their username. An
+invite that only reached the friend's phones gets no reply, like a relayed
 one. Invites for the same room share a `collapse_key`, so they replace each
 other on the phone.
 
@@ -67,7 +69,8 @@ for invites, and never fail the gift.
 ```
 
 The app opens the Forge Hall when it's tapped. Gifts from the same friend
-share a `collapse_key`.
+share a `collapse_key`. As for invites, the title uses the receiver's
+nickname for the sender when there is one.
 
 ## Server setup
 

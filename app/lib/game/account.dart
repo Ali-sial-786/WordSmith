@@ -237,6 +237,13 @@ class AccountController extends Notifier<AccountState> {
     await _becomeReady(profile);
   }
 
+  /// A new smith name (at most once a week). Throws [ApiException]: taken,
+  /// not allowed, or `too_soon` with [ApiException.nextChangeAt].
+  Future<void> changeUsername(String username) async {
+    final profile = await _api!.changeUsername(username.trim());
+    if (ref.mounted) state = state.copyWith(server: profile);
+  }
+
   Future<void> changeAvatar(String avatar) async {
     final name = state.server?.username;
     if (name == null) return;
@@ -440,6 +447,29 @@ class AccountController extends Notifier<AccountState> {
   Future<void> removeFriend(String userId) async {
     await _api!.removeFriend(userId);
     await refreshFriends();
+  }
+
+  /// Gives a friend a nickname only I see, or clears it (null). Throws [ApiException].
+  Future<void> setNickname(String friendId, String? nickname) async {
+    final stored = await _api!.setNickname(friendId, nickname);
+    if (!ref.mounted) return;
+    final f = state.friends;
+    state = state.copyWith(
+      friends: FriendsList(
+        friends: [for (final p in f.friends) p.id == friendId ? p.withNickname(stored) : p],
+        incoming: f.incoming,
+        outgoing: f.outgoing,
+      ),
+    );
+  }
+
+  /// My nickname for [userId], if they're a friend I gave one (see game/names.dart).
+  String? nicknameOf(String userId) {
+    if (!ref.mounted) return null;
+    for (final f in state.friends.friends) {
+      if (f.id == userId) return f.nickname;
+    }
+    return null;
   }
 
   Future<List<LeaderboardEntry>> leaderboard() => _api!.leaderboard();

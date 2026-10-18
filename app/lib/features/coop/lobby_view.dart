@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../engine/heat.dart';
 import '../../game/account.dart';
+import '../../game/names.dart';
 import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
 import '../../ui/theme/palette.dart';
@@ -30,6 +31,7 @@ class LobbyView extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final heat = Heat.fromValue(lobby.heat.clamp(1, 6));
     final host = lobby.player(lobby.hostId);
+    final hostName = host == null ? null : session.nameOf(host.id);
     final me = session.myPlayer;
     final vs = lobby.isVs;
     final max = lobby.maxPlayers;
@@ -56,7 +58,7 @@ class LobbyView extends ConsumerWidget {
           child: Text(
             vs
                 ? '${heat.title} heat · from the middle level in the room'
-                : '${heat.title} heat · set by host ${host?.username ?? '?'} (Lv ${host?.level ?? '?'})',
+                : '${heat.title} heat · set by host ${hostName ?? '?'} (Lv ${host?.level ?? '?'})',
             textAlign: TextAlign.center,
             style: text.titleSmall,
           ),
@@ -71,7 +73,13 @@ class LobbyView extends ConsumerWidget {
         Text('Smiths ${lobby.players.length}/$max', style: text.titleMedium),
         const SizedBox(height: 6),
         for (final p in lobby.players)
-          _PlayerRow(player: p, isHost: p.id == lobby.hostId, isMe: p.id == session.me, call: video.call),
+          _PlayerRow(
+            player: p,
+            name: session.nameOf(p.id),
+            isHost: p.id == lobby.hostId,
+            isMe: p.id == session.me,
+            call: video.call,
+          ),
         for (var i = lobby.players.length; i < max; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -101,7 +109,7 @@ class LobbyView extends ConsumerWidget {
           )
         else
           Text(
-            'Waiting for ${host?.username ?? 'the host'} to start…',
+            'Waiting for ${hostName ?? 'the host'} to start…',
             textAlign: TextAlign.center,
             style: text.bodyMedium?.copyWith(color: Palette.steel),
           ),
@@ -247,9 +255,12 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.player, required this.isHost, required this.isMe, this.call});
+  const _PlayerRow({required this.player, required this.name, required this.isHost, required this.isMe, this.call});
 
   final RoomPlayer player;
+
+  /// As I see them (my nickname for a friend).
+  final String name;
   final bool isHost;
   final bool isMe;
   final VideoCall? call;
@@ -281,7 +292,7 @@ class _PlayerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${player.username}${isMe ? ' (you)' : ''}', style: Theme.of(context).textTheme.titleSmall),
+                Text('$name${isMe ? ' (you)' : ''}', style: Theme.of(context).textTheme.titleSmall),
                 Text(
                   ['Lv ${player.level}', if (isHost) 'Host', if (!player.connected) 'Reconnecting…'].join(' · '),
                   style: Theme.of(context).textTheme.bodySmall,
@@ -309,6 +320,7 @@ class _InviteSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final account = ref.watch(accountProvider);
+    final names = ref.watch(displayNamesProvider);
     bool isOnline(String id) => (account.presence[id] ?? 'offline') != 'offline';
     // Online friends first; offline ones can still get a notification.
     final friends = account.friends.friends.where((f) => !inRoom.contains(f.id)).toList()
@@ -330,14 +342,15 @@ class _InviteSheet extends ConsumerWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: AvatarBadge(avatar: f.avatar, size: 40, presence: account.presence[f.id]),
-              title: Text(f.username),
+              title: Text(names.of(f.id, f.username)),
               subtitle: Text(
                 isOnline(f.id) ? presenceLabel(account.presence[f.id]) : 'Offline · gets a notification if it can',
               ),
               trailing: TextButton(
                 onPressed: () {
                   ref.read(accountProvider.notifier).invite(f.id, code, mode);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invited ${f.username}')));
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('Invited ${names.of(f.id, f.username)}')));
                 },
                 child: const Text('Invite'),
               ),

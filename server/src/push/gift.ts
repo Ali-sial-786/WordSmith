@@ -10,6 +10,8 @@ export interface GiftNotice {
   /** The sender's user ID. */
   readonly from: string;
   readonly fromUsername: string;
+  /** The nickname the receiver gave the sender, shown instead of their username. */
+  readonly nickname?: string | null;
 }
 
 /** How long FCM keeps trying to deliver a gift notification. The gift itself waits 7 days. */
@@ -18,7 +20,7 @@ export const GIFT_TTL = "86400s";
 export function giftMessage(token: string, gift: GiftNotice): FcmMessage {
   return {
     token,
-    notification: { title: `${gift.fromUsername} sent you a gift`, body: "A free Hammer Strike is waiting in the Forge Hall" },
+    notification: { title: `${gift.nickname ?? gift.fromUsername} sent you a gift`, body: "A free Hammer Strike is waiting in the Forge Hall" },
     data: { type: "gift", from: gift.from },
     android: { priority: "normal", ttl: GIFT_TTL, collapse_key: `gift-${gift.from}` },
   };

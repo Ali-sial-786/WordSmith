@@ -151,6 +151,13 @@ describe("inviteMessage", () => {
       android: { collapse_key: "invite-ZZ22QQ" },
     });
   });
+
+  it("names the inviter by the friend's nickname for them, if any", () => {
+    const invite = { from: "uid-ali", fromUsername: "Ali", code: "K7Q2AB", mode: "vs" } as const;
+    expect(inviteMessage("t", { ...invite, nickname: "Big Al" }).notification?.title).toBe("Big Al invited you to Versus");
+    expect(inviteMessage("t", { ...invite, nickname: null }).notification?.title).toBe("Ali invited you to Versus");
+    expect(giftMessage("t", { from: "uid-ali", fromUsername: "Ali", nickname: "Big Al" }).notification?.title).toBe("Big Al sent you a gift");
+  });
 });
 
 /** An FCM v1 error body. */

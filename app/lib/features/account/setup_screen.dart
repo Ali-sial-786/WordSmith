@@ -11,7 +11,8 @@ import '../../ui/widgets/metal_button.dart';
 
 final _validName = RegExp(r'^[A-Za-z0-9_]{3,16}$');
 
-/// First-time setup: pick a smith name (forever) and an emblem.
+/// First-time setup: pick a smith name (it can change later, once a week)
+/// and an emblem.
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
 
@@ -65,18 +66,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         children: [
           Text('Pick a name', style: text.titleMedium),
           const SizedBox(height: 6),
-          Text(
-            'Friends find you by it. It can\'t be changed later.',
-            style: text.bodySmall,
-          ),
+          Text('Friends find you by it. You can change it later, once a week.', style: text.bodySmall),
           const SizedBox(height: 10),
           TextField(
             controller: _name,
             maxLength: 16,
-            decoration: const InputDecoration(
-              labelText: 'Smith name',
-              helperText: '3–16 letters, numbers or _',
-            ),
+            decoration: const InputDecoration(labelText: 'Smith name', helperText: '3–16 letters, numbers or _'),
             onChanged: (_) => setState(() => _error = null),
           ),
           const SizedBox(height: 16),
@@ -101,16 +96,14 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             Text(_error!, style: text.bodyMedium?.copyWith(color: Palette.quenchRed)),
           ],
           const SizedBox(height: 22),
-          PlateButton(
-            label: _busy ? 'Forging…' : 'Start forging',
-            primary: true,
-            onPressed: _busy ? null : _submit,
-          ),
+          PlateButton(label: _busy ? 'Forging…' : 'Start forging', primary: true, onPressed: _busy ? null : _submit),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: _busy ? null : () => ref.read(accountProvider.notifier).signOut().then((_) {
-              if (context.mounted) context.go('/');
-            }),
+            onPressed: _busy
+                ? null
+                : () => ref.read(accountProvider.notifier).signOut().then((_) {
+                    if (context.mounted) context.go('/');
+                  }),
             child: const Text('Sign out'),
           ),
         ],

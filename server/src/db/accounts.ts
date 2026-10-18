@@ -3,7 +3,7 @@
  * (docs/TECH.md §7), and the JSON shapes the API returns for them.
  */
 
-import { DELETED_NAME } from "../account/username";
+import { DELETED_NAME, nextUsernameChangeAt, USERNAME_CHANGE_COOLDOWN_MS } from "../account/username";
 import { levelProgress, rankForLevel, STARTING_HINTS, type HintCounts } from "../rules/progression";
 import type { SurvivalBest } from "../rules/survival";
 
@@ -27,6 +27,8 @@ export interface Account {
   readonly username: string | null;
   readonly avatar: string | null;
   readonly createdAt: number;
+  /** When the username last changed (`POST /v1/me/username`), or `null` if it hasn't since setup. */
+  readonly usernameChangedAt: number | null;
   readonly totalXp: number;
   /** Highest campaign stage completed (0 = none). */
   readonly campaignCompleted: number;
@@ -54,6 +56,7 @@ interface AccountRow {
   username: string | null;
   avatar: string | null;
   created_at: number;
+  username_changed_at: number | null;
   xp: number;
   campaign_stage: number;
   scrap_bin: number;
@@ -80,7 +83,7 @@ interface AccountRow {
 }
 
 const ACCOUNT_SQL = `
-SELECT u.id, u.username, u.avatar, u.created_at,
+SELECT u.id, u.username, u.avatar, u.created_at, u.username_changed_at,
        p.xp, p.campaign_stage, p.scrap_bin, p.updated_at, p.stoke_claims, p.stoke_last, p.masterwork_pieces, p.reminder_hour,
        s.words_forged, s.longest_word, s.solo_done, s.coop_rounds, s.coop_mvps,
        s.vs_series, s.vs_series_won, s.vs_rounds_won,
@@ -100,6 +103,7 @@ function toAccount(row: AccountRow): Account {
     username: row.username,
     avatar: row.avatar,
     createdAt: row.created_at,
+    usernameChangedAt: row.username_changed_at,
     totalXp: row.xp,
     campaignCompleted: row.campaign_stage,
     scrapBin: row.scrap_bin,
@@ -162,6 +166,8 @@ export interface ProfileBody {
   readonly avatar: string | null;
   /** True until `POST /v1/me/setup` has set a username and avatar. */
   readonly needsSetup: boolean;
+  /** When `POST /v1/me/username` may next change the username (epoch ms); `null` or a past time means now. */
+  readonly nextUsernameChangeAt: number | null;
   readonly totalXp: number;
   readonly level: number;
   readonly xpIntoLevel: number;
@@ -190,6 +196,7 @@ export function profileBody(account: Account): ProfileBody {
     username: account.username,
     avatar: account.avatar,
     needsSetup: !isSetUp(account),
+    nextUsernameChangeAt: nextUsernameChangeAt(account.usernameChangedAt),
     totalXp: account.totalXp,
     level: progress.level,
     xpIntoLevel: progress.xpIntoLevel,
@@ -240,9 +247,10 @@ export async function userIdByUsername(db: D1Database, username: string): Promis
 export type SetupResult = "ok" | "taken" | "already_set";
 
 /**
- * Sets the username and avatar. A username can only be set once; repeating
- * the same username (ignoring case) just updates the avatar, so a retried
- * request and later avatar changes both work.
+ * Sets the username and avatar. Setup sets a username only once (later
+ * changes go through {@link changeUsername}); repeating the same username
+ * (ignoring case) just updates the avatar, so a retried request and later
+ * avatar changes both work.
  */
 export async function setupAccount(db: D1Database, account: Account, username: string, avatar: string): Promise<SetupResult> {
   if (account.username !== null) {
@@ -264,6 +272,49 @@ export async function setupAccount(db: D1Database, account: Account, username: s
     throw err;
   }
   return "ok";
+}
+
+export type RenameResult =
+  | { readonly kind: "ok" }
+  /** It already was exactly that name: nothing changed, and no cooldown started. */
+  | { readonly kind: "unchanged" }
+  | { readonly kind: "taken" }
+  | { readonly kind: "too_soon"; readonly nextChangeAt: number };
+
+/**
+ * Changes a set-up account's username, at most once per
+ * {@link USERNAME_CHANGE_COOLDOWN_MS}. A change of case only is a change.
+ *
+ * One UPDATE decides it, so races are settled by the database: two players
+ * asking for the same name meet the UNIQUE index (one gets `taken`), and two
+ * changes for the same account meet the cooldown in the WHERE clause (the
+ * second gets `too_soon`). The caller tells the hub and rooms, which keep
+ * copies of the name; everything else in D1 joins `users` for it.
+ */
+export async function changeUsername(db: D1Database, account: SetUpAccount, username: string, now: number): Promise<RenameResult> {
+  if (account.username === username) return { kind: "unchanged" };
+  const next = nextUsernameChangeAt(account.usernameChangedAt);
+  if (next !== null && now < next) return { kind: "too_soon", nextChangeAt: next };
+  const holder = await userIdByUsername(db, username);
+  if (holder !== null && holder !== account.id) return { kind: "taken" };
+  try {
+    const res = await db
+      .prepare(
+        `UPDATE users SET username = ?2, username_changed_at = ?3
+          WHERE id = ?1 AND username IS NOT NULL AND (username_changed_at IS NULL OR username_changed_at <= ?4)`,
+      )
+      .bind(account.id, username, now, now - USERNAME_CHANGE_COOLDOWN_MS)
+      .run();
+    if (res.meta.changes === 0) {
+      // Another change for this account got there first.
+      const fresh = await loadAccount(db, account.id);
+      return { kind: "too_soon", nextChangeAt: nextUsernameChangeAt(fresh?.usernameChangedAt ?? now) ?? now };
+    }
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) return { kind: "taken" };
+    throw err;
+  }
+  return { kind: "ok" };
 }
 
 /** Accepted friends' user IDs. */

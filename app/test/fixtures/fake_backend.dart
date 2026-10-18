@@ -109,6 +109,12 @@ class FakeServer {
   Map<String, int> hints = {'hammer': 3, 'chisel': 0, 'sparks': 0};
   final synced = <Map<String, dynamic>>[];
   final takenNames = <String>{'taken'};
+
+  /// When `POST /me/username` last changed the name (epoch ms); changes are once a week.
+  int? usernameChangedAt;
+  static const usernameCooldownMs = 7 * 24 * 3600 * 1000;
+
+  /// Friends as `GET /friends` lists them; `nickname` is mine for them.
   final friends = <Map<String, Object>>[];
   final incoming = <Map<String, Object>>[];
   bool down = false;
@@ -187,12 +193,7 @@ class FakeServer {
       ],
       'lastWeek': lastWeek == null ? null : {...lastWeek!, 'claimed': lastWeekClaimed},
     },
-    'gifts': {
-      'pending': giftsPending,
-      'sentToday': giftsSent.toList(),
-      'claimedToday': giftsClaimed,
-      'claimLimit': 5,
-    },
+    'gifts': {'pending': giftsPending, 'sentToday': giftsSent.toList(), 'claimedToday': giftsClaimed, 'claimLimit': 5},
   };
 
   Map<String, Object?> _order(Map<String, Object?> o) => {
@@ -228,6 +229,7 @@ class FakeServer {
     'username': username,
     'avatar': username == null ? null : avatar,
     'needsSetup': username == null,
+    'nextUsernameChangeAt': usernameChangedAt == null ? null : usernameChangedAt! + usernameCooldownMs,
     'totalXp': totalXp,
     'level': 1,
     'xpIntoLevel': totalXp,
@@ -242,11 +244,8 @@ class FakeServer {
     'survivalBest': survivalBest,
   };
 
-  ApiClient client(AuthService auth) => ApiClient(
-    baseUrl: 'https://forge.test',
-    token: auth.idToken,
-    client: MockClient(_handle),
-  );
+  ApiClient client(AuthService auth) =>
+      ApiClient(baseUrl: 'https://forge.test', token: auth.idToken, client: MockClient(_handle));
 
   Future<http.Response> _handle(http.Request req) async {
     if (down) throw http.ClientException('offline');
@@ -265,6 +264,18 @@ class FakeServer {
         }
         username = name;
         avatar = body['avatar'] as String;
+        return _json(200, profile(token));
+      case 'POST /me/username':
+        final name = body['username'] as String? ?? '';
+        if (!RegExp(r'^[A-Za-z0-9_]{3,16}$').hasMatch(name)) return _json(400, {'error': 'invalid_username'});
+        if (name == username) return _json(200, profile(token));
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (usernameChangedAt != null && now < usernameChangedAt! + usernameCooldownMs) {
+          return _json(429, {'error': 'too_soon', 'nextChangeAt': usernameChangedAt! + usernameCooldownMs});
+        }
+        if (takenNames.contains(name.toLowerCase())) return _json(409, {'error': 'username_taken'});
+        username = name;
+        usernameChangedAt = now;
         return _json(200, profile(token));
       case 'POST /solo/sync':
         final entries = (body['entries'] as List).cast<Map<String, dynamic>>();
@@ -286,7 +297,11 @@ class FakeServer {
         });
       case 'POST /survival/solo':
         if (survivalRuns.any((r) => r['runId'] == body['runId'])) {
-          return _json(200, {'profile': profile(token), 'xp': {'xp': 0, 'level': 1, 'levelUps': 0}, 'duplicate': true});
+          return _json(200, {
+            'profile': profile(token),
+            'xp': {'xp': 0, 'level': 1, 'levelUps': 0},
+            'duplicate': true,
+          });
         }
         survivalRuns.add(body);
         final puzzles = (body['puzzles'] as List).cast<Map<String, dynamic>>();
@@ -312,6 +327,22 @@ class FakeServer {
         return _json(200, {'friends': friends, 'incoming': incoming, 'outgoing': []});
       case 'POST /friends/request':
         return _json(200, {'status': 'pending'});
+      case 'GET /leaderboard':
+        return _json(200, {
+          'entries': [
+            {
+              'place': 1,
+              'id': token,
+              'username': username,
+              'avatar': avatar,
+              'level': 1,
+              'rank': 'Apprentice',
+              'totalXp': totalXp,
+              'me': true,
+            },
+            for (final (i, f) in friends.indexed) {...f, 'nickname': null, 'place': i + 2, 'totalXp': 0, 'me': false},
+          ],
+        });
       case 'DELETE /me':
         deletedMe = true;
         return _json(200, {'ok': true});
@@ -409,6 +440,17 @@ class FakeServer {
           'best': dailyStreak > 3 ? dailyStreak : 3,
           'alreadyDone': already,
         });
+    }
+    final nick = RegExp(r'^/friends/([^/]+)/nickname$').firstMatch(path);
+    if (req.method == 'PUT' && nick != null) {
+      final friend = friends.where((f) => f['id'] == nick.group(1)).firstOrNull;
+      if (friend == null) return _json(404, {'error': 'not_friends'});
+      final nickname = (body['nickname'] as String?)?.trim();
+      if (nickname != null && (nickname.isEmpty || nickname.runes.length > 20)) {
+        return _json(400, {'error': 'invalid_nickname'});
+      }
+      nickname == null ? friend.remove('nickname') : friend['nickname'] = nickname;
+      return _json(200, {'ok': true, 'nickname': nickname});
     }
     final gift = RegExp(r'^/friends/([^/]+)/gift$').firstMatch(path);
     if (req.method == 'POST' && gift != null) {

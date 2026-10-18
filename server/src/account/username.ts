@@ -1,5 +1,7 @@
 /**
- * Username and avatar rules for `POST /v1/me/setup` (docs/DESIGN.md §4.1).
+ * Username and avatar rules for `POST /v1/me/setup` and
+ * `POST /v1/me/username` (docs/DESIGN.md §4.1), and the rules for the
+ * nicknames players give friends (`PUT /v1/friends/:id/nickname`).
  * Uniqueness (ignoring case) is enforced by the database.
  */
 
@@ -42,6 +44,14 @@ export function checkUsername(raw: unknown): UsernameCheck {
   return { ok: true, username };
 }
 
+/** A username can change once in this long (the first change after setup is free). */
+export const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 3600_000;
+
+/** When a username last changed at `changedAt` may next change; `null` (never changed) means now. */
+export function nextUsernameChangeAt(changedAt: number | null): number | null {
+  return changedAt === null ? null : changedAt + USERNAME_CHANGE_COOLDOWN_MS;
+}
+
 /** Whether a string could be a username at all (for lookups by name). */
 export function looksLikeUsername(raw: string): boolean {
   return raw.length >= USERNAME_MIN && raw.length <= USERNAME_MAX && USERNAME_SHAPE.test(raw);
@@ -49,4 +59,42 @@ export function looksLikeUsername(raw: string): boolean {
 
 export function isAvatar(raw: unknown): raw is string {
   return typeof raw === "string" && AVATARS.includes(raw);
+}
+
+/**
+ * A nickname is 1–20 characters as they show on screen (graphemes, so an
+ * emoji made of several code points counts once), and at most this many
+ * code points, which stops a pile of combining marks on each.
+ */
+export const NICKNAME_MAX = 20;
+const NICKNAME_MAX_CODE_POINTS = 160;
+
+/** Control characters, lone surrogates, line breaks and bidi overrides (which could turn the rest of a line around). */
+const NICKNAME_FORBIDDEN = /[\p{Cc}\p{Cs}\p{Zl}\p{Zp}\u202A-\u202E\u2066-\u2069]/u;
+/** At least one letter, digit, punctuation mark or symbol (emoji included), so it can be seen. */
+const NICKNAME_VISIBLE = /[\p{L}\p{N}\p{P}\p{S}]/u;
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+export type NicknameCheck =
+  | { readonly ok: true; readonly nickname: string | null }
+  | { readonly ok: false; readonly error: "invalid_nickname"; readonly message: string };
+
+/**
+ * Checks a nickname for a friend: `null` clears it; otherwise it's trimmed
+ * and must be 1–20 visible characters with no control characters. Anything
+ * else goes (it's only ever shown to the player who chose it).
+ */
+export function checkNickname(raw: unknown): NicknameCheck {
+  if (raw === null) return { ok: true, nickname: null };
+  const bad = (message: string): NicknameCheck => ({ ok: false, error: "invalid_nickname", message });
+  if (typeof raw !== "string") return bad("Nickname must be a string, or null to clear it");
+  const nickname = raw.normalize("NFC").trim();
+  if (NICKNAME_FORBIDDEN.test(nickname)) return bad("Nicknames can't have control characters or line breaks");
+  if (!NICKNAME_VISIBLE.test(nickname)) return bad(`Nickname must be 1-${NICKNAME_MAX} characters`);
+  const length = [...graphemes.segment(nickname)].length;
+  if (length > NICKNAME_MAX || [...nickname].length > NICKNAME_MAX_CODE_POINTS) {
+    return bad(`Nickname must be 1-${NICKNAME_MAX} characters`);
+  }
+  return { ok: true, nickname };
 }

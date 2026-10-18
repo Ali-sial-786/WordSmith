@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { nameProblem } from "../../src/account/profanity";
-import { AVATARS, checkUsername, isAvatar, looksLikeUsername } from "../../src/account/username";
+import {
+  AVATARS,
+  checkNickname,
+  checkUsername,
+  isAvatar,
+  looksLikeUsername,
+  nextUsernameChangeAt,
+  USERNAME_CHANGE_COOLDOWN_MS,
+} from "../../src/account/username";
 
 describe("checkUsername", () => {
   it.each(["Ali", "sam_the_smith", "X9_", "a".repeat(16), "Scrap_Bin", "Classic", "Bass_Player", "Grape", "Peacock", "therapist", "Torpedo"])(
@@ -37,6 +45,56 @@ describe("looksLikeUsername", () => {
     expect(looksLikeUsername("abc")).toBe(true);
     expect(looksLikeUsername("ab")).toBe(false);
     expect(looksLikeUsername("a/b")).toBe(false);
+  });
+});
+
+describe("nextUsernameChangeAt", () => {
+  it("is now before the first change, then a week after the last", () => {
+    expect(USERNAME_CHANGE_COOLDOWN_MS).toBe(7 * 24 * 3600_000);
+    expect(nextUsernameChangeAt(null)).toBeNull();
+    expect(nextUsernameChangeAt(1_000)).toBe(1_000 + USERNAME_CHANGE_COOLDOWN_MS);
+  });
+});
+
+describe("checkNickname", () => {
+  it.each([
+    ["Al", "Al"],
+    ["  Big Al ", "Big Al"],
+    ["Ma 🔨", "Ma 🔨"],
+    ["a".repeat(20), "a".repeat(20)],
+    ["👨‍👩‍👧‍👦".repeat(20), "👨‍👩‍👧‍👦".repeat(20)],
+    ["Zoë", "Zoë"],
+    // Composed the same way whatever the keyboard sent.
+    ["Zoë", "Zoë"],
+    ["李小龍", "李小龍"],
+    ["!", "!"],
+  ])("allows %j", (raw, nickname) => {
+    expect(checkNickname(raw)).toEqual({ ok: true, nickname });
+  });
+
+  it("clears with null", () => {
+    expect(checkNickname(null)).toEqual({ ok: true, nickname: null });
+  });
+
+  it.each([
+    "",
+    "   ",
+    "​​",
+    "a".repeat(21),
+    "🔥".repeat(21),
+    "a" + "́".repeat(200),
+    "tab\there",
+    "new\nline",
+    "nul\u0000",
+    "para graph",
+    "‮evil",
+    "⁦isolate",
+    "\ud800lone",
+    42,
+    undefined,
+    ["Al"],
+  ])("refuses %j", (raw) => {
+    expect(checkNickname(raw)).toMatchObject({ ok: false, error: "invalid_nickname" });
   });
 });
 

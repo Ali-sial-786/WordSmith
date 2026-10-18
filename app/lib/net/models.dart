@@ -52,6 +52,7 @@ class ServerProfile {
     required this.stats,
     this.masterworkPieces = 0,
     this.survivalBest,
+    this.nextUsernameChangeAt,
   });
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -59,6 +60,10 @@ class ServerProfile {
     username: j['username'] as String?,
     avatar: j['avatar'] as String?,
     needsSetup: j['needsSetup'] as bool? ?? false,
+    nextUsernameChangeAt: switch (j['nextUsernameChangeAt']) {
+      final num at => DateTime.fromMillisecondsSinceEpoch(at.toInt()),
+      _ => null,
+    },
     totalXp: j['totalXp'] as int? ?? 0,
     level: j['level'] as int? ?? 1,
     rank: j['rank'] as String? ?? '',
@@ -88,6 +93,12 @@ class ServerProfile {
 
   /// The best Crucible run (shared/survival.md).
   final SurvivalBest? survivalBest;
+
+  /// When the username may next change (once a week); null or past means now.
+  final DateTime? nextUsernameChangeAt;
+
+  /// Whether `POST /v1/me/username` would be turned away as too soon.
+  bool get usernameLocked => nextUsernameChangeAt?.isAfter(DateTime.now()) ?? false;
 }
 
 /// A Crucible run's score: puzzles cleared, then words, then saved.
@@ -155,6 +166,7 @@ class PlayerSummary {
     required this.avatar,
     required this.level,
     required this.rank,
+    this.nickname,
   });
 
   factory PlayerSummary.fromJson(Map<String, dynamic> j) => PlayerSummary(
@@ -163,6 +175,7 @@ class PlayerSummary {
     avatar: j['avatar'] as String? ?? 'avatar_01',
     level: j['level'] as int? ?? 1,
     rank: j['rank'] as String? ?? '',
+    nickname: j['nickname'] as String?,
   );
 
   final String id;
@@ -170,25 +183,22 @@ class PlayerSummary {
   final String avatar;
   final int level;
   final String rank;
+
+  /// My private name for this friend (friends list only), shown instead of [username].
+  final String? nickname;
+
+  PlayerSummary withNickname(String? nickname) =>
+      PlayerSummary(id: id, username: username, avatar: avatar, level: level, rank: rank, nickname: nickname);
 }
 
 class FriendsList {
-  const FriendsList({
-    this.friends = const [],
-    this.incoming = const [],
-    this.outgoing = const [],
-  });
+  const FriendsList({this.friends = const [], this.incoming = const [], this.outgoing = const []});
 
   factory FriendsList.fromJson(Map<String, dynamic> j) {
     List<PlayerSummary> list(String key) => [
-      for (final f in ((j[key] as List?) ?? const []).cast<Map<String, dynamic>>())
-        PlayerSummary.fromJson(f),
+      for (final f in ((j[key] as List?) ?? const []).cast<Map<String, dynamic>>()) PlayerSummary.fromJson(f),
     ];
-    return FriendsList(
-      friends: list('friends'),
-      incoming: list('incoming'),
-      outgoing: list('outgoing'),
-    );
+    return FriendsList(friends: list('friends'), incoming: list('incoming'), outgoing: list('outgoing'));
   }
 
   final List<PlayerSummary> friends;

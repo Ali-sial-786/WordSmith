@@ -99,7 +99,7 @@ describe("POST /v1/me/setup", () => {
     expect(await body(res)).toMatchObject({ error: "username_taken" });
   });
 
-  it("can't change the username, but can repeat it to change the avatar", async () => {
+  it("can't change the username (POST /v1/me/username does), but can repeat it to change the avatar", async () => {
     const c = await setUpClient(uniqueName("Kai"), "avatar_03");
     const rename = await c.post("/v1/me/setup", { username: uniqueName("Other"), avatar: "avatar_03" });
     expect(rename.status).toBe(409);

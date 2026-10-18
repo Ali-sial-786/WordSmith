@@ -20,8 +20,7 @@ sealed class HubEvent {
       mode: m['mode'] as String,
     ),
     'OPEN_ROOMS' => HubOpenRooms([
-      for (final r in ((m['rooms'] as List?) ?? const []).cast<Map<String, dynamic>>())
-        OpenRoom.fromJson(r),
+      for (final r in ((m['rooms'] as List?) ?? const []).cast<Map<String, dynamic>>()) OpenRoom.fromJson(r),
     ]),
     'ERROR' => HubError(m['code'] as String? ?? 'unknown'),
     _ => null,
@@ -38,12 +37,7 @@ class HubPresence extends HubEvent {
 }
 
 class HubInvite extends HubEvent {
-  const HubInvite({
-    required this.from,
-    required this.fromUsername,
-    required this.code,
-    required this.mode,
-  });
+  const HubInvite({required this.from, required this.fromUsername, required this.code, required this.mode});
 
   final String from;
   final String fromUsername;
@@ -64,11 +58,13 @@ class OpenRoom {
     required this.hostUsername,
     required this.players,
     required this.max,
+    this.hostId = '',
   });
 
   factory OpenRoom.fromJson(Map<String, dynamic> j) => OpenRoom(
     code: j['code'] as String,
     mode: j['mode'] as String? ?? 'coop',
+    hostId: j['hostId'] as String? ?? '',
     hostUsername: j['hostUsername'] as String? ?? '?',
     players: j['players'] as int? ?? 0,
     max: j['max'] as int? ?? 4,
@@ -76,6 +72,7 @@ class OpenRoom {
 
   final String code;
   final String mode;
+  final String hostId;
   final String hostUsername;
   final int players;
   final int max;
@@ -90,11 +87,7 @@ class HubError extends HubEvent {
 /// backoff, sends keep-alives and re-sends the current status after a
 /// reconnect.
 class HubClient {
-  HubClient({
-    required String baseUrl,
-    required Future<String?> Function() token,
-    SocketConnector? connect,
-  }) {
+  HubClient({required String baseUrl, required Future<String?> Function() token, SocketConnector? connect}) {
     _socket = ReconnectingSocket(
       uri: wsUri(baseUrl, '/v1/ws/hub'),
       token: token,
@@ -130,8 +123,7 @@ class HubClient {
     _send({'op': 'SET_STATUS', 'status': status});
   }
 
-  void invite(String to, String code, String mode) =>
-      _send({'op': 'INVITE', 'to': to, 'code': code, 'mode': mode});
+  void invite(String to, String code, String mode) => _send({'op': 'INVITE', 'to': to, 'code': code, 'mode': mode});
 
   Future<void> stop() => _socket.stop();
 

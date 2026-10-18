@@ -109,6 +109,15 @@ async function register(c: Client, token: string): Promise<void> {
   expect(await body(res)).toEqual({ ok: true });
 }
 
+/** `c`'s nickname for a friend (`PUT /v1/friends/:id/nickname`). */
+function nicknameFor(c: Client, friend: string, nickname: string): Promise<Response> {
+  return request(`/v1/friends/${friend}/nickname`, {
+    method: "PUT",
+    headers: { authorization: `Bearer ${c.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ nickname }),
+  });
+}
+
 async function hubSocket(c: Client): Promise<Socket> {
   const s = await connect(c, "/v1/ws/hub");
   await s.next({ op: "OPEN_ROOMS" });
@@ -290,6 +299,19 @@ describe("invite notifications", () => {
     await closeAll(sa, sb);
   });
 
+  it("use the nickname the invited friend gave the inviter", async () => {
+    const [a, b] = await friends();
+    const phone = fcmToken();
+    await register(b, phone);
+    expect((await nicknameFor(b, a.uid, "Big Al")).status).toBe(200);
+    const sa = await hubSocket(a);
+
+    sa.send({ op: "INVITE", to: b.uid, code: "NICK22", mode: "vs" });
+    await until("a send", () => google.sends().length === 1);
+    expect(google.messages()[0]).toMatchObject({ token: phone, notification: { title: "Big Al invited you to Versus" } });
+    await closeAll(sa);
+  });
+
   it("forget the tokens FCM says are dead, and keep the rest", async () => {
     const [a, b] = await friends();
     const gone = fcmToken("gone");
@@ -412,6 +434,17 @@ describe("gift notifications (shared/forge-board.md, \"Gifts\")", () => {
     expect((await a.post(`/v1/friends/${b.uid}/gift`, {})).status).toBe(409);
     await sleep(100);
     expect(google.sends()).toHaveLength(2);
+  });
+
+  it("use the nickname the receiver gave the sender", async () => {
+    const a = await setUpClient();
+    const b = await setUpClient();
+    await befriend(a, b);
+    await register(b, fcmToken("phone"));
+    expect((await nicknameFor(b, a.uid, "Auntie 🔨")).status).toBe(200);
+    expect((await a.post(`/v1/friends/${b.uid}/gift`, {})).status).toBe(200);
+    await until("a send", () => google.sends().length === 1);
+    expect(google.messages()[0]).toMatchObject({ notification: { title: "Auntie 🔨 sent you a gift" } });
   });
 
   it("send nothing to a friend with no phones, and the gift still goes", async () => {

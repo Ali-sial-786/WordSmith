@@ -9,7 +9,7 @@ import '../ui/theme/palette.dart';
 /// letters only once forged, hinted or shown in the results. Co-op shares one
 /// between the team; in Versus it's this player's own.
 class RemoteMold implements MoldModel {
-  RemoteMold(RoundStart start, this._players, {this.initials = true})
+  RemoteMold(RoundStart start, this._players, {this.initials = true, this.nameOf})
     : cols = start.cols,
       rows = start.rows,
       slots = start.slots,
@@ -27,6 +27,10 @@ class RemoteMold implements MoldModel {
   /// Mark each forged word with its smith's initial (co-op; in Versus
   /// every word on your mold is yours).
   final bool initials;
+
+  /// A player's name as I see them (the session's `nameOf`), for initials;
+  /// their username if not given.
+  final String Function(String id)? nameOf;
 
   @override
   final int cols;
@@ -137,8 +141,10 @@ class RemoteMold implements MoldModel {
       if (e.value == null) continue;
       final s = slot(e.key);
       if (s.cells.first == cell) {
-        final name = _players().player(e.value!)?.username ?? '';
-        return name.isEmpty ? null : name[0].toUpperCase();
+        final player = _players().player(e.value!);
+        final name = player == null ? '' : nameOf?.call(player.id) ?? player.username;
+        // A whole code point, so a nickname starting with an emoji keeps it.
+        return name.isEmpty ? null : String.fromCharCode(name.runes.first).toUpperCase();
       }
     }
     return null;

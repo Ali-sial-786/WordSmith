@@ -89,13 +89,15 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 | `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks, such as names. No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
 | `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
+| `POST /me/username` | Change my username: the same rules, at most once every 7 days (`429 too_soon` says when) |
 | `DELETE /me` | Delete my account data |
 | `POST /me/push-token` · `DELETE /me/push-token` | This phone's FCM token for notifications (`shared/push.md`) |
 | `PUT /me/reminder` | The UTC hour of a daily reminder, or none (`shared/push.md`) |
 | `GET /users/:username` | A player's public profile (any signed-in player, so you can look someone up before adding them) |
 | `POST /solo/sync` | Upload a batch of offline solo results (see §8), campaign and Master Forge stages (`shared/master-forge.md`). Returns the updated profile and any rewards. |
-| `GET /friends` | My friends and pending requests |
+| `GET /friends` | My friends (with the nicknames I gave them) and pending requests |
 | `POST /friends/request` · `POST /friends/respond` · `DELETE /friends/:id` | Manage friends |
+| `PUT /friends/:id/nickname` | My private nickname for a friend, or none; the app shows it instead of their username everywhere |
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
 | `POST /rooms/:code/video` | A LiveKit token for the room's optional video chat (§6, "Video chat") |
@@ -242,13 +244,13 @@ their avatar, with voice.
 ## 7. Data model (D1)
 
 ```sql
-users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT)
+users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT, username_changed_at INT /*once a week*/)
 profiles     (user_id PK, xp INT /*lifetime total*/, level INT, campaign_stage INT /*highest completed; the app's campaignStage = this + 1*/, scrap_bin INT, updated_at INT)
 inventory    (user_id, item TEXT /*hammer|chisel|sparks*/, count INT, PRIMARY KEY(user_id, item))
 stats        (user_id PK, words_forged INT, longest_word TEXT, solo_done INT,
               coop_rounds INT, coop_mvps INT, vs_series INT, vs_series_won INT, vs_rounds_won INT)
 friends      (user_id, friend_id, status TEXT /*pending|accepted*/, created_at INT,
-              PRIMARY KEY(user_id, friend_id))
+              nickname TEXT /*user_id's private name for friend_id*/, PRIMARY KEY(user_id, friend_id))
 puzzles      (id TEXT PK, pool TEXT /*mp*/, heat INT, size INT, letters TEXT, data TEXT /*json*/)
 campaign     (stage INT PK, puzzle_id TEXT, data TEXT /*json incl. answers, for validation*/)
 puzzle_seen  (user_id, puzzle_id, seen_at INT, PRIMARY KEY(user_id, puzzle_id))

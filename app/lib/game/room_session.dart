@@ -112,10 +112,12 @@ abstract class RoomSession extends ChangeNotifier {
   Future<void> start() async {
     _subs
       ..add(client.events.listen(_onEvent))
-      ..add(client.connection.listen((up) {
-        connection = up ? RoomConnection.live : RoomConnection.reconnecting;
-        notifyListeners();
-      }));
+      ..add(
+        client.connection.listen((up) {
+          connection = up ? RoomConnection.live : RoomConnection.reconnecting;
+          notifyListeners();
+        }),
+      );
     unawaited(
       client.closed.then((code) {
         if (_disposed) return;
@@ -136,9 +138,17 @@ abstract class RoomSession extends ChangeNotifier {
   @protected
   String? departedName(String id) => null;
 
+  /// My nickname for a player, if they're a friend I gave one; the room
+  /// screen points it at the account's nicknames (game/names.dart).
+  String? Function(String id) nicknameOf = _noNickname;
+
+  static String? _noNickname(String _) => null;
+
+  /// How a player is shown in this room: my nickname for them, else their
+  /// username. Every view names players through this.
   String nameOf(String? id) {
     if (id == null) return 'The forge';
-    return lobby?.player(id)?.username ?? departedName(id) ?? 'A smith';
+    return nicknameOf(id) ?? lobby?.player(id)?.username ?? departedName(id) ?? 'A smith';
   }
 
   Color colorOf(String? id) {

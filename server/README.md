@@ -10,7 +10,7 @@ contract.
 |---|---|
 | `src/index.ts` | The router (every route, and which need a token), and the hourly Cron Trigger's `scheduled` handler |
 | `src/auth/` | Firebase ID token checks with WebCrypto (`firebase.ts`) and reading the token from a request (`request.ts`) |
-| `src/account/` | Username and avatar rules, and the profanity blocklist |
+| `src/account/` | Username, avatar and nickname rules, the username cooldown, and the profanity blocklist |
 | `src/routes/` | The REST and WebSocket handlers |
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
@@ -18,7 +18,7 @@ contract.
 | `src/dictionary/` | Online definitions for words the app's offline lexicon lacks (`define.ts`): the Free Dictionary API, then Wiktionary, and picking and filtering their senses (below) |
 | `src/push/` | Notifications ([shared/push.md](../shared/push.md)): the FCM HTTP v1 sender with its Google OAuth JWT and access-token cache (`fcm.ts`), sending to each of a player's phones (`send.ts`), the invite and gift messages (`invite.ts`, `gift.ts`), and the daily reminders' hourly run (`reminder.ts`) |
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
-| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql`, `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days) and `0006_survival.sql` (The Crucible's runs and best runs) |
+| `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql`, `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days), `0006_survival.sql` (The Crucible's runs and best runs) and `0007_names.sql` (when the username last changed, and nicknames for friends) |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
 | `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
@@ -59,7 +59,8 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 | `GET /health` | `{ok: true}` |
 | `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it, `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
-| `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). The username can't change (`409 already_set`), but repeating it with another avatar changes the avatar. |
+| `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). Setup can't change the username (`409 already_set`; that's `POST /me/username`), but repeating it with another avatar changes the avatar. |
+| `POST /me/username` | `{username}` → my profile, renamed. Setup's rules (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`, unique ignoring case; a change of case only is fine), once every 7 days: `429 {error: "too_soon", message, nextChangeAt}` (epoch ms). The first change after setup is free; the profile's `nextUsernameChangeAt` says when the next is allowed. Asking for exactly my current name changes nothing and answers 200 (a retry). See "Changing the username" below. |
 | `DELETE /me` | `{ok: true}`. Deletes all my rows (push tokens too). Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
 | `POST /me/push-token` | `{token}` → `{ok: true}`: this phone's FCM registration token gets invite notifications (below). A token another account had moves here; an account keeps its 5 newest. `400 invalid_push_token` unless `token` is 1–4096 printable ASCII characters without spaces. |
 | `DELETE /me/push-token` | `{token}` → `{ok: true}`: no more notifications to that phone (sign-out, or turned off). Only removes my own token; unknown tokens are fine. `400 invalid_push_token` as above. |
@@ -77,7 +78,8 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 | `POST /me/trials/claim` | → `{profile, board, reward}`. `409 no_prize`, `409 already_claimed`. |
 | `POST /me/gifts/claim` | → `{profile, board, reward}`. `409 nothing_to_claim`. |
 | `POST /friends/:id/gift` | → `{ok: true}`. `400 cannot_gift_self`, `404 not_friends`, `409 already_sent`. |
-| `GET /friends` | `{friends, incoming, outgoing}`, each a list of `{id, username, avatar, level, rank, since}` |
+| `GET /friends` | `{friends, incoming, outgoing}`, each a list of `{id, username, avatar, level, rank, since, nickname}`. `nickname` is the one I gave that friend (`null` for none, and always for requests); `friends` is sorted by it, or else the username. |
+| `PUT /friends/:id/nickname` | `{nickname}` → `{ok: true, nickname}`: my private name for an accepted friend, or `{nickname: null}` to clear it. Trimmed, 1–20 characters as they show on screen (an emoji counts once; at most 160 code points), at least one visible character, and no control characters, line breaks or bidi overrides (`400 invalid_nickname`). `404 not_friends` for requests, strangers and myself. Only `GET /friends` returns it, and only to me; removing the friend drops it. |
 | `POST /friends/request` | `{username}` → `{status: "pending" \| "accepted", user}`. Asking someone who already asked you accepts. `404 user_not_found`, `400 cannot_friend_self`, `409 already_friends`, `409 too_many_requests`. |
 | `POST /friends/respond` | `{userId, accept}` → `{status: "accepted" \| "declined", user}`. `404 request_not_found`. |
 | `DELETE /friends/:id` | `{ok: true}`. Removes a friend, cancels my request, or declines theirs. `404 not_found`. |
@@ -88,7 +90,7 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
 
-Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board and push tokens need a set-up account
+Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board, push tokens and changing the username need a set-up account
 (`403 setup_required`). `/me`, `/me/setup`, `/solo/sync`, `/survival/solo` and `/users/:username` don't.
 
 ### Definitions
@@ -107,7 +109,7 @@ often the case for names and rarer words:
 ```json
 {
   "id": "<firebase uid>", "username": "Ali", "avatar": "avatar_03", "needsSetup": false,
-  "totalXp": 1000, "level": 10, "xpIntoLevel": 100, "xpForLevel": 150, "rank": "Journeyman",
+  "nextUsernameChangeAt": null, "totalXp": 1000, "level": 10, "xpIntoLevel": 100, "xpForLevel": 150, "rank": "Journeyman",
   "campaignCompleted": 12, "nextStage": 13,
   "scrapBin": 4, "hints": {"hammer": 5, "chisel": 1, "sparks": 0},
   "stats": {"wordsForged": 40, "longestWord": "THREAD", "soloDone": 12, "coopRounds": 0,
@@ -120,7 +122,24 @@ often the case for names and rarer words:
 
 `campaignCompleted` is the highest stage completed (`profiles.campaign_stage`,
 0 = none). `nextStage` is `campaignCompleted + 1`, which is what the app's
-`Profile.campaignStage` holds.
+`Profile.campaignStage` holds. `nextUsernameChangeAt` is when
+`POST /me/username` may next change the name (epoch ms): `null` until the
+first change, then 7 days after the last (`users.username_changed_at`).
+
+### Changing the username
+
+`POST /me/username` (`src/routes/me.ts`, `changeUsername` in
+`src/db/accounts.ts`) decides with one `UPDATE … WHERE` the cooldown has
+passed: two players racing for a name meet the `UNIQUE COLLATE NOCASE`
+index (one gets `409 username_taken`), and two changes for one account meet
+the cooldown (one gets `429 too_soon`). In D1 the name lives only in
+`users`: friends, requests, the leaderboard, the Forge Board's Weekly Trials
+and gifts, and `GET /users/:username` all join it, and match summaries only
+hold user IDs. Two places keep a copy, and are told before the answer (best
+effort, like presence):
+
+- **HubDO** (`usernameChanged`): each of the player's sockets carries the name for the invites it sends, and each room they host is listed under it. It updates both, sends the host's connected friends a fresh `OPEN_ROOMS`, and returns the codes of the rooms the player is in (by their `in_room:` status) or hosts.
+- **RoomDO** (`renamed`), for each of those codes: the player's seat takes the new name and everyone gets a `LOBBY`; the open-rooms listing, `GET /rooms/:code`'s host and results still to come follow. Results already sent keep the old name. A room that missed it catches up when the player next connects, since each connection brings the player's current name.
 
 ### Solo sync
 
@@ -204,10 +223,10 @@ malformed secret means push is off: invites behave exactly as before, and
 the hub doesn't touch D1 for them. Tokens are stored either way.
 
 - **Tokens** live in `push_tokens` (`migrations/0004_push_tokens.sql`): the token is unique across accounts, and registering it again gives it a new, higher `id`, so each account keeps its 5 highest.
-- **Sending:** when the hub relays an `INVITE`, it also reads the friend's tokens (one D1 query) and sends each an HTTP v1 message: title `<username> invited you to Co-op` or `… to Versus`, body `Tap to join room <CODE>`, `data: {type: "invite", code, mode, from: <user id>}`, `android: {priority: "high", ttl: "300s", collapse_key: "invite-<CODE>"}`. It goes out with `ctx.waitUntil`, after the socket relay. Only when the friend has no open socket does the hub wait for the token read, since it decides the reply: `ERROR friend_offline` if they have no tokens either, otherwise nothing (as for a relayed invite).
+- **Sending:** when the hub relays an `INVITE`, it also reads the friend's tokens and the nickname they gave the inviter (one D1 batch, `pushTargetOf` in `src/db/push.ts`) and sends each an HTTP v1 message: title `<nickname or username> invited you to Co-op` or `… to Versus`, body `Tap to join room <CODE>`, `data: {type: "invite", code, mode, from: <user id>}`, `android: {priority: "high", ttl: "300s", collapse_key: "invite-<CODE>"}`. It goes out with `ctx.waitUntil`, after the socket relay. Only when the friend has no open socket does the hub wait for the token read, since it decides the reply: `ERROR friend_offline` if they have no tokens either, otherwise nothing (as for a relayed invite).
 - **Google:** the sender signs an RS256 JWT with the key (`iss` = `client_email`, `scope` = `https://www.googleapis.com/auth/firebase.messaging`, `aud` = `https://oauth2.googleapis.com/token`, one hour), trades it for an access token, and keeps that per isolate until 5 minutes before it expires (a 401 from FCM drops it early).
 - **Failures:** a token FCM calls dead (404 or `UNREGISTERED`, or 400 `INVALID_ARGUMENT` about `message.token`) is deleted. Anything else is logged and ignored, so an invite never fails because a notification did.
-- **Gifts** (`POST /friends/:id/gift`) notify the friend's phones the same way, after the answer (`src/push/gift.ts`).
+- **Gifts** (`POST /friends/:id/gift`) notify the friend's phones the same way, after the answer, also under the receiver's nickname for the sender if they gave one (`src/push/gift.ts`).
 - **Daily reminders:** a Cron Trigger (`"0 * * * *"` in `wrangler.jsonc`) runs `scheduled` in `src/index.ts` at the start of every hour. `src/push/reminder.ts` finds up to 500 accounts whose `reminder_hour` is that UTC hour, that have a token, haven't done today's Daily Commission and weren't reminded today (`profiles_by_reminder` index; never-reminded first), records today in `reminder_last` (an `UPDATE … RETURNING`, so an overlapping run can't remind twice), and sends "Today's Daily Commission is waiting" with the streak ending yesterday. Without the FCM key it reads nothing.
 
 ### Rooms

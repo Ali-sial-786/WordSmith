@@ -15,9 +15,9 @@ import { ApiError, errorResponse, json } from "./http";
 import { Router } from "./router";
 import { getBoard, postFriendGift, postGiftsClaim, postOrderClaim, postOrderSwap, postStokeClaim, postTrialsClaim } from "./routes/board";
 import type { AuthedContext, RequestContext } from "./routes/context";
-import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond } from "./routes/friends";
+import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond, putNickname } from "./routes/friends";
 import { sendDailyReminders } from "./push/reminder";
-import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, putReminder } from "./routes/me";
+import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, postUsername, putReminder } from "./routes/me";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { getDefine } from "./routes/define";
@@ -45,6 +45,7 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
   { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
   { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
+  { method: "POST", path: "/v1/me/username", handler: authed(postUsername) },
   { method: "POST", path: "/v1/me/push-token", handler: authed(postPushToken) },
   { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },
   { method: "PUT", path: "/v1/me/reminder", handler: authed(putReminder) },
@@ -69,6 +70,7 @@ const router = new Router<Handler>([
   { method: "POST", path: "/v1/friends/respond", handler: authed(postFriendRespond) },
   { method: "DELETE", path: "/v1/friends/:id", handler: authed(deleteFriend) },
   { method: "POST", path: "/v1/friends/:id/gift", handler: authed(postFriendGift) },
+  { method: "PUT", path: "/v1/friends/:id/nickname", handler: authed(putNickname) },
   { method: "GET", path: "/v1/leaderboard", handler: authed(getLeaderboard) },
 
   { method: "POST", path: "/v1/rooms", handler: authed(postRoom) },

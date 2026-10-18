@@ -44,6 +44,22 @@ export async function pushTokensOf(db: D1Database, uid: string): Promise<string[
   return results.map((r) => r.token);
 }
 
+/**
+ * What a notification from `from` to `uid` needs, in one D1 round trip:
+ * `uid`'s tokens (as {@link pushTokensOf}), and the nickname `uid` gave
+ * `from` (shown instead of their username), or `null`.
+ */
+export async function pushTargetOf(db: D1Database, uid: string, from: string): Promise<{ tokens: string[]; nickname: string | null }> {
+  const [tokens, names] = await db.batch<{ token?: string; nickname?: string | null }>([
+    db.prepare("SELECT token FROM push_tokens WHERE user_id = ?1 ORDER BY id DESC LIMIT ?2").bind(uid, MAX_PUSH_TOKENS),
+    db.prepare("SELECT nickname FROM friends WHERE user_id = ?1 AND friend_id = ?2 AND status = 'accepted'").bind(uid, from),
+  ]);
+  return {
+    tokens: tokens!.results.map((r) => r.token!),
+    nickname: names!.results[0]?.nickname ?? null,
+  };
+}
+
 /** Deletes tokens FCM says are dead, whoever has them now. */
 export async function forgetPushTokens(db: D1Database, tokens: readonly string[]): Promise<void> {
   if (tokens.length === 0) return;
