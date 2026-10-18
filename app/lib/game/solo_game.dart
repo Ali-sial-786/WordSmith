@@ -45,6 +45,12 @@ abstract class SoloGame extends ChangeNotifier {
   /// Saves the play time when leaving mid-puzzle.
   void pause();
 
+  /// Hints spent on this puzzle so far, by kind name (for the history).
+  Map<String, int> get hintsUsed => const {};
+
+  /// Time spent playing it so far (for the history).
+  int get playedMs => 0;
+
   /// The reward for forging it: straight away in the campaign, once the
   /// server has confirmed it for the Daily Commission.
   Future<CompletionReward> finish();

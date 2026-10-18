@@ -17,6 +17,7 @@ import 'features/daily/daily_screen.dart';
 import 'features/daily/lore_screen.dart';
 import 'features/friends/friends_screen.dart';
 import 'features/hall/hall_screen.dart';
+import 'features/history/history_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
@@ -52,6 +53,7 @@ final GoRouter appRouter = GoRouter(
           PuzzleScreen(key: ValueKey(state.pathParameters['stage']), stage: int.parse(state.pathParameters['stage']!)),
     ),
     GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+    GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
     GoRoute(path: '/armory', builder: (_, _) => const ArmoryScreen()),
     GoRoute(path: '/board', builder: (_, _) => const BoardScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),

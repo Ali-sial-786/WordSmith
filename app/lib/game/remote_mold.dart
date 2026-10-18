@@ -64,6 +64,12 @@ class RemoteMold implements MoldModel {
   ];
 
   bool isClaimed(int slot) => _owner.containsKey(slot);
+
+  /// Slot → who forged it (null: it filled in by itself).
+  Map<int, String?> get owners => Map.unmodifiable(_owner);
+
+  /// Cells a hint showed.
+  Set<CellPos> get revealedCells => Set.unmodifiable(_revealed);
   int get claimedCount => _owner.length;
   bool get complete => _owner.length == slots.length;
   int get filledLetters => _cells.where((c) => fillOf(c) != CellFill.empty).length;

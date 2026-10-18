@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/sfx.dart';
 import '../data/campaign.dart';
+import '../data/history.dart';
 import '../data/profile.dart';
 import '../data/store.dart';
 import '../engine/board.dart';
@@ -15,13 +16,24 @@ final storeProvider = Provider<Store>((_) => throw UnimplementedError());
 final campaignProvider = Provider<Campaign>((_) => throw UnimplementedError());
 final sfxProvider = Provider<Sfx>((_) => Sfx.silent());
 
-final profileProvider = NotifierProvider<ProfileNotifier, Profile>(
-  ProfileNotifier.new,
-);
+final profileProvider = NotifierProvider<ProfileNotifier, Profile>(ProfileNotifier.new);
 
-final settingsProvider = NotifierProvider<SettingsNotifier, Settings>(
-  SettingsNotifier.new,
-);
+final settingsProvider = NotifierProvider<SettingsNotifier, Settings>(SettingsNotifier.new);
+
+/// Puzzles played on this phone, newest first.
+final historyProvider = NotifierProvider<HistoryNotifier, List<PlayRecord>>(HistoryNotifier.new);
+
+class HistoryNotifier extends Notifier<List<PlayRecord>> {
+  @override
+  List<PlayRecord> build() => ref.read(storeProvider).loadHistory();
+
+  /// Adds [record], or replaces the one with its id (a result that came
+  /// again with its XP).
+  void add(PlayRecord record) {
+    state = withRecord(state, record);
+    ref.read(storeProvider).saveHistory(state);
+  }
+}
 
 /// What the player earned for forging a campaign puzzle.
 class CompletionReward {
@@ -105,16 +117,12 @@ class ProfileNotifier extends Notifier<Profile> {
         masterworkPieces: server.masterworkPieces + (pending?.gildedCollected == true ? 1 : 0),
         userId: server.id,
         totalXp: server.totalXp,
-        campaignStage: server.nextStage > local.campaignStage
-            ? server.nextStage
-            : local.campaignStage,
+        campaignStage: server.nextStage > local.campaignStage ? server.nextStage : local.campaignStage,
         scrapBin: bin,
         hints: hints,
         stats: local.stats.copyWith(
           wordsForged: s.wordsForged,
-          longestWord: s.longestWord.length >= local.stats.longestWord.length
-              ? s.longestWord
-              : local.stats.longestWord,
+          longestWord: s.longestWord.length >= local.stats.longestWord.length ? s.longestWord : local.stats.longestWord,
           soloDone: s.soloDone,
         ),
       ),
@@ -125,6 +133,7 @@ class ProfileNotifier extends Notifier<Profile> {
   Future<void> resetLocal() async {
     await _store.clearAll();
     state = _store.loadProfile();
+    ref.invalidate(historyProvider);
   }
 
   /// Spends one hint of [kind]; false if the player has none.
@@ -134,8 +143,7 @@ class ProfileNotifier extends Notifier<Profile> {
     return true;
   }
 
-  void addHint(HintKind kind, [int count = 1]) =>
-      _set(state.withHints(kind, count));
+  void addHint(HintKind kind, [int count = 1]) => _set(state.withHints(kind, count));
 
   /// A blueprint piece from a gilded cell. Finishing a Masterwork is
   /// rewarded when the puzzle is forged.
@@ -145,9 +153,7 @@ class ProfileNotifier extends Notifier<Profile> {
   /// full and got smelted into a Hammer Strike.
   bool addBonusWord() {
     var bin = state.scrapBin + 1;
-    var next = state.copyWith(
-      stats: state.stats.copyWith(bonusWords: state.stats.bonusWords + 1),
-    );
+    var next = state.copyWith(stats: state.stats.copyWith(bonusWords: state.stats.bonusWords + 1));
     final smelted = bin >= scrapBinCapacity;
     if (smelted) {
       bin -= scrapBinCapacity;
@@ -167,9 +173,7 @@ class ProfileNotifier extends Notifier<Profile> {
   }) {
     final before = state.progress;
     // The piece was counted when it was collected; did it finish one?
-    final masterwork = board.gildedCollected
-        ? MasterworkProgress(state.masterworkPieces - 1).finishedBy(1)
-        : null;
+    final masterwork = board.gildedCollected ? MasterworkProgress(state.masterworkPieces - 1).finishedBy(1) : null;
     final xp = soloXp(bonusWords: board.bonusFound.length) + (masterwork == null ? 0 : masterworkXp);
     var next = state.copyWith(totalXp: state.totalXp + xp);
     final after = next.progress;
@@ -186,17 +190,13 @@ class ProfileNotifier extends Notifier<Profile> {
     for (final e in [...hints.entries, ...masterworkHints.entries]) {
       next = next.withHints(e.key, e.value);
     }
-    final typed = [
-      for (final i in board.foundSlots) board.puzzle.slots[i].word,
-    ];
+    final typed = [for (final i in board.foundSlots) board.puzzle.slots[i].word];
     var longest = state.stats.longestWord;
     for (final w in typed) {
       if (w.length > longest.length) longest = w;
     }
     next = next.copyWith(
-      campaignStage: stage + 1 > state.campaignStage
-          ? stage + 1
-          : state.campaignStage,
+      campaignStage: stage + 1 > state.campaignStage ? stage + 1 : state.campaignStage,
       stats: next.stats.copyWith(
         wordsForged: next.stats.wordsForged + typed.length,
         longestWord: longest,
@@ -210,9 +210,7 @@ class ProfileNotifier extends Notifier<Profile> {
       'foundWords': typed,
       'bonusWords': board.bonusFound.toList(),
       'hintsUsed': hintsUsed,
-      'pickups': [
-        for (final i in board.collectedPickups) board.pickups[i].toJson(),
-      ],
+      'pickups': [for (final i in board.collectedPickups) board.pickups[i].toJson()],
       'gilded': [?(board.gildedCollected ? board.gilded : null)],
       // The id pickups were seeded with (the install id before sign-in).
       'pickupSeed': pickupSeed,

@@ -75,6 +75,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           const _ArmoryCard(),
+          const SizedBox(height: 12),
+          const _HistoryCard(),
           const SizedBox(height: 16),
           Text('Records', style: text.titleMedium),
           const SizedBox(height: 8),
@@ -197,6 +199,57 @@ class _Stat extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The way into the puzzle history, with what was played last.
+class _HistoryCard extends ConsumerWidget {
+  const _HistoryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final history = ref.watch(historyProvider);
+    final last = history.firstOrNull;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.push('/history'),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Palette.soot,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Palette.gold.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: Center(child: GameIcon('scroll', size: 40, color: Palette.molten)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Puzzle history', style: text.titleMedium),
+                  Text(
+                    last == null
+                        ? 'Every puzzle you finish, with the words you missed'
+                        : '${history.length} ${history.length == 1 ? 'puzzle' : 'puzzles'} · last: ${last.title}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Palette.steel),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// The Masterwork being built, with a way into the Armory.

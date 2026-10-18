@@ -366,6 +366,7 @@ exact rules live in the shared contracts.
 | Reminder notifications | **Daily reminder** at an hour you pick, only when the commission is still waiting | `shared/push.md` |
 | Tutorial | A hand traces a word on the first puzzle; one-time tips for embers, gilded cells and meanings | — |
 | Timed / survival modes | **Survival**: one heated word at a time on a countdown; if it isn't forged in time it melts and the round ends. Solo as **The Crucible** (an endless run of puzzles), and as a lobby option in Co-op and Versus | `shared/survival.md` |
+| Game history | **Puzzle history** (from the Profile): every puzzle finished on this phone in every mode, newest first and filtered by mode, the latest 150 kept. Each opens its whole mold, with the words forged, the ones missed glowing and the bonus words; co-op shows who forged what, the Crucible every puzzle of the run, and Versus the series round by round. Kept on the phone only, and cleared when the account is deleted | `app/lib/data/history.dart` |
 
 Also: a left-handed layout (hints on the left of the anvil).
 

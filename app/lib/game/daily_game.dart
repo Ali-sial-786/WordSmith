@@ -64,6 +64,10 @@ class DailyGame extends SoloGame {
   @override
   String get title => 'Daily Commission';
   @override
+  Map<String, int> get hintsUsed => Map.unmodifiable(_hintsUsed);
+  @override
+  int get playedMs => _clock.elapsedMilliseconds;
+  @override
   String get subtitle => '${Heat.fromValue(info.heat.clamp(1, 6)).title} heat · ${prettyDate(info.date)}';
 
   @override

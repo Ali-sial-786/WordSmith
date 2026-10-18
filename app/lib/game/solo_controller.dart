@@ -16,14 +16,9 @@ export 'solo_game.dart';
 
 /// Runs one campaign puzzle: the board, the anvil order, hints and saving.
 class SoloController extends SoloGame {
-  SoloController({
-    required this.stage,
-    required this.campaign,
-    required this.store,
-    required this.profile,
-    Random? rng,
-  }) : puzzle = campaign.puzzle(stage),
-       _rng = rng ?? Random() {
+  SoloController({required this.stage, required this.campaign, required this.store, required this.profile, Random? rng})
+    : puzzle = campaign.puzzle(stage),
+      _rng = rng ?? Random() {
     final saved = store.loadSavedPuzzle();
     if (saved != null && saved.stage == stage && saved.puzzleId == puzzle.id) {
       board = saved.toBoard(puzzle);
@@ -43,12 +38,7 @@ class SoloController extends SoloGame {
       board = Board(
         puzzle,
         pickups: pickups,
-        gilded: gildedCellFor(
-          userId: pickupSeed,
-          puzzleId: puzzle.id,
-          cellCount: puzzle.letterCount,
-          pickups: pickups,
-        ),
+        gilded: gildedCellFor(userId: pickupSeed, puzzleId: puzzle.id, cellCount: puzzle.letterCount, pickups: pickups),
       );
       letters = puzzle.letters;
       _save();
@@ -98,6 +88,11 @@ class SoloController extends SoloGame {
   int get elapsedMs => _elapsedBefore + _clock.elapsedMilliseconds;
 
   @override
+  Map<String, int> get hintsUsed => Map.unmodifiable(_hintsUsed);
+  @override
+  int get playedMs => elapsedMs;
+
+  @override
   WordFeedback submit(String word) {
     if (isComplete) {
       return WordFeedback(SubmitResult(SubmitOutcome.alreadyFound, word));
@@ -129,9 +124,7 @@ class SoloController extends SoloGame {
 
   @override
   bool canUse(HintKind kind) =>
-      !isComplete &&
-      kind.unlockedAt(profile.current.level) &&
-      profile.current.hintCount(kind) > 0;
+      !isComplete && kind.unlockedAt(profile.current.level) && profile.current.hintCount(kind) > 0;
 
   @override
   RevealResult? useHammer() {

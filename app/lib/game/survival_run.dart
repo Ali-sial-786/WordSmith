@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../data/campaign.dart';
+import '../data/history.dart';
 import '../data/store.dart';
 import '../engine/board.dart';
 import '../engine/hints.dart';
@@ -34,6 +35,7 @@ class SurvivalRun extends ChangeNotifier {
     Random? rng,
     DateTime Function()? now,
     Stopwatch? clock,
+    this.onFinished,
   }) : _rng = rng ?? Random(),
        _now = now ?? DateTime.now,
        _clock = clock ?? Stopwatch() {
@@ -49,6 +51,9 @@ class SurvivalRun extends ChangeNotifier {
   final Campaign campaign;
   final Store store;
   final ProfileNotifier profile;
+
+  /// Called once when a run that played anything ends (for the history).
+  final void Function(SurvivalRun run)? onFinished;
   final Random _rng;
   final DateTime Function() _now;
 
@@ -80,6 +85,9 @@ class SurvivalRun extends ChangeNotifier {
 
   /// Finished puzzles, in the shape the server wants.
   final List<Map<String, Object>> puzzles = [];
+
+  /// The run's boards as they ended, the one left unfinished included (for the history).
+  final List<PlayedBoard> playedBoards = [];
 
   /// Runs while a puzzle is being played and the app is in front.
   final Stopwatch _clock;
@@ -173,6 +181,7 @@ class SurvivalRun extends ChangeNotifier {
   void _end({required bool cleared}) {
     _clock.stop();
     _watch?.cancel();
+    playedBoards.add(PlayedBoard.fromBoard(board, melted: cleared ? null : heated?.index));
     puzzles.add({
       'stage': puzzleStage,
       'puzzleId': puzzle.id,
@@ -279,6 +288,11 @@ class SurvivalRun extends ChangeNotifier {
     );
     if (!played) return null;
     store.enqueueSurvival(run);
+    // Left mid-puzzle: that board too, as it was.
+    if (stage == CrucibleStage.playing && (board.foundSlots.isNotEmpty || board.revealed.isNotEmpty)) {
+      playedBoards.add(PlayedBoard.fromBoard(board));
+    }
+    onFinished?.call(this);
     return run;
   }
 

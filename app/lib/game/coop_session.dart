@@ -13,6 +13,9 @@ class CoopSession extends RoomSession {
   RemoteMold? mold;
   RoundEnd? results;
   Map<String, int> scores = {};
+
+  /// The round's bonus words and who found each, in order.
+  final List<(String, String)> bonusWords = [];
   final Map<int, String> _pending = {};
 
   @override
@@ -28,6 +31,7 @@ class CoopSession extends RoomSession {
     round = start;
     results = null;
     scores = {};
+    bonusWords.clear();
     feed.clear();
     mold = RemoteMold(start, () => lobby!, nameOf: nameOf);
     syncClock(start.serverNow);
@@ -47,6 +51,7 @@ class CoopSession extends RoomSession {
         say('${nameOf(by)} forged $word  +$points', colorOf(by));
       case BonusClaimed(:final word, :final by, :final points):
         scores = e.scores;
+        bonusWords.add((word, by));
         say('${nameOf(by)} found bonus $word  +$points', colorOf(by));
       case Revealed(:final cells, :final auto, :final by):
         mold?.reveal(cells);
@@ -83,6 +88,7 @@ class CoopSession extends RoomSession {
       }
       mold!.reveal(s.revealed);
       scores = s.scores;
+      bonusWords.addAll(s.bonus);
     }
     if (s.results != null) {
       results = s.results;

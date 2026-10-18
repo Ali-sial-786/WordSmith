@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/coop_session.dart';
+import '../../game/history_records.dart';
 import '../../game/vs_session.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
@@ -45,6 +46,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   late final AccountController _account;
   late final Sfx _sfx;
   late final SettingsNotifier _settings;
+  late final HistoryNotifier _history;
   StreamSubscription<RoomEvent>? _sub;
   StreamSubscription<String>? _hubErrors;
   bool _left = false;
@@ -67,6 +69,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     _account = ref.read(accountProvider.notifier);
     _sfx = ref.read(sfxProvider);
     _settings = ref.read(settingsProvider.notifier);
+    _history = ref.read(historyProvider.notifier);
     _hubErrors = _account.hubErrors.listen((code) {
       if (code == 'friend_offline') _toast("That friend is offline and can't get a notification right now.");
     });
@@ -271,6 +274,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         }
         // XP, level and hints changed on the server: refresh the profile.
         _account.sync();
+        final s = _session;
+        if (s is CoopSession) {
+          final record = coopRecord(s, e, at: DateTime.now().millisecondsSinceEpoch);
+          if (record != null) _history.add(record);
+        }
       case VsRoundEnd(:final winner, :final melted):
         // After the melt, if there was one.
         Future.delayed(melted == null ? Duration.zero : meltDuration, () {
@@ -280,6 +288,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         _podium = e;
         _podiumSounds();
         _account.sync();
+        final s = _session;
+        if (s is VsSession) {
+          final record = vsRecord(s, e, at: DateTime.now().millisecondsSinceEpoch);
+          if (record != null) _history.add(record);
+        }
       case RoomError(:final code):
         final message = switch (code) {
           'no_puzzle' => 'The forge has no puzzles ready. Try again in a minute.',

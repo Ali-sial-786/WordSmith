@@ -529,6 +529,7 @@ class SeriesEnd extends RoomEvent {
     required this.podium,
     required this.xp,
     this.history = const [],
+    this.json = const {},
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -549,6 +550,7 @@ class SeriesEnd extends RoomEvent {
     history: [
       for (final r in ((j['history'] as List?) ?? const []).cast<Map<String, dynamic>>()) SeriesRound.fromJson(r),
     ],
+    json: j,
   );
 
   final String? winner;
@@ -560,6 +562,9 @@ class SeriesEnd extends RoomEvent {
 
   /// Every round played, in order. Empty from a server that doesn't send it.
   final List<SeriesRound> history;
+
+  /// The message as it came, kept in the puzzle history.
+  final Map<String, dynamic> json;
 
   /// Letters each racer filled over the rounds they raced.
   Map<String, int> get letters {

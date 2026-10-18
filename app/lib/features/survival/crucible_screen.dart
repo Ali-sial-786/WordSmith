@@ -10,6 +10,7 @@ import '../../engine/board.dart';
 import '../../engine/hints.dart';
 import '../../engine/puzzle.dart';
 import '../../game/account.dart';
+import '../../game/history_records.dart';
 import '../../game/providers.dart';
 import '../../game/survival_run.dart';
 import '../../net/models.dart';
@@ -65,12 +66,17 @@ class _CrucibleScreenState extends ConsumerState<CrucibleScreen> with WidgetsBin
     });
   }
 
-  SurvivalRun _newRun() => SurvivalRun(
-    campaign: ref.read(campaignProvider),
-    store: ref.read(storeProvider),
-    profile: ref.read(profileProvider.notifier),
-    furthestStage: ref.read(profileProvider).campaignStage - 1,
-  )..addListener(_onRunChanged);
+  SurvivalRun _newRun() {
+    // Read now: a run can end as the screen is disposed, when ref is gone.
+    final history = ref.read(historyProvider.notifier);
+    return SurvivalRun(
+      campaign: ref.read(campaignProvider),
+      store: ref.read(storeProvider),
+      profile: ref.read(profileProvider.notifier),
+      furthestStage: ref.read(profileProvider).campaignStage - 1,
+      onFinished: (run) => history.add(crucibleRecord(run, at: DateTime.now().millisecondsSinceEpoch)),
+    )..addListener(_onRunChanged);
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {

@@ -13,6 +13,7 @@ import '../../engine/pickups.dart';
 import '../../engine/puzzle.dart';
 import '../../game/account.dart';
 import '../../game/daily_game.dart';
+import '../../game/history_records.dart';
 import '../../game/providers.dart';
 import '../../game/replay_game.dart';
 import '../../game/solo_controller.dart';
@@ -347,9 +348,16 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
       _chisel = false;
     });
     final game = _game;
+    // Into the history straight away, and again with its XP once known.
+    final history = ref.read(historyProvider.notifier);
+    final at = DateTime.now().millisecondsSinceEpoch;
+    history.add(soloRecord(game, at: at));
     // Campaign results sync in the background; the daily one is sent now.
     if (game is SoloController) _account.sync();
-    final rewardSoon = _reward();
+    final rewardSoon = _reward().then((reward) {
+      if (reward != null && game is! ReplayGame) history.add(soloRecord(game, at: at, xp: reward.xp));
+      return reward;
+    });
     await Future<void>.delayed(const Duration(milliseconds: 1100));
     if (!mounted) return;
     _sfx.play(SfxId.forged);

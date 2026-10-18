@@ -260,6 +260,13 @@ List<_Section> _sections() => [
           '**Armory**. Open it from your Profile.',
     ),
     const _Entry(
+      'scroll',
+      'Puzzle history',
+      'Every puzzle you finish on this phone, in every mode, newest first. Open one to see its whole mold: '
+          'the words you forged, the ones you missed glowing, and your bonus words. Tap any word for its '
+          'meaning. Open it from your Profile.',
+    ),
+    const _Entry(
       'book',
       'Lore Book',
       "Every Daily Commission you forge adds a page of **Smith's Lore**: true tales of metals, words and "
@@ -269,7 +276,7 @@ List<_Section> _sections() => [
       'settings',
       'Settings',
       'Sound, music and forge ambience, vibration, colours and fonts, a left-handed layout (hints on the '
-          'left of the anvil), fewer effects, video chat, notifications and a daily reminder. Your account '
+          'left of the anvil), fewer effects, voice and text chat, notifications and a daily reminder. Your account '
           'lives here too: sign in, sign out, or delete it.',
     ),
   ]),

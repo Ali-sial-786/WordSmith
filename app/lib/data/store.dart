@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../engine/board.dart';
 import '../engine/pickups.dart';
 import '../engine/puzzle.dart';
+import 'history.dart';
 import 'profile.dart';
 
 /// A campaign puzzle the player has started but not finished.
@@ -57,15 +58,9 @@ class SavedPuzzle {
     letters: json['letters'] as String,
     foundSlots: (json['found'] as List).cast<int>(),
     autoSlots: (json['auto'] as List).cast<int>(),
-    revealed: [
-      for (final c in (json['revealed'] as List).cast<List>())
-        (x: c[0] as int, y: c[1] as int),
-    ],
+    revealed: [for (final c in (json['revealed'] as List).cast<List>()) (x: c[0] as int, y: c[1] as int)],
     bonusFound: (json['bonus'] as List).cast<String>(),
-    pickups: [
-      for (final p in (json['pickups'] as List).cast<Map<String, dynamic>>())
-        Pickup.fromJson(p),
-    ],
+    pickups: [for (final p in (json['pickups'] as List).cast<Map<String, dynamic>>()) Pickup.fromJson(p)],
     collected: (json['collected'] as List).cast<int>(),
     hintsUsed: (json['hintsUsed'] as Map).cast<String, int>(),
     elapsedMs: json['elapsedMs'] as int? ?? 0,
@@ -134,8 +129,7 @@ class SavedPuzzle {
 class Store {
   Store(this._prefs);
 
-  static Future<Store> open() async =>
-      Store(await SharedPreferences.getInstance());
+  static Future<Store> open() async => Store(await SharedPreferences.getInstance());
 
   final SharedPreferences _prefs;
 
@@ -146,6 +140,30 @@ class Store {
   static const _tipsKey = 'tips_seen.v1';
   static const _errorsKey = 'errors.v1';
   static const _crashSeenKey = 'crash_seen.v1';
+  static const _historyKey = 'history.v1';
+
+  /// Puzzles played on this phone, newest first (data/history.dart). An
+  /// entry that no longer reads is dropped rather than losing the rest.
+  List<PlayRecord> loadHistory() {
+    final raw = _prefs.getString(_historyKey);
+    if (raw == null) return const [];
+    try {
+      return [for (final r in (jsonDecode(raw) as List).cast<Map<String, dynamic>>()) ?_readRecord(r)];
+    } on Object {
+      return const [];
+    }
+  }
+
+  static PlayRecord? _readRecord(Map<String, dynamic> j) {
+    try {
+      return PlayRecord.fromJson(j);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> saveHistory(List<PlayRecord> records) =>
+      _prefs.setString(_historyKey, jsonEncode([for (final r in records) r.toJson()]));
 
   /// The last few app errors, oldest first, for crash reports.
   List<String> loadErrors() => _prefs.getStringList(_errorsKey) ?? const [];
@@ -173,10 +191,8 @@ class Store {
   Future<void> enqueueSurvival(Map<String, Object?> run) =>
       _prefs.setString(_survivalKey, jsonEncode([...loadSurvivalQueue(), run]));
 
-  Future<void> dropSurvival(String runId) => _prefs.setString(
-    _survivalKey,
-    jsonEncode(loadSurvivalQueue().where((r) => r['runId'] != runId).toList()),
-  );
+  Future<void> dropSurvival(String runId) =>
+      _prefs.setString(_survivalKey, jsonEncode(loadSurvivalQueue().where((r) => r['runId'] != runId).toList()));
 
   /// The run being played right now, kept after every change.
   Future<void> saveOpenSurvival(Map<String, Object?>? run) =>
@@ -232,18 +248,14 @@ class Store {
     return profile;
   }
 
-  Future<void> saveProfile(Profile profile) =>
-      _prefs.setString(_profileKey, jsonEncode(profile.toJson()));
+  Future<void> saveProfile(Profile profile) => _prefs.setString(_profileKey, jsonEncode(profile.toJson()));
 
   Settings loadSettings() {
     final raw = _prefs.getString(_settingsKey);
-    return raw == null
-        ? const Settings()
-        : Settings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    return raw == null ? const Settings() : Settings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<void> saveSettings(Settings settings) =>
-      _prefs.setString(_settingsKey, jsonEncode(settings.toJson()));
+  Future<void> saveSettings(Settings settings) => _prefs.setString(_settingsKey, jsonEncode(settings.toJson()));
 
   SavedPuzzle? loadSavedPuzzle() {
     final raw = _prefs.getString(_savedKey);
@@ -255,17 +267,14 @@ class Store {
     }
   }
 
-  Future<void> savePuzzle(SavedPuzzle saved) =>
-      _prefs.setString(_savedKey, jsonEncode(saved.toJson()));
+  Future<void> savePuzzle(SavedPuzzle saved) => _prefs.setString(_savedKey, jsonEncode(saved.toJson()));
 
   Future<void> clearSavedPuzzle() => _prefs.remove(_savedKey);
 
   /// Finished solo puzzles waiting to be sent to the server (M2).
   List<Map<String, dynamic>> loadSyncQueue() {
     final raw = _prefs.getString(_syncKey);
-    return raw == null
-        ? []
-        : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    return raw == null ? [] : (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
   }
 
   Future<void> enqueueSync(Map<String, Object> entry) =>
@@ -280,16 +289,21 @@ class Store {
 
   /// Forgets everything on this phone (after deleting the account).
   Future<void> clearAll() async {
-    for (final key in [_profileKey, _savedKey, _syncKey, _survivalKey, _survivalOpenKey, _survivalBestKey]) {
+    for (final key in [
+      _profileKey,
+      _savedKey,
+      _syncKey,
+      _survivalKey,
+      _survivalOpenKey,
+      _survivalBestKey,
+      _historyKey,
+    ]) {
       await _prefs.remove(key);
     }
   }
 
   static String _randomId() {
     final rng = Random.secure();
-    return List.generate(
-      16,
-      (_) => rng.nextInt(256).toRadixString(16).padLeft(2, '0'),
-    ).join();
+    return List.generate(16, (_) => rng.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
   }
 }

@@ -17,7 +17,10 @@ class ReplayGame extends SoloGame {
       _rng = rng ?? Random() {
     board = Board(puzzle);
     order = List.generate(letters.length, (i) => i);
+    _clock.start();
   }
+
+  final _clock = Stopwatch();
 
   final int stage;
   final Campaign campaign;
@@ -45,9 +48,13 @@ class ReplayGame extends SoloGame {
       : 'Replay · Puzzle ${stage - chapter.first + 1} of ${chapter.count}';
 
   @override
+  int get playedMs => _clock.elapsedMilliseconds;
+
+  @override
   WordFeedback submit(String word) {
     if (isComplete) return WordFeedback(SubmitResult(SubmitOutcome.alreadyFound, word));
     final result = board.submit(word);
+    if (board.isComplete) _clock.stop();
     notifyListeners();
     return WordFeedback(result);
   }
@@ -77,6 +84,13 @@ class ReplayGame extends SoloGame {
   @override
   Future<CompletionReward> finish() async {
     final now = profile.current.progress;
-    return CompletionReward(xp: 0, before: now, after: now, hints: const {}, unlocked: const [], chapterFinished: false);
+    return CompletionReward(
+      xp: 0,
+      before: now,
+      after: now,
+      hints: const {},
+      unlocked: const [],
+      chapterFinished: false,
+    );
   }
 }

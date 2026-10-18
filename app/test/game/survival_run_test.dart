@@ -8,6 +8,7 @@ import 'package:wordsmith/data/campaign.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/engine/hints.dart';
 import 'package:wordsmith/engine/survival.dart';
+import 'package:wordsmith/game/history_records.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/game/survival_run.dart';
 
@@ -130,6 +131,10 @@ void main() {
     expect(puzzles.single['foundWords'], ['TEAR']);
     expect(puzzles.single['cleared'], false);
     expect(store.loadSurvivalQueue().single['runId'], run.runId);
+    // The history keeps the board: TEAR forged, EAT melted, RATE missed.
+    final board = crucibleRecord(run, at: 1).boards.single;
+    expect(board.melted, 1);
+    expect([for (final s in board.missed) s.word], ['EAT', 'RATE']);
   });
 
   test('hints come from the stock and aim at the heated word', () {
