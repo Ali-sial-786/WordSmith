@@ -98,6 +98,8 @@ void main() {
     await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
     await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
     await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
+    await _font('VollkornSC', rootBundle.load('assets/fonts/VollkornSC-Bold.ttf'));
+    await _font('Arvo', rootBundle.load('assets/fonts/Arvo-Bold.ttf'));
     final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
         .readAsBytesSync();
     await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));

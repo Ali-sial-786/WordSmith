@@ -15,8 +15,8 @@ and icons. Nothing here is CC BY-SA, NC, ND, GPL or taken from another game.
 - **Icons and Masterworks:** game-icons.net icons are CC BY 3.0. Credit line: *Icons made by
   Lorc, Delapouite, Carl Olsen, SeregaCthtuf, Willdabeast, Kier Heyl and Caro Asercion, from game-icons.net, licensed under CC BY 3.0
   (https://creativecommons.org/licenses/by/3.0/).* All were modified (background removed, recoloured).
-- **Fonts:** Cinzel and Nunito Sans (SIL OFL 1.1), Roboto Slab (Apache 2.0): ship the licence files; a credits
-  mention is good practice.
+- **Fonts:** Cinzel, Nunito Sans, Vollkorn SC, Arvo, Atkinson Hyperlegible Next and Texturina (SIL OFL 1.1),
+  Roboto Slab (Apache 2.0): ship the licence files; a credits mention is good practice.
 - **Material Symbols** (`back.svg`, `swap.svg`): Apache 2.0, Google.
 - **Audio:** Kenney and OpenGameArt sources are CC0 (no attribution required; credited anyway).
 
@@ -27,6 +27,10 @@ and icons. Nothing here is CC BY-SA, NC, ND, GPL or taken from another game.
 | Cinzel | Natanael Gama (The Cinzel Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Cinzel | 2026-10-17 | 1 file(s) |
 | Roboto Slab | Christian Robertson (The Roboto Slab Project Authors) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | https://fonts.google.com/specimen/Roboto+Slab | 2026-10-17 | 1 file(s) |
 | Nunito Sans | Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin (The Nunito Sans Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Nunito+Sans | 2026-10-17 | 1 file(s) |
+| Vollkorn SC | Friedrich Althausen (The Vollkorn Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Vollkorn+SC | 2026-10-18 | 1 file(s) |
+| Arvo | Anton Koovit | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Arvo | 2026-10-18 | 1 file(s) |
+| Atkinson Hyperlegible Next | Braille Institute, Applied Design Works and Letters from Sweden (The Atkinson Hyperlegible Next Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next | 2026-10-18 | 1 file(s) |
+| Texturina | Guillermo Torres Carreño, Omnibus-Type (The Texturina Project Authors) | [OFL-1.1](https://openfontlicense.org) | https://fonts.google.com/specimen/Texturina | 2026-10-18 | 1 file(s) |
 | Game-icons.net | (per icon) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://game-icons.net | 2026-10-17 | 59 file(s) |
 | Material Symbols (Rounded) | Google | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | https://fonts.google.com/icons | 2026-10-17 | 2 file(s) |
 | Kenney Impact Sounds | Kenney (www.kenney.nl) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://kenney.nl/assets/impact-sounds | 2026-10-17 | 14 file(s) |
@@ -43,9 +47,13 @@ Pinned download URLs and SHA-256 checksums are in `art/sources.json`.
 
 | File | Font | Author | Licence | Source | Notes |
 |---|---|---|---|---|---|
-| `fonts/Cinzel-Variable.ttf` | Cinzel | Natanael Gama (The Cinzel Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/cinzel/Cinzel%5Bwght%5D.ttf | Titles and banners. Variable axis wght 400-900. |
-| `fonts/RobotoSlab-Variable.ttf` | Roboto Slab | Christian Robertson (The Roboto Slab Project Authors) | Apache License 2.0 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/apache/robotoslab/RobotoSlab%5Bwght%5D.ttf | Letter tiles and grid letters. Variable axis wght 100-900 (use 700-900). |
+| `fonts/Cinzel-Variable.ttf` | Cinzel | Natanael Gama (The Cinzel Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/cinzel/Cinzel%5Bwght%5D.ttf | Titles in the Classic fonts. Variable axis wght 400-900. |
+| `fonts/RobotoSlab-Variable.ttf` | Roboto Slab | Christian Robertson (The Roboto Slab Project Authors) | Apache License 2.0 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/apache/robotoslab/RobotoSlab%5Bwght%5D.ttf | Letter tiles in the Classic fonts. Variable axis wght 100-900 (use 700-900). |
 | `fonts/NunitoSans-Variable.ttf` | Nunito Sans | Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin (The Nunito Sans Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/nunitosans/NunitoSans%5BYTLC,opsz,wdth,wght%5D.ttf | UI text. Variable axes wght 200-1000, wdth 75-125, opsz 6-12, YTLC 440-540. |
+| `fonts/VollkornSC-Bold.ttf` | Vollkorn SC | Friedrich Althausen (The Vollkorn Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/vollkornsc/VollkornSC-Bold.ttf | Titles in the Forge fonts (the default). Bold (700) only. |
+| `fonts/Arvo-Bold.ttf` | Arvo | Anton Koovit | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/arvo/Arvo-Bold.ttf | Letter tiles in the Forge fonts (the default); titles and tiles in Foundry. Bold (700) only. |
+| `fonts/AtkinsonHyperlegibleNext-Variable.ttf` | Atkinson Hyperlegible Next | Braille Institute, Applied Design Works and Letters from Sweden (The Atkinson Hyperlegible Next Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/atkinsonhyperlegiblenext/AtkinsonHyperlegibleNext%5Bwght%5D.ttf | Everything in the Clear fonts. Variable axis wght 200-800. |
+| `fonts/Texturina-Variable.ttf` | Texturina | Guillermo Torres Carreño, Omnibus-Type (The Texturina Project Authors) | SIL Open Font License 1.1 | https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/texturina/Texturina%5Bopsz,wght%5D.ttf | Titles and letter tiles in the Guild fonts. Variable axes wght 100-900, opsz 12-72. |
 
 ## Icons (`app/assets/icons/`)
 

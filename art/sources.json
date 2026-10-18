@@ -77,6 +77,106 @@
       "retrieved": "2026-10-17"
     },
     {
+      "id": "font-vollkorn-sc",
+      "title": "Vollkorn SC",
+      "author": "Friedrich Althausen (The Vollkorn Project Authors)",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Vollkorn+SC",
+      "copyright": "Copyright 2017 The Vollkorn Project Authors (https://github.com/FAlthausen/Vollkorn-Typeface)",
+      "files": [
+        {
+          "name": "VollkornSC-Bold.ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/vollkornsc/VollkornSC-Bold.ttf",
+          "sha256": "e699f58347d31321902c74ff3bafde0f2820240c89c321acff1da69e015a5f56",
+          "size": 200976
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/vollkornsc/OFL.txt",
+          "licence_text": true,
+          "sha256": "53f9c99fa3d47f7d632a42ee7bab4a834a60a744f6026d676c3a223cef2b2ef3",
+          "size": 4489
+        }
+      ],
+      "retrieved": "2026-10-18"
+    },
+    {
+      "id": "font-arvo",
+      "title": "Arvo",
+      "author": "Anton Koovit",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Arvo",
+      "copyright": "Copyright (c) 2010-2013, Anton Koovit (anton@korkork.com), with Reserved Font Name 'Arvo'",
+      "files": [
+        {
+          "name": "Arvo-Bold.ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/arvo/Arvo-Bold.ttf",
+          "sha256": "6239b2edee762db0ab99343137c9ba15ae81fc843da2e76a0a395781748cc21f",
+          "size": 37652
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/arvo/OFL.txt",
+          "licence_text": true,
+          "sha256": "359671bf16c00cae69cb66d041296b2adc7a4becd73a463cb8c5e101d97c7986",
+          "size": 4393
+        }
+      ],
+      "retrieved": "2026-10-18"
+    },
+    {
+      "id": "font-atkinson-hyperlegible-next",
+      "title": "Atkinson Hyperlegible Next",
+      "author": "Braille Institute, Applied Design Works and Letters from Sweden (The Atkinson Hyperlegible Next Project Authors)",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next",
+      "copyright": "Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next)",
+      "files": [
+        {
+          "name": "AtkinsonHyperlegibleNext[wght].ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/atkinsonhyperlegiblenext/AtkinsonHyperlegibleNext%5Bwght%5D.ttf",
+          "sha256": "5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745",
+          "size": 114552
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/atkinsonhyperlegiblenext/OFL.txt",
+          "licence_text": true,
+          "sha256": "aca6a428580965d2297d1b718042dd427c2a9443ece3b0d02d758e161e0c4030",
+          "size": 4431
+        }
+      ],
+      "retrieved": "2026-10-18"
+    },
+    {
+      "id": "font-texturina",
+      "title": "Texturina",
+      "author": "Guillermo Torres Carreño, Omnibus-Type (The Texturina Project Authors)",
+      "licence": "OFL-1.1",
+      "licence_url": "https://openfontlicense.org",
+      "page": "https://fonts.google.com/specimen/Texturina",
+      "copyright": "Copyright 2020 The Texturina Project Authors (https://github.com/Omnibus-Type/Texturina)",
+      "files": [
+        {
+          "name": "Texturina[opsz,wght].ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/texturina/Texturina%5Bopsz,wght%5D.ttf",
+          "sha256": "478a15d7145cf94565cfc1aeb33596aeb0118c7d86a84d061ddf46de3d7dfda3",
+          "size": 288320
+        },
+        {
+          "name": "OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/texturina/OFL.txt",
+          "licence_text": true,
+          "sha256": "631ba6504ec2454e472196173aea91c423295787d2128f3732e73fb07a9ea1e0",
+          "size": 4393
+        }
+      ],
+      "retrieved": "2026-10-18"
+    },
+    {
       "id": "kenney-impact-sounds",
       "title": "Kenney Impact Sounds",
       "author": "Kenney (www.kenney.nl)",

@@ -39,11 +39,21 @@ FONTS = {
     "Cinzel-Variable.ttf": ("font-cinzel", "Cinzel[wght].ttf", "OFL.txt", "Cinzel-OFL.txt"),
     "RobotoSlab-Variable.ttf": ("font-roboto-slab", "RobotoSlab[wght].ttf", "LICENSE.txt", "RobotoSlab-LICENSE.txt"),
     "NunitoSans-Variable.ttf": ("font-nunito-sans", "NunitoSans[YTLC,opsz,wdth,wght].ttf", "OFL.txt", "NunitoSans-OFL.txt"),
+    "VollkornSC-Bold.ttf": ("font-vollkorn-sc", "VollkornSC-Bold.ttf", "OFL.txt", "VollkornSC-OFL.txt"),
+    "Arvo-Bold.ttf": ("font-arvo", "Arvo-Bold.ttf", "OFL.txt", "Arvo-OFL.txt"),
+    "AtkinsonHyperlegibleNext-Variable.ttf": ("font-atkinson-hyperlegible-next", "AtkinsonHyperlegibleNext[wght].ttf",
+                                              "OFL.txt", "AtkinsonHyperlegibleNext-OFL.txt"),
+    "Texturina-Variable.ttf": ("font-texturina", "Texturina[opsz,wght].ttf", "OFL.txt", "Texturina-OFL.txt"),
 }
+# The player picks a set in Settings (FontChoice in app/lib/ui/theme/theme.dart).
 FONT_USE = {
-    "Cinzel-Variable.ttf": "Titles and banners. Variable axis wght 400-900.",
-    "RobotoSlab-Variable.ttf": "Letter tiles and grid letters. Variable axis wght 100-900 (use 700-900).",
+    "Cinzel-Variable.ttf": "Titles in the Classic fonts. Variable axis wght 400-900.",
+    "RobotoSlab-Variable.ttf": "Letter tiles in the Classic fonts. Variable axis wght 100-900 (use 700-900).",
     "NunitoSans-Variable.ttf": "UI text. Variable axes wght 200-1000, wdth 75-125, opsz 6-12, YTLC 440-540.",
+    "VollkornSC-Bold.ttf": "Titles in the Forge fonts (the default). Bold (700) only.",
+    "Arvo-Bold.ttf": "Letter tiles in the Forge fonts (the default); titles and tiles in Foundry. Bold (700) only.",
+    "AtkinsonHyperlegibleNext-Variable.ttf": "Everything in the Clear fonts. Variable axis wght 200-800.",
+    "Texturina-Variable.ttf": "Titles and letter tiles in the Guild fonts. Variable axes wght 100-900, opsz 12-72.",
 }
 
 GI = "game-icons"
@@ -411,8 +421,8 @@ def write_credits() -> None:
          "- **Icons and Masterworks:** game-icons.net icons are CC BY 3.0. Credit line: *Icons made by",
          f"  {gi_credit}, from game-icons.net, licensed under CC BY 3.0",
          "  (https://creativecommons.org/licenses/by/3.0/).* All were modified (background removed, recoloured).",
-         "- **Fonts:** Cinzel and Nunito Sans (SIL OFL 1.1), Roboto Slab (Apache 2.0): ship the licence files; a credits",
-         "  mention is good practice.",
+         "- **Fonts:** Cinzel, Nunito Sans, Vollkorn SC, Arvo, Atkinson Hyperlegible Next and Texturina (SIL OFL 1.1),",
+         "  Roboto Slab (Apache 2.0): ship the licence files; a credits mention is good practice.",
          f"- **Material Symbols** ({', '.join(f'`{n}`' for n in ms_used)}): Apache 2.0, Google.",
          "- **Audio:** Kenney and OpenGameArt sources are CC0 (no attribution required; credited anyway).", "",
          "## Source packs", "",

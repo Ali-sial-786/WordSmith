@@ -106,6 +106,10 @@ Stream<LicenseEntry> _bundledLicences() async* {
     'Cinzel-OFL.txt': ['Cinzel font'],
     'RobotoSlab-LICENSE.txt': ['Roboto Slab font'],
     'NunitoSans-OFL.txt': ['Nunito Sans font'],
+    'VollkornSC-OFL.txt': ['Vollkorn SC font'],
+    'Arvo-OFL.txt': ['Arvo font'],
+    'AtkinsonHyperlegibleNext-OFL.txt': ['Atkinson Hyperlegible Next font'],
+    'Texturina-OFL.txt': ['Texturina font'],
   };
   for (final e in files.entries) {
     final text = await rootBundle.loadString('assets/licenses/${e.key}');

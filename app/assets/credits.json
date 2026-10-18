@@ -27,6 +27,42 @@
     "changes": "Renamed file; licence shipped alongside as NunitoSans-OFL.txt"
   },
   {
+    "file": "fonts/VollkornSC-Bold.ttf",
+    "title": "Vollkorn SC",
+    "author": "Friedrich Althausen (The Vollkorn Project Authors)",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Vollkorn+SC",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as VollkornSC-OFL.txt"
+  },
+  {
+    "file": "fonts/Arvo-Bold.ttf",
+    "title": "Arvo",
+    "author": "Anton Koovit",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Arvo",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as Arvo-OFL.txt"
+  },
+  {
+    "file": "fonts/AtkinsonHyperlegibleNext-Variable.ttf",
+    "title": "Atkinson Hyperlegible Next",
+    "author": "Braille Institute, Applied Design Works and Letters from Sweden (The Atkinson Hyperlegible Next Project Authors)",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as AtkinsonHyperlegibleNext-OFL.txt"
+  },
+  {
+    "file": "fonts/Texturina-Variable.ttf",
+    "title": "Texturina",
+    "author": "Guillermo Torres Carre\u00f1o, Omnibus-Type (The Texturina Project Authors)",
+    "licence": "SIL Open Font License 1.1",
+    "url": "https://fonts.google.com/specimen/Texturina",
+    "licence_url": "https://openfontlicense.org",
+    "changes": "Renamed file; licence shipped alongside as Texturina-OFL.txt"
+  },
+  {
     "file": "icons/hammer.svg",
     "title": "Flat hammer",
     "author": "Lorc",

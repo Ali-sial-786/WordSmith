@@ -81,6 +81,8 @@ flutter:
     - shaders/forge_fire.frag
 
   # Variable fonts: styles set the weight with FontVariation('wght', …).
+  # Single-weight files say which weight they are. The sets the player can
+  # pick from are FontChoice.all in lib/ui/theme/theme.dart.
   fonts:
     - family: Cinzel
       fonts:
@@ -91,3 +93,17 @@ flutter:
     - family: NunitoSans
       fonts:
         - asset: assets/fonts/NunitoSans-Variable.ttf
+    - family: VollkornSC
+      fonts:
+        - asset: assets/fonts/VollkornSC-Bold.ttf
+          weight: 700
+    - family: Arvo
+      fonts:
+        - asset: assets/fonts/Arvo-Bold.ttf
+          weight: 700
+    - family: AtkinsonHyperlegibleNext
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Variable.ttf
+    - family: Texturina
+      fonts:
+        - asset: assets/fonts/Texturina-Variable.ttf

@@ -104,11 +104,18 @@ ratio.
 
 ## 5. Fonts (bundled in the app, not downloaded at runtime)
 
-| Use | Font | Licence |
-|---|---|---|
-| Titles, banners ("Forged!") | **Cinzel** | OFL |
-| Letter tiles and grid letters | **Roboto Slab** (Bold/Black): sturdy and very readable | Apache 2.0 / OFL (via Google Fonts) |
-| UI text | **Nunito Sans** | OFL |
+The player picks a set in Settings → Font (`FontChoice` in `app/lib/ui/theme/theme.dart`). Every set's G must
+stay clearly unlike its C on the anvil and on the smallest mold tiles (letters about 16–22 px on a 10×10 mold).
+
+| Set | Titles, banners ("Forged!") | Letter tiles and grid letters | UI text |
+|---|---|---|---|
+| **Forge** (default) | **Vollkorn SC** Bold | **Arvo** Bold: sturdy slab, G with a square spur | **Nunito Sans** |
+| Classic (the first look) | **Cinzel** | **Roboto Slab** (800) | Nunito Sans |
+| Clear | **Atkinson Hyperlegible Next** | Atkinson Hyperlegible Next | Atkinson Hyperlegible Next |
+| Guild | **Texturina** | Texturina (900) | Nunito Sans |
+| Foundry | Arvo Bold | Arvo Bold | Nunito Sans |
+
+All OFL except Roboto Slab (Apache 2.0), from Google Fonts; sources and checksums in `art/sources.json`.
 
 ---
 

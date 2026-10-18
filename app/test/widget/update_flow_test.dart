@@ -175,6 +175,7 @@ void main() {
     await _pumpApp(tester, updater, latest: '0.0.1', location: '/settings');
 
     await tester.scrollUntilVisible(find.text('Tap to check for updates'), 200);
+    await tester.pump(); // lay out the last scroll before tapping
     await tester.tap(find.text('Tap to check for updates'));
     await _settle(tester);
     expect(find.text('You have the latest version.'), findsOneWidget);
