@@ -148,6 +148,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     // No music in rooms: friends talk over voice chat, and the forge's
     // ambience and sounds carry the game. The hall music is back on leaving.
     ref.read(sfxProvider).music(null);
+    _podiumSounds();
     // Video joins once the room has seated us.
     if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
       _videoAutoTried = true;
@@ -229,6 +230,23 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     onMic: _toggleMic,
   );
 
+  /// Versus: a series that's over, its sounds waiting for the podium.
+  SeriesEnd? _podium;
+
+  /// The series' sounds, once the podium shows: after the round that decided
+  /// it has had its moment.
+  void _podiumSounds() {
+    final e = _podium;
+    final s = _session;
+    if (e == null || (s is VsSession && s.showingFinalRound)) return;
+    _podium = null;
+    final sfx = ref.read(sfxProvider);
+    e.winner == s?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
+    if ((e.xp[s?.me]?.levelUps ?? 0) > 0) {
+      Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
+    }
+  }
+
   void _onEffect(RoomEvent e) {
     final sfx = ref.read(sfxProvider);
     switch (e) {
@@ -251,16 +269,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         Future.delayed(melted == null ? Duration.zero : meltDuration, () {
           winner == _session?.me ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
         });
-      case SeriesEnd(:final winner, :final xp):
-        // When the podium shows, after the last round's molds.
-        final s = _session;
-        final podium = s is VsSession ? s.finalRoundLeft : Duration.zero;
-        Future.delayed(podium, () {
-          winner == _session?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
-        });
-        if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
-          Future.delayed(podium + const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
-        }
+      case SeriesEnd():
+        _podium = e;
+        _podiumSounds();
         _account.sync();
       case RoomError(:final code):
         final message = switch (code) {
@@ -390,14 +401,17 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
       },
       VsSession() => switch (s.phase) {
-        // A melt plays out, and the round that decided the series stays up a moment, before the podium.
-        _ when (s.melting || s.showingFinalRound) && s.round != null && s.mold != null => VsRoundView(
+        // A melt plays out on the mold before the standings.
+        _ when s.melting && s.round != null && s.mold != null => VsRoundView(
           session: s,
           cues: _cues,
           onLeave: _leave,
           video: _roomVideo,
         ),
-        'results' when s.seriesEnd != null => VsResultsView(session: s, onLeave: _leave),
+        // The round that decided the series gets its standings too, everyone's molds and all, before the podium.
+        _ when s.showingFinalRound => VsStandingsView(session: s, cues: _cues, onLeave: _leave),
+        // SERIES_END comes just before the LOBBY that says so.
+        _ when s.seriesEnd != null => VsResultsView(session: s, onLeave: _leave),
         'standings' || 'results' when s.standings != null => VsStandingsView(session: s, cues: _cues, onLeave: _leave),
         'countdown' ||
         'round' when s.round != null => VsRoundView(session: s, cues: _cues, onLeave: _leave, video: _roomVideo),

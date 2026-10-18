@@ -33,18 +33,28 @@ class VsSession extends RoomSession {
   final Set<String> _closeCalls = {};
 
   /// How long the round that decides the series stays up before the podium,
-  /// once any melt has played: time to look at everyone's mold.
-  static const finalRoundHold = Duration(milliseconds: 3500);
+  /// once any melt has played: its card, then time to look at everyone's
+  /// mold. "See the results" moves on sooner.
+  static const finalRoundHold = Duration(seconds: 10);
 
-  /// Until when the round that decided the series shows (this phone's clock).
+  /// Until when the round that decided the series shows by itself (this
+  /// phone's clock); null once that's over or the player has moved on.
   DateTime? finalRoundUntil;
   Timer? _finalRoundDone;
 
-  /// The round that decided the series is still showing: the podium waits.
-  bool get showingFinalRound => finalRoundUntil != null && DateTime.now().isBefore(finalRoundUntil!);
+  /// The standings are of the round that decided the series.
+  bool get finalRound => standings != null && standings!.next == null;
 
-  /// How long until the podium shows.
-  Duration get finalRoundLeft => showingFinalRound ? finalRoundUntil!.difference(DateTime.now()) : Duration.zero;
+  /// The round that decided the series is still showing, everyone's molds and
+  /// all: the podium waits for the hold (or "See the results"), and for the
+  /// series' results to arrive.
+  bool get showingFinalRound => finalRound && (finalRoundUntil != null || seriesEnd == null);
+
+  /// How long until the podium shows by itself.
+  Duration get finalRoundLeft {
+    final left = finalRoundUntil?.difference(DateTime.now()) ?? Duration.zero;
+    return left.isNegative ? Duration.zero : left;
+  }
 
   /// Best of this many rounds.
   int get series => round?.series ?? lobby?.series ?? 3;
@@ -96,7 +106,7 @@ class VsSession extends RoomSession {
   void _holdFinalRound() {
     finalRoundUntil = (melting ? melt!.until : DateTime.now()).add(finalRoundHold);
     _finalRoundDone?.cancel();
-    _finalRoundDone = Timer(finalRoundLeft + const Duration(milliseconds: 50), notifyListeners);
+    _finalRoundDone = Timer(finalRoundLeft, seeResults);
   }
 
   void _endFinalRound() {
@@ -141,8 +151,10 @@ class VsSession extends RoomSession {
 
   void _applySnapshot(RoomSnapshot s) {
     lobby = s.lobby;
-    // Back in the room: straight to wherever it is now.
-    _endFinalRound();
+    // Back in the room: straight to wherever it is now, unless that's still
+    // the round that decided the series, which carries on showing.
+    final end = s.standings;
+    if (s.round != null || end == null || end.next != null || end.round != standings?.round) _endFinalRound();
     if (s.round != null) {
       _beginRound(s.round!);
       for (final (slot, word) in s.mine) {
@@ -177,6 +189,14 @@ class VsSession extends RoomSession {
 
   /// Sends a word; the result arrives as a [WordResult] effect.
   void submit(String word) => client.submit(word);
+
+  /// On from the round that decided the series to the podium, as soon as the
+  /// series' results are in.
+  void seeResults() {
+    if (finalRoundUntil == null) return;
+    _endFinalRound();
+    notifyListeners();
+  }
 
   @override
   void dispose() {

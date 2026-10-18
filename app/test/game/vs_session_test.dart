@@ -358,7 +358,7 @@ void main() {
     expect(session.seriesEnd!.history.last.molds['u2'], [0, 1, 2]);
   });
 
-  test('the round that decides the series stays up a moment, after any melt, before the podium', () async {
+  test('the round that decides the series stays up, after any melt, before the podium', () async {
     await until(() => room.sockets.isNotEmpty);
     final now = DateTime.now().millisecondsSinceEpoch;
     Map<String, Object?> roundEnd(int round, {Map<String, Object?>? next}) => {
@@ -394,8 +394,18 @@ void main() {
     await until(() => session.standings != null);
     expect(session.showingFinalRound, isFalse, reason: 'the series goes on: the standings, as ever');
 
-    // Round 2 decides it: its molds stay up 3.5 s, SERIES_END or not.
+    // Round 2 decides it: its standings stay up 10 s, and until SERIES_END is in.
     final before = DateTime.now();
+    room
+      ..send({..._roundStart(now), 'round': 2})
+      ..send(roundEnd(2));
+    await until(() => session.finalRound);
+    expect(session.showingFinalRound, isTrue);
+    expect(session.seriesEnd, isNull);
+    session.seeResults();
+    expect(session.showingFinalRound, isTrue, reason: 'nothing to show on the podium yet');
+    expect(session.finalRoundLeft, Duration.zero);
+
     room
       ..send({..._roundStart(now), 'round': 2})
       ..send(roundEnd(2))
@@ -404,13 +414,20 @@ void main() {
     await until(() => session.seriesEnd != null && session.phase == 'results');
     expect(session.showingFinalRound, isTrue);
     expect(session.finalRoundUntil!.isBefore(before.add(VsSession.finalRoundHold)), isFalse);
-    expect(session.finalRoundLeft, greaterThan(const Duration(seconds: 3)));
-    expect(session.round!.round, 2, reason: 'so the round view can show it');
+    expect(session.finalRoundLeft, greaterThan(const Duration(seconds: 8)));
+    expect(session.round!.round, 2, reason: 'so everyone\'s molds can be drawn');
     expect(session.mold, isNotNull);
 
-    // Back in the room: straight to the podium.
+    // Back in the room during it: the same round, so it carries on.
+    final held = (standings: session.standings, until: session.finalRoundUntil);
     room.send({'op': 'SNAPSHOT', 'lobby': _lobby('results'), 'standings': roundEnd(2)..remove('op')});
-    await until(() => !session.showingFinalRound);
+    await until(() => !identical(session.standings, held.standings));
+    expect(session.showingFinalRound, isTrue);
+    expect(session.finalRoundUntil, held.until);
+
+    // "See the results": on to the podium.
+    session.seeResults();
+    expect(session.showingFinalRound, isFalse);
     expect(session.finalRoundLeft, Duration.zero);
 
     // A survival round that a melt decides: the melt plays first, then the hold.
@@ -427,7 +444,23 @@ void main() {
     expect(session.melting, isTrue);
     expect(session.finalRoundUntil, session.melt!.until.add(VsSession.finalRoundHold));
 
-    // A new series clears it.
+    // Back in the room once a new series is under way: straight to it.
+    room.send({
+      'op': 'SNAPSHOT',
+      'lobby': _lobby('round'),
+      'round': {
+        ..._roundStart(now),
+        'mine': {'claims': [], 'auto': []},
+      },
+    });
+    await until(() => !session.showingFinalRound);
+    expect(session.finalRoundUntil, isNull);
+
+    // So does a new series' ROUND_START.
+    room
+      ..send({..._roundStart(now), 'round': 1})
+      ..send(roundEnd(1));
+    await until(() => session.showingFinalRound);
     room.send({..._roundStart(now), 'round': 1});
     await until(() => !session.showingFinalRound);
   });

@@ -271,8 +271,10 @@ void main() {
       ..standings = _end
       ..tally = _end.tally;
     await _pump(tester, VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}));
+    // Past the round's card (vs_round_flash_test.dart), to the banner.
+    await tester.pump(const Duration(seconds: 4));
     expect(tester.takeException(), isNull);
-    expect(find.text('Kit_the_Smith wins on time'), findsOneWidget);
+    expect(find.text('Kit_the_Smith won the round'), findsOneWidget);
     expect(find.text('Round 4 of up to 5'), findsOneWidget);
   });
 
@@ -309,6 +311,7 @@ void main() {
       ..standings = end
       ..tally = end.tally;
     await _pump(tester, VsStandingsView(session: s, cues: MoldCues(), onLeave: () {}));
+    await tester.pump(const Duration(seconds: 4));
     expect(tester.takeException(), isNull);
     expect(find.text('You'), findsOneWidget, reason: 'my own mold is in the row');
     expect(find.text('7/7'), findsOneWidget);
