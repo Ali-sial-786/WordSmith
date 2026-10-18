@@ -9,7 +9,9 @@ the server checks the result when it's sent.
 - The day is the **UTC date** (`YYYY-MM-DD`).
 - The puzzle is a bank puzzle with `size` 1, chosen deterministically from the
   date (for example `fnv1a32("daily:" + date)` modulo the number of candidates,
-  candidates ordered by id), so every phone and the server agree.
+  candidates ordered by id), so every phone and the server agree. Candidates
+  come from the bank's first part only (`m-00001` to `m-00960`), so puzzles
+  added to the bank later don't change any date's puzzle.
 - The heat follows the weekday: Monday Ember (1), Tuesday Dull Red (2),
   Wednesday Cherry Red (3), Thursday Orange (4), Friday Yellow (5),
   Saturday White Heat (6), Sunday Cherry Red (3).

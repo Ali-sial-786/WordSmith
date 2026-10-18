@@ -131,7 +131,6 @@ def validate_mp(data: dict, lex: Lexicon, campaign: dict | None = None,
     puzzles = data.get("puzzles")
     if not isinstance(puzzles, list) or not puzzles:
         return errors + ["bank needs a non-empty 'puzzles' list"]
-    counts: Counter = Counter()
     seen_sigs: dict[str, str] = {}
     camp_sigs = {}
     if campaign is not None:
@@ -157,7 +156,6 @@ def validate_mp(data: dict, lex: Lexicon, campaign: dict | None = None,
         if heat in TIERS:
             lo, hi = mp_target(heat, size)
             errors += _tier_checks(p, heat, MP_SIZE_MIN[(heat, size)], hi, where)
-        counts[(heat, size)] += 1
         sig = signature(p["letters"])
         if sig in seen_sigs:
             errors.append(f"{where}: same letters as {seen_sigs[sig]}")
@@ -165,15 +163,52 @@ def validate_mp(data: dict, lex: Lexicon, campaign: dict | None = None,
             seen_sigs[sig] = pid
         if sig in camp_sigs:
             errors.append(f"{where}: same letters as campaign {camp_sigs[sig]}")
-    # Every heat x size present, in equal numbers.
-    want = per if per is not None else max(counts.values())
-    for h in sorted(TIERS):
-        for s in MP_SIZES:
-            if counts[(h, s)] != want:
-                errors.append(f"heat {h} size {s}: {counts[(h, s)]} puzzles, expected {want}")
-    order = [(p.get("heat"), p.get("size")) for p in puzzles if isinstance(p, dict)]
-    if order != sorted(order, key=lambda x: (x[0] or 0, x[1] or 0)):
-        errors.append("bank is not ordered by heat, then size")
+    return errors + _part_checks(data.get("parts"), puzzles, per)
+
+
+def _part_checks(parts, puzzles: list, per: int | None) -> list[str]:
+    """A bank is one or more parts (README "Growing the bank"), contiguous from
+    m-00001. In each part every heat x size is present, `per[heat-1][size-1]`
+    times (a bank without parts: `per` times, or equally often), ordered by
+    heat, then size."""
+    errors = []
+    single = parts is None
+    if single:
+        parts = [{"first": 1, "count": len(puzzles)}]
+    if not isinstance(parts, list) or not parts:
+        return ["'parts' must be a non-empty list"]
+    expected_first = 1
+    for k, part in enumerate(parts):
+        name = "bank" if single else f"part {k + 1}"
+        if (not isinstance(part, dict) or not isinstance(part.get("first"), int)
+                or not isinstance(part.get("count"), int)):
+            return errors + [f"{name}: needs integer 'first' and 'count'"]
+        if part["first"] != expected_first:
+            errors.append(f"{name}: first is {part['first']}, expected {expected_first} "
+                          "(parts must be contiguous)")
+        expected_first = part["first"] + part["count"]
+        ps = [p for p in puzzles[part["first"] - 1:expected_first - 1] if isinstance(p, dict)]
+        counts = Counter((p.get("heat"), p.get("size")) for p in ps)
+        table = part.get("per")
+        if table is not None and not (
+                isinstance(table, list) and len(table) == len(TIERS)
+                and all(isinstance(r, list) and len(r) == len(MP_SIZES) for r in table)):
+            errors.append(f"{name}: 'per' must list a count for each heat and size")
+            table = None
+        for h in sorted(TIERS):
+            for s in MP_SIZES:
+                if table is not None:
+                    want = table[h - 1][s - 1]
+                else:
+                    want = per if per is not None else max(counts.values(), default=0)
+                if counts[(h, s)] != want:
+                    where = f"heat {h} size {s}" if single else f"{name} heat {h} size {s}"
+                    errors.append(f"{where}: {counts[(h, s)]} puzzles, expected {want}")
+        order = [(p.get("heat"), p.get("size")) for p in ps]
+        if order != sorted(order, key=lambda x: (x[0] or 0, x[1] or 0)):
+            errors.append(f"{name} is not ordered by heat, then size")
+    if expected_first - 1 != len(puzzles):
+        errors.append(f"parts cover {expected_first - 1} puzzles but there are {len(puzzles)}")
     return errors
 
 

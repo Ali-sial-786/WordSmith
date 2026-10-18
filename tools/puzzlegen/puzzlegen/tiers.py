@@ -98,3 +98,15 @@ MP_SIZE_MIN[(1, 4)] = 6
 # enough words exist (Ember only: very common -> common).
 MP_ANSWER_LEVEL = {(1, 2): 35, (1, 3): 35, (1, 4): 35}
 MP_SEED_LEVEL = {(1, 2): 35, (1, 3): 35, (1, 4): 35}
+
+# A part added to the bank by `grow` (README "Growing the bank"). Versus
+# (size 1) needs the most variety: 210 more per heat makes 250 with the
+# first part's 40. Co-op sizes get 60 more (100 in all), except Ember: about
+# 90 unused 4-letter anvils make 5+ common words and only 30 make 6+, so
+# its sizes 2-4 get 40, 12 and 12. Ember size 1 also draws from common
+# words (SCOWL <= 35): the first part and the campaign used most of the
+# very common 4-letter anvils.
+MP_GROW_PER = {(h, s): 210 if s == 1 else 60 for h in TIERS for s in MP_SIZES}
+MP_GROW_PER.update({(1, 2): 40, (1, 3): 12, (1, 4): 12})
+MP_GROW_ANSWER_LEVEL = {**MP_ANSWER_LEVEL, (1, 1): 35}
+MP_GROW_SEED_LEVEL = {**MP_SEED_LEVEL, (1, 1): 35}

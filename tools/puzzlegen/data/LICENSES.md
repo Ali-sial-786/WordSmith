@@ -10,14 +10,19 @@ committed). Only 3-8 letter, lowercase a-z words are kept.
 | Source | Version / URL | Licence | Used for |
 |---|---|---|---|
 | ENABLE (`enable1.txt`) | https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt | Public domain | Accepted (bonus) words; grid answers must also be ENABLE words |
-| SCOWL | 2020.12.07, https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words. Only `final/english-words.*` and `final/american-words.*`, levels 10-70 |
+| SCOWL | 2020.12.07, https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words: `final/english-words.*` and `final/american-words.*`, levels 10-70. Names: the English and American `proper-names.*` and `upper.*` lists (levels <= 60) against every spelling region's `*-words.*` (levels <= 60) |
 | LDNOOBW English list | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (file `en`) | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), by the LDNOOBW contributors (Shutterstock) | Blocklist (single words only; phrases skipped) |
-| `blocklist_extra.txt`, `answer_exclude.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids |
+| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list |
 
 Derived files:
 
-- `accepted.txt`: ENABLE + SCOWL (levels <= 70), minus `blocklist.txt`. Every
-  bonus word comes from here.
+- `accepted.txt`: ENABLE + SCOWL (levels <= 70), minus `blocklist.txt` and
+  `names_exclude.txt`. Every bonus word comes from here.
+- `names_exclude.txt`: words that are names, places, brands or nationalities
+  rather than real words (`boston`, `abigail`, `berlin`). SCOWL lists them
+  capitalised at level <= 60, and in lowercase at no level <= 60 in
+  any spelling region; plus `names_extra.txt`, minus `names_keep.txt`, with
+  their plural and verb forms.
 - `scowl_levels.tsv`: `word<TAB>smallest SCOWL size level` for accepted
   SCOWL words (10 = most common ... 70).
 - `scowl_only.txt`: accepted SCOWL words that are not in ENABLE (`gonna`,

@@ -1,6 +1,6 @@
 import unittest
 
-from puzzlegen import words
+from puzzlegen import fetch, words
 from puzzlegen.words import Lexicon, can_make, signature, sub_signatures
 
 
@@ -81,6 +81,39 @@ class DataTests(unittest.TestCase):
                 self.assertIn(w, lex.blocked, w)
         self.assertNotIn("shell", lex.blocked)
         self.assertNotIn("cockpit", lex.blocked)
+
+    def test_names_are_not_words(self):
+        lex = words.load()
+        self.assertGreater(len(lex.names), 900)
+        self.assertFalse(lex.accepted & lex.names)
+        for w in ("abigail", "alaska", "boston", "berlin", "brazil", "barbie", "batman", "ben",
+                  "bertha", "bilbo", "bolivia", "bostons", "abigails", "ted", "english", "jew"):
+            self.assertIn(w, lex.names, w)
+        # Real words that are also names stay, and so do their forms.
+        for w in ("china", "amber", "august", "bill", "mark", "rose", "jack", "mike", "peter",
+                  "may", "will", "bass", "basil", "angel", "apple", "amazon", "google", "grey",
+                  "armour", "tyre", "east", "easts", "deed", "lased", "gothic", "gothics",
+                  "adonis", "roses", "willies"):
+            self.assertIn(w, lex.accepted, w)
+
+
+class NamesRuleTests(unittest.TestCase):
+    def test_names_their_forms_and_the_hand_lists(self):
+        vocabulary = {"boston", "bostons", "china", "east", "easts", "hade", "hades", "had",
+                      "dee", "dees", "deed", "las", "lase", "lased", "lases", "adonis",
+                      "adonises", "ted", "teds", "tedded", "abigail", "abigails", "cat"}
+        names = {w: 50 for w in ("boston", "china", "easts", "hades", "dee", "las", "adonis",
+                                 "abigail")}
+        common = {"china", "east", "had", "deed", "cat"}
+        got = fetch.build_names(vocabulary, names, common, keep={"adonis"}, extra={"ted"})
+        self.assertEqual(got, {"boston", "bostons", "hades", "dee", "dees", "las", "ted", "teds",
+                               "tedded", "abigail", "abigails"})
+
+    def test_word_forms(self):
+        self.assertLessEqual({"chevies", "chevied", "chevying"}, fetch.word_forms("chevy"))
+        self.assertIn("burked", fetch.word_forms("burke"))
+        self.assertNotIn("hades", fetch.word_forms("had"))
+        self.assertEqual(fetch._bases("lased"), {"lase", "las"})
 
 
 if __name__ == "__main__":

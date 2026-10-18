@@ -42,10 +42,10 @@ ApiClient _server(Completer<void> gate) => ApiClient(
     await gate.future;
     return http.Response(
       jsonEncode({
-        'word': 'omar',
+        'word': 'tuyere',
         'senses': [
-          {'pos': 'proper noun', 'gloss': 'A male given name from Arabic.'},
-          {'pos': 'proper noun', 'gloss': 'A transliteration of the Arabic surname.'},
+          {'pos': 'n', 'gloss': 'A nozzle through which air is blown into a furnace or forge.'},
+          {'pos': 'n', 'gloss': 'The opening in the hearth where such a nozzle enters.'},
         ],
         'source': 'wiktionary',
       }),
@@ -177,7 +177,7 @@ void main() {
 
   testWidgets('meaning looked up online', (tester) async {
     final gate = Completer<void>()..complete();
-    await _pump(tester, _opener('OMAR'), api: _server(gate));
+    await _pump(tester, _opener('TUYERE'), api: _server(gate));
     await tester.tap(find.text('look up'));
     await _settle(tester);
     await _shot('meaning_online');
@@ -185,7 +185,7 @@ void main() {
 
   testWidgets('meaning loading online', (tester) async {
     final gate = Completer<void>();
-    await _pump(tester, _opener('OMAR'), api: _server(gate));
+    await _pump(tester, _opener('TUYERE'), api: _server(gate));
     await tester.tap(find.text('look up'));
     await _settle(tester);
     await _shot('meaning_loading');

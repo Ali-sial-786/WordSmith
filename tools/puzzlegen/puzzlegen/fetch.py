@@ -46,6 +46,27 @@ SCOWL_MEMBER_RE = re.compile(
     rf"^scowl-{re.escape(SCOWL_VERSION)}/final/(english|american)-words\.(\d+)$"
 )
 
+# Names (see build_names): an accepted word is a name when SCOWL lists it
+# capitalised (a proper name, or another word written with a capital:
+# places, nationalities, brands) at level <= NAME_LEVEL, and no SCOWL word
+# list for any spelling region has it in lowercase at level <= COMMON_LEVEL.
+# So BOSTON, ABIGAIL and BERLIN go (their lowercase senses are level 70+ or
+# unlisted), while CHINA, BILL, AMBER, AMAZON and GOOGLE stay. Levels 55 and
+# 60 are mostly real words (ANGELICA, CORVETTE, GESTALT), so they stay and
+# the few names among them are in names_extra.txt.
+NAME_LEVEL = 60
+COMMON_LEVEL = 60
+SCOWL_NAMES_RE = re.compile(
+    rf"^scowl-{re.escape(SCOWL_VERSION)}/final/(english|american)-(proper-names|upper)\.(\d+)$"
+)
+# Lowercase words in every spelling region, so British spellings count as
+# real words too (GREY, ARMOUR, TYRE, SABRE are not in the American lists).
+SCOWL_REGION_WORDS_RE = re.compile(
+    rf"^scowl-{re.escape(SCOWL_VERSION)}/final/"
+    r"(english|american|british|british_z|canadian|australian)-words\.(\d+)$"
+)
+CAPITALISED_RE = re.compile(r"^[A-Z][a-z]+$")
+
 
 def sha256_file(path: str) -> str:
     h = hashlib.sha256()
@@ -120,6 +141,37 @@ def read_scowl(path: str) -> tuple[dict[str, int], str]:
     return levels, copyright_text
 
 
+def read_scowl_names(path: str) -> tuple[dict[str, int], set[str]]:
+    """Return ({name: min level <= NAME_LEVEL}, common lowercase words).
+
+    Names are the capitalised entries (`Boston`, not `IBM`, `McCoy` or
+    `Abe's`) of the proper-names and upper lists, lowercased. Common words
+    are lowercase entries at level <= COMMON_LEVEL in any region's list.
+    """
+    names: dict[str, int] = {}
+    common: set[str] = set()
+    with tarfile.open(path, "r:gz") as tar:
+        for member in tar.getmembers():
+            if not member.isfile():
+                continue
+            m = SCOWL_NAMES_RE.match(member.name)
+            if m and int(m.group(3)) <= NAME_LEVEL:
+                level = int(m.group(3))
+                text = tar.extractfile(member).read().decode("iso-8859-1")
+                for line in text.splitlines():
+                    w = line.strip()
+                    if CAPITALISED_RE.match(w):
+                        w = w.lower()
+                        names[w] = min(level, names.get(w, level))
+                continue
+            m = SCOWL_REGION_WORDS_RE.match(member.name)
+            if m and int(m.group(2)) <= COMMON_LEVEL:
+                text = tar.extractfile(member).read().decode("iso-8859-1")
+                common.update(w for w in (line.strip() for line in text.splitlines())
+                              if WORD_RE.match(w))
+    return names, common
+
+
 def read_ldnoobw(path: str) -> set[str]:
     """Single lowercase a-z words from the LDNOOBW list (phrases are skipped)."""
     out = set()
@@ -167,6 +219,67 @@ def build_blocklist(ldnoobw: set[str], extra: set[str], substrings: set[str],
     return {w for w in blocked if WORD_RE.match(w)}
 
 
+def read_word_list(path: str) -> set[str]:
+    """Lowercase a-z words from a hand-kept list ('#' starts a comment)."""
+    out = set()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            for tok in line.split("#", 1)[0].lower().split():
+                if not re.fullmatch(r"[a-z]+", tok):
+                    raise ValueError(f"{path}: bad entry {tok!r}")
+                out.add(tok)
+    return out
+
+
+def build_names(words: set[str], names: dict[str, int], common: set[str],
+                keep: set[str], extra: set[str]) -> set[str]:
+    """The words in `words` that count as names, not real words.
+
+    A word is a name if SCOWL has it capitalised (`names`) and not as a
+    common lowercase word, or if it is in `extra`. Words in `keep` (and their
+    forms) stay. A form of a common word (EASTS, CONCORDS) is not a name. A
+    form of a name (BERLINS, ABIGAILS) is, unless it is common in its own
+    right (DEE, but DEED) or also a form of another word (LASED is LASE + D,
+    not LAS + ED).
+    """
+    kept = set(keep)
+    for w in keep:
+        kept |= word_forms(w)
+    found = {w for w in words if w in names and w not in common}
+    found = {w for w in found if not any(b in common and b in words for b in _bases(w))}
+    found |= extra & words
+    out = set(found)
+    for w in found:
+        for f in word_forms(w):
+            if (f in words and f not in common
+                    and not any(b != w and b in words and b not in found for b in _bases(f))):
+                out.add(f)
+    return {w for w in out if w not in kept or w in extra}
+
+
+def word_forms(word: str) -> set[str]:
+    """Regular plural and verb forms of `word` (BOSTONS, BURKED, CHEVIES)."""
+    forms = {word + "s"}
+    if re.search(r"(s|x|z|ch|sh|o)$", word):
+        forms.add(word + "es")
+    if re.search(r"[^aeiou]y$", word):
+        forms |= {word[:-1] + "ies", word[:-1] + "ied"}
+    if word.endswith("e"):
+        forms |= {word + "d", word[:-1] + "ing"}
+    else:
+        forms |= {word + "ed", word + "ing"}
+    if re.search(r"[^aeiou][aeiou][bdgklmnprt]$", word):
+        forms |= {word + word[-1] + "ed", word + word[-1] + "ing"}
+    return forms
+
+
+def _bases(word: str) -> set[str]:
+    """The words that `word` is one of the `word_forms` of."""
+    cands = {word[:-k] for k in (1, 2, 3) if len(word) > k + 2}
+    cands |= {word[:-3] + "e", word[:-3] + "y", word[:-4]}
+    return {b for b in cands if b and word in word_forms(b)}
+
+
 def write_lines(path: str, lines) -> None:
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         for line in lines:
@@ -182,13 +295,26 @@ def build(log=print) -> dict:
     vocabulary = enable | set(scowl)
     blocked = build_blocklist(ldnoobw, extra, substrings, vocabulary)
 
-    accepted = vocabulary - blocked
+    scowl_names, common = read_scowl_names(os.path.join(raw, f"scowl-{SCOWL_VERSION}.tar.gz"))
+    names_keep = read_word_list(paths.NAMES_KEEP)
+    names_extra = read_word_list(paths.NAMES_EXTRA)
+    names = build_names(vocabulary - blocked, scowl_names, common, names_keep, names_extra)
+    unused = sorted(names_keep - build_names(vocabulary - blocked, scowl_names, common,
+                                             set(), names_extra))
+    if unused:
+        log(f"names_keep.txt entries that are not names anyway: {' '.join(unused)}")
+    missing = sorted(names_extra - vocabulary)
+    if missing:
+        log(f"names_extra.txt entries that are not words anyway: {' '.join(missing)}")
+
+    accepted = vocabulary - blocked - names
     levels = {w: lv for w, lv in scowl.items() if w in accepted}
     # Answers must be real dictionary words, so we record which accepted
     # words are SCOWL-only (not in ENABLE): "gonna", "email", "dunno", ...
     scowl_only = sorted(w for w in levels if w not in enable)
 
     write_lines(paths.BLOCKLIST, sorted(blocked))
+    write_lines(paths.NAMES_EXCLUDE, sorted(names))
     write_lines(paths.ACCEPTED, sorted(accepted))
     write_lines(paths.SCOWL_LEVELS, (f"{w}\t{levels[w]}" for w in sorted(levels)))
     write_lines(paths.SCOWL_ONLY, scowl_only)
@@ -200,6 +326,9 @@ def build(log=print) -> dict:
         "ldnoobw_single_words": len(ldnoobw),
         "blocklist_extra": len(extra) + len(substrings),
         "blocklist_total": len(blocked),
+        "names_keep": len(names_keep),
+        "names_extra": len(names_extra),
+        "names_excluded": len(names),
         "accepted": len(accepted),
         "scowl_levels": len(levels),
         "scowl_only": len(scowl_only),
@@ -222,14 +351,19 @@ committed). Only 3-8 letter, lowercase a-z words are kept.
 | Source | Version / URL | Licence | Used for |
 |---|---|---|---|
 | ENABLE (`enable1.txt`) | https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt | Public domain | Accepted (bonus) words; grid answers must also be ENABLE words |
-| SCOWL | {scowl_version}, https://downloads.sourceforge.net/wordlist/scowl-{scowl_version}.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words. Only `final/english-words.*` and `final/american-words.*`, levels 10-{scowl_max} |
+| SCOWL | {scowl_version}, https://downloads.sourceforge.net/wordlist/scowl-{scowl_version}.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words: `final/english-words.*` and `final/american-words.*`, levels 10-{scowl_max}. Names: the English and American `proper-names.*` and `upper.*` lists (levels <= {name_level}) against every spelling region's `*-words.*` (levels <= {common_level}) |
 | LDNOOBW English list | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (file `en`) | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), by the LDNOOBW contributors (Shutterstock) | Blocklist (single words only; phrases skipped) |
-| `blocklist_extra.txt`, `answer_exclude.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids |
+| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list |
 
 Derived files:
 
-- `accepted.txt`: ENABLE + SCOWL (levels <= {scowl_max}), minus `blocklist.txt`. Every
-  bonus word comes from here.
+- `accepted.txt`: ENABLE + SCOWL (levels <= {scowl_max}), minus `blocklist.txt` and
+  `names_exclude.txt`. Every bonus word comes from here.
+- `names_exclude.txt`: words that are names, places, brands or nationalities
+  rather than real words (`boston`, `abigail`, `berlin`). SCOWL lists them
+  capitalised at level <= {name_level}, and in lowercase at no level <= {common_level} in
+  any spelling region; plus `names_extra.txt`, minus `names_keep.txt`, with
+  their plural and verb forms.
 - `scowl_levels.tsv`: `word<TAB>smallest SCOWL size level` for accepted
   SCOWL words (10 = most common ... {scowl_max}).
 - `scowl_only.txt`: accepted SCOWL words that are not in ENABLE (`gonna`,
@@ -254,7 +388,8 @@ LICENSES_FOOTER = """\
 
 
 def write_licenses(scowl_copyright: str) -> None:
-    text = LICENSES_HEADER.format(scowl_version=SCOWL_VERSION, scowl_max=SCOWL_MAX_LEVEL)
+    text = LICENSES_HEADER.format(scowl_version=SCOWL_VERSION, scowl_max=SCOWL_MAX_LEVEL,
+                                  name_level=NAME_LEVEL, common_level=COMMON_LEVEL)
     text += scowl_copyright.rstrip("\n") + "\n" + LICENSES_FOOTER
     with open(paths.LICENSES, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)

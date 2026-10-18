@@ -18,20 +18,27 @@ export interface DailyBankPuzzle {
 }
 
 /**
- * The puzzle for `date`: among the size-1 bank puzzles at the day's heat,
- * ordered by id, the one {@link dailyIndex} picks. If that heat has none,
- * the nearest heat that does (cooler first). `null` if the bank has no
- * size-1 puzzles at all.
+ * Daily puzzles come from the bank's first part only (ids up to this one,
+ * tools/puzzlegen README "Growing the bank"), so puzzles added to the bank
+ * later never change which puzzle a date has.
+ */
+export const DAILY_LAST_BANK_ID = "m-00960";
+
+/**
+ * The puzzle for `date`: among the size-1 bank puzzles at the day's heat
+ * (up to {@link DAILY_LAST_BANK_ID}), ordered by id, the one
+ * {@link dailyIndex} picks. If that heat has none, the nearest heat that
+ * does (cooler first). `null` if the bank has no such puzzles at all.
  */
 export async function loadDailyPuzzle(db: D1Database, date: string): Promise<DailyBankPuzzle | null> {
   const pool = await db
-    .prepare("SELECT heat, COUNT(*) AS n FROM puzzles WHERE pool = 'mp' AND size = 1 GROUP BY heat ORDER BY abs(heat - ?1), heat LIMIT 1")
-    .bind(dailyHeat(date))
+    .prepare("SELECT heat, COUNT(*) AS n FROM puzzles WHERE pool = 'mp' AND size = 1 AND id <= ?2 GROUP BY heat ORDER BY abs(heat - ?1), heat LIMIT 1")
+    .bind(dailyHeat(date), DAILY_LAST_BANK_ID)
     .first<{ heat: HeatTier; n: number }>();
   if (pool === null) return null;
   const row = await db
-    .prepare("SELECT data FROM puzzles WHERE pool = 'mp' AND size = 1 AND heat = ?1 ORDER BY id LIMIT 1 OFFSET ?2")
-    .bind(pool.heat, dailyIndex(date, pool.n))
+    .prepare("SELECT data FROM puzzles WHERE pool = 'mp' AND size = 1 AND heat = ?1 AND id <= ?3 ORDER BY id LIMIT 1 OFFSET ?2")
+    .bind(pool.heat, dailyIndex(date, pool.n), DAILY_LAST_BANK_ID)
     .first<{ data: string }>();
   return row === null ? null : { heat: pool.heat, data: JSON.parse(row.data) as Record<string, unknown> };
 }

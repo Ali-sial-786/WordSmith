@@ -123,6 +123,19 @@ class DeterminismTests(unittest.TestCase):
             self.assertEqual(check_puzzle(q, lex), [])
         self.assertGreaterEqual(len(bank["puzzles"][3]["words"]), TIERS[3].min_words + 2)
 
+    def test_mp_bank_part(self):
+        # A later part: its own counts per heat and size, ids after the earlier parts',
+        # and no letters the earlier ones (`exclude`) used.
+        first, _ = campaign.build_mp(5, 1, set(), heats=(3,), sizes=(1,),
+                                     opts=layout.LayoutOptions(restarts=4))
+        used = {"".join(sorted(p["letters"].lower())) for p in first["puzzles"]}
+        part, rep = campaign.build_mp(6, {(3, 1): 2, (3, 2): 0}, used, heats=(3,), sizes=(1, 2),
+                                      opts=layout.LayoutOptions(restarts=4), first_id=2)
+        self.assertEqual([(p["id"], p["heat"], p["size"]) for p in part["puzzles"]],
+                         [("m-00002", 3, 1), ("m-00003", 3, 1)])
+        self.assertFalse(used & {"".join(sorted(p["letters"].lower())) for p in part["puzzles"]})
+        self.assertEqual(rep["per"][2], [2, 0, 0, 0])
+
 
 if __name__ == "__main__":
     unittest.main()

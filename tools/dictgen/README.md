@@ -2,7 +2,8 @@
 
 Builds the offline dictionary the app shows when a player taps a word
 (`app/assets/dict/`) from [Open English WordNet 2024](https://github.com/globalwordnet/english-wordnet),
-for every word in `tools/puzzlegen/data/accepted.txt`.
+for every word in `tools/puzzlegen/data/accepted.txt` (which already leaves
+out names: see the puzzlegen README).
 
 Python 3.13, standard library only. The build and the tests need no network
 once the source is downloaded.
@@ -91,7 +92,7 @@ For each accepted word, in order:
    -ies, plus -oes; verb -s, -ies, -es, -ed, -ing; adjective -er, -est; plus
    -ied/-ier/-iest -> -y and a doubled final consonant before -ed/-ing/-er/-est
    (hummed -> hum). The base must be a lemma of that part of speech.
-3. It only matches a capitalised lemma (alaska ~ Alaska) and step 2 found
+3. It only matches a capitalised lemma (brie ~ Brie) and step 2 found
    nothing: that entry is used. (So mars -> mar and burns -> burn, rather
    than the planet and the poet.)
 4. Fallbacks: the same rules landing on another part of speech (guested ->

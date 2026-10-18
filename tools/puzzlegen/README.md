@@ -18,27 +18,37 @@ cd tools/puzzlegen
 python3 -m puzzlegen fetch                 # download sources, rebuild data/*.txt (network)
 python3 -m puzzlegen campaign --seed 1 --out ../../app/assets/campaign/campaign.json
 python3 -m puzzlegen mp --seed 2 --per 40 --out ../../server/data/mp_bank.json
+python3 -m puzzlegen grow --seed 3                 # add a part of new puzzles to the bank
+python3 -m puzzlegen refresh ../../app/assets/campaign/campaign.json   # new bonus lists, same grids
 python3 -m puzzlegen validate ../../app/assets/campaign/campaign.json
 python3 -m puzzlegen validate ../../server/data/mp_bank.json   # also checks it shares no letters with the campaign
 python3 -m puzzlegen show ../../app/assets/campaign/campaign.json c-0001 c-0300
 python3 -m puzzlegen stats ../../app/assets/campaign/campaign.json
 
-python3 -m unittest discover -s tests      # about 3 s
+python3 -m unittest discover -s tests      # about 8 s
 ```
 
 - `mp` reads the campaign file (`--campaign`, default the committed one) so
   multiplayer letter sets never repeat campaign ones. Generate the campaign
-  first.
+  first. It makes a whole new bank: to add puzzles to the committed one, whose
+  ids rooms and players have seen, use `grow` (see "Growing the bank").
 - `validate` exits non-zero and prints every problem. For a bank,
   `--campaign FILE` checks it against a campaign (automatic for the committed
-  bank) and `--per N` checks the count per heat and size.
+  bank) and `--per N` checks the count per heat and size (a bank with parts
+  carries its own counts).
 - Each generation run writes a report (seeds, difficulty per stage, rejected
   seeds) to `reports/campaign.gen.json` / `reports/mp_bank.gen.json`; other
   `--out` paths get `<name>.gen.json` beside the output. `stats` shows it.
+  A part added by `grow` gets `reports/mp_bank.partN.gen.json`.
+- `refresh FILE` recomputes every bonus list from the current word lists and
+  changes nothing else (ids, letters, grids and order stay, so players'
+  progress still matches). Run it on the campaign and the bank after the word
+  lists change. It exits non-zero, naming the puzzles, if a grid answer is no
+  longer accepted: those need a new grid.
 
 Same inputs and the same `--seed` give byte-identical output (nothing depends
 on `PYTHONHASHSEED`). Runtime on one core: campaign about 35 s, bank about
-70 s.
+70 s, `grow` with the current part sizes about 2.5 min.
 
 ## Word lists
 
@@ -47,14 +57,16 @@ against the value recorded in `puzzlegen/fetch.py`, and writes:
 
 | File | Contents |
 |---|---|
-| `data/accepted.txt` | Every accepted (bonus) word: ENABLE + SCOWL levels <= 70, minus the blocklist. 3-8 letters, a-z. |
+| `data/accepted.txt` | Every accepted (bonus) word: ENABLE + SCOWL levels <= 70, minus the blocklist and the names. 3-8 letters, a-z. |
+| `data/names_exclude.txt` | Names, places, brands and nationalities that ENABLE or SCOWL also list as lowercase words (`boston`, `abigail`, `berlin`). Never accepted. See Names below. |
 | `data/scowl_levels.tsv` | `word<TAB>level`, the smallest SCOWL size level (10 = most common, 70) the word appears at. |
 | `data/scowl_only.txt` | Accepted SCOWL words that are not in ENABLE (`gonna`, `email`). Never grid answers. |
 | `data/blocklist.txt` | LDNOOBW single English words + `blocklist_extra.txt`, with simple inflections, plus every word containing a `*stem*` entry. |
 | `data/LICENSES.md` | Sources, licences and the verbatim SCOWL copyright notice. |
 
 Sources: ENABLE (public domain), SCOWL 2020.12.07 (`final/english-words.*`
-and `final/american-words.*` only; permissive notice kept in
+and `final/american-words.*` for the words; its proper-name, capitalised and
+other regions' word lists for the names; permissive notice kept in
 `data/LICENSES.md`), and the LDNOOBW English list (CC BY 4.0).
 
 Hand-curated, committed files:
@@ -62,12 +74,62 @@ Hand-curated, committed files:
 - `data/blocklist_extra.txt`: extra blocked words (slurs, crude words the
   LDNOOBW list misses). `*stem*` lines block every word containing the stem.
   Re-run `fetch` after editing it.
+- `data/names_keep.txt` and `data/names_extra.txt`: the hand-kept edges of
+  the names list (below). Re-run `fetch` after editing them, then `refresh`.
 - `data/answer_exclude.txt`: words that stay valid bonus words but never go in
   a grid (interjections, letter plurals like `IFS`, archaic or British forms,
   odd inflections SCOWL ranks as common such as `GROSSES`, and dark or
   sensitive words such as `MURDER`). Read at generation time, so no `fetch`
   needed. This is the main knob for answer quality: when `show` turns up a
   bad answer, add it here and regenerate.
+
+## Names
+
+Names don't count as words. ENABLE and SCOWL's lowercase lists hold hundreds
+of words that people know only as names, places, brands or nationalities,
+through an obscure lowercase sense (`abigail` a lady's maid, `boston` a card
+game, `ben` a mountain). `fetch` writes them to `data/names_exclude.txt` and
+leaves them out of `accepted.txt`, so they are never bonus words or grid
+answers, and the app's dictionary (tools/dictgen) has no entry for them.
+
+A word is a name when both hold (`build_names` in `fetch.py`):
+
+1. SCOWL lists it capitalised at level <= 60 (`NAME_LEVEL`): a proper name
+   (`final/english-proper-names.*`, `american-proper-names.*`: people, places,
+   brands) or another word written with a capital (`english-upper.*`,
+   `american-upper.*`: nationalities, languages, religions, characters). Only
+   plain capitalised entries count: `Boston`, not `IBM` or `McCoy`.
+2. No SCOWL word list for any spelling region (American, British, Canadian,
+   Australian) has it in lowercase at level <= 60 (`COMMON_LEVEL`). The
+   British lists count, so `grey`, `armour` and `tyre` stay.
+
+So `china`, `bill`, `mark`, `rose`, `jack`, `may`, `will`, `amber`, `amazon`
+and `google` stay (lowercase at level 10-50), while `abigail`, `boston`,
+`berlin`, `brazil`, `ben` and `bertha` go (lowercase at level 70, 80 or not at
+all). The levels come from reading the results: names SCOWL only has at 70+
+are mostly obscure, and their lowercase words rarely read as names
+(`boreal`, `pinot`, `raj`); lowercase senses at 55-60 are mostly ordinary words
+(`angelica`, `corvette`, `gestalt`, `java`, `kelvin`).
+
+Then:
+
+- `data/names_keep.txt` keeps real words whose lowercase sense SCOWL ranks
+  too rare for the rule: `adonis`, `bonnie`, `chile`, `gothic`, `max`,
+  `merlot`, `savannah`, `utopian`, ...
+- `data/names_extra.txt` drops names the rule misses: names with a lowercase
+  sense at 55-60 (`barbie`, `batman`, `carter`, `ted`, `dutch`, `viking`),
+  `japan` and `morocco` (50), and a few well-known names SCOWL only lists at
+  70+ (`abba`, `wigan`).
+- Plural and verb forms of a name go too (`bostons`, `abigails`, `burked`),
+  unless SCOWL ranks the form as a common word (`dee` goes, `deed` stays) or
+  it is a form of another word (`lased` is `lase` + d). Forms of a common word
+  are never names (`easts`, `concords`), and forms of a kept word stay.
+- `fetch` prints any keep or extra entry that no longer makes a difference.
+
+The current list has 1,010 words: 575 found by the rule, 64 from
+`names_extra.txt` and 371 forms of those; `names_keep.txt` (45 entries) saves
+51 words. Slurs found while reading the list (`abo`, `sambo`, `kaffir`, ...)
+went into `blocklist_extra.txt` instead.
 
 ## Answer pools and heat tiers
 
@@ -136,8 +198,8 @@ overlap (Cherry Red goes up to 10 words, Orange starts at 9).
 
 ## Multiplayer bank
 
-For each heat 1-6 and size 1-4 there are `--per` puzzles (default 40, so 960
-in all) with ids `m-NNNNN`, ordered by heat, then size, then difficulty. Size s
+`mp` makes, for each heat 1-6 and size 1-4, `--per` puzzles (default 40, so
+960 in all) with ids `m-NNNNN`, ordered by heat, then size, then difficulty. Size s
 targets the tier's word count + 2*(s-1) and guarantees at least the tier
 minimum + 2*(s-1), with these exceptions (see `MP_SIZE_MIN` in
 `puzzlegen/tiers.py`):
@@ -151,25 +213,57 @@ minimum + 2*(s-1), with these exceptions (see `MP_SIZE_MIN` in
 - **White Heat size 4** wants 20-26 words, but a 10x10 grid tops out around
   22-23. The current bank has 20-22.
 
+### Growing the bank
+
+`grow --seed N` appends a **part** to the bank: new puzzles with ids after
+the last one, ordered by heat, then size, then difficulty within the part,
+using no letter set the campaign or the earlier parts use. Earlier puzzles
+keep their ids, grids and order (their bonus lists are refreshed first), so
+rooms' history of seen puzzles and players' results still match. The bank's
+head lists its parts (`{"first", "count", "seed", "per"}`, `per` being
+the count for each heat and size), and `validate` checks each part's counts
+and order. Same bank, campaign, word lists and seed give the same part.
+
+| Part | Ids | Made by | Per heat: size 1 / 2 / 3 / 4 |
+|---|---|---|---|
+| 1 | m-00001 to m-00960 | `mp --seed 2 --per 40` (word lists of 2026-10-17; bonus lists refreshed since) | 40 / 40 / 40 / 40 |
+| 2 | m-00961 to m-03184 | `grow --seed 3` | 210 / 60 / 60 / 60; Ember 210 / 40 / 12 / 12 |
+
+So Versus (size 1) has 250 puzzles per heat, and co-op 100 per heat and size,
+except Ember: only about 90 unused 4-letter anvils make 5+ common words that
+interlock, and about 30 make 6+, so Ember has 80 (size 2) and 52 (sizes 3, 4).
+In part 2 Ember size 1 also draws seeds and answers from "common" (SCOWL <=
+35), since the campaign and part 1 used most of the very common 4-letter
+anvils. `MP_GROW_PER` and `MP_GROW_*_LEVEL` in `puzzlegen/tiers.py` set
+what the next `grow` makes.
+
+The Daily Commission picks from part 1's size-1 puzzles only
+(`server/src/db/daily.ts`), so growing the bank never changes a date's
+puzzle. The server loads the whole bank with `npm run db:bank` (one small SQL
+statement per puzzle).
+
 ## Tests
 
-`tests/` (unittest, about 3 s): anagram finder and multiplicity (and a check
+`tests/` (unittest, about 8 s): anagram finder and multiplicity (and a check
 against brute force on the real lists), the rule checker on a hand-made bad
 grid for each kind of violation, a small generated batch per tier, the
-tutorial, letter shuffling, determinism of the campaign and the bank, blocked
-words, and the committed `campaign.json` / `mp_bank.json` passing `validate`
-(skipped if the files are missing).
+tutorial, letter shuffling, determinism of the campaign and the bank, a bank
+part (its counts, ids and unused letters), blocked words, the names rule on a
+small made-up list and on the real one (names out, real words and their forms
+in), `refresh`, and the committed `campaign.json` / `mp_bank.json` passing
+`validate` with no blocked words or names, and its parts checks (skipped if
+the files are missing).
 
 ## Layout of the package
 
 | Module | Role |
 |---|---|
-| `fetch.py` | downloads, derived lists, LICENSES.md |
+| `fetch.py` | downloads, derived lists (blocklist, names), LICENSES.md |
 | `words.py` | lexicon, levels, answer eligibility, sub-anagram index |
 | `tiers.py` | heat tiers, chapters, multiplayer size rules |
 | `layout.py` | crossword placement |
 | `generate.py` | one puzzle: seed -> answers -> layout -> JSON; difficulty |
-| `campaign.py` | campaign and bank assembly, output writing, reports |
+| `campaign.py` | campaign and bank assembly, bank parts (`grow`), `refresh`, output writing, reports |
 | `rules.py` | every rule in shared/puzzle-format.md, for one puzzle |
 | `validate.py` | campaign / bank structure checks plus `rules.py` |
 | `render.py` | `show` and `stats` |

@@ -75,15 +75,31 @@ describe("GET /v1/define/:word", () => {
     expect(asked).toEqual([{ url: `${DICTIONARY_API_URL}quench`, userAgent: USER_AGENT }]);
   });
 
-  it("falls back to Wiktionary for names, with its HTML stripped", async () => {
+  it("falls back to Wiktionary, with its HTML stripped", async () => {
     const asked = fakeDictionaries({
-      [`${WIKTIONARY_URL}Omari`]: wiktionary('A <a rel="mw:WikiLink" href="/wiki/male">male</a> given name.'),
+      [`${WIKTIONARY_URL}tuyere`]: wiktionary('A <a rel="mw:WikiLink" href="/wiki/nozzle">nozzle</a> through which air is blown into a forge.', "Noun"),
     });
-    const res = await get("/v1/define/omari");
+    const res = await get("/v1/define/tuyere");
     expect(res.status).toBe(200);
-    expect(await body(res)).toEqual({ word: "omari", senses: [{ pos: "proper noun", gloss: "A male given name." }], source: "wiktionary" });
-    expect(asked.map((a) => a.url)).toEqual([`${DICTIONARY_API_URL}omari`, `${WIKTIONARY_URL}omari`, `${WIKTIONARY_URL}Omari`]);
+    expect(await body(res)).toEqual({
+      word: "tuyere",
+      senses: [{ pos: "n", gloss: "A nozzle through which air is blown into a forge." }],
+      source: "wiktionary",
+    });
+    expect(asked.map((a) => a.url)).toEqual([`${DICTIONARY_API_URL}tuyere`, `${WIKTIONARY_URL}tuyere`]);
     expect(asked.every((a) => a.userAgent === USER_AGENT)).toBe(true);
+  });
+
+  it("is a 404 for a name, which isn't a word", async () => {
+    const asked = fakeDictionaries({
+      [`${DICTIONARY_API_URL}omar`]: [{ word: "Omar", meanings: [{ partOfSpeech: "noun", definitions: [{ definition: "A male given name." }] }] }],
+      [`${WIKTIONARY_URL}omar`]: wiktionary('A <a href="/wiki/male">male</a> given name from Arabic.'),
+      [`${WIKTIONARY_URL}Omar`]: wiktionary("A male given name from Arabic."),
+    });
+    const res = await get("/v1/define/OMAR");
+    expect(res.status).toBe(404);
+    expect(await body(res)).toEqual({ error: "word_not_found" });
+    expect(asked.map((a) => a.url)).toEqual([`${DICTIONARY_API_URL}omar`, `${WIKTIONARY_URL}omar`]);
   });
 
   it("is a 404 when neither dictionary has the word", async () => {
@@ -106,13 +122,8 @@ describe("GET /v1/define/:word", () => {
     const miss = await get("/v1/define/qqzzx");
     expect(miss.status).toBe(404);
     expect(await body(miss)).toEqual({ error: "word_not_found" });
-    // One ask for the hit; three (one source, then two Wiktionary titles) for the miss.
-    expect(asked.map((a) => a.url)).toEqual([
-      `${DICTIONARY_API_URL}tempered`,
-      `${DICTIONARY_API_URL}qqzzx`,
-      `${WIKTIONARY_URL}qqzzx`,
-      `${WIKTIONARY_URL}Qqzzx`,
-    ]);
+    // One ask for the hit; two (one for each source) for the miss.
+    expect(asked.map((a) => a.url)).toEqual([`${DICTIONARY_API_URL}tempered`, `${DICTIONARY_API_URL}qqzzx`, `${WIKTIONARY_URL}qqzzx`]);
   });
 
   it("is a 502 when a dictionary can't be asked, and asks again next time", async () => {
@@ -120,7 +131,7 @@ describe("GET /v1/define/:word", () => {
     const res = await get("/v1/define/bellows");
     expect(res.status).toBe(502);
     expect(await body(res)).toEqual({ error: "dictionary_unavailable" });
-    expect(asked).toHaveLength(3);
+    expect(asked).toHaveLength(2);
 
     asked = fakeDictionaries({ [`${DICTIONARY_API_URL}bellows`]: dictionaryApi("A device for blowing air into a fire.") });
     const later = await get("/v1/define/bellows");

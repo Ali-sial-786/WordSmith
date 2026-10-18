@@ -27,12 +27,23 @@ def main(argv=None) -> int:
     m.add_argument("--campaign", default=paths.CAMPAIGN_JSON,
                    help="campaign file whose letter sets must not be reused")
 
+    g = sub.add_parser("grow", help="add a part of new puzzles to the multiplayer bank")
+    g.add_argument("--seed", type=int, required=True, help="a seed no earlier part used")
+    g.add_argument("--bank", default=paths.MP_BANK_JSON, help="the bank to grow")
+    g.add_argument("--out", default=paths.MP_BANK_JSON)
+    g.add_argument("--campaign", default=paths.CAMPAIGN_JSON,
+                   help="campaign file whose letter sets must not be reused")
+
+    r = sub.add_parser("refresh", help="recompute the bonus lists of a campaign file or bank "
+                                       "after the word lists change (grids stay as they are)")
+    r.add_argument("file")
+
     v = sub.add_parser("validate", help="check a campaign file or multiplayer bank")
     v.add_argument("file")
     v.add_argument("--campaign", default=None,
                    help="(bank only) also check no letter set repeats this campaign")
     v.add_argument("--per", type=int, default=None,
-                   help="(bank only) expected puzzles per heat and size")
+                   help="(bank without parts only) expected puzzles per heat and size")
 
     s = sub.add_parser("show", help="ASCII render of puzzles")
     s.add_argument("file")
@@ -51,6 +62,12 @@ def main(argv=None) -> int:
     if args.cmd == "mp":
         from . import campaign
         return campaign.main_mp(args)
+    if args.cmd == "grow":
+        from . import campaign
+        return campaign.main_grow(args)
+    if args.cmd == "refresh":
+        from . import campaign
+        return campaign.main_refresh(args)
     if args.cmd == "validate":
         from . import validate
         return validate.main(args)

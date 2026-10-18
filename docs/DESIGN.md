@@ -346,7 +346,7 @@ exact rules live in the shared contracts.
 
 | Genre feature | Wordsmith | Contract |
 |---|---|---|
-| Word definitions and pronunciation | **Meanings**: tap any forged word (or a bonus word, or a word on the Forged! card) to see up to three definitions from Open English WordNet, offline, and hear it said. Words WordNet lacks (names, rarer words) are looked up online through the server (Wiktionary) when there's a connection | `tools/dictgen`, `GET /v1/define/:word` |
+| Word definitions and pronunciation | **Meanings**: tap any forged word (or a bonus word, or a word on the Forged! card) to see up to three definitions from Open English WordNet, offline, and hear it said. Words WordNet lacks (rarer words) are looked up online through the server (Wiktionary) when there's a connection. Names aren't words: they never count as answers or bonus words, and their meanings aren't shown | `tools/dictgen`, `GET /v1/define/:word` |
 | Daily login reward | **Daily Stoke**: a 7-step track (XP, hints, a Spark Shower on day 7); missing days never resets it | `shared/forge-board.md` |
 | Quests | **Work Orders**: three daily orders (one swap a day) and a chest for all three, plus two weekly orders including a **Letter Hunt** | `shared/forge-board.md` |
 | Weekend tournament | **Weekly Trials**: an XP race among your friends; the top three win prizes | `shared/forge-board.md` |

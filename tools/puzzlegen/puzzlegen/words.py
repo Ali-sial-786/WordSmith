@@ -54,11 +54,13 @@ def _read_tokens(path: str) -> set[str]:
 
 
 class Lexicon:
-    """Accepted words, SCOWL levels, blocklist and answer eligibility."""
+    """Accepted words, SCOWL levels, blocklist, names and answer eligibility."""
 
-    def __init__(self, accepted, levels, blocked, scowl_only=(), answer_exclude=()):
+    def __init__(self, accepted, levels, blocked, scowl_only=(), answer_exclude=(), names=()):
         self.blocked = frozenset(blocked)
-        self.accepted = frozenset(w for w in accepted if w not in self.blocked)
+        self.names = frozenset(names)  # data/names_exclude.txt: names, not words
+        self.accepted = frozenset(w for w in accepted
+                                  if w not in self.blocked and w not in self.names)
         self.levels = {w: lv for w, lv in levels.items() if w in self.accepted}
         self.scowl_only = frozenset(scowl_only)
         self.answer_exclude = frozenset(answer_exclude)
@@ -106,4 +108,5 @@ def load() -> Lexicon:
     blocked = _read_lines(paths.BLOCKLIST)
     scowl_only = _read_lines(paths.SCOWL_ONLY)
     exclude = _read_tokens(paths.ANSWER_EXCLUDE)
-    return Lexicon(accepted, levels, blocked, scowl_only, exclude)
+    names = _read_lines(paths.NAMES_EXCLUDE)
+    return Lexicon(accepted, levels, blocked, scowl_only, exclude, names)

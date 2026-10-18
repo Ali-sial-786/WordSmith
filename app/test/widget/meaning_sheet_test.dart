@@ -28,7 +28,7 @@ class _Lexicon extends Lexicon {
       word.toUpperCase() == 'FORGE' ? const Meaning(word: 'FORGE', senses: [Sense('v', 'create by hammering')]) : null;
 }
 
-/// The server's `GET /v1/define`: knows ZEPHYRINE (from Wiktionary), not
+/// The server's `GET /v1/define`: knows TUYERE (from Wiktionary), not
 /// anything else. [down] makes it unreachable; [gate] holds answers back.
 class _Dictionary {
   final asked = <http.Request>[];
@@ -42,13 +42,13 @@ class _Dictionary {
     asked.add(req);
     await gate?.future;
     if (down) throw http.ClientException('offline');
-    if (req.url.path == '/v1/define/zephyrine') {
+    if (req.url.path == '/v1/define/tuyere') {
       return http.Response(
         jsonEncode({
-          'word': 'zephyrine',
+          'word': 'tuyere',
           'senses': [
-            {'pos': 'proper noun', 'gloss': 'A female given name from Greek.'},
-            {'pos': 'a', 'gloss': 'Like a zephyr; gentle.'},
+            {'pos': 'n', 'gloss': 'A nozzle through which air is blown into a furnace or forge.'},
+            {'pos': 'n', 'gloss': 'The opening in the hearth where such a nozzle enters.'},
           ],
           'source': 'wiktionary',
         }),
@@ -114,7 +114,7 @@ void main() {
 
   testWidgets('a word the lexicon lacks is looked up online, once a session', (tester) async {
     final server = _Dictionary()..gate = Completer();
-    await _pump(tester, _opener('ZEPHYRINE'), server: server);
+    await _pump(tester, _opener('TUYERE'), server: server);
     await _open(tester);
     expect(find.text(_searching), findsOneWidget);
 
@@ -122,11 +122,17 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text(_searching), findsNothing);
-    expect(find.text('proper noun  A female given name from Greek.', findRichText: true), findsOneWidget);
-    expect(find.text('adjective  Like a zephyr; gentle.', findRichText: true), findsOneWidget);
+    expect(
+      find.text('noun  A nozzle through which air is blown into a furnace or forge.', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.text('noun  The opening in the hearth where such a nozzle enters.', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('From Wiktionary'), findsOneWidget);
     // Signed out works too: the lookup carries no token.
-    expect(server.asked.single.url.path, '/v1/define/zephyrine');
+    expect(server.asked.single.url.path, '/v1/define/tuyere');
     expect(server.asked.single.headers['Authorization'], isNull);
 
     await _close(tester);
@@ -148,7 +154,7 @@ void main() {
 
   testWidgets("offline shows today's message, and tries again next time", (tester) async {
     final server = _Dictionary()..down = true;
-    await _pump(tester, _opener('ZEPHYRINE'), server: server);
+    await _pump(tester, _opener('TUYERE'), server: server);
     await _open(tester);
     expect(find.text(_notInLexicon), findsOneWidget);
     expect(find.text(_searching), findsNothing);
@@ -161,7 +167,7 @@ void main() {
   });
 
   testWidgets("without a server it's today's message", (tester) async {
-    await _pump(tester, _opener('ZEPHYRINE'));
+    await _pump(tester, _opener('TUYERE'));
     await _open(tester);
     expect(find.text(_notInLexicon), findsOneWidget);
   });

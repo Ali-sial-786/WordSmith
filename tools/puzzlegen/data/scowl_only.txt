@@ -82,7 +82,6 @@ atishoo
 attrit
 aulos
 auramine
-aurelia
 aureolin
 aurified
 aurifies
@@ -105,7 +104,6 @@ baccies
 baccy
 backcomb
 backtalk
-baguio
 bainite
 ballata
 ballboy
@@ -126,17 +124,12 @@ bandsaws
 banket
 banlieue
 bant
-banting
-bantings
 barbacoa
-barbie
 barbies
 barista
 baristas
-barney
 barneys
 barrings
-barton
 baryton
 basanite
 bascinet
@@ -215,7 +208,6 @@ bookwork
 boolean
 boong
 borak
-borg
 botnet
 botnets
 bouilli
@@ -295,7 +287,6 @@ ceilidhs
 celtuce
 ceresin
 certs
-cesar
 cesural
 ceteris
 cha
@@ -319,7 +310,6 @@ chinwags
 choc
 chocs
 choli
-chou
 chunder
 chunders
 chuppah
@@ -338,7 +328,6 @@ clarino
 clarsach
 clearcut
 clearway
-clem
 cleruchy
 clifftop
 cloison
@@ -463,14 +452,11 @@ digicam
 digicams
 dinnered
 diseur
-dixie
-dixies
 dkl
 dob
 dobbed
 dobbing
 doberman
-dobro
 dobs
 doddle
 domaine
@@ -482,7 +468,6 @@ doodah
 doodahs
 doolally
 dopily
-dora
 dormeuse
 dorsums
 dosh
@@ -501,7 +486,6 @@ duffed
 duffing
 duh
 dulosis
-dumbo
 dumbos
 dumpsite
 dumpster
@@ -621,7 +605,6 @@ flattie
 flaunch
 fleuron
 floorman
-flory
 flyback
 flysheet
 fogeydom
@@ -680,7 +663,6 @@ givings
 glam
 glitzily
 gluiness
-gnostics
 godawful
 godspeed
 goldmine
@@ -850,8 +832,6 @@ journo
 journos
 juggins
 kaboom
-kali
-kalis
 kanaka
 kanzu
 kanzus
@@ -879,8 +859,6 @@ kuchens
 kuna
 kvetcher
 kwachas
-kyle
-kyles
 lablab
 lacrymal
 laddish
@@ -970,8 +948,6 @@ manat
 mandorla
 manga
 manky
-mara
-maras
 marka
 mascle
 mashup
@@ -1038,7 +1014,6 @@ mosh
 moshed
 moshes
 moshing
-mounties
 mousepad
 mudflap
 mudflaps
@@ -1051,7 +1026,6 @@ munchie
 murage
 muskox
 muskoxen
-muzak
 muzz
 myall
 mys
@@ -1416,7 +1390,6 @@ selloffs
 sens
 septimal
 septuor
-serena
 servery
 settable
 setula
@@ -1620,8 +1593,6 @@ texting
 thalweg
 thalwegs
 thanedom
-thar
-thebes
 thees
 thicko
 thickos
@@ -1675,7 +1646,6 @@ trunking
 truther
 truthers
 tum
-tums
 tunings
 tuple
 tuples
@@ -1819,7 +1789,6 @@ yeps
 yer
 yest
 yonks
-york
 yorker
 yorkers
 yous

@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DAILY_LAST_BANK_ID } from "../../src/db/daily";
 import { dailyIndex } from "../../src/rules/daily";
 import { body, client, setUpClient, type Client } from "./helpers";
 
@@ -29,9 +30,10 @@ async function at(iso: string, c?: Client): Promise<Client> {
   return client(c?.uid);
 }
 
-/** The bank puzzle the server should pick for `date` at `heat`, worked out here from the bank file. */
+/** The bank puzzle the server should pick for `date` at `heat`, worked out here from the bank file (its first part: m-00001 to m-00960). */
 function expectedPuzzle(date: string, heat: number): PuzzleJson {
-  const candidates = env.TEST_BANK.filter((r) => r.heat === heat && r.size === 1).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const candidates = env.TEST_BANK.filter((r) => r.heat === heat && r.size === 1 && r.id <= DAILY_LAST_BANK_ID).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  expect(candidates).toHaveLength(40);
   return JSON.parse(candidates[dailyIndex(date, candidates.length)]!.data) as PuzzleJson;
 }
 

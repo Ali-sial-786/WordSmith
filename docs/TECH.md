@@ -86,7 +86,7 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 |---|---|
 | `GET /version` | Latest app version and minimum supported version (for the update banner and blocking old clients) |
 | `GET /health` | `{ok: true}` liveness check |
-| `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks, such as names. No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
+| `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks (never names: a word with only name senses is a 404). No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
 | `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
 | `POST /me/username` | Change my username: the same rules, at most once every 7 days (`429 too_soon` says when) |

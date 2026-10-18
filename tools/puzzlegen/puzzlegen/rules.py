@@ -190,6 +190,8 @@ def check_puzzle(p: dict, lex: Lexicon | None = None) -> list[str]:
             lw = w.lower()
             if lw in lex.blocked:
                 errors.append(f"rule 7: blocked word {w}")
+            elif lw in lex.names:
+                errors.append(f"{w} is a name, not a word (names_exclude.txt)")
             elif lw not in lex.accepted:
                 errors.append(f"{w} is not an accepted word")
         expected = sorted(w.upper() for w in lex.subwords(letters) if w.upper() not in set(grid_words))

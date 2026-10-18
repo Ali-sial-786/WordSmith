@@ -5,7 +5,7 @@
  * signed out.
  *
  * - `400 invalid_word` unless the word is 2–15 letters A–Z
- * - `404 word_not_found` when no dictionary has it
+ * - `404 word_not_found` when no dictionary has it, or only as a name
  * - `502 dictionary_unavailable` when a dictionary couldn't be asked and the
  *   other didn't have it (not cached, so the next ask tries again)
  *
@@ -22,8 +22,8 @@ import type { RequestContext } from "./context";
 export const HIT_TTL_SECONDS = 30 * 86_400;
 export const MISS_TTL_SECONDS = 86_400;
 
-/** Part of the cache key: bump it when the cached body or the sense picking changes. */
-const CACHE_VERSION = 1;
+/** Part of the cache key: bump it when the cached body or the sense picking changes (2: names left out). */
+const CACHE_VERSION = 2;
 
 /** What the cache holds for a word: its definition, or null for a miss. */
 interface Cached {

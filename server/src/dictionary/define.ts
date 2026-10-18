@@ -1,10 +1,15 @@
 /**
  * Online definitions for words the app's offline lexicon (WordNet, from
- * tools/dictgen) lacks, such as names and rarer words: `GET /v1/define/:word`
+ * tools/dictgen) lacks, mostly rarer words: `GET /v1/define/:word`
  * (src/routes/define.ts). The Free Dictionary API (dictionaryapi.dev) is
- * asked first, then Wiktionary's REST definitions, lowercase title first and
- * then capitalised (names). Both serve Wiktionary's text (CC BY-SA), and the
- * app says which one a meaning came from.
+ * asked first, then Wiktionary's REST definitions for the lowercase title.
+ * Both serve Wiktionary's text (CC BY-SA), and the app says which one a
+ * meaning came from.
+ *
+ * Names aren't words in Wordsmith (tools/puzzlegen drops them from the word
+ * list), so they never come back as meanings: proper-noun senses,
+ * capitalised entries (Omar, Boston) and given-name or surname senses are
+ * left out, and a word with nothing else isn't found.
  *
  * Senses are picked the way tools/dictgen picks the lexicon's: at most
  * {@link MAX_SENSES}, round robin across parts of speech (the one with more
@@ -61,9 +66,8 @@ const POS_CODES = new Map([
   ["adverb", "r"],
 ]);
 
-/** Other parts of speech, which the app shows as they're spelled here. */
+/** Other parts of speech, which the app shows as they're spelled here. (Proper nouns are left out: see {@link isProperNoun}.) */
 const OTHER_POS = new Set([
-  "proper noun",
   "pronoun",
   "preposition",
   "conjunction",
@@ -86,11 +90,19 @@ const OTHER_POS = new Set([
   "letter",
 ]);
 
-/** A source's part of speech ("Noun", "proper noun", …) as the app labels it; "" if it has none. */
+function posName(raw: unknown): string {
+  return typeof raw === "string" ? raw.trim().toLowerCase().replace(/\s+/g, " ") : "";
+}
+
+/** A source's part of speech ("Noun", "interjection", …) as the app labels it; "" if it has none. */
 export function posLabel(raw: unknown): string {
-  if (typeof raw !== "string") return "";
-  const name = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  const name = posName(raw);
   return POS_CODES.get(name) ?? (OTHER_POS.has(name) ? name : "");
+}
+
+/** Whether a source's part of speech is a proper noun ("Proper noun"): a name, whose senses are left out. */
+export function isProperNoun(raw: unknown): boolean {
+  return posName(raw) === "proper noun";
 }
 
 const ENTITIES = new Map([
@@ -188,8 +200,19 @@ const UNLESS_ONLY: readonly RegExp[] = [
   /\([^)]*\b(derogatory|pejorative|disparaging)\b[^)]*\)/i,
 ];
 
+/**
+ * Always dropped: senses that are a name, as Wiktionary words them ("A male
+ * given name from Arabic.", "An English surname.", "A diminutive of the
+ * female given name Abigail."), even outside a proper-noun entry. A gloss
+ * that only mentions one ("A name that precedes the family name") stays.
+ */
+const NAME_SENSES: readonly RegExp[] = [/^(?:an?\s+)?(?:(?!name\b)[a-z-]+\s+){0,4}(?:given name|surname|family name|forename)s?\b/i];
+
 function blocked(gloss: string, dropUnlessOnly: boolean): boolean {
-  return ALWAYS.some((p) => p.test(gloss)) || (dropUnlessOnly && UNLESS_ONLY.some((p) => p.test(gloss)));
+  const g = gloss.trim();
+  return (
+    ALWAYS.some((p) => p.test(g)) || NAME_SENSES.some((p) => p.test(g)) || (dropUnlessOnly && UNLESS_ONLY.some((p) => p.test(g)))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -235,14 +258,22 @@ function pick(raw: readonly Sense[], dropUnlessOnly: boolean): Sense[] {
 // The sources
 // ---------------------------------------------------------------------------
 
-/** Every sense in a Free Dictionary API answer (an array of entries, each with `meanings`). */
+/** A capitalised headword (`Omar`, `Boston`): a name, or another word only written with a capital. */
+function capitalised(word: unknown): boolean {
+  return typeof word === "string" && /^[A-Z]/.test(word);
+}
+
+/**
+ * Every sense in a Free Dictionary API answer (an array of entries, each with
+ * `meanings`), except those of capitalised entries and proper nouns.
+ */
 export function parseDictionaryApi(body: unknown): Sense[] {
   const out: Sense[] = [];
   if (!Array.isArray(body)) return out;
   for (const entry of body) {
-    if (!isRecord(entry) || !Array.isArray(entry.meanings)) continue;
+    if (!isRecord(entry) || !Array.isArray(entry.meanings) || capitalised(entry.word)) continue;
     for (const meaning of entry.meanings) {
-      if (!isRecord(meaning) || !Array.isArray(meaning.definitions)) continue;
+      if (!isRecord(meaning) || !Array.isArray(meaning.definitions) || isProperNoun(meaning.partOfSpeech)) continue;
       const pos = posLabel(meaning.partOfSpeech);
       for (const d of meaning.definitions) {
         if (isRecord(d) && typeof d.definition === "string") out.push({ pos, gloss: d.definition });
@@ -252,12 +283,12 @@ export function parseDictionaryApi(body: unknown): Sense[] {
   return out;
 }
 
-/** Every English sense in a Wiktionary REST definitions answer (`{en: [{partOfSpeech, language, definitions}], …}`). */
+/** Every English sense but proper nouns in a Wiktionary REST definitions answer (`{en: [{partOfSpeech, language, definitions}], …}`). */
 export function parseWiktionary(body: unknown): Sense[] {
   const out: Sense[] = [];
   if (!isRecord(body) || !Array.isArray(body.en)) return out;
   for (const entry of body.en) {
-    if (!isRecord(entry) || !Array.isArray(entry.definitions)) continue;
+    if (!isRecord(entry) || !Array.isArray(entry.definitions) || isProperNoun(entry.partOfSpeech)) continue;
     if (typeof entry.language === "string" && entry.language !== "English") continue;
     const pos = posLabel(entry.partOfSpeech);
     for (const d of entry.definitions) {
@@ -297,12 +328,9 @@ async function fromDictionaryApi(word: string): Promise<Sense[]> {
 }
 
 async function fromWiktionary(word: string): Promise<Sense[]> {
-  // Titles are case-sensitive: "ali" is a different page from "Ali".
-  for (const title of [word, word[0]!.toUpperCase() + word.slice(1)]) {
-    const senses = pickSenses(parseWiktionary(await getJson(WIKTIONARY_URL + encodeURIComponent(title))));
-    if (senses.length > 0) return senses;
-  }
-  return [];
+  // Titles are case-sensitive, and only the lowercase one is asked: "Omar"
+  // and "Boston" are names, while "boston" (a card game) is a word.
+  return pickSenses(parseWiktionary(await getJson(WIKTIONARY_URL + encodeURIComponent(word))));
 }
 
 const SOURCES: readonly { readonly name: DefinitionSource; readonly lookUp: (word: string) => Promise<Sense[]> }[] = [
@@ -320,7 +348,8 @@ export class DictionaryUnavailable extends Error {
 
 /**
  * What `word` (already {@link normalizeWord}ed) means, from the first source
- * that has it; null when every source answered that it doesn't.
+ * that has it; null when every source answered that it doesn't, or had only
+ * names (or filtered senses) for it.
  */
 export async function define(word: string): Promise<Definition | null> {
   const failures: unknown[] = [];

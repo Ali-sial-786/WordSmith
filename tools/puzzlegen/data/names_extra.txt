@@ -1,0 +1,22 @@
+# Extra names for `python3 -m puzzlegen fetch` to drop, on top of the ones it
+# finds in SCOWL (see README.md "Names"): mostly names whose lowercase sense
+# SCOWL ranks at level 55-60, which the rule keeps, and a few well-known
+# names SCOWL only lists at levels 70+. Their plural and verb forms go too,
+# except forms SCOWL ranks as common words (list those here as well).
+# One lowercase word per line or several per line; '#' starts a comment.
+# Re-run `fetch` after editing.
+
+# People's names and nicknames
+barney bailey carter charlie dido dona jenny johnny marge mickey mickeys molly
+sheila smokey ted timothy veronica willy pattie quintin gussie agee amin dahl
+hogg ridley
+
+# Places and regions
+alps ghats hamburg hamburgs riviera rivieras sunbelt ulster vela japan morocco
+minorca penang pennines rouen tyne wigan honan
+
+# Brands, characters and titles
+abba barbie batman cheerios dobro dumbo medicaid medicare muzak saran tums
+
+# Nationalities, peoples and languages
+basque basques dutch guarani mongol mongols negroid viking vikings

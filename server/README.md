@@ -20,7 +20,7 @@ contract.
 | `src/rules/` | Game rules as pure functions with no I/O, so they're easy to test and tune. The app's Dart engine mirrors them. |
 | `migrations/` | The D1 schema (TECH.md §7), plus `0002_pickup_seeds.sql`, `0003_daily_completions.sql`, `0004_push_tokens.sql`, `0005_forge_board.sql` (the Forge Board, Masterworks and catch-up days), `0006_survival.sql` (The Crucible's runs and best runs) and `0007_names.sql` (when the username last changed, and nicknames for friends) |
 | `scripts/build-campaign-sql.mjs` | Turns the app's campaign into SQL for the `campaign` table |
-| `data/mp_bank.json` | The multiplayer puzzle bank (960 puzzles: heat 1–6 × size 1–4), made by `tools/puzzlegen`. Never shipped in the app. |
+| `data/mp_bank.json` | The multiplayer puzzle bank, made by `tools/puzzlegen` (3,184 puzzles: 250 per heat for Versus, 52–100 per heat and co-op size). The Daily Commission uses its first part only (`m-00001`–`m-00960`). Never shipped in the app. |
 | `scripts/build-bank-sql.mjs` | Turns the bank into SQL for the `puzzles` table |
 
 | Rules file | Rules |
@@ -57,7 +57,7 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 |---|---|
 | `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself (`APK_URL`), or null |
 | `GET /health` | `{ok: true}` |
-| `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it, `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
+| `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it (or has it only as a name), `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
 | `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). Setup can't change the username (`409 already_set`; that's `POST /me/username`), but repeating it with another avatar changes the avatar. |
 | `POST /me/username` | `{username}` → my profile, renamed. Setup's rules (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`, unique ignoring case; a change of case only is fine), once every 7 days: `429 {error: "too_soon", message, nextChangeAt}` (epoch ms). The first change after setup is free; the profile's `nextUsernameChangeAt` says when the next is allowed. Asking for exactly my current name changes nothing and answers 200 (a retry). See "Changing the username" below. |
@@ -97,11 +97,12 @@ Friends, the leaderboard, the hub, rooms, the Daily Commission, the Forge Board,
 
 `GET /v1/define/:word` (`src/routes/define.ts`, `src/dictionary/define.ts`) is
 the app's fallback when its offline WordNet lexicon has no entry, which is
-often the case for names and rarer words:
+often the case for rarer words:
 
-- **Sources:** the Free Dictionary API (`https://api.dictionaryapi.dev/api/v2/entries/en/<word>`) first; when it has nothing, Wiktionary's REST definitions (`https://en.wiktionary.org/api/rest_v1/page/definition/<word>`), the lowercase title and then the capitalised one (`Ali`), English entries only, with the HTML stripped. Both serve Wiktionary's text (CC BY-SA), and the app says which one a meaning came from. Requests carry a descriptive `User-Agent` with the repository's URL, as Wikimedia's API policy asks, and time out after 5 s.
+- **Sources:** the Free Dictionary API (`https://api.dictionaryapi.dev/api/v2/entries/en/<word>`) first; when it has nothing, Wiktionary's REST definitions (`https://en.wiktionary.org/api/rest_v1/page/definition/<word>`) for the lowercase title, English entries only, with the HTML stripped. Both serve Wiktionary's text (CC BY-SA), and the app says which one a meaning came from. Requests carry a descriptive `User-Agent` with the repository's URL, as Wikimedia's API policy asks, and time out after 5 s.
 - **Senses** are picked as `tools/dictgen` picks the lexicon's: at most 3, round robin across parts of speech (the one with more senses first), duplicates dropped, glosses cleaned and cut to 160 characters. Slur and sexual senses are left out with the patterns of `tools/dictgen/data/gloss_filter.txt`, plus Wiktionary's `(vulgar)`, `(offensive)` and `(slur)` labels (`(derogatory)` only when there's another sense to show).
-- **`pos`** is the app's `Sense.pos`: `n`, `v`, `a` or `r` for noun, verb, adjective and adverb; another part of speech spelled out in lowercase (`proper noun`, `interjection`, `pronoun`, …); or `""`.
+- **Names** aren't words in Wordsmith (`tools/puzzlegen` drops them from the word list), so they never come back: proper-noun senses, the Free Dictionary API's capitalised entries (`Omar`, `Boston`) and senses worded as a given name or surname (`A male given name from Arabic.`) are left out, and Wiktionary's capitalised titles aren't asked. A word with only those is a `404 word_not_found`.
+- **`pos`** is the app's `Sense.pos`: `n`, `v`, `a` or `r` for noun, verb, adjective and adverb; another part of speech spelled out in lowercase (`interjection`, `pronoun`, …); or `""`.
 - **Caching:** answers are kept in the Workers Cache API (`caches.default`, per data centre) under the word: definitions for 30 days, misses (the 404) for a day. A `502` isn't kept, so the next ask tries again. Responses also carry a matching `Cache-Control`.
 
 ### Profile

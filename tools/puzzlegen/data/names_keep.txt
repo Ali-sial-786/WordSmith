@@ -1,0 +1,23 @@
+# Words that `python3 -m puzzlegen fetch` would drop as names (SCOWL lists
+# them capitalised, and their lowercase sense is rare in SCOWL), but whose
+# ordinary meaning is well known, so they stay accepted (see README.md
+# "Names"). Their plural and verb forms stay too. One lowercase word per line
+# or several per line; '#' starts a comment. Re-run `fetch` after editing.
+
+# Everyday words, or the usual spelling of one
+bonnie chile gage lenten max missy nan pogo savannah seder
+
+# Eponyms used as ordinary words
+adonis argonaut grinch jezebel lothario
+
+# Adjectives and nouns from myth, art and history, written lowercase
+dada elysian gothic olympiad pyrrhic stygian utopian
+
+# Food and drink
+brut cabernet havarti gruyeres merlot riesling
+
+# Animals, plants and other things
+capuchin cayman chinook jacuzzi kraft pollock spackle valerian
+
+# Science, printing and other technical words
+alar chad evert firebase flathead gauss kern murine redshift
