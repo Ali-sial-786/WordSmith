@@ -27,7 +27,9 @@ class MoldCues {
   /// Bumped to make cells pulse (e.g. "already forged").
   final Map<CellPos, int> flash = {};
 
-  /// Hammer Strikes to play (the latest few), each with its own id.
+  /// Hammer Strikes still swinging (the latest few), each with its own id.
+  /// A strike leaves once its swing is over, so a rebuilt grid never plays
+  /// it again.
   final List<({CellPos cell, int id})> strikes = [];
   int _strikes = 0;
 
@@ -55,6 +57,9 @@ class MoldCues {
       stagger(cells, start: hammerImpact);
     }
   }
+
+  /// The swing of strike [id] is over.
+  void retire(int id) => strikes.removeWhere((s) => s.id == id);
 
   /// A new round or puzzle: forget everything.
   void clear() {
@@ -122,11 +127,14 @@ class MoldGrid extends StatelessWidget {
                 for (final pos in mold.cells) Positioned.fromRect(rect: rectOf(pos), child: _cell(pos)),
                 if (!reducedMotion)
                   for (final st in cues.strikes)
+                    // Keyed here, among the Stack's children, so each swing keeps its
+                    // own animation when an older one leaves the list.
                     Positioned.fill(
+                      key: ValueKey(('strike', st.id)),
                       child: HammerStrike(
-                        key: ValueKey(('strike', st.id)),
                         cell: rectOf(st.cell),
                         mirror: st.cell.x * 2 >= mold.cols,
+                        onDone: () => cues.retire(st.id),
                       ),
                     ),
                 if (heat != null && melt == null)

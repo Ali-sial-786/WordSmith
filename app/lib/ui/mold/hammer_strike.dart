@@ -23,7 +23,7 @@ const _grip = Offset(0.3006, 0.9743);
 /// lands on it at [hammerImpact] with a flash, then lifts away and fades.
 /// [mirror] swings it from the left (for cells on the right of the grid).
 class HammerStrike extends StatefulWidget {
-  const HammerStrike({super.key, required this.cell, this.mirror = false});
+  const HammerStrike({super.key, required this.cell, this.mirror = false, this.onDone});
 
   /// Loads the hammer ahead of time, so the first strike isn't missing it.
   static Future<void> precache(BuildContext context) => precacheImage(const AssetImage(_sprite), context);
@@ -32,12 +32,19 @@ class HammerStrike extends StatefulWidget {
   final Rect cell;
   final bool mirror;
 
+  /// The hammer has lifted away and faded.
+  final VoidCallback? onDone;
+
   @override
   State<HammerStrike> createState() => _HammerStrikeState();
 }
 
 class _HammerStrikeState extends State<HammerStrike> with SingleTickerProviderStateMixin {
-  late final AnimationController _t = AnimationController(vsync: this, duration: _swing)..forward();
+  late final AnimationController _t = AnimationController(vsync: this, duration: _swing)
+    ..addStatusListener((s) {
+      if (s == AnimationStatus.completed) widget.onDone?.call();
+    })
+    ..forward();
 
   @override
   void dispose() {
