@@ -48,7 +48,7 @@ contract.
 ## Routes
 
 Everything is under `/v1`. Every route except `/version`, `/health`,
-`/define/:word` and `/contact` needs `Authorization: Bearer <Firebase ID token>`; the
+`/apk/:version`, `/define/:word` and `/contact` needs `Authorization: Bearer <Firebase ID token>`; the
 WebSocket route reads the token from `Sec-WebSocket-Protocol` instead.
 Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or bad token is
 `401 {"error": "unauthorized", "message": "<reason>"}` (`missing_token`,
@@ -56,7 +56,8 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 
 | Route | Body → response |
 |---|---|
-| `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself (`APK_URL`), or null |
+| `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself: this server's `/apk/<latest>`, or null without `APK_SOURCE_URL` |
+| `GET /apk/:version` · `HEAD` | The APK for a version (`1.2.3`) or `latest`, streamed from `APK_SOURCE_URL` (where release.yml publishes it) with its length, as `wordsmith-<version>.apk`, so players never see where builds are kept (`src/routes/apk.ts`). No token needed. `404 apk_not_found` when it isn't published (yet), `502 apk_unavailable` when the source fails. |
 | `GET /health` | `{ok: true}` |
 | `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it (or has it only as a name), `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |

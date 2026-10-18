@@ -15,9 +15,11 @@
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
     "LATEST_VERSION": "0.6.0",
     "MIN_SUPPORTED_VERSION": "0.1.0",
-    // The app downloads LATEST_VERSION's APK from here to update itself
-    // ({version} is filled in). Publish the release before deploying a bump.
-    "APK_URL": "https://github.com/Ali-sial-786/WordSmith/releases/download/v{version}/wordsmith-{version}.apk",
+    // Where release.yml publishes each version's APK ({version} is filled in
+    // per download; the deploy workflow fills in {repository}). Players
+    // download it through /v1/apk/:version and never see this URL. Publish
+    // the release before deploying a bump.
+    "APK_SOURCE_URL": "https://github.com/{repository}/releases/download/v{version}/wordsmith-{version}.apk",
     // Firebase ID tokens must have aud = this and
     // iss = https://securetoken.google.com/<this> (docs/TECH.md §3). Not a secret.
     "FIREBASE_PROJECT_ID": "wordsmith-8f550",

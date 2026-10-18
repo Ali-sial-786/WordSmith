@@ -80,12 +80,13 @@ that's ever needed.
 
 ## 4. REST API (Worker)
 
-All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/health`, `/v1/define/:word` and `/v1/contact`. Friends, leaderboard and the hub return `403 setup_required` until the player has picked a username. The full request and response shapes are in `server/README.md`.
+All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/health`, `/v1/apk/:version`, `/v1/define/:word` and `/v1/contact`. Friends, leaderboard and the hub return `403 setup_required` until the player has picked a username. The full request and response shapes are in `server/README.md`.
 
 | Method & path | Purpose |
 |---|---|
 | `GET /version` | Latest app version and minimum supported version (for the update banner and blocking old clients) |
 | `GET /health` | `{ok: true}` liveness check |
+| `GET /apk/:version` | The Android APK for a version or `latest`, streamed from where releases are published, so the in-app updater (and anyone given the link) downloads from our server |
 | `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks (never names: a word with only name senses is a 404). No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
 | `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |

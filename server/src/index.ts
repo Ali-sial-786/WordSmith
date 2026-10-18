@@ -3,8 +3,8 @@
  * and the hourly Cron Trigger that sends daily reminders (shared/push.md)
  * and tidies the contact form's messages (shared/contact.md).
  *
- * Every route except `/v1/version`, `/v1/health`, `/v1/define/:word` and
- * `/v1/contact` needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
+ * Every route except `/v1/version`, `/v1/health`, `/v1/apk/:version`,
+ * `/v1/define/:word` and `/v1/contact` needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
  * route reads it from `Sec-WebSocket-Protocol` instead). Errors are JSON
  * `{error, message?}`.
  */
@@ -20,6 +20,7 @@ import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond, putNickname } from "./routes/friends";
 import { sendDailyReminders } from "./push/reminder";
 import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, postUsername, putReminder } from "./routes/me";
+import { getApk } from "./routes/apk";
 import { postContact } from "./routes/contact";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
@@ -41,7 +42,10 @@ const open = (run: (c: RequestContext) => Response | Promise<Response>): Handler
 const authed = (run: (c: AuthedContext) => Response | Promise<Response>): Handler => ({ auth: true, run });
 
 const router = new Router<Handler>([
-  { method: "GET", path: "/v1/version", handler: open((c) => json(versionInfo(c.env))) },
+  { method: "GET", path: "/v1/version", handler: open((c) => json(versionInfo(c.env, new URL(c.request.url).origin))) },
+  // The in-app updater's download (src/routes/apk.ts).
+  { method: "GET", path: "/v1/apk/:version", handler: open(getApk) },
+  { method: "HEAD", path: "/v1/apk/:version", handler: open(getApk) },
   { method: "GET", path: "/v1/health", handler: open(() => json({ ok: true })) },
   // Meanings work signed out (src/routes/define.ts).
   { method: "GET", path: "/v1/define/:word", handler: open(getDefine) },

@@ -16,7 +16,7 @@ describe("routes", () => {
       latest: "0.6.0",
       minSupported: "0.1.0",
       protocol: 1,
-      apk: "https://github.com/Ali-sial-786/WordSmith/releases/download/v0.6.0/wordsmith-0.6.0.apk",
+      apk: `${BASE}/v1/apk/0.6.0`,
     });
   });
 

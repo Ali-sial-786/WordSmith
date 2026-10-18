@@ -13,11 +13,13 @@
 
 ## 1. How friends install and update
 
-1. You download the APK from the repo's **Releases** page (or Claude sends it) and send the file to friends.
+1. Send friends the file, or this link, which always downloads the latest APK from the game's server:
+   `https://wordsmith-api.wordsmith-forge.workers.dev/v1/apk/latest`.
+   (It streams the APK from the repo's **Releases** page, so players never see GitHub.)
 2. They open it on their phone. The first time, Android asks them to **allow installs from this source** (the chat or file app they opened it from). Google Play Protect may warn that the app is from an unknown developer, and they tap **Install anyway**.
 3. **Updates:** from 0.4.2 on, the game updates itself. Every build is signed with the same key, so it installs over the old one.
    - When `/v1/version` says a newer version is out, the Forge Hall shows a banner with **Update now**. Settings → **Version** checks again on a tap.
-   - **Update now** downloads the new APK from its GitHub Release (`apk` in `/v1/version`, from `APK_URL` in `server/wrangler.jsonc`) with a progress bar, checks it's Wordsmith at that version, and opens Android's installer. The player taps **Update** there; progress stays.
+   - **Update now** downloads the new APK from the server's `/v1/apk/<version>` (`apk` in `/v1/version`), which streams it from its GitHub Release (`APK_SOURCE_URL` in `server/wrangler.jsonc`), with a progress bar, checks it's Wordsmith at that version, and opens Android's installer. The player taps **Update** there; progress stays.
    - The first time, Android asks them to let Wordsmith **install unknown apps**; the game opens that switch and carries on when they come back.
    - Sending the APK by hand still works, and is the only way onto 0.4.1 or older.
    - Very old versions are blocked from multiplayer until they update.
@@ -63,7 +65,7 @@ bump `version:` in app/pubspec.yaml, then: git tag v0.3.0 && git push --tags
 ```
 
 **Publish the release before the server announces it.** The app downloads
-updates from the release (`APK_URL`), so bump `LATEST_VERSION` in
+updates from the release (through `/v1/apk/<version>`), so bump `LATEST_VERSION` in
 `server/wrangler.jsonc` in a commit marked `[skip ci]`, publish the release,
 then run **Deploy server**. Otherwise players who tap **Update now** in
 between hear that the update is still on its way, and to try again shortly.
@@ -72,7 +74,7 @@ Where tags can't be pushed (Claude's cloud sessions can only push their
 branch), run **Actions → Release (friends build) → Run workflow** with
 **publish** ticked instead: it builds the same APK and publishes the release
 for pubspec's version, tagging the commit it ran on. The latest APK is always
-at `https://github.com/Ali-sial-786/WordSmith/releases/latest`.
+at `https://wordsmith-api.wordsmith-forge.workers.dev/v1/apk/latest`.
 
 **The GitHub repository is public**, so anyone who finds the Releases page
 can download the APK. It holds nothing secret (the Firebase API key and

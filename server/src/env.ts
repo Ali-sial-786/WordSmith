@@ -11,10 +11,11 @@ export interface Env {
   LATEST_VERSION: string;
   MIN_SUPPORTED_VERSION: string;
   /**
-   * The APK of LATEST_VERSION, with `{version}` standing for it: the GitHub
-   * Release that release.yml publishes. The app updates itself from it.
+   * Where a version's APK is published, with `{version}` standing for it (the
+   * release that release.yml publishes). The server streams it to players
+   * from `/v1/apk/:version` (src/routes/apk.ts); players never see this URL.
    */
-  APK_URL?: string;
+  APK_SOURCE_URL?: string;
   /** Firebase project whose ID tokens we accept (`aud`, and part of `iss`). */
   FIREBASE_PROJECT_ID: string;
   /**

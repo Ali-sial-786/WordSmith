@@ -78,6 +78,9 @@ jobs:
           [ -n "$id" ] || { echo "::error::Could not find or create the wordsmith D1 database"; exit 1; }
           # The repo keeps a placeholder id; fill in the real one for this run.
           sed -i "s/00000000-0000-0000-0000-000000000000/$id/" wrangler.jsonc
+          # And where this repository's releases are, for the APK downloads.
+          sed -i "s#{repository}#${GITHUB_REPOSITORY}#" wrangler.jsonc
+          if grep -q '{repository}' wrangler.jsonc; then echo "::error::APK_SOURCE_URL still has {repository}"; exit 1; fi
           echo "D1 database: $id"
 
       - name: Apply migrations

@@ -26,7 +26,7 @@ export const DICTIONARY_API_URL = "https://api.dictionaryapi.dev/api/v2/entries/
 export const WIKTIONARY_URL = "https://en.wiktionary.org/api/rest_v1/page/definition/";
 
 /** Wikimedia's API policy asks clients to say who they are and where to find out more. */
-export const USER_AGENT = "WordsmithAPI/1.0 (https://github.com/Ali-sial-786/WordSmith; definitions for a word game)";
+export const USER_AGENT = "WordsmithAPI/1.0 (https://play.wordsmith-forge.workers.dev/contact; definitions for a word game)";
 
 export const MAX_SENSES = 3;
 export const MAX_GLOSS = 160;

@@ -10,16 +10,19 @@ export interface VersionInfo {
   latest: string;
   minSupported: string;
   protocol: number;
-  /** Where the Android app downloads `latest` to update itself; null when not set up. */
+  /**
+   * Where the Android app downloads `latest` to update itself: this server's
+   * `/v1/apk/<latest>` (src/routes/apk.ts); null when there's no APK source.
+   */
   apk: string | null;
 }
 
-/** Body of `GET /v1/version`. */
-export function versionInfo(env: Env): VersionInfo {
+/** Body of `GET /v1/version`; `origin` is this server's, as the request reached it. */
+export function versionInfo(env: Pick<Env, "LATEST_VERSION" | "MIN_SUPPORTED_VERSION" | "APK_SOURCE_URL">, origin: string): VersionInfo {
   return {
     latest: env.LATEST_VERSION,
     minSupported: env.MIN_SUPPORTED_VERSION,
     protocol: PROTOCOL_VERSION,
-    apk: env.APK_URL ? env.APK_URL.replaceAll("{version}", env.LATEST_VERSION) : null,
+    apk: env.APK_SOURCE_URL ? `${origin}/v1/apk/${env.LATEST_VERSION}` : null,
   };
 }

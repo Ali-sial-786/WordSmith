@@ -250,7 +250,7 @@ class _UpdateBanner extends ConsumerWidget {
                 ? 'Wordsmith ${v.latest} is out! Close the game and open it again to update.'
                 : apk != null
                 ? 'Wordsmith ${v.latest} is out!'
-                : 'Wordsmith ${v.latest} is out! Get the new APK from whoever shares it, or the GitHub Releases page.',
+                : 'Wordsmith ${v.latest} is out! Get it from whoever shared the game with you.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
