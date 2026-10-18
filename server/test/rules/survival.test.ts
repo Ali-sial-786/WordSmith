@@ -344,6 +344,37 @@ describe("Versus survival rounds", () => {
     expect(activeRacers(s4)).toEqual(["b"]);
     expect(endVsRound(s4, r4, "timeout", T0 + SURVIVAL_CAP_MS).fields).toMatchObject({ reason: "timeout", winner: "b", how: "timeout", melted: null });
   });
+
+  it("keep the melt, everyone's words saved and Scrap Bins, and the words in the series' history", () => {
+    const players = ["a", "b"];
+    const s = newVsSeries({ matchId: "s", length: 3, heat: 1, racerIds: players, startedAt: T0, variant: "survival" });
+    const r = vsRound(players);
+    // A saves the heated EAT and finds a bonus word; B finds nothing, and melts.
+    applyVsSubmit(r, "a", "EAT");
+    applyVsHeat(r, "a", T0 + 3000);
+    applyVsSubmit(r, "a", "TEA");
+    applyVsMelt(r, "b");
+    const end = endVsRound(s, r, "melted", T0 + 30_000);
+    expect(s.history).toEqual([
+      {
+        round: 1,
+        suddenDeath: false,
+        reason: "melted",
+        winner: "a",
+        how: "survived",
+        cols: 4,
+        rows: 4,
+        slots: vsRoundStartFields(r, s, T0).slots,
+        progress: end.fields.progress,
+        molds: { a: [1], b: [] },
+        letters: r.letters,
+        answers: end.fields.answers,
+        bins: { a: ["TEA"], b: [] },
+        melted: { id: "b", slot: 1 },
+        saved: { a: 1, b: 0 },
+      },
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------

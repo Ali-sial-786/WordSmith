@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { CoopRound } from "../../src/rules/coop-round";
 import { totalXpForLevel } from "../../src/rules/progression";
 import { survivalHeatMs, SURVIVAL_CAP_MS, SURVIVAL_GRACE_MS, type HeatClock } from "../../src/rules/survival";
-import type { VsRound } from "../../src/rules/vs-round";
+import type { VsRound, VsSeries } from "../../src/rules/vs-round";
 import { body, setUpClient, type Client } from "./helpers";
 import { closeAll, connect, sleep, type Message, type Socket } from "./sockets";
 
@@ -304,9 +304,11 @@ describe("survival Versus", () => {
     // B forges a word that isn't B's heated one: B's heat stays.
     expect(await forge(sb, slots[order[1]!]!.word, 1)).toMatchObject({ result: "claimed" });
     for (const s of [sb, sc]) expect((await s.drain()).filter((m) => m.op === "HEATED")).toEqual([]);
-    // A saves another.
+    // A saves another. C finds a bonus word (if the puzzle has one).
     expect(await forge(sa, slots[nextA]!.word, 2)).toMatchObject({ result: "claimed" });
     expect(await sa.next({ op: "HEATED" })).toMatchObject({ saved: 2 });
+    const bin = round.puzzle.bonus.slice(0, 1);
+    for (const w of bin) expect(await forge(sc, w, 2)).toMatchObject({ result: "bonus" });
 
     // A has the most letters, but A's countdown runs out first.
     const now = await roundOf<VsRound>(code);
@@ -334,6 +336,21 @@ describe("survival Versus", () => {
       });
       await s.next({ op: "LOBBY", phase: "standings" });
     }
+    // The series' history, for the podium: the melt, everyone's words saved and Scrap Bin, and the words.
+    const series = await runInDurableObject(stub(code), (_instance, state) => state.storage.kv.get<VsSeries>("series")!);
+    expect(series.history).toEqual([
+      expect.objectContaining({
+        round: 1,
+        reason: "melted",
+        winner: b.uid,
+        how: "survived",
+        melted: { id: a.uid, slot: meltSlot },
+        saved: { [a.uid]: 2, [b.uid]: 0, [c.uid]: 0 },
+        letters: first.letters,
+        answers: slots.map(({ slot, word }) => ({ slot, word })),
+        bins: { [a.uid]: [], [b.uid]: [], [c.uid]: bin },
+      }),
+    ]);
     expect(await forge(sc, slots[order[0]!]!.word, 1)).toMatchObject({ result: "too_late" });
 
     // The next round of the series is survival too.

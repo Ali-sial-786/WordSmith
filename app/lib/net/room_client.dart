@@ -425,9 +425,15 @@ class PodiumPlace {
   final int place;
 }
 
+Map<String, List<String>> _bins(Object? j) => {
+  for (final e in ((j as Map?) ?? const {}).entries)
+    e.key as String: [for (final w in (e.value as List?) ?? const []) w as String],
+};
+
 /// Versus: one round of a finished series, as `SERIES_END.history` sums it
-/// up: how it went and every racer's mold, with the mold's shape, so it can
-/// be drawn without having seen that round start.
+/// up: how it went, every racer's mold with the mold's shape, the words and
+/// everyone's Scrap Bin, so it can be drawn and gone back over without having
+/// seen that round start.
 class SeriesRound implements MoldShape {
   const SeriesRound({
     required this.round,
@@ -441,6 +447,10 @@ class SeriesRound implements MoldShape {
     required this.progress,
     required this.molds,
     this.melted,
+    this.letters = '',
+    this.answers = const [],
+    this.bins = const {},
+    this.saved = const {},
   });
 
   factory SeriesRound.fromJson(Map<String, dynamic> j) => SeriesRound(
@@ -455,6 +465,10 @@ class SeriesRound implements MoldShape {
     progress: _progress(j['progress']),
     molds: _molds(j['molds']),
     melted: _melted(j['melted']),
+    letters: j['letters'] as String? ?? '',
+    answers: _slotWords(j['answers']),
+    bins: _bins(j['bins']),
+    saved: _scores(j['saved']),
   );
 
   final int round;
@@ -479,8 +493,16 @@ class SeriesRound implements MoldShape {
   /// Each racer's complete slots, as in that round's [VsRoundEnd.molds].
   final Map<String, List<int>> molds;
 
-  /// Survival: whose word melted, ending the round.
+  /// Survival: whose word melted, ending the round, and each racer's words
+  /// saved.
   final ({String id, int slot})? melted;
+  final Map<String, int> saved;
+
+  /// The anvil everyone had, every grid word by slot, and each racer's bonus
+  /// words in the order found. Empty from a server that doesn't send them.
+  final String letters;
+  final List<(int, String)> answers;
+  final Map<String, List<String>> bins;
 }
 
 class SeriesEnd extends RoomEvent {

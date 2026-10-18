@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { loadBankRows } from "../../scripts/build-bank-sql.mjs";
 import { parseMpPuzzle, type Pos } from "../../src/rules/mold";
 import { mulberry32 } from "../../src/rules/pickups";
 import type { SeriesLength } from "../../src/rules/vs";
@@ -422,24 +423,34 @@ describe("the series' history", () => {
     return endVsRound(s, r, "timeout", T0);
   }
 
-  it("sums up every round of a best of 3, in order, with each racer's mold and its shape", () => {
+  /** EXAMPLE's words, by slot. */
+  const answers = [
+    { slot: 0, word: "TEAR" },
+    { slot: 1, word: "EAT" },
+    { slot: 2, word: "RATE" },
+  ];
+
+  it("sums up every round of a best of 3, in order, with each racer's mold, its shape, the words and the Scrap Bins", () => {
     const s = series(["a", "b", "c"]);
     expect(s.history).toBeUndefined();
-    // Round 1: a fills the mold; b has EAT.
+    // Round 1: a fills the mold; b has EAT, and two bonus words (one found twice).
     const r1 = round(["a", "b", "c"]);
     applyVsSubmit(r1, "b", "EAT");
-    for (const w of ["TEAR", "EAT", "RATE"]) applyVsSubmit(r1, "a", w);
+    for (const w of ["tea", "EAR", "TEA"]) applyVsSubmit(r1, "b", w);
+    for (const w of ["TEAR", "ART", "EAT", "RATE"]) applyVsSubmit(r1, "a", w);
     endVsRound(s, r1, "finished", T0);
     // Round 2: b has the most letters when time runs out.
     const r2 = round(["a", "b", "c"], { n: 2 });
     applyVsSubmit(r2, "b", "RATE");
     applyVsSubmit(r2, "c", "EAT");
+    applyVsSubmit(r2, "c", "RAT");
     endVsRound(s, r2, "timeout", T0);
     // Round 3: a again, which decides it.
     const third = finish(s, "a");
     expect(third.outcome).toEqual({ winner: "a", early: false, forfeit: false });
 
     const progress = (filled: Record<string, number>) => ["a", "b", "c"].map((id) => ({ id, filled: filled[id] ?? 0, total: 9 }));
+    const letters = r1.letters;
     expect(s.history).toEqual([
       {
         round: 1,
@@ -450,6 +461,9 @@ describe("the series' history", () => {
         ...shape,
         progress: progress({ a: 9, b: 3 }),
         molds: { a: [0, 1, 2], b: [1], c: [] },
+        letters,
+        answers,
+        bins: { a: ["ART"], b: ["TEA", "EAR"], c: [] },
       },
       {
         round: 2,
@@ -460,12 +474,48 @@ describe("the series' history", () => {
         ...shape,
         progress: progress({ b: 4, c: 3 }),
         molds: { a: [], b: [2], c: [1] },
+        letters,
+        answers,
+        bins: { a: [], b: [], c: ["RAT"] },
       },
-      { round: 3, suddenDeath: false, reason: "timeout", winner: "a", how: "timeout", ...shape, progress: progress({ a: 4 }), molds: { a: [0], b: [], c: [] } },
+      {
+        round: 3,
+        suddenDeath: false,
+        reason: "timeout",
+        winner: "a",
+        how: "timeout",
+        ...shape,
+        progress: progress({ a: 4 }),
+        molds: { a: [0], b: [], c: [] },
+        letters,
+        answers,
+        bins: { a: [], b: [], c: [] },
+      },
     ]);
-    // Never the words.
-    const text = JSON.stringify(s.history);
-    for (const w of [...EXAMPLE.words.map((w) => w.w), ...EXAMPLE.bonus]) expect(text).not.toContain(w);
+    // The same anvil as everyone got at the start, and every grid word as ROUND_END had them.
+    expect(letters).toBe(vsRoundStartFields(r1, s, T0).letters);
+    expect(s.history![2]!.answers).toEqual(third.fields.answers);
+    // Copies: nothing found later changes what the history says.
+    r1.molds.c!.bonus.push("ERA");
+    expect(s.history![0]!.bins!.c).toEqual([]);
+  });
+
+  it("stays small enough for one message with every bonus word of the bank's biggest puzzle in five bins", () => {
+    // The size-1 puzzle with the most bonus words: the worst case for a racer's Scrap Bin.
+    const biggest = loadBankRows()
+      .filter((row) => row.size === 1)
+      .map((row) => parseMpPuzzle(JSON.parse(row.data)))
+      .reduce((a, b) => (b.bonus.length > a.bonus.length ? b : a));
+    const players = ["racer-a", "racer-b", "racer-c", "racer-d", "racer-e"].map((id) => `${id}-0123456789abcdef`);
+    const r = round(players, { puzzle: biggest });
+    for (const id of players) for (const w of [...biggest.bonus, ...biggest.slots.map((x) => x.word)]) applyVsSubmit(r, id, w);
+    expect(r.molds[players[0]!]!.bonus.length).toBeGreaterThan(200);
+    // Every round of the longest history goes like that.
+    const s = series(players, 10);
+    for (let n = 0; n < MAX_HISTORY; n++) endVsRound(s, r, "finished", T0);
+    expect(s.history).toHaveLength(MAX_HISTORY);
+    const bytes = new TextEncoder().encode(JSON.stringify({ op: "SERIES_END", history: s.history })).length;
+    expect(bytes).toBeLessThan(1024 * 1024);
   });
 
   it("marks sudden death and lists only its racers, a round with no winner included", () => {
@@ -512,6 +562,9 @@ describe("the series' history", () => {
       ...shape,
       progress: end.fields.progress,
       molds: { a: [1], b: [0], c: [] },
+      letters: r2.letters,
+      answers,
+      bins: { a: [], b: [], c: [] },
     });
 
     // Decided in the standings: the rounds played, and no more.

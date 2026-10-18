@@ -6,41 +6,34 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/game_icon.dart';
-import 'rival_molds.dart';
+import 'round_review.dart';
+
+/// Everyone in a series in podium order, then anyone the podium left out.
+List<String> seriesRacers(SeriesEnd series) => <String>{
+  for (final p in series.podium) p.id,
+  for (final r in series.history)
+    for (final p in r.progress) p.id,
+}.toList();
 
 /// The podium's look back at a Versus series: a column per racer in podium
 /// order, a row per round with everyone's letters and who won it and how,
-/// and the series totals at the foot. Tap a round to see everyone's mold;
-/// the last one starts open. Drawn from `SERIES_END.history` alone, so it's
-/// whole even for someone who joined late.
-class SeriesSummary extends StatefulWidget {
+/// and the series totals at the foot. Tap a round to go back over it (its
+/// words, everyone's molds and Scrap Bins). Drawn from `SERIES_END.history`
+/// alone, so it's whole even for someone who joined late.
+class SeriesSummary extends StatelessWidget {
   const SeriesSummary({super.key, required this.session, required this.series});
 
   final VsSession session;
   final SeriesEnd series;
 
-  @override
-  State<SeriesSummary> createState() => _SeriesSummaryState();
-}
-
-class _SeriesSummaryState extends State<SeriesSummary> {
   /// Width of the round-number column; the racers share the rest.
   static const _lead = 46.0;
 
-  /// Rounds showing their molds, by round number.
-  late final Set<int> _open = {if (widget.series.history.isNotEmpty) widget.series.history.last.round};
-
   @override
   Widget build(BuildContext context) {
-    final s = widget.session;
-    final series = widget.series;
+    final s = session;
     final text = Theme.of(context).textTheme;
-    // Podium order, then anyone the podium left out.
-    final ids = <String>{
-      for (final p in series.podium) p.id,
-      for (final r in series.history)
-        for (final p in r.progress) p.id,
-    }.toList();
+    final ids = seriesRacers(series);
     final wins = {for (final p in series.podium) p.id: p.wins};
     final letters = series.letters;
     Widget columns(Widget Function(String id) cell, {Widget? lead}) => Row(
@@ -78,10 +71,7 @@ class _SeriesSummaryState extends State<SeriesSummary> {
                 round: round,
                 ids: ids,
                 lead: _lead,
-                open: _open.contains(round.round),
-                onTap: () => setState(() {
-                  if (!_open.remove(round.round)) _open.add(round.round);
-                }),
+                onTap: () => showRoundReview(context, session: s, series: series, round: round.round),
               ),
             ],
             Divider(height: 1, thickness: 1.5, color: Palette.iron.withValues(alpha: 0.6)),
@@ -148,15 +138,14 @@ class _Racer extends StatelessWidget {
   }
 }
 
-/// One round: its number, every racer's letters (the winner's ringed),
-/// who won it and how, and, open, everyone's mold.
+/// One round: its number, every racer's letters (the winner's ringed), and
+/// who won it and how. Tapped, it opens for a look back.
 class _RoundRow extends StatelessWidget {
   const _RoundRow({
     required this.session,
     required this.round,
     required this.ids,
     required this.lead,
-    required this.open,
     required this.onTap,
   });
 
@@ -164,7 +153,6 @@ class _RoundRow extends StatelessWidget {
   final SeriesRound round;
   final List<String> ids;
   final double lead;
-  final bool open;
   final VoidCallback onTap;
 
   @override
@@ -217,7 +205,7 @@ class _RoundRow extends StatelessWidget {
                             text: 'Sudden death · ',
                             style: TextStyle(color: Palette.quenchRed, fontWeight: FontWeight.w700),
                           ),
-                        ..._how(s),
+                        ...roundHow(s, round),
                       ],
                     ),
                     maxLines: 2,
@@ -225,62 +213,49 @@ class _RoundRow extends StatelessWidget {
                     style: text.bodySmall?.copyWith(color: Palette.steel),
                   ),
                 ),
-                Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: Palette.steel),
+                Icon(Icons.chevron_right, size: 20, color: Palette.steel),
               ],
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: open
-                  ? RivalMolds.past(
-                      session: s,
-                      past: round,
-                      order: ids,
-                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 4),
-                    )
-                  : const SizedBox(width: double.infinity),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  /// "Ada · finished first", or that nobody won, and whose word melted.
-  List<InlineSpan> _how(VsSession s) {
-    final winner = round.winner;
-    final melted = round.melted;
-    return [
-      if (winner == null)
-        const TextSpan(text: 'No winner')
-      else ...[
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Padding(
-            padding: EdgeInsets.only(right: 3),
-            child: GameIcon('crown', size: 13, color: Palette.molten),
-          ),
+/// "Ada · finished first", or that nobody won, and whose word melted.
+List<InlineSpan> roundHow(VsSession s, SeriesRound round) {
+  final winner = round.winner;
+  final melted = round.melted;
+  return [
+    if (winner == null)
+      const TextSpan(text: 'No winner')
+    else ...[
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: EdgeInsets.only(right: 3),
+          child: GameIcon('crown', size: 13, color: Palette.molten),
         ),
-        TextSpan(
-          text: winner == s.me ? 'You' : s.nameOf(winner),
-          style: TextStyle(color: s.colorOf(winner), fontWeight: FontWeight.w700),
-        ),
-        TextSpan(
-          text: switch (round.how) {
-            'finished' => ' · finished first',
-            'survived' => ' · survived the heat',
-            _ => ' · most letters on time',
-          },
-        ),
-      ],
-      if (melted != null)
-        TextSpan(
-          text: ' · ${melted.id == s.me ? 'you' : s.nameOf(melted.id)} melted',
-          style: TextStyle(color: Palette.quenchRed),
-        ),
-    ];
-  }
+      ),
+      TextSpan(
+        text: winner == s.me ? 'You' : s.nameOf(winner),
+        style: TextStyle(color: s.colorOf(winner), fontWeight: FontWeight.w700),
+      ),
+      TextSpan(
+        text: switch (round.how) {
+          'finished' => ' · finished first',
+          'survived' => ' · survived the heat',
+          _ => ' · most letters on time',
+        },
+      ),
+    ],
+    if (melted != null)
+      TextSpan(
+        text: ' · ${melted.id == s.me ? 'you' : s.nameOf(melted.id)} melted',
+        style: TextStyle(color: Palette.quenchRed),
+      ),
+  ];
 }
 
 /// A racer's letters in one round: ringed for the winner, red for a melt,

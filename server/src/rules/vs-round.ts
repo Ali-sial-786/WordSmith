@@ -48,9 +48,10 @@ export const DEFAULT_SERIES: SeriesLength = 3;
 export const STANDINGS_MS = 10_000;
 /**
  * Round summaries a series keeps for `SERIES_END.history`: the latest this
- * many. Each is 2 KB at most (5 racers, a 10×10 mold), so the series, the
- * award and the results stay far below the 2 MB a storage value may hold.
- * A series of 10 with a few sudden deaths never gets near it.
+ * many. Each is about 13 KB at most (5 racers who all found every bonus word
+ * of the bank's biggest puzzle, a 10×10 mold), so the series, the award and
+ * the results stay below the 2 MB a storage value may hold, and `SERIES_END`
+ * below 1 MiB. A series of 10 with a few sudden deaths never gets near it.
  */
 export const MAX_HISTORY = 50;
 
@@ -587,9 +588,10 @@ export interface VsRoundEnd {
 }
 
 /**
- * One ended round as `SERIES_END.history` lists it: how it went, and every
- * racer's mold with its shape (as in `ROUND_START`, never the words), so it
- * can be drawn by someone who never saw the round start.
+ * One ended round as `SERIES_END.history` lists it: how it went, every
+ * racer's mold with its shape (as in `ROUND_START`), the words, and every
+ * racer's Scrap Bin, so the podium can go back over it, even with someone
+ * who never saw the round start. Only sent once the series is over.
  */
 export interface VsRoundSummary {
   readonly round: number;
@@ -602,8 +604,17 @@ export interface VsRoundSummary {
   readonly slots: RoundStartFields["slots"];
   readonly progress: readonly VsProgress[];
   readonly molds: Readonly<Record<string, readonly number[]>>;
-  /** Survival only: who melted which slot (`null` if nobody did). */
+  /**
+   * The anvil (as in `ROUND_START`), every grid word (as in `ROUND_END`), and
+   * each racer's bonus words in the order found (`[]` for none). Absent in
+   * rounds stored before them.
+   */
+  readonly letters?: string;
+  readonly answers?: readonly SlotWord[];
+  readonly bins?: Readonly<Record<string, readonly string[]>>;
+  /** Survival only: who melted which slot (`null` if nobody did), and each racer's words saved. */
   readonly melted?: { readonly id: string; readonly slot: number } | null;
+  readonly saved?: Readonly<Record<string, number>>;
 }
 
 /** Adds the round that `end` closed to the series' history, dropping the oldest past {@link MAX_HISTORY}. */
@@ -620,7 +631,11 @@ function recordHistory(s: VsSeries, r: VsRound, end: VsRoundEndFields): void {
     slots: r.puzzle.slots.map(({ slot, x, y, d, len }) => ({ slot, x, y, d, len })),
     progress: end.progress,
     molds: end.molds,
+    letters: r.letters,
+    answers: end.answers,
+    bins: Object.fromEntries(r.playerIds.map((id) => [id, [...(r.molds[id]?.bonus ?? [])]])),
     ...(end.melted === undefined ? {} : { melted: end.melted }),
+    ...(end.saved === undefined ? {} : { saved: end.saved }),
   });
   if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
 }

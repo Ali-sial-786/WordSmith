@@ -57,6 +57,7 @@ For example, at heat 1 a 3-letter word gets 21.6 s and a 6-letter word gets
 | `HEATED` | `slot`, `startsAt`, `deadline`, `durationMs`, `saved`, `serverNow`. Co-op: sent to everyone when the team's heated slot changes. Versus: sent to the racer only, about their own mold. It follows the `CLAIMED`, `REVEAL` or `WORD_RESULT` that completed the previous one. When every slot is complete there is no `HEATED`; the round ends `complete` or `finished` as usual. |
 | `MELT` | `slot`, plus `id` (whose mold) in Versus. Sent to everyone, straight before `ROUND_END`. The app plays the melt (about 2.4 s) before showing results or standings. |
 | `ROUND_END` | Co-op: `reason` adds `melted`; adds `variant`, `saved` (team), and `melted`: `{slot}` or `null`. Stars and XP for a melted round are worked out as for `timeout`. Versus: `reason` adds `melted`, `how` adds `survived`; adds `variant`, `saved`: `{userId: n}`, and `melted`: `{id, slot}` or `null`. |
+| `SERIES_END` | Versus: each `history` entry of a survival round adds `melted` and `saved`, as in its `ROUND_END`. |
 | `SNAPSHOT` | `round` adds `variant` and, in survival, `heated` (co-op: the team's; Versus: the receiver's own; `null` for someone watching or when no slot is heated) and `saved` (co-op: a number; Versus: the receiver's). |
 
 ### Rules worth spelling out

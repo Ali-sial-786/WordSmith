@@ -14,7 +14,7 @@ import 'series_summary.dart';
 import 'vs_widgets.dart';
 
 /// The end of a Versus series: the podium, my XP and embers, the series round
-/// by round with everyone's molds, and a rematch.
+/// by round (each round opens for a look back), and a rematch.
 class VsResultsView extends StatelessWidget {
   const VsResultsView({super.key, required this.session, required this.onLeave});
 
@@ -90,6 +90,11 @@ class VsResultsView extends StatelessWidget {
                   'Round by round',
                   textAlign: TextAlign.center,
                   style: displayStyle(18, color: Palette.molten),
+                ),
+                Text(
+                  'Tap a round for its words, molds and Scrap Bins',
+                  textAlign: TextAlign.center,
+                  style: text.labelMedium?.copyWith(color: Palette.steel),
                 ),
                 const SizedBox(height: 10),
                 SeriesSummary(session: session, series: r),

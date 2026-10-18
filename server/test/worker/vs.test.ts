@@ -389,7 +389,8 @@ describe("Versus rooms", () => {
         [d.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
         [e.uid]: { xp: 15, level: 1, levelUps: 0, rewards: NO_HINTS, scrapHammers: 0, pickups: NO_HINTS },
       });
-      // Every round, sudden death included: how it went and everyone's mold, with its shape.
+      // Every round, sudden death included: how it went, everyone's mold with its shape, the
+      // words, and each racer's Scrap Bin (A's bonus word in round 1).
       expect(series.history).toEqual(
         (
           [
@@ -409,6 +410,9 @@ describe("Versus rooms", () => {
           slots: s.slots,
           progress: e.progress,
           molds: e.molds,
+          letters: s.letters,
+          answers: e.answers,
+          bins: Object.fromEntries(s.players.map((id: string) => [id, e.round === 1 && id === a.uid ? [bonus] : []])),
         })),
       );
       expect(series.history.map((h: Message) => h.suddenDeath)).toEqual([false, false, false, true]);
@@ -548,15 +552,19 @@ describe("Versus rooms", () => {
       const code = await createVsRoom(a);
       const sa = await join(a, code);
       let sb = await join(b, code);
-      // A best of 3 that goes the distance: A, B, then A each forge one word and win on time.
+      // A best of 3 that goes the distance: A, B, then A each forge one word and win on time,
+      // while the other finds a bonus word (if the puzzle has one).
       const winners = [a, b, a];
       const starts: Message[] = [];
       const ends: Message[] = [];
+      const bins: string[][] = [];
       for (const [i, winner] of winners.entries()) {
         starts.push(i === 0 ? await start(sa, code, [sa, sb]) : await nextRound(code, [sa, sb]));
         await setEmbers(code, []);
         const { puzzle } = await roundOf(code);
         await forge(winner === a ? sa : sb, puzzle.slots[0]!.word, 10 * i + 1);
+        bins.push(puzzle.bonus.slice(0, 1));
+        for (const w of bins[i]!) expect(await forge(winner === a ? sb : sa, w, 10 * i + 2)).toMatchObject({ result: "bonus" });
         expect(await runDurableObjectAlarm(stub(code))).toBe(true);
         ends.push(await sa.next({ op: "ROUND_END", round: i + 1 }));
       }
@@ -574,8 +582,13 @@ describe("Versus rooms", () => {
           slots: s.slots,
           progress: ends[i]!.progress,
           molds: { [a.uid]: winners[i] === a ? [0] : [], [b.uid]: winners[i] === b ? [0] : [] },
+          letters: s.letters,
+          answers: ends[i]!.answers,
+          bins: { [a.uid]: winners[i] === a ? [] : bins[i], [b.uid]: winners[i] === b ? [] : bins[i] },
         })),
       );
+      // Rivals' Scrap Bins only come out with the series: never in a ROUND_END.
+      for (const [i, end] of ends.entries()) for (const w of bins[i]!) expect(JSON.stringify(end)).not.toContain(`"${w}"`);
       await sa.next({ op: "SERIES_END" });
       await sa.next({ op: "LOBBY", phase: "results" });
 
@@ -688,6 +701,9 @@ describe("Versus rooms", () => {
           slots: round.puzzle.slots.map(({ slot, x, y, d, len }) => ({ slot, x, y, d, len })),
           progress: end.progress,
           molds: end.molds,
+          letters: round.letters,
+          answers: end.answers,
+          bins: { [a.uid]: [], [b.uid]: [], [c.uid]: [] },
         },
       ]);
       const results = await sa.next({ op: "LOBBY", phase: "results" });

@@ -326,7 +326,7 @@ the player's initial, so it's still readable for colour-blind players.
   - With 2 players: best of 3 is first to 2, best of 5 is first to 3, best of 7 is first to 4, and best of 10 is first to 6.
 - **Tied at the end?** Only the tied players play a **sudden-death round** under the same rules, while everyone else watches live. The "most letters, then who got there first" rule almost always produces a winner. In the rare case that nobody fills a single letter, the sudden-death round is played again.
 - **Between rounds:** 10 seconds of standings showing the round winner, how they won (finished or on time), the series tally, and "Round 4 of up to 7".
-- **End of the series:** a podium ranked by round wins, with XP added to everyone's profiles.
+- **End of the series:** a podium ranked by round wins, with XP added to everyone's profiles. Every round can be looked back at from there: the whole mold with the words you forged and the ones you missed, everyone's molds, and everyone's Scrap Bin.
 
 ### 9.3 Player colours
 Copper, Gold, Verdigris, Cobalt and **Titanium** (the purple of anodised

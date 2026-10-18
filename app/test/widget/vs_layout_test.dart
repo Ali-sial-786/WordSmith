@@ -345,21 +345,21 @@ void main() {
     expect(find.textContaining('Sudden death', findRichText: true), findsNWidgets(2));
     expect(find.textContaining('most letters on time', findRichText: true), findsOneWidget);
     expect(find.text('Letters'), findsOneWidget);
-    // The last round starts open, with its two racers' molds: mine (CAT, COT) and sam's (TOE).
-    expect(find.byType(RivalMolds), findsOneWidget);
+    // A tap opens a round for a look back: the last one has its two racers' molds, mine (CAT,
+    // COT) and sam's (TOE).
+    expect(find.byType(RivalMolds), findsNothing);
+    await tester.tap(find.text('12').first);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Round 12'), findsOneWidget);
     final tiles = find.byType(RivalMolds);
+    await tester.scrollUntilVisible(tiles, 200, scrollable: find.byType(Scrollable).last);
     expect(find.descendant(of: tiles, matching: find.text('5/7')), findsOneWidget);
     expect(find.descendant(of: tiles, matching: find.text('3/7')), findsOneWidget);
     expect(find.descendant(of: tiles, matching: find.text('You')), findsOneWidget);
-
-    // Rounds open and close with a tap.
-    await tester.tap(find.text('11').first);
+    await tester.tap(find.byTooltip('Back to the podium'));
     await tester.pumpAndSettle();
-    expect(find.byType(RivalMolds), findsNWidgets(2));
-    expect(tester.takeException(), isNull);
-    await tester.tap(find.text('12').first);
-    await tester.pumpAndSettle();
-    expect(find.byType(RivalMolds), findsOneWidget);
+    expect(find.text('Letters'), findsOneWidget);
     // From the top again for the next text size.
     await tester.pumpWidget(const SizedBox());
   });
