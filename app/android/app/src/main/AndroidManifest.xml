@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <!-- Invite notifications (Android 13+ asks the player). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Voice chat and the game's sound with the app in the background (GameAudioService). -->
+    <!-- Voice chat with the app in the background (GameAudioService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
@@ -46,8 +46,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Keeps a voice chat's mic, and the game's sound off screen, going
-             with the app in the background. Ends when the game is swiped away. -->
+        <!-- Keeps a voice chat going with the app in the background (the mic,
+             or just listening). Ends when the game is swiped away. -->
         <service
             android:name=".GameAudioService"
             android:exported="false"

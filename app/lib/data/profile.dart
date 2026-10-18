@@ -115,7 +115,6 @@ class Settings {
     this.sfxVolume = 0.9,
     this.musicVolume = 0.6,
     this.ambienceVolume = 0.4,
-    this.backgroundAudio = true,
     this.haptics = true,
     this.reducedMotion = false,
     this.videoChat = false,
@@ -132,7 +131,6 @@ class Settings {
     sfxVolume: (json['sfx'] as num?)?.toDouble() ?? 0.9,
     musicVolume: (json['music'] as num?)?.toDouble() ?? 0.6,
     ambienceVolume: (json['ambience'] as num?)?.toDouble() ?? 0.4,
-    backgroundAudio: json['backgroundAudio'] as bool? ?? true,
     haptics: json['haptics'] as bool? ?? true,
     reducedMotion: json['reducedMotion'] as bool? ?? false,
     videoChat: json['videoChat'] as bool? ?? false,
@@ -149,9 +147,6 @@ class Settings {
   final double musicVolume;
   final double ambienceVolume;
 
-  /// Music, ambience and sounds carry on while the app is in the background
-  /// or the screen is off; otherwise they pause until it's back.
-  final bool backgroundAudio;
   final bool haptics;
   final bool reducedMotion;
 
@@ -182,7 +177,6 @@ class Settings {
     double? sfxVolume,
     double? musicVolume,
     double? ambienceVolume,
-    bool? backgroundAudio,
     bool? haptics,
     bool? reducedMotion,
     bool? videoChat,
@@ -197,7 +191,6 @@ class Settings {
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
     ambienceVolume: ambienceVolume ?? this.ambienceVolume,
-    backgroundAudio: backgroundAudio ?? this.backgroundAudio,
     haptics: haptics ?? this.haptics,
     reducedMotion: reducedMotion ?? this.reducedMotion,
     videoChat: videoChat ?? this.videoChat,
@@ -214,7 +207,6 @@ class Settings {
     'sfx': sfxVolume,
     'music': musicVolume,
     'ambience': ambienceVolume,
-    'backgroundAudio': backgroundAudio,
     'haptics': haptics,
     'reducedMotion': reducedMotion,
     'videoChat': videoChat,

@@ -144,9 +144,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       });
       return;
     }
-    // Round music while racing or forging together; hall music otherwise.
-    final phase = _session?.phase;
-    ref.read(sfxProvider).music(phase == 'countdown' || phase == 'round' ? 'music_round' : 'music_hall');
+    // No music in rooms: friends talk over voice chat, and the forge's
+    // ambience and sounds carry the game. The hall music is back on leaving.
+    ref.read(sfxProvider).music(null);
     // Video joins once the room has seated us.
     if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
       _videoAutoTried = true;

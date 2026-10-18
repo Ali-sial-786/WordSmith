@@ -28,15 +28,6 @@ class MainActivity : FlutterActivity() {
     /** A room's voice chat, as the Dart side reports it. */
     private var voiceChat = VoiceChat.NONE
 
-    /** The game's music and ambience carry on off screen (the player's setting). */
-    private var keepPlaying = false
-
-    /** Off screen, another app took over the audio: quiet until the game is back. */
-    private var yielded = false
-
-    /** This activity's handler for GameAudioService's audio interruptions. */
-    private var interruptions: ((Boolean, Boolean) -> Unit)? = null
-
     private enum class VoiceChat { NONE, LISTENING, TALKING }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,34 +88,13 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
-        val audio = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wordsmith/audio")
-        audio.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "keepPlaying" -> {
-                    keepPlaying = call.arguments == true
-                    syncService()
-                    result.success(null)
-                }
-                else -> result.notImplemented()
-            }
-        }
         val update = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wordsmith/update")
         update.setMethodCallHandler(AppUpdater(this, update)::handle)
-        val onInterruption = { interrupted: Boolean, forGood: Boolean ->
-            if (forGood) {
-                yielded = true
-                syncService()
-            }
-            audio.invokeMethod("interrupted", interrupted)
-        }
-        interruptions = onInterruption
-        GameAudioService.onInterruption = onInterruption
     }
 
     override fun onStart() {
         super.onStart()
         visible = true
-        yielded = false
         syncService()
     }
 
@@ -136,11 +106,10 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Runs GameAudioService for whatever needs it: a voice chat with the mic
-     * on, and off screen a muted voice chat or the game's own sound. Android
-     * lets it start only on screen or just after leaving it, and keeps the
-     * mic only for one started on screen, so a call that goes live off
-     * screen gets its mic when the game is back.
+     * Runs GameAudioService for a voice chat: with the mic on, or off screen
+     * with it muted. Android lets it start only on screen or just after
+     * leaving it, and keeps the mic only for one started on screen, so a call
+     * that goes live off screen gets its mic when the game is back.
      */
     private fun syncService() {
         val mode = when {
@@ -148,7 +117,6 @@ class MainActivity : FlutterActivity() {
                 GameAudioService.VOICE
             visible -> GameAudioService.NONE
             voiceChat != VoiceChat.NONE -> GameAudioService.LISTEN
-            keepPlaying && !yielded -> GameAudioService.PLAY
             else -> GameAudioService.NONE
         }
         val intent = Intent(this, GameAudioService::class.java)
@@ -169,9 +137,7 @@ class MainActivity : FlutterActivity() {
         // The engine ends with this activity (Flutter destroys an engine it
         // created), and with it the game's sounds and any call.
         voiceChat = VoiceChat.NONE
-        keepPlaying = false
         stopService(Intent(this, GameAudioService::class.java))
-        if (GameAudioService.onInterruption === interruptions) GameAudioService.onInterruption = null
         openActivities--
         // Really closed: backed out of, or swiped away from recents while
         // something kept the process alive. Not a configuration change.

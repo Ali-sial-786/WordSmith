@@ -28,6 +28,7 @@ import 'net/push.dart';
 import 'ui/theme/appearance.dart';
 import 'ui/theme/palette.dart';
 import 'ui/theme/theme.dart';
+import 'ui/widgets/pinch_zoom.dart';
 
 final GoRouter appRouter = GoRouter(
   routes: [
@@ -160,8 +161,11 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       // phone's bigger or bold text settings would only misshape it.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
-        // A new colour scheme or font: build every screen afresh to pick it up.
-        child: KeyedSubtree(key: ValueKey(look), child: child!),
+        // Two fingers zoom anywhere. A new colour scheme or font builds every
+        // screen afresh to pick it up.
+        child: PinchZoom(
+          child: KeyedSubtree(key: ValueKey(look), child: child!),
+        ),
       ),
     );
   }

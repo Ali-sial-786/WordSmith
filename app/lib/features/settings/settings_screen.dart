@@ -45,14 +45,7 @@ class SettingsScreen extends ConsumerWidget {
             value: s.ambienceVolume,
             onChanged: (v) => n.update((s) => s.copyWith(ambienceVolume: v)),
           ),
-          // Browsers decide these themselves (and iPhones have no web vibration).
-          if (!kIsWeb)
-            SwitchListTile(
-              title: const Text('Keep playing in the background'),
-              subtitle: const Text('Music and sounds carry on when you switch apps or the screen turns off'),
-              value: s.backgroundAudio,
-              onChanged: (v) => n.update((s) => s.copyWith(backgroundAudio: v)),
-            ),
+          // iPhones have no web vibration.
           if (!kIsWeb)
             SwitchListTile(
               title: const Text('Vibration'),

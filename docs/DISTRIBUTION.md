@@ -184,7 +184,7 @@ Safari. Updates need nothing: the next start loads the latest version.
 ### Limits on iPhone
 
 - **Sound needs a first tap**, as on every website. After that it plays even with the ring/silent switch on (iOS 17 and later).
-- **No sound in the background.** Music and voice chat stop when Safari or the Home Screen app is closed or in the background, unlike the Android app.
+- **No sound in the background.** Voice chat stops when Safari or the Home Screen app is closed or in the background, unlike the Android app. (Music pauses off screen on both.)
 - **No push notifications** (invites) in Safari. iOS only allows web notifications for apps added to the Home Screen on **iOS 16.4 or later**, and the browser version doesn't support them yet, so invites only show while the game is open.
 - **Storage:** Safari can clear a website's saved data after about 7 days without a visit (not for Home Screen apps). Signed-in progress is safe on the server; settings and a signed-out player's progress may be lost.
 - **First start** downloads about 6 MB (the renderer, the game and its pictures) and takes a few seconds; later starts use the cache.
