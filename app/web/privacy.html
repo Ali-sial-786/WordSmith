@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy policy · Wordsmith</title>
+  <meta name="description" content="What Wordsmith collects, why, who helps run it, how long it's kept and how to delete it.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#140F0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F7EFE2" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <!-- Served at /privacy (Cloudflare drops ".html"). The same styles are in
+       terms.html and delete-account.html: change all three together. -->
+  <style>
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #140F0C;
+      --card: #1E1612;
+      --card-edge: rgba(255, 178, 63, 0.18);
+      --rule: rgba(255, 178, 63, 0.14);
+      --text: #F4E8D4;
+      --muted: #C7B59D;
+      --heading: #FFB23F;
+      --gold: #E9B949;
+      --ember: #FF6A13;
+      --link: #FFC266;
+      --link-hover: #FFE3AE;
+      --glow: rgba(255, 106, 19, 0.17);
+      --button-top: #FFC35C;
+      --button-bottom: #FF8A1F;
+      --button-text: #1C1007;
+      --display: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #F7EFE2;
+        --card: #FFFAF2;
+        --card-edge: rgba(140, 78, 18, 0.22);
+        --rule: rgba(140, 78, 18, 0.18);
+        --text: #2A1C12;
+        --muted: #5E4A3A;
+        --heading: #9A4708;
+        --gold: #85600C;
+        --ember: #C2410C;
+        --link: #A14600;
+        --link-hover: #6A2E00;
+        --glow: rgba(255, 150, 60, 0.20);
+        --button-top: #FFC35C;
+        --button-bottom: #FF9A3C;
+        --button-text: #1C1007;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 900px 380px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 400 17px/1.65 var(--body);
+      overflow-wrap: break-word;
+    }
+    @media (min-width: 640px) { body { font-size: 18px; } }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+    a:hover { color: var(--link-hover); }
+    a:focus-visible { outline: 2px solid var(--heading); outline-offset: 2px; border-radius: 4px; }
+
+    /* Header: the name and Play on top, the pages under them on a phone;
+       one row from 640px. */
+    .site-head { border-bottom: 1px solid var(--rule); }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-bottom: 12px;
+    }
+    .brand {
+      order: 1;
+      margin-right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--heading);
+    }
+    .brand img { width: 34px; height: auto; display: block; }
+    .brand span {
+      font: 700 19px/1 var(--display);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--heading);
+    }
+    .site-nav { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+    .site-nav a {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .site-nav a:hover { color: var(--text); border-color: var(--rule); }
+    .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    .play {
+      order: 2;
+      display: inline-block;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play:hover { filter: brightness(1.06); color: var(--button-text); }
+    @media (min-width: 640px) {
+      .site-nav { order: 2; flex-basis: auto; }
+      .play { order: 3; }
+    }
+
+    main { padding-top: 30px; padding-bottom: 24px; }
+
+    h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.2; color: var(--heading); }
+    h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.02em; }
+    @media (min-width: 640px) { h1 { font-size: 42px; } }
+    @media not all and (prefers-color-scheme: light) {
+      h1 {
+        background: linear-gradient(180deg, #FFF1D0 0%, #FFB23F 55%, #FF7A24 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+    h2 {
+      margin: 40px 0 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 24px;
+      scroll-margin-top: 16px;
+    }
+    h3 { margin: 26px 0 6px; font-size: 1.06em; line-height: 1.35; color: var(--gold); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3em; }
+    li { margin: 0 0 8px; }
+    li::marker { color: var(--ember); }
+    strong { color: var(--text); font-weight: 650; }
+    code {
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--card);
+      font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 0.9em; letter-spacing: 0.02em; }
+    .lead { font-size: 1.06em; }
+
+    .card {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      background: var(--card);
+    }
+    .card > :last-child { margin-bottom: 0; }
+    .card h2 { margin-top: 0; padding-top: 0; border-top: 0; font-size: 21px; }
+
+    .contents { margin: 22px 0 8px; }
+    .contents p { margin: 0 0 8px; color: var(--muted); font-size: 0.9em; }
+    .contents ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .contents li { margin: 0; }
+    .contents a {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-size: 0.86em;
+      text-decoration: none;
+    }
+
+    .who { margin: 0 0 16px; }
+    .who div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .who div:first-child { padding-top: 4px; }
+    .who dt { font-weight: 650; color: var(--gold); }
+    .who dd { margin: 4px 0 0; }
+
+    .contact { border-color: var(--heading); }
+
+    .site-foot {
+      padding-top: 18px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+    .site-foot p { margin: 0 0 8px; }
+    .site-foot a { color: var(--muted); white-space: nowrap; }
+    .site-foot a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="brand" href="/"><img src="/icons/anvil.webp" alt="" width="34" height="26"><span>Wordsmith</span></a>
+      <a class="play" href="/">Play</a>
+      <nav class="site-nav" aria-label="Wordsmith pages">
+        <a href="/privacy" aria-current="page">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/delete-account">Delete account</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Privacy policy</h1>
+    <p class="updated">Last updated 18 October 2026</p>
+
+    <p class="lead">This policy explains what Wordsmith collects, why, who helps us run the game, how long things are kept and what you can do about it. It covers the Android app and the browser version at <a href="/">play.wordsmith-forge.workers.dev</a>.</p>
+
+    <section class="card" aria-labelledby="short">
+      <h2 id="short">The short version</h2>
+      <ul>
+        <li>We collect what the game needs to work: your sign-in, your username and emblem, your progress, your friends and your Co-op and Versus results.</li>
+        <li>Text chat isn't saved. It stays in the room only while the room is open. Voice and video go live between players and are never recorded.</li>
+        <li>No ads, no analytics or tracking tools, and we never sell your data.</li>
+        <li>You can delete your account and its data at any time, in the app or at <a href="/delete-account">/delete-account</a>.</li>
+      </ul>
+    </section>
+
+    <nav class="contents" aria-label="On this page">
+      <p>On this page</p>
+      <ol>
+        <li><a href="#who-we-are">Who we are</a></li>
+        <li><a href="#what-we-collect">What we collect</a></li>
+        <li><a href="#on-your-phone">On your phone only</a></li>
+        <li><a href="#who-sees-it">What others see</a></li>
+        <li><a href="#services">Services we use</a></li>
+        <li><a href="#no-ads">No ads or tracking</a></li>
+        <li><a href="#how-long">How long we keep it</a></li>
+        <li><a href="#choices">Your choices</a></li>
+        <li><a href="#children">Children</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#changes">Changes</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="who-we-are">Who we are</h2>
+    <p>Wordsmith is a free, independent word game with a blacksmithing theme. In this policy, “we”, “us” and “the developer” mean the developer of Wordsmith. You can reach us using the details under <a href="#contact">Contact</a>.</p>
+
+    <h2 id="what-we-collect">What we collect and why</h2>
+
+    <h3>Your sign-in</h3>
+    <p>You sign in with Google, or with an email address and password, through <strong>Firebase Authentication</strong>, a Google service. Firebase keeps your email address and looks after your password: it goes straight from the game to Firebase, and we never see it. With Google sign-in, Google also shares your account's basic profile (such as your name and picture) with Firebase; Wordsmith doesn't use them.</p>
+    <p>Whenever the game asks our server about your account, it sends a sign-in token from Firebase that proves who you are. Our server checks it and knows you by a random account ID. Our game database doesn't store your email address.</p>
+    <p><em>Why:</em> so you can sign in on any phone or browser and keep your progress.</p>
+
+    <h3>Your username and emblem</h3>
+    <p>The username you choose and the emblem you pick from the game's set. Usernames must be unique and are checked for offensive words. We also note when you last changed your username.</p>
+    <p><em>Why:</em> so other players know who they're playing with.</p>
+
+    <h3>Your progress</h3>
+    <p>Your level and XP (with a record of each XP award), your hints, your Scrap Bin, your stats (such as words forged and your longest word), your campaign and Master Forge progress, the Daily Commission days you've completed, your Daily Stoke, Work Orders and Weekly Trials, your Masterwork blueprint pieces, and your Crucible runs (puzzles cleared, words found and saves, and your best run).</p>
+    <p>When you finish a puzzle, the game sends the words you found, the hints you used and how long it took, so the server can check the result and award XP. If you played before signing in, those results carry a random ID the game made on that phone, which we remember (up to 5 per account).</p>
+    <p><em>Why:</em> your progress lives on our server so it's safe if you change phones, and so XP and hints can't be faked.</p>
+
+    <h3>Friends</h3>
+    <p>Your friends and friend requests, the gifts you send and receive, and any nicknames you give your friends. Only you see the nicknames you set: the game shows them to you instead of your friends' usernames, including in notifications you get.</p>
+    <p><em>Why:</em> to run the friends list, invites, gifts and the friends leaderboard.</p>
+
+    <h3>Co-op and Versus</h3>
+    <ul>
+      <li><strong>Match results:</strong> for each Co-op round and Versus series, who played, the points, words found, longest word, placing, rounds won and XP for each player, and the puzzle and difficulty.</li>
+      <li><strong>Puzzles you've seen:</strong> which multiplayer and Daily Commission puzzles you've had, and when, so rooms can avoid giving you one you've had in the last 60 days.</li>
+      <li><strong>While a room is open,</strong> the server holds what the game needs: the players' usernames, emblems and levels, the scores and the latest chat. This is wiped when the room closes (30 minutes after its last activity, or 2 minutes after everyone has left).</li>
+    </ul>
+
+    <h3>Text chat</h3>
+    <p>Lines you write in a room go to everyone in that room. Our server tidies them and stars out swear words. The room keeps only its latest 50 lines, so players who join or reconnect can catch up, and they're gone when the room closes. Chat is never written to our database.</p>
+    <p>The one exception: when a player reports someone, up to 20 of that person's chat lines, as the reporter saw them, are sent with the report.</p>
+
+    <h3>Voice and video</h3>
+    <p>Your voice, and your camera if you turn it on, go live to the other players in the room through <strong>LiveKit Cloud</strong>. They never pass through our own servers, and they're never recorded. LiveKit is given your account ID and username so others can see who's talking. Voice chat is on unless you turn it off in Settings: it starts when you join a room, with your microphone on or off as you last left it. Your camera stays off until you turn it on in the room.</p>
+
+    <h3>Notifications (Android)</h3>
+    <p>If you allow notifications, <strong>Firebase Cloud Messaging</strong> gives your phone a token, which we keep (for up to 5 phones per account) to send room invites, gifts from friends and the daily reminder. If you turn the reminder on, we also keep the hour you chose. Notifications include the friend's name and, for invites, the room code. The token is removed when you sign out or turn notifications off. The browser version doesn't use notifications.</p>
+
+    <h3>Blocks and reports</h3>
+    <p>The players you've blocked, and when. If you report someone, we keep who made the report, who it's about, their username at the time, the reason, any details you add (up to 500 characters), the room code and up to 20 of their chat lines. The player you block or report isn't told.</p>
+    <p><em>Why:</em> to keep chat friendly and act on players who break the <a href="/terms">rules</a>.</p>
+
+    <h3>Crash reports</h3>
+    <p>Nothing is sent automatically. On Android, if the game closed unexpectedly last time, it tells you and offers to copy a crash report: the game's version, your phone's make and model and Android version, when and how the game closed, the graphics mode, memory use, the last few errors the game noted and a technical trace. It's plain text that stays on your phone unless you paste it into a message yourself.</p>
+
+    <h3>Word meanings</h3>
+    <p>Most meanings come from a dictionary built into the game. For rarer words, the game asks our server, which looks the word up at the <strong>Free Dictionary API</strong> (dictionaryapi.dev) and then <strong>Wiktionary</strong>. Only the word is sent: the request doesn't carry your account, and the dictionaries hear from our server, not from your phone. Hearing a word said aloud uses the text-to-speech built into your phone or browser.</p>
+
+    <h3>Technical data</h3>
+    <p>Like any online service, our servers at <strong>Cloudflare</strong> receive your IP address and basic details of each request, such as the address asked for, the time, and your app or browser. Cloudflare uses these to deliver and protect the service. Our server's logs, which can include these details and error messages, are kept for a few days (at most 7).</p>
+
+    <h2 id="on-your-phone">What stays only on your phone</h2>
+    <p>These are kept on your phone (or, in the browser version, in your browser's storage for the game's site) and never sent to us:</p>
+    <ul>
+      <li>Your settings: sound, music and ambience volumes, vibration, colour scheme and font, left-handed layout, reduce motion, and the voice chat, text chat and notification switches.</li>
+      <li>Your puzzle history: the latest 150 puzzles you've finished on that phone, with their boards (in Co-op, who forged which word).</li>
+      <li>Which tips you've seen, the players you've muted in a room (for that room only) and the crash information described above.</li>
+    </ul>
+    <p>The phone also keeps a copy of your profile, the puzzle you're in the middle of and results waiting to be sent, so you can play offline; these go to our server as described above. Firebase keeps you signed in on that phone or browser.</p>
+
+    <h2 id="who-sees-it">What other players see</h2>
+    <ul>
+      <li><strong>Anyone signed in</strong> who knows your username can look up your public profile: username, emblem, level and rank, campaign progress and stats.</li>
+      <li><strong>Your friends</strong> also see whether you're online, playing a puzzle or in a room, the rooms you have open, and where you are on the friends leaderboard and in the Weekly Trials.</li>
+      <li><strong>Players in a room with you</strong> see your username, emblem and level, your scores, your chat, emotes and voice, and your video if you turn your camera on.</li>
+    </ul>
+
+    <h2 id="services">Services that handle data for us</h2>
+    <dl class="who">
+      <div>
+        <dt>Google Firebase (Authentication and Cloud Messaging)</dt>
+        <dd>Sign-in, password resets and Android notifications. <a href="https://firebase.google.com/support/privacy">Firebase privacy</a></dd>
+      </div>
+      <div>
+        <dt>Cloudflare (Workers, Durable Objects and D1)</dt>
+        <dd>Runs our server, the game rooms and our database, and hosts the browser version and these pages. <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy</a></dd>
+      </div>
+      <div>
+        <dt>LiveKit Cloud</dt>
+        <dd>Carries voice and video between players in a room, live. <a href="https://livekit.com/legal/privacy-policy">LiveKit privacy</a></dd>
+      </div>
+      <div>
+        <dt>Free Dictionary API and Wiktionary</dt>
+        <dd>Meanings of rarer words. They get only the word, from our server. <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy">Wikimedia privacy</a></dd>
+      </div>
+      <div>
+        <dt>GitHub</dt>
+        <dd>Where the Android app's updates are published: when you tap <em>Update now</em>, the new version downloads from GitHub, which sees your IP address like any download. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy</a></dd>
+      </div>
+    </dl>
+    <p>In the browser version, your browser also loads Firebase's sign-in code and some fonts (for example, for emoji) from Google's servers. These services work around the world, so your information may be handled outside your country, for example in the United States.</p>
+
+    <h2 id="no-ads">No ads, no tracking, no selling</h2>
+    <p>Wordsmith has no ads and no in-game purchases. It contains no analytics, advertising or tracking tools, and doesn't use cookies for advertising or tracking. We never sell your data or share it with advertisers or data brokers. Apart from what <a href="#who-sees-it">other players see</a>, we only share it with the services above, so they can run the game for us, or when the law requires it.</p>
+
+    <h2 id="how-long">How long we keep it</h2>
+    <ul>
+      <li><strong>Your account and everything tied to it:</strong> until you delete your account. Deleting it removes it straight away; <a href="/delete-account">see exactly what's deleted</a>.</li>
+      <li><strong>After you delete:</strong> Co-op and Versus results that other players took part in are kept so their history still adds up, with your account removed from them, so nothing in them identifies you (they show “Deleted smith”). Our database host keeps automatic recovery copies for up to 30 days, after which deleted data is gone from those too.</li>
+      <li><strong>Chat:</strong> until the room closes.</li>
+      <li><strong>Voice and video:</strong> never kept.</li>
+      <li><strong>Reports and blocks:</strong> deleted when either player's account is deleted. Reports may be deleted sooner once they've been dealt with.</li>
+      <li><strong>Notification tokens:</strong> until you sign out, turn notifications off or delete your account, or until Firebase tells us a token no longer works.</li>
+      <li><strong>Server logs:</strong> a few days (at most 7).</li>
+    </ul>
+
+    <h2 id="choices">Your choices</h2>
+    <ul>
+      <li>Turn off voice chat, text chat, notifications and the daily reminder in <strong>Settings</strong>. In a room you can also turn your microphone and camera off.</li>
+      <li>Mute a player for the rest of a room by holding down one of their messages. Block or report players from room chat, the lobby or your friends list, and unblock them in <strong>Settings › Blocked smiths</strong>.</li>
+      <li>Change your username from your profile, and remove friends or nicknames at any time.</li>
+      <li>Delete your account at any time: in the app under <strong>Settings › Delete account</strong>, or at <a href="/delete-account">/delete-account</a>.</li>
+    </ul>
+    <p>Depending on where you live, you may have the right to ask for a copy of your data, to have it corrected or deleted, or to object to how it's used. You can do most of this in the game. For anything else, <a href="#contact">contact us</a>.</p>
+
+    <h2 id="children">Children</h2>
+    <p>Wordsmith isn't designed for children under 13, and we don't knowingly collect their data. If you think a child under 13 has an account, you can delete it at <a href="/delete-account">/delete-account</a>, or <a href="#contact">contact us</a> and we'll delete it.</p>
+
+    <h2 id="security">Security</h2>
+    <p>Every connection to our servers is encrypted (HTTPS and secure WebSockets), and every request that touches your account is checked against your sign-in. Voice and video are encrypted on their way to and from LiveKit. Passwords are handled by Firebase, never by us. No system is perfectly secure, so please use a strong password that you don't use anywhere else.</p>
+
+    <h2 id="changes">Changes to this policy</h2>
+    <p>If we change this policy, we'll update it here and change the date at the top.</p>
+
+    <!-- CONTACT: the one place on this page with contact details. Swap it
+         for an email address when there is one (and in terms.html and
+         delete-account.html too). -->
+    <section id="contact" class="card contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Contact</h2>
+      <p>Questions or requests about your privacy or your data: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>.</p>
+      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+    </section>
+  </main>
+
+  <footer class="wrap site-foot">
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p>Wordsmith is a free, independent word game.</p>
+  </footer>
+</body>
+</html>

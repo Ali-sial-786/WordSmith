@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Delete your account · Wordsmith</title>
+  <meta name="description" content="How to delete your Wordsmith account, what's deleted and what's kept.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#140F0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F7EFE2" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <!-- Served at /delete-account (Cloudflare drops ".html"), for Google Play's
+       account-deletion link. The same styles are in privacy.html and
+       terms.html: change all three together. -->
+  <style>
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html) */
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #140F0C;
+      --card: #1E1612;
+      --card-edge: rgba(255, 178, 63, 0.18);
+      --rule: rgba(255, 178, 63, 0.14);
+      --text: #F4E8D4;
+      --muted: #C7B59D;
+      --heading: #FFB23F;
+      --gold: #E9B949;
+      --ember: #FF6A13;
+      --link: #FFC266;
+      --link-hover: #FFE3AE;
+      --glow: rgba(255, 106, 19, 0.17);
+      --button-top: #FFC35C;
+      --button-bottom: #FF8A1F;
+      --button-text: #1C1007;
+      --display: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #F7EFE2;
+        --card: #FFFAF2;
+        --card-edge: rgba(140, 78, 18, 0.22);
+        --rule: rgba(140, 78, 18, 0.18);
+        --text: #2A1C12;
+        --muted: #5E4A3A;
+        --heading: #9A4708;
+        --gold: #85600C;
+        --ember: #C2410C;
+        --link: #A14600;
+        --link-hover: #6A2E00;
+        --glow: rgba(255, 150, 60, 0.20);
+        --button-top: #FFC35C;
+        --button-bottom: #FF9A3C;
+        --button-text: #1C1007;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 900px 380px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 400 17px/1.65 var(--body);
+      overflow-wrap: break-word;
+    }
+    @media (min-width: 640px) { body { font-size: 18px; } }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+    a:hover { color: var(--link-hover); }
+    a:focus-visible { outline: 2px solid var(--heading); outline-offset: 2px; border-radius: 4px; }
+
+    /* Header: the name and Play on top, the pages under them on a phone;
+       one row from 640px. */
+    .site-head { border-bottom: 1px solid var(--rule); }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-bottom: 12px;
+    }
+    .brand {
+      order: 1;
+      margin-right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--heading);
+    }
+    .brand img { width: 34px; height: auto; display: block; }
+    .brand span {
+      font: 700 19px/1 var(--display);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--heading);
+    }
+    .site-nav { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+    .site-nav a {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .site-nav a:hover { color: var(--text); border-color: var(--rule); }
+    .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    .play {
+      order: 2;
+      display: inline-block;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play:hover { filter: brightness(1.06); color: var(--button-text); }
+    @media (min-width: 640px) {
+      .site-nav { order: 2; flex-basis: auto; }
+      .play { order: 3; }
+    }
+
+    main { padding-top: 30px; padding-bottom: 24px; }
+
+    h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.2; color: var(--heading); }
+    h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.02em; }
+    @media (min-width: 640px) { h1 { font-size: 42px; } }
+    @media not all and (prefers-color-scheme: light) {
+      h1 {
+        background: linear-gradient(180deg, #FFF1D0 0%, #FFB23F 55%, #FF7A24 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+    h2 {
+      margin: 40px 0 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 24px;
+      scroll-margin-top: 16px;
+    }
+    h3 { margin: 26px 0 6px; font-size: 1.06em; line-height: 1.35; color: var(--gold); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3em; }
+    li { margin: 0 0 8px; }
+    li::marker { color: var(--ember); }
+    strong { color: var(--text); font-weight: 650; }
+    code {
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--card);
+      font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 0.9em; letter-spacing: 0.02em; }
+    .lead { font-size: 1.06em; }
+
+    .card {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      background: var(--card);
+    }
+    .card > :last-child { margin-bottom: 0; }
+    .card h2 { margin-top: 0; padding-top: 0; border-top: 0; font-size: 21px; }
+
+    .contents { margin: 22px 0 8px; }
+    .contents p { margin: 0 0 8px; color: var(--muted); font-size: 0.9em; }
+    .contents ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .contents li { margin: 0; }
+    .contents a {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-size: 0.86em;
+      text-decoration: none;
+    }
+
+    .who { margin: 0 0 16px; }
+    .who div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .who div:first-child { padding-top: 4px; }
+    .who dt { font-weight: 650; color: var(--gold); }
+    .who dd { margin: 4px 0 0; }
+
+    .contact { border-color: var(--heading); }
+
+    .site-foot {
+      padding-top: 18px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+    .site-foot p { margin: 0 0 8px; }
+    .site-foot a { color: var(--muted); white-space: nowrap; }
+    .site-foot a:hover { color: var(--text); }
+    /* END shared styles */
+    .app-id { color: var(--muted); font-size: 0.92em; }
+    .start { text-align: center; padding: 22px 16px; }
+    .start p { color: var(--muted); font-size: 0.92em; }
+    .button {
+      display: block;
+      max-width: 420px;
+      margin: 0 auto 12px;
+      padding: 15px 18px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      box-shadow: 0 6px 22px rgba(255, 106, 19, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      color: var(--button-text);
+      font: 700 18px/1.3 var(--body);
+      text-align: center;
+      text-decoration: none;
+      overflow-wrap: normal;
+    }
+    .button:hover { color: var(--button-text); filter: brightness(1.06); }
+    .button:focus-visible { outline: 3px solid var(--heading); outline-offset: 3px; }
+
+    .steps { margin: 0 0 18px; padding: 0; list-style: none; counter-reset: step; }
+    .steps li {
+      position: relative;
+      margin: 0 0 12px;
+      padding: 2px 0 0 48px;
+      min-height: 34px;
+      counter-increment: step;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font: 700 17px/34px var(--display);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="brand" href="/"><img src="/icons/anvil.webp" alt="" width="34" height="26"><span>Wordsmith</span></a>
+      <a class="play" href="/">Play</a>
+      <nav class="site-nav" aria-label="Wordsmith pages">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/delete-account" aria-current="page">Delete account</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Delete your Wordsmith account</h1>
+    <p class="updated">Last updated 18 October 2026</p>
+
+    <!-- #developer: use the developer name exactly as it appears on the
+         Google Play listing. -->
+    <p class="lead">You can delete your <strong>Wordsmith</strong> account and its data at any time, even if you no longer have the app. It takes a minute, and it can't be undone.</p>
+    <p class="app-id">Wordsmith is a free word game by <span id="developer">an independent developer</span>: the Android app <code>com.wordsmithforge.game</code> and the browser version.</p>
+
+    <section class="card start" aria-label="Start here">
+      <a class="button" href="/#/delete-account">Sign in and delete my account</a>
+      <p>Opens the account deletion screen in the browser version of Wordsmith.</p>
+    </section>
+
+    <h2 id="steps">How to delete it</h2>
+    <ol class="steps">
+      <li>Tap <strong>Sign in and delete my account</strong> above.</li>
+      <li>Sign in with the same Google account, or the same email address and password, that you use in the game.</li>
+      <li>Check what will be deleted, then confirm. Your account is deleted straight away.</li>
+    </ol>
+    <p><strong>In the app:</strong> open <strong>Settings › Delete account</strong>, then confirm with Google or your password.</p>
+
+    <h3>Can't sign in?</h3>
+    <ul>
+      <li><strong>Forgot your password?</strong> Tap <em>Forgot password?</em> on the sign-in screen and you'll get an email with a link to reset it. Then sign in and delete your account.</li>
+      <li><strong>Can't get into your Google account or email at all?</strong> <a href="#contact">Contact us</a> with your Wordsmith username.</li>
+    </ul>
+
+    <h2 id="deleted">What's deleted straight away</h2>
+    <ul>
+      <li>Your sign-in account, with your email address and the link to your Google account</li>
+      <li>Your username and emblem</li>
+      <li>Your level, XP and the record of XP you earned, your hints, Scrap Bin and stats</li>
+      <li>Your campaign and Master Forge progress, and the record of puzzles you finished</li>
+      <li>Your Daily Commission days and streaks, Daily Stoke, Work Orders, Weekly Trials and Masterwork pieces</li>
+      <li>Your Crucible runs and best run</li>
+      <li>Your friends and friend requests, the nicknames you gave friends and any they gave you, and gifts you sent or received (you disappear from your friends' lists)</li>
+      <li>The list of puzzles you've seen</li>
+      <li>Your notification tokens and daily reminder</li>
+      <li>The players you blocked and anyone's blocks of you, the reports you made and any reports about you</li>
+      <li>The random IDs from puzzles you played before signing in</li>
+    </ul>
+    <p>If you sign in again later, you start again from scratch with a new, empty account.</p>
+
+    <h2 id="kept">What's kept, and for how long</h2>
+    <ul>
+      <li><strong>Co-op and Versus results that other players took part in</strong> (scores, word counts and longest words, placings and XP) are kept as part of their history. Your account is removed from them, so nothing in them identifies you: they show “Deleted smith”.</li>
+      <li><strong>Automatic recovery copies</strong> of our database are kept by our host, Cloudflare, for up to 30 days. After that, your deleted data is gone from them too.</li>
+      <li><strong>Server logs</strong> (such as IP addresses and the addresses asked for) are kept for a few days, at most 7.</li>
+      <li><strong>Chat lines</strong> you wrote in a room that's still open stay there until the room closes. Chat is never saved anywhere else.</li>
+    </ul>
+
+    <h2 id="phone">Data on your phone</h2>
+    <p>Some things, like your settings and puzzle history, are kept only on your phone. When you delete your account in the app, it clears your progress and puzzle history from that phone and signs you out. Settings such as sound and colours stay until you uninstall.</p>
+    <p>On any other phone where you've played, uninstalling Wordsmith removes what it kept there. In a browser, clear the site's data for play.wordsmith-forge.workers.dev.</p>
+    <p>More about what we collect is in the <a href="/privacy">privacy policy</a>.</p>
+
+    <!-- CONTACT: the one place on this page with contact details. Swap it
+         for an email address when there is one (and in privacy.html and
+         terms.html too). -->
+    <section id="contact" class="card contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Contact</h2>
+      <p>Need help deleting your account: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>.</p>
+      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+    </section>
+  </main>
+
+  <footer class="wrap site-foot">
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p>Wordsmith is a free, independent word game.</p>
+  </footer>
+</body>
+</html>
