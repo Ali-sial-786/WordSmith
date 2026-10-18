@@ -11,6 +11,8 @@
  *
  * Answers are kept in the Workers Cache API (each data centre's own cache):
  * definitions for {@link HIT_TTL_SECONDS}, misses for {@link MISS_TTL_SECONDS}.
+ * Each isolate also remembers its latest {@link MEMO_SIZE} answers, since the
+ * Cache API does nothing on a workers.dev address.
  */
 
 import { define, DictionaryUnavailable, normalizeWord, type Definition } from "../dictionary/define";
@@ -28,14 +30,36 @@ interface Cached {
   readonly definition: Definition | null;
 }
 
+export const MEMO_SIZE = 1000;
+
+/** This isolate's answers, oldest first. */
+const memo = new Map<string, Cached>();
+
+function remember(word: string, entry: Cached): void {
+  memo.delete(word);
+  memo.set(word, entry);
+  if (memo.size > MEMO_SIZE) memo.delete(memo.keys().next().value!);
+}
+
+/** Tests start each case with nothing remembered. */
+export function forgetDefinitions(): void {
+  memo.clear();
+}
+
 export async function getDefine(c: RequestContext): Promise<Response> {
   const word = normalizeWord(c.params.word ?? "");
   if (word === null) throw new ApiError(400, "invalid_word", "Expected 2–15 letters A–Z");
 
+  const known = memo.get(word);
+  if (known !== undefined) return answer(known);
   const cache = caches.default;
   const key = new Request(new URL(`/v1/define/${word}?v=${CACHE_VERSION}`, c.request.url));
   const hit = await cache.match(key);
-  if (hit !== undefined) return answer((await hit.json()) as Cached);
+  if (hit !== undefined) {
+    const cached = (await hit.json()) as Cached;
+    remember(word, cached);
+    return answer(cached);
+  }
 
   let definition: Definition | null;
   try {
@@ -46,6 +70,7 @@ export async function getDefine(c: RequestContext): Promise<Response> {
     throw new ApiError(502, "dictionary_unavailable");
   }
   const entry: Cached = { definition };
+  remember(word, entry);
   const ttl = definition === null ? MISS_TTL_SECONDS : HIT_TTL_SECONDS;
   c.ctx.waitUntil(
     cache.put(key, json(entry, 200, { "Cache-Control": `public, max-age=${ttl}` })).catch((err: unknown) => {

@@ -8,7 +8,7 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it } from "vitest";
 import { DICTIONARY_API_URL, setDictionaryFetcher, USER_AGENT, WIKTIONARY_URL } from "../../src/dictionary/define";
-import { HIT_TTL_SECONDS, MISS_TTL_SECONDS } from "../../src/routes/define";
+import { forgetDefinitions, HIT_TTL_SECONDS, MISS_TTL_SECONDS } from "../../src/routes/define";
 import worker from "../../src/index";
 import { BASE, body } from "./helpers";
 
@@ -43,7 +43,10 @@ const wiktionary = (html: string, partOfSpeech = "Proper noun") => ({
   en: [{ partOfSpeech, language: "English", definitions: [{ definition: html }] }],
 });
 
-afterEach(() => setDictionaryFetcher(null));
+afterEach(() => {
+  setDictionaryFetcher(null);
+  forgetDefinitions();
+});
 
 describe("GET /v1/define/:word", () => {
   it("needs no sign-in and answers from the Free Dictionary API, lowercased", async () => {
