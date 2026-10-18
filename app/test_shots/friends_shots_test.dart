@@ -23,10 +23,7 @@ import 'package:wordsmith/net/room_client.dart';
 import '../test/fixtures/fake_backend.dart';
 import '../test/fixtures/fake_socket.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+import 'shot_fonts.dart';
 
 FakeServer _server() {
   final server = FakeServer()
@@ -129,14 +126,7 @@ Future<void> _close(WidgetTester tester) async {
 }
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   testWidgets('friends with nicknames', (tester) async {
     await _pump(tester, _server(), '/friends');

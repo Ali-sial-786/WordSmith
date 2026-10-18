@@ -25,12 +25,9 @@ import 'package:wordsmith/ui/theme/palette.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
 import 'package:wordsmith/ui/widgets/forge_background.dart';
 
-const _names = ['Ada', 'sam', 'Kit', 'Bo'];
+import 'shot_fonts.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+const _names = ['Ada', 'sam', 'Kit', 'Bo'];
 
 RoomLobby _lobby(String phase) => RoomLobby.fromJson({
   'code': 'K7Q2AB',
@@ -94,16 +91,7 @@ Future<void> _frame(WidgetTester tester, Store store, Widget child) async {
 }
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    await _font('VollkornSC', rootBundle.load('assets/fonts/VollkornSC-Bold.ttf'));
-    await _font('Arvo', rootBundle.load('assets/fonts/Arvo-Bold.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   testWidgets('crucible', (tester) async {
     final store = await _store();

@@ -24,10 +24,7 @@ import 'package:wordsmith/ui/theme/theme.dart';
 import 'package:wordsmith/ui/widgets/forge_background.dart';
 import 'package:wordsmith/ui/widgets/meaning_sheet.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+import 'shot_fonts.dart';
 
 /// An offline lexicon that has none of the shots' words.
 class _EmptyLexicon extends Lexicon {
@@ -176,14 +173,7 @@ CoopSession _coopResults() {
 }
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   testWidgets('meaning looked up online', (tester) async {
     final gate = Completer<void>()..complete();

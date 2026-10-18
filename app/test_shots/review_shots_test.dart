@@ -18,10 +18,7 @@ import 'package:wordsmith/ui/widgets/forge_background.dart';
 
 import '../test/fixtures/vs_review.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+import 'shot_fonts.dart';
 
 /// The round's page scrolled down by [scroll].
 Future<void> _shoot(WidgetTester tester, String name, Widget child, {double scroll = 0}) async {
@@ -70,14 +67,7 @@ Widget _review(SeriesEnd series, int round, {int players = 4}) {
 }
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   for (final (name, scroll) in [('vs_review_classic', 0.0), ('vs_review_classic_bins', 900.0)]) {
     testWidgets(name.replaceAll('_', ' '), (tester) async {

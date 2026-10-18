@@ -116,8 +116,10 @@ void main() {
     expect(_familyOf(tester, 'Settings'), 'AtkinsonHyperlegibleNext');
     expect(tester.getTopLeft(find.byType(FontPicker)).dy, closeTo(before, 1));
     final selected = find.byWidgetPredicate((w) => w is Semantics && w.properties.selected == true);
-    expect(find.ancestor(of: find.text('Clear'), matching: selected), findsOneWidget);
-    expect(find.ancestor(of: find.text('Forge'), matching: selected), findsNothing);
+    // (The colour picker has a Forge too.)
+    Finder font(String name) => find.descendant(of: find.byType(FontPicker), matching: find.text(name));
+    expect(find.ancestor(of: font('Clear'), matching: selected), findsOneWidget);
+    expect(find.ancestor(of: font('Forge'), matching: selected), findsNothing);
   });
 
   testWidgets('a saved font is used from the start', (tester) async {

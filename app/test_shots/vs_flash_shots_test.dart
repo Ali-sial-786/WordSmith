@@ -22,6 +22,8 @@ import 'package:wordsmith/ui/widgets/forge_background.dart';
 import 'package:wordsmith/ui/widgets/forge_frame.dart';
 import 'package:wordsmith/ui/widgets/game_icon.dart';
 
+import 'shot_fonts.dart';
+
 const _names = ['Ada', 'sam', 'Kit', 'Bo', 'Wren'];
 
 RoomLobby _lobby(String phase, int players) => RoomLobby.fromJson({
@@ -151,11 +153,6 @@ VsSession _clash({
   return s;
 }
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
-
 Widget _app(Store store, Widget child) => ProviderScope(
   overrides: [storeProvider.overrideWithValue(store)],
   child: MaterialApp(
@@ -228,14 +225,7 @@ Future<void> _frames(
 Widget _standings(VsSession s) => VsStandingsView(session: s, cues: MoldCues(), onLeave: () {});
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   // I fill the mold first: the hammer comes down, sparks, then the banner.
   testWidgets('vs flash win', (tester) async {

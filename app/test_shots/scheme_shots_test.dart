@@ -36,10 +36,7 @@ import 'package:wordsmith/ui/widgets/meaning_sheet.dart';
 import '../test/fixtures/fake_backend.dart';
 import '../test/fixtures/puzzles.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+import 'shot_fonts.dart';
 
 String _settings(PaletteScheme scheme) =>
     jsonEncode({'reducedMotion': true, 'haptics': false, 'colorScheme': scheme.id});
@@ -345,8 +342,11 @@ final _screens = <String, Future<void> Function(WidgetTester, PaletteScheme)>{
     await t.scrollUntilVisible(find.text('Delete account'), 300);
     await t.tap(find.text('Delete account'));
     await _wait(t);
-    await t.enterText(find.byType(TextField), 'hunter2');
-    await _wait(t);
+    // A password account confirms with its password (Google ones don't).
+    if (find.byType(TextField).evaluate().isNotEmpty) {
+      await t.enterText(find.byType(TextField).last, 'hunter2');
+      await _wait(t);
+    }
   },
   'vs_lobby': (t, s) => _room(t, s, () => LobbyView(session: _vs('lobby'), onLeave: () {})),
   'vs_standings': (t, s) =>
@@ -357,14 +357,7 @@ final _screens = <String, Future<void> Function(WidgetTester, PaletteScheme)>{
 };
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
   tearDown(() => Palette.scheme = PaletteScheme.forge);
 
   // The Hall after picking a scheme in Settings and going back: should match scheme_<id>_hall.

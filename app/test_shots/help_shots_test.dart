@@ -20,10 +20,7 @@ import 'package:wordsmith/game/providers.dart';
 import '../test/fixtures/fake_backend.dart';
 import '../test/fixtures/puzzles.dart';
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
+import 'shot_fonts.dart';
 
 /// The Hall of a signed-in smith partway through Bronze, on a [size] phone.
 Future<void> _pumpHall(WidgetTester tester, Size size) async {
@@ -75,14 +72,7 @@ Future<void> _wait(WidgetTester tester) async {
 Future<void> _shot(String name) => expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/$name.png'));
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   for (final (tag, size) in [('412', const Size(412, 892)), ('360', const Size(360, 740))]) {
     testWidgets('hall with the help button at $tag', (tester) async {

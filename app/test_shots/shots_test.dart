@@ -36,6 +36,8 @@ import '../test/fixtures/fake_backend.dart';
 import '../test/fixtures/fake_video.dart';
 import '../test/fixtures/puzzles.dart';
 
+import 'shot_fonts.dart';
+
 const _names = ['Ada', 'sam', 'Kit', 'Bo', 'Wren'];
 
 RoomLobby _lobby(String phase, {int players = 4}) => RoomLobby.fromJson({
@@ -369,11 +371,6 @@ CoopSession _coopRound({Map<String, int> scores = const {'u1': 50, 'u2': 30, 'u3
 /// A small phone, for the tightest video layouts.
 const _small = Size(360, 740);
 
-Future<void> _font(String family, Future<ByteData> data) async {
-  final loader = FontLoader(family)..addFont(data);
-  await loader.load();
-}
-
 Future<void> _shoot(
   WidgetTester tester,
   String name,
@@ -419,16 +416,7 @@ Future<void> _shoot(
 }
 
 void main() {
-  setUpAll(() async {
-    await _font('Cinzel', rootBundle.load('assets/fonts/Cinzel-Variable.ttf'));
-    await _font('RobotoSlab', rootBundle.load('assets/fonts/RobotoSlab-Variable.ttf'));
-    await _font('NunitoSans', rootBundle.load('assets/fonts/NunitoSans-Variable.ttf'));
-    await _font('VollkornSC', rootBundle.load('assets/fonts/VollkornSC-Bold.ttf'));
-    await _font('Arvo', rootBundle.load('assets/fonts/Arvo-Bold.ttf'));
-    final icons = File('/opt/sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
-        .readAsBytesSync();
-    await _font('MaterialIcons', Future.value(ByteData.view(icons.buffer)));
-  });
+  setUpAll(loadShotFonts);
 
   testWidgets('vs lobby', (tester) async {
     await _shoot(tester, 'vs_lobby', LobbyView(session: _session('lobby'), onLeave: () {}));
