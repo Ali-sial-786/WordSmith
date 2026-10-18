@@ -315,8 +315,9 @@ export async function friendIds(db: D1Database, uid: string): Promise<string[]> 
  * Deletes everything we hold about a player (docs/TECH.md §3). Their rows in
  * past matches stay, under a random placeholder ID that no user has, so
  * those matches show {@link DELETED_NAME}; the uid is also replaced inside
- * match summaries. Returns the accepted friends they had, so the hub can
- * tell them.
+ * match summaries. Their blocks go both ways, and so does every report they
+ * made or that was made about them (shared/safety.md). Returns the accepted
+ * friends they had, so the hub can tell them.
  */
 export async function deleteAccount(db: D1Database, uid: string): Promise<{ formerFriends: string[] }> {
   const formerFriends = await friendIds(db, uid);
@@ -346,6 +347,8 @@ export async function deleteAccount(db: D1Database, uid: string): Promise<{ form
     byUser("trial_claims"),
     db.prepare("DELETE FROM survival_runs WHERE uid = ?1").bind(uid),
     db.prepare("DELETE FROM survival_best WHERE uid = ?1").bind(uid),
+    db.prepare("DELETE FROM blocks WHERE user_id = ?1 OR blocked_id = ?1").bind(uid),
+    db.prepare("DELETE FROM reports WHERE reporter_id = ?1 OR reported_id = ?1").bind(uid),
     db.prepare("DELETE FROM users WHERE id = ?1").bind(uid),
   ]);
   return { formerFriends };

@@ -21,6 +21,7 @@ import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, po
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { getDefine } from "./routes/define";
+import { deleteBlock, getBlocks, postReport, putBlock } from "./routes/safety";
 import { postSync } from "./routes/solo";
 import { postSurvivalSolo } from "./routes/survival";
 import { getHubSocket } from "./routes/ws";
@@ -72,6 +73,12 @@ const router = new Router<Handler>([
   { method: "POST", path: "/v1/friends/:id/gift", handler: authed(postFriendGift) },
   { method: "PUT", path: "/v1/friends/:id/nickname", handler: authed(putNickname) },
   { method: "GET", path: "/v1/leaderboard", handler: authed(getLeaderboard) },
+
+  // Blocking and reporting (shared/safety.md).
+  { method: "GET", path: "/v1/me/blocks", handler: authed(getBlocks) },
+  { method: "PUT", path: "/v1/me/blocks/:id", handler: authed(putBlock) },
+  { method: "DELETE", path: "/v1/me/blocks/:id", handler: authed(deleteBlock) },
+  { method: "POST", path: "/v1/reports", handler: authed(postReport) },
 
   { method: "POST", path: "/v1/rooms", handler: authed(postRoom) },
   { method: "GET", path: "/v1/rooms/:code", handler: authed(getRoom) },

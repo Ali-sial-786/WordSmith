@@ -6,8 +6,9 @@ report and block tools in the app, terms players can read (`/terms` on the
 web version), and someone looking at what's reported (docs/DISTRIBUTION.md,
 "Reports").
 
-All routes need the usual Firebase token. User ids are the server's user ids
-(as in `LOBBY` players and the friends list).
+All routes need the usual Firebase token and, like the friends routes, a
+set-up account (`403 setup_required` otherwise). User ids are the server's
+user ids (as in `LOBBY` players and the friends list).
 
 ## Blocks
 
