@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../game/providers.dart';
 import '../../game/room_session.dart';
 import '../../net/room_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/gold_field.dart';
+import '../../ui/widgets/web_links.dart';
+import '../safety/player_actions.dart';
 
 /// Quick lines under the chat box, one tap to send (handy mid-round).
 const chatPhrases = ['Good luck!', 'Nice one!', 'So close!', 'Ready when you are', 'Again?', 'gg'];
@@ -137,16 +141,19 @@ class ChatToast extends StatelessWidget {
 /// The room's chat: everything said since I joined (and the room's last 50
 /// lines from before), a box to write in and quick phrases. A long press on
 /// someone's line mutes them for this room.
-class RoomChatSheet extends StatefulWidget {
+class RoomChatSheet extends ConsumerStatefulWidget {
   const RoomChatSheet({super.key, required this.session});
 
   final RoomSession session;
 
   @override
-  State<RoomChatSheet> createState() => _RoomChatSheetState();
+  ConsumerState<RoomChatSheet> createState() => _RoomChatSheetState();
 }
 
-class _RoomChatSheetState extends State<RoomChatSheet> {
+class _RoomChatSheetState extends ConsumerState<RoomChatSheet> {
+  /// The chat rules, shown until dismissed once.
+  late bool _rules = !ref.read(storeProvider).seenTip('chat_rules');
+
   final _text = TextEditingController();
   StreamSubscription<RoomEvent>? _errors;
 
@@ -184,20 +191,22 @@ class _RoomChatSheetState extends State<RoomChatSheet> {
     _text.clear();
   }
 
-  Future<void> _askMute(ChatLine line) async {
-    final name = _s.chatName(line);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Mute $name?'),
-        content: Text("You won't see $name's messages for the rest of this room. They won't know."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Mute')),
-        ],
-      ),
+  /// Mute, block or report whoever wrote [line].
+  void _actions(ChatLine line) {
+    final player = _s.lobby?.player(line.from);
+    showPlayerActions(
+      context,
+      ref,
+      userId: line.from,
+      name: _s.chatName(line),
+      avatar: player?.avatar ?? 'avatar_01',
+      session: _s,
     );
-    if (ok == true) _s.mute(line.from);
+  }
+
+  void _dismissRules() {
+    ref.read(storeProvider).markTip('chat_rules');
+    setState(() => _rules = false);
   }
 
   @override
@@ -231,6 +240,36 @@ class _RoomChatSheetState extends State<RoomChatSheet> {
                       ),
                     ],
                   ),
+                  if (_rules)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
+                      decoration: BoxDecoration(
+                        color: Palette.forgeBlack.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Palette.gold.withValues(alpha: 0.6)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Be kind in the forge: no bullying, hate or sharing anyone's personal details. Swear "
+                            "words are starred out. Hold someone's message to mute, block or report them.",
+                            style: text.bodySmall,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => openWebPage(context, WebPage.terms),
+                                child: const Text('Chat rules'),
+                              ),
+                              TextButton(onPressed: _dismissRules, child: const Text('Got it')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   if (_s.muted.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
@@ -272,7 +311,7 @@ class _RoomChatSheetState extends State<RoomChatSheet> {
                                 text: line.text,
                                 color: Palette.legible(_s.colorOf(line.from)),
                                 mine: mine,
-                                onLongPress: mine ? null : () => _askMute(line),
+                                onLongPress: mine ? null : () => _actions(line),
                               );
                             },
                           ),

@@ -24,6 +24,7 @@ const _me = AuthUser(uid: 'uid-ali', email: 'ali@example.com');
 Future<GoRouter> _pumpApp(WidgetTester tester, FakeSocketChannel room, {bool textChat = true}) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false, 'roomChat': false, 'textChat': textChat}),
+    'tips_seen.v1': ['chat_rules'],
   });
   final store = await Store.open();
   final auth = FakeAuth(signedIn: _me);
@@ -195,8 +196,9 @@ void main() {
     // Holding down sam's line mutes him for this room.
     await tester.longPress(find.text('lol'));
     await tester.pumpAndSettle();
-    expect(find.text('Mute sam?'), findsOneWidget);
-    await tester.tap(find.text('Mute'));
+    expect(find.text('Block sam'), findsOneWidget);
+    expect(find.text('Report sam'), findsOneWidget);
+    await tester.tap(find.text('Mute in this room'));
     await tester.pumpAndSettle();
     expect(find.text('lol'), findsNothing);
     expect(find.text('hi all'), findsNothing);

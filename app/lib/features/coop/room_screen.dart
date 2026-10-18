@@ -115,6 +115,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
         ..nicknameOf = _account.nicknameOf
         ..chatEnabled = ref.read(settingsProvider).textChat
+        ..isBlocked = _account.isBlocked
         ..addListener(_changed);
     });
     _sub = _session!.effects.listen(_onEffect);
@@ -307,7 +308,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         _toast("You're the host now: you pick the heat and start the next round.");
       case RoomChat(:final line):
         final s = _session;
-        if (s == null || line.from == s.me || s.muted.contains(line.from) || !s.chatEnabled || s.chatOpen) break;
+        if (s == null || line.from == s.me || s.hides(line.from) || !s.chatEnabled || s.chatOpen) break;
         sfx.play(SfxId.tap, volume: 0.5);
         _chatToastTimer?.cancel();
         _chatToastTimer = Timer(const Duration(seconds: 4), () {
@@ -315,7 +316,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         });
         setState(() => _chatToast = line);
       case RoomEmote(:final from, :final emote):
-        if (mounted) {
+        if (mounted && !(_session?.hides(from) ?? false)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               duration: const Duration(seconds: 2),
@@ -463,7 +464,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           child: Center(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
-              child: toast == null || s.chatOpen || s.muted.contains(toast.from) || !s.chatEnabled
+              child: toast == null || s.chatOpen || s.hides(toast.from) || !s.chatEnabled
                   ? const SizedBox.shrink()
                   : ChatToast(
                       key: ValueKey(toast.id),

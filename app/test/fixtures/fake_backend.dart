@@ -115,6 +115,10 @@ class FakeServer {
   final incoming = <Map<String, Object>>[];
   bool down = false;
 
+  /// Blocks (shared/safety.md): `{id, username, avatar, at}`, newest first; and reports as sent.
+  final blocks = <Map<String, Object>>[];
+  final reports = <Map<String, dynamic>>[];
+
   /// Room code → `GET /v1/rooms/:code` summary.
   final rooms = <String, Map<String, Object?>>{};
 
@@ -315,6 +319,11 @@ class FakeServer {
         });
       case 'GET /friends':
         return _json(200, {'friends': friends, 'incoming': incoming, 'outgoing': []});
+      case 'GET /me/blocks':
+        return _json(200, {'blocks': blocks});
+      case 'POST /reports':
+        reports.add(body);
+        return _json(201, {'ok': true});
       case 'POST /friends/request':
         return _json(200, {'status': 'pending'});
       case 'GET /leaderboard':
@@ -441,6 +450,22 @@ class FakeServer {
       }
       nickname == null ? friend.remove('nickname') : friend['nickname'] = nickname;
       return _json(200, {'ok': true, 'nickname': nickname});
+    }
+    final block = RegExp(r'^/me/blocks/([^/]+)$').firstMatch(path);
+    if (block != null && (req.method == 'PUT' || req.method == 'DELETE')) {
+      final id = block.group(1)!;
+      blocks.removeWhere((b) => b['id'] == id);
+      if (req.method == 'PUT') {
+        final friend = friends.where((f) => f['id'] == id).firstOrNull;
+        blocks.insert(0, {
+          'id': id,
+          'username': friend?['username'] ?? id,
+          'avatar': friend?['avatar'] ?? 'avatar_01',
+          'at': DateTime.now().millisecondsSinceEpoch,
+        });
+        friends.removeWhere((f) => f['id'] == id);
+      }
+      return _json(200, {'ok': true});
     }
     final gift = RegExp(r'^/friends/([^/]+)/gift$').firstMatch(path);
     if (req.method == 'POST' && gift != null) {

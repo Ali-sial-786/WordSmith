@@ -177,7 +177,7 @@ List<_Section> _sections() => [
         'Tap **Co-op** or **Versus** and light a forge to host: you get a 6-letter room code to share, or '
         "invite friends straight in. To join, type a friend's code or tap their open room. In a room you "
         'can write in the chat, send quick emotes and talk over voice chat, and turn your camera on there '
-        'for video.',
+        "for video. Hold someone's message, or tap the menu next to their name, to mute, block or report them.",
     [
       _Entry(
         'tongs',

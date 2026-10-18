@@ -172,7 +172,8 @@ void main() {
       await _shot('chat_sheet_$w');
       await tester.longPress(find.text('gg last round, that last word was brutal'));
       await _wait(tester);
-      await tester.tap(find.text('Mute'));
+      await _shot('chat_actions_$w');
+      await tester.tap(find.text('Mute in this room'));
       await _wait(tester);
       await _shot('chat_sheet_muted_$w');
     });

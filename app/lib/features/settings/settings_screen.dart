@@ -13,6 +13,7 @@ import '../../net/config.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/crash_notice.dart';
+import '../../ui/widgets/web_links.dart';
 import '../../update/app_updater.dart';
 import '../update/update_sheet.dart';
 import 'font_picker.dart';
@@ -113,6 +114,18 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Fonts, sounds, icons and word lists'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/credits'),
+          ),
+          ListTile(
+            title: Text(WebPage.privacy.title),
+            subtitle: const Text('What the game keeps about you, and why'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openWebPage(context, WebPage.privacy),
+          ),
+          ListTile(
+            title: Text(WebPage.terms.title),
+            subtitle: const Text('Playing fair and being kind in chat'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openWebPage(context, WebPage.terms),
           ),
           const _VersionTile(),
         ],
@@ -278,11 +291,26 @@ class _AccountSection extends ConsumerWidget {
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.sync), onPressed: n.sync),
           ),
+          if (account.isReady)
+            ListTile(
+              title: const Text('Blocked smiths'),
+              subtitle: Text(
+                account.blocked.isEmpty ? 'Nobody blocked' : '${account.blocked.length} blocked · their chat is hidden',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/blocked'),
+            ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
           ListTile(
             title: Text('Delete account', style: TextStyle(color: Palette.quenchRed)),
             subtitle: const Text('Removes your account, progress and friends for good'),
-            onTap: () => showDialog<void>(context: context, builder: (_) => const _DeleteDialog()),
+            onTap: () => showDialog<void>(context: context, builder: (_) => const DeleteAccountDialog()),
+          ),
+          ListTile(
+            title: const Text('Delete your account on the web'),
+            subtitle: Text(WebPage.deleteAccount.uri.toString().replaceFirst('https://', '')),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openWebPage(context, WebPage.deleteAccount),
           ),
         ],
       ],
@@ -290,14 +318,14 @@ class _AccountSection extends ConsumerWidget {
   }
 }
 
-class _DeleteDialog extends ConsumerStatefulWidget {
-  const _DeleteDialog();
+class DeleteAccountDialog extends ConsumerStatefulWidget {
+  const DeleteAccountDialog({super.key});
 
   @override
-  ConsumerState<_DeleteDialog> createState() => _DeleteDialogState();
+  ConsumerState<DeleteAccountDialog> createState() => _DeleteAccountDialogState();
 }
 
-class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
+class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
   final _password = TextEditingController();
   bool _busy = false;
   String? _error;

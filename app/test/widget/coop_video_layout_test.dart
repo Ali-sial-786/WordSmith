@@ -106,6 +106,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const ValueKey('video-u1')), findsOneWidget);
     expect(find.byKey(const ValueKey('video-u3')), findsOneWidget);
+    // The voice and video bar is further down the lobby.
+    await tester.scrollUntilVisible(find.text('Video chat on'), 100);
     expect(find.text('Video chat on'), findsOneWidget);
     expect(_myCameraOff, findsNothing);
   });

@@ -189,3 +189,51 @@ Safari. Updates need nothing: the next start loads the latest version.
 - **Storage:** Safari can clear a website's saved data after about 7 days without a visit (not for Home Screen apps). Signed-in progress is safe on the server; settings and a signed-out player's progress may be lost.
 - **First start** downloads about 6 MB (the renderer, the game and its pictures) and takes a few seconds; later starts use the cache.
 - No vibration, and the screen can rotate if the iPhone's rotation lock is off (iOS ignores the portrait setting for web apps).
+
+## 7. Reports and blocks
+
+Players can block and report each other from room chat, the lobby and the
+friends list (shared/safety.md). Blocks are the player's own; reports wait
+for you in the database:
+
+1. Cloudflare dashboard › **Storage & databases › D1 › wordsmith › Console**.
+2. Open reports, newest first:
+   `SELECT id, created_at, reason, reported_username, details, room, lines FROM reports WHERE status = 'open' ORDER BY created_at DESC;`
+   (`created_at` is epoch milliseconds; `lines` holds the reported player's
+   chat lines as the reporter saw them.)
+3. Once handled: `UPDATE reports SET status = 'done' WHERE id = 12;`
+
+Check them every few days once the game reaches people you don't know: app
+stores expect reports to be acted on. There's no ban tool yet; ask for one
+when it's needed.
+
+## 8. The Google Play version (later, not started)
+
+The owner decided (2026-10-18) to stay on GitHub Releases and the browser for
+now. When a Play version is made, it is a **separate build** with only these
+two differences from the friends' APK; everything else stays the same:
+
+1. **No background voice.** Voice and video chat stop when the game leaves the
+   screen (switching apps or locking the phone) and reconnect when it comes
+   back. That drops `GameAudioService`, its microphone and media-playback
+   foreground service and their permissions, so the Play Console needs no
+   foreground-service declaration or demo video.
+2. **No in-app updater.** Play updates the app itself: the update banner, the
+   Settings "check for updates" row and the `REQUEST_INSTALL_PACKAGES`
+   permission are left out (Play doesn't allow apps to update themselves).
+
+Already done for it (in every version): report and block buttons, a privacy
+policy (`/privacy`), terms and chat rules (`/terms`) and an account-deletion
+page (`/delete-account`) on the web version, and in-app account deletion.
+
+Still to do on the Play Console when the time comes:
+- A Play developer account: $25 once, with ID verification. New personal
+  accounts must run a **closed test with at least 12 testers for 14 days in a
+  row** before going public (an organisation account is exempt).
+- Upload an **Android App Bundle** (`.aab`) signed with the existing key; Play
+  App Signing then holds the release key.
+- Store listing, content rating questionnaire (13+ is simplest with chat and
+  voice), target audience, **Data safety** form (matching `/privacy`), the
+  privacy policy URL and the account-deletion URL.
+- Target the Android version Play currently requires (Android 16, API 36,
+  from August 31, 2026; the app already does).

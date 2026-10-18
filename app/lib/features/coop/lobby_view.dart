@@ -13,6 +13,7 @@ import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
+import '../safety/player_actions.dart';
 import 'room_chat.dart';
 import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
@@ -71,6 +72,17 @@ class LobbyView extends ConsumerWidget {
             isHost: p.id == lobby.hostId,
             isMe: p.id == session.me,
             call: video.call,
+            blocked: ref.watch(accountProvider.select((a) => a.blocked.any((b) => b.id == p.id))),
+            onMore: p.id == session.me
+                ? null
+                : () => showPlayerActions(
+                    context,
+                    ref,
+                    userId: p.id,
+                    name: session.nameOf(p.id),
+                    avatar: p.avatar,
+                    session: session,
+                  ),
           ),
         for (var i = lobby.players.length; i < max; i++)
           Padding(
@@ -438,7 +450,15 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.player, required this.name, required this.isHost, required this.isMe, this.call});
+  const _PlayerRow({
+    required this.player,
+    required this.name,
+    required this.isHost,
+    required this.isMe,
+    this.call,
+    this.blocked = false,
+    this.onMore,
+  });
 
   final RoomPlayer player;
 
@@ -447,6 +467,12 @@ class _PlayerRow extends StatelessWidget {
   final bool isHost;
   final bool isMe;
   final VideoCall? call;
+
+  /// I've blocked them: their chat and emotes are hidden.
+  final bool blocked;
+
+  /// Mute, block or report them (not shown for me).
+  final VoidCallback? onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +503,12 @@ class _PlayerRow extends StatelessWidget {
               children: [
                 Text('$name${isMe ? ' (you)' : ''}', style: Theme.of(context).textTheme.titleSmall),
                 Text(
-                  ['Lv ${player.level}', if (isHost) 'Host', if (!player.connected) 'Reconnecting…'].join(' · '),
+                  [
+                    'Lv ${player.level}',
+                    if (isHost) 'Host',
+                    if (blocked) 'Blocked',
+                    if (!player.connected) 'Reconnecting…',
+                  ].join(' · '),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -487,6 +518,13 @@ class _PlayerRow extends StatelessWidget {
             player.ready ? Icons.check_circle : Icons.radio_button_unchecked,
             color: player.ready ? Palette.verdigris : Palette.iron,
           ),
+          if (onMore != null)
+            IconButton(
+              tooltip: 'Mute, block or report',
+              visualDensity: VisualDensity.compact,
+              onPressed: onMore,
+              icon: Icon(Icons.more_vert, color: Palette.steel),
+            ),
         ],
       ),
     );

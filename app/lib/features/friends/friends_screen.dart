@@ -10,6 +10,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/gold_field.dart';
+import '../safety/player_actions.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -187,6 +188,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     onSelected: (choice) => switch (choice) {
                       'nickname' => _editNickname(p),
                       'clear' => _act(() => n.setNickname(p.id, null)),
+                      'safety' => showPlayerActions(
+                        context,
+                        ref,
+                        userId: p.id,
+                        name: names.of(p.id, p.username),
+                        avatar: p.avatar,
+                      ),
                       _ => _act(() => n.removeFriend(p.id)),
                     },
                     itemBuilder: (_) => [
@@ -197,6 +205,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       if (names.nicknameOf(p.id) != null)
                         const PopupMenuItem(value: 'clear', child: Text('Clear nickname')),
                       const PopupMenuItem(value: 'remove', child: Text('Remove friend')),
+                      const PopupMenuItem(value: 'safety', child: Text('Block or report')),
                     ],
                   ),
                 ],

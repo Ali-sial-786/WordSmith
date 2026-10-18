@@ -161,6 +161,35 @@ class ApiClient {
 
   Future<void> removeFriend(String userId) => _send('DELETE', '/friends/${Uri.encodeComponent(userId)}');
 
+  // ---- Blocks and reports (shared/safety.md) ----
+
+  Future<List<BlockedPlayer>> blocks() async => [
+    for (final b in ((await _send('GET', '/me/blocks'))['blocks'] as List? ?? const []).cast<Map<String, dynamic>>())
+      BlockedPlayer.fromJson(b),
+  ];
+
+  Future<void> block(String userId) => _send('PUT', '/me/blocks/${Uri.encodeComponent(userId)}', body: const {});
+  Future<void> unblock(String userId) => _send('DELETE', '/me/blocks/${Uri.encodeComponent(userId)}');
+
+  /// [lines] are the reported player's chat lines as I saw them: `{id, text, at}`.
+  Future<void> report({
+    required String userId,
+    required ReportReason reason,
+    String? details,
+    String? room,
+    List<Map<String, Object>> lines = const [],
+  }) => _send(
+    'POST',
+    '/reports',
+    body: {
+      'userId': userId,
+      'reason': reason.name,
+      if (details != null && details.trim().isNotEmpty) 'details': details.trim(),
+      'room': ?room,
+      if (lines.isNotEmpty) 'lines': lines,
+    },
+  );
+
   /// My private nickname for a friend, or null to clear it. Returns it as stored (trimmed).
   Future<String?> setNickname(String friendId, String? nickname) async =>
       (await _send(

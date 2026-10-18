@@ -22,6 +22,10 @@ abstract final class AppConfig {
     defaultValue: '920525083065-gslh1nvo2evhb6j0oj8v3m6tkc28ahb7.apps.googleusercontent.com',
   );
 
+  /// The browser version, which also has the privacy policy (`/privacy`),
+  /// terms and chat rules (`/terms`) and account deletion (`/delete-account`).
+  static const webBase = 'https://play.wordsmith-forge.workers.dev';
+
   static bool get hasFirebase => firebaseApiKey.isNotEmpty;
   static bool get hasServer => apiBase.isNotEmpty;
 

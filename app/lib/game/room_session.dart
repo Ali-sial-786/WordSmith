@@ -102,14 +102,23 @@ abstract class RoomSession extends ChangeNotifier {
   /// Players whose lines I've hidden in this room.
   final Set<String> muted = {};
 
-  /// Lines I can see: not from a player I've muted.
+  /// Whether I've blocked a player (everywhere); the room screen points it
+  /// at the account's block list (shared/safety.md).
+  bool Function(String id) isBlocked = _notBlocked;
+
+  static bool _notBlocked(String _) => false;
+
+  /// I don't see [id]'s chat or emotes: muted here, or blocked.
+  bool hides(String id) => muted.contains(id) || isBlocked(id);
+
+  /// Lines I can see: not from a player I've muted or blocked.
   List<ChatLine> get visibleChat => [
     for (final l in chat)
-      if (!muted.contains(l.from)) l,
+      if (!hides(l.from)) l,
   ];
 
   /// Lines from others that came since I last looked.
-  int get unreadChat => chat.where((l) => l.id > _readUpTo && l.from != me && !muted.contains(l.from)).length;
+  int get unreadChat => chat.where((l) => l.id > _readUpTo && l.from != me && !hides(l.from)).length;
 
   /// A line's sender as I know them, even if they've left the room.
   String chatName(ChatLine line) =>

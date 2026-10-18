@@ -195,6 +195,39 @@ class FriendsList {
   final List<PlayerSummary> outgoing;
 }
 
+/// Someone I've blocked (shared/safety.md).
+class BlockedPlayer {
+  const BlockedPlayer({required this.id, required this.username, this.avatar = 'avatar_01', this.at = 0});
+
+  factory BlockedPlayer.fromJson(Map<String, dynamic> j) => BlockedPlayer(
+    id: j['id'] as String,
+    username: j['username'] as String? ?? '?',
+    avatar: j['avatar'] as String? ?? 'avatar_01',
+    at: (j['at'] as num?)?.toInt() ?? 0,
+  );
+
+  final String id;
+  final String username;
+  final String avatar;
+
+  /// When, epoch ms.
+  final int at;
+}
+
+/// Why a player is reported (shared/safety.md), as the report sheet words it.
+enum ReportReason {
+  harassment('Bullying or harassment'),
+  hate('Hate or discrimination'),
+  sexual('Sexual or inappropriate messages'),
+  name('Offensive username'),
+  cheating('Cheating'),
+  spam('Spam'),
+  other('Something else');
+
+  const ReportReason(this.label);
+  final String label;
+}
+
 class LeaderboardEntry {
   const LeaderboardEntry({
     required this.place,

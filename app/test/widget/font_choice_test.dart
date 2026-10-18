@@ -103,6 +103,8 @@ void main() {
     final store = await _pumpSettings(tester, {});
     expect(_familyOf(tester, 'Settings'), 'VollkornSC');
     await tester.scrollUntilVisible(find.text('Foundry'), 200);
+    // The whole picker in view (Settings goes on well below it).
+    await tester.ensureVisible(find.byType(FontPicker));
     await tester.pumpAndSettle();
     final before = tester.getTopLeft(find.byType(FontPicker)).dy;
 

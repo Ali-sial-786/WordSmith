@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'features/armory/armory_screen.dart';
 import 'features/campaign/chapter_map_screen.dart';
 import 'features/board/board_screen.dart';
+import 'features/account/delete_account_screen.dart';
 import 'features/account/setup_screen.dart';
 import 'features/account/sign_in_screen.dart';
 import 'features/campaign/chapters_screen.dart';
@@ -19,6 +20,7 @@ import 'features/friends/friends_screen.dart';
 import 'features/hall/hall_screen.dart';
 import 'features/history/history_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/safety/blocked_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'features/survival/crucible_screen.dart';
@@ -54,6 +56,8 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
     GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
+    GoRoute(path: '/blocked', builder: (_, _) => const BlockedScreen()),
+    GoRoute(path: '/delete-account', builder: (_, _) => const DeleteAccountScreen()),
     GoRoute(path: '/armory', builder: (_, _) => const ArmoryScreen()),
     GoRoute(path: '/board', builder: (_, _) => const BoardScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),

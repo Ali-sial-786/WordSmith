@@ -98,6 +98,7 @@ class AccountState {
     this.presence = const {},
     this.invites = const [],
     this.openRooms = const [],
+    this.blocked = const [],
     this.error,
     this.syncing = false,
   });
@@ -113,6 +114,9 @@ class AccountState {
 
   /// Friends' rooms that can be joined.
   final List<OpenRoom> openRooms;
+
+  /// Players I've blocked, newest first.
+  final List<BlockedPlayer> blocked;
   final String? error;
   final bool syncing;
 
@@ -128,6 +132,7 @@ class AccountState {
     Map<String, String>? presence,
     List<HubInvite>? invites,
     List<OpenRoom>? openRooms,
+    List<BlockedPlayer>? blocked,
     String? error,
     bool clearError = false,
     bool? syncing,
@@ -139,6 +144,7 @@ class AccountState {
     presence: presence ?? this.presence,
     invites: invites ?? this.invites,
     openRooms: openRooms ?? this.openRooms,
+    blocked: blocked ?? this.blocked,
     error: clearError ? null : error ?? this.error,
     syncing: syncing ?? this.syncing,
   );
@@ -255,6 +261,7 @@ class AccountController extends Notifier<AccountState> {
     await sync();
     if (!state.isReady) return;
     unawaited(refreshFriends());
+    unawaited(refreshBlocks());
     unawaited(_startHub());
     unawaited(_registerPush());
     // Again each time: the UTC hour moves with daylight saving.
@@ -461,6 +468,60 @@ class AccountController extends Notifier<AccountState> {
       ),
     );
   }
+
+  // ---- Blocks and reports (shared/safety.md) ----
+
+  Future<void> refreshBlocks() async {
+    if (!state.isReady) return;
+    try {
+      final blocked = await _api!.blocks();
+      if (ref.mounted && state.isReady) state = state.copyWith(blocked: blocked);
+    } on ApiException {
+      // An older server has no blocks yet; try again next time.
+    }
+  }
+
+  /// Whether I've blocked [userId]: their chat and emotes are hidden.
+  bool isBlocked(String userId) => ref.mounted && state.blocked.any((b) => b.id == userId);
+
+  /// Blocks a player (ending any friendship). Throws [ApiException].
+  Future<void> block(String userId, {required String username, String avatar = 'avatar_01'}) async {
+    await _api!.block(userId);
+    if (!ref.mounted) return;
+    // Shown at once; the list from the server follows.
+    state = state.copyWith(
+      blocked: [
+        BlockedPlayer(id: userId, username: username, avatar: avatar, at: DateTime.now().millisecondsSinceEpoch),
+        ...state.blocked.where((b) => b.id != userId),
+      ],
+    );
+    await Future.wait([refreshBlocks(), refreshFriends()]);
+  }
+
+  /// Throws [ApiException].
+  Future<void> unblock(String userId) async {
+    await _api!.unblock(userId);
+    if (!ref.mounted) return;
+    state = state.copyWith(blocked: [...state.blocked.where((b) => b.id != userId)]);
+    await refreshBlocks();
+  }
+
+  /// Throws [ApiException].
+  Future<void> report({
+    required String userId,
+    required ReportReason reason,
+    String? details,
+    String? room,
+    List<ChatLine> lines = const [],
+  }) => _api!.report(
+    userId: userId,
+    reason: reason,
+    details: details,
+    room: room,
+    lines: [
+      for (final l in lines.reversed.take(20).toList().reversed) {'id': l.id, 'text': l.text, 'at': l.at},
+    ],
+  );
 
   /// My nickname for [userId], if they're a friend I gave one (see game/names.dart).
   String? nicknameOf(String userId) {
