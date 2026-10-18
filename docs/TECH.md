@@ -234,8 +234,9 @@ their avatar, with voice.
 - **Light on data:** 240×180 video at 15 fps without simulcast, adaptive
   streaming (each phone downloads only the size it shows) and dynacast.
   Roughly 400–500 MB an hour per player in a 5-player room; Wi-Fi is best.
-- **Off by default.** The camera and mic switches are remembered. Nothing is
-  recorded.
+- **Voice on, camera off by default.** Joining a room joins its voice chat
+  (Settings can turn that off); the camera always starts off, and the mic
+  starts as it was last left. Nothing is recorded.
 - **In the background:** voices go on both ways. While the mic is on,
   `GameAudioService` runs as a microphone foreground service ("Voice chat
   on"), started from the screen since Android 11+ cuts the mic off for
