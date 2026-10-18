@@ -286,7 +286,8 @@ export type ServerMessage =
     }
   | { readonly op: "BONUS"; readonly word: string; readonly by: string; readonly points: number; readonly scores: Readonly<Record<string, number>> }
   | { readonly op: "REVEAL"; readonly by: string; readonly kind: HintKind; readonly cells: readonly RevealedCell[]; readonly auto: readonly SlotWord[] }
-  | { readonly op: "PROGRESS"; readonly id: string; readonly filled: number; readonly total: number }
+  /** Versus. `slots` only to those watching the round (never letters). */
+  | { readonly op: "PROGRESS"; readonly id: string; readonly filled: number; readonly total: number; readonly slots?: readonly number[] }
   /** Survival: a mold's heated slot changed (co-op: to everyone; Versus: to the racer, about their own), or its countdown resumed. */
   | ({ readonly op: "HEATED" } & HeatedFields)
   /** Survival: a heated slot melted (Versus: on `id`'s mold). Straight before ROUND_END. */

@@ -28,7 +28,20 @@ class RivalMolds extends ConsumerStatefulWidget {
       molds = end.molds,
       melted = end.melted,
       shape = null,
-      order = null;
+      order = null,
+      maxTile = 96;
+
+  /// The round on now, for someone watching it (shared/room-protocol.md,
+  /// `PROGRESS.slots`): each racer's mold fills as they forge, in their
+  /// colour, never with letters. Bigger tiles, racers in the round's order.
+  RivalMolds.live({super.key, required this.session, required this.molds, this.padding = EdgeInsets.zero})
+    : source = session.round?.round ?? 0,
+      round = session.round?.round,
+      winner = null,
+      melted = null,
+      shape = null,
+      order = session.round?.racers,
+      maxTile = 168;
 
   /// A round from the series' history, which brings its own shape; [order]
   /// lines the tiles up with a summary's columns.
@@ -43,7 +56,8 @@ class RivalMolds extends ConsumerStatefulWidget {
        winner = past.winner,
        molds = past.molds,
        melted = past.melted,
-       shape = past;
+       shape = past,
+       maxTile = 96;
 
   final VsSession session;
 
@@ -62,6 +76,9 @@ class RivalMolds extends ConsumerStatefulWidget {
 
   /// Around the row, only when there is one to show.
   final EdgeInsets padding;
+
+  /// The widest a tile gets.
+  final double maxTile;
 
   @override
   ConsumerState<RivalMolds> createState() => _RivalMoldsState();
@@ -132,7 +149,7 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
       child: LayoutBuilder(
         builder: (context, c) {
           const gap = 6.0;
-          final width = min(96.0, (c.maxWidth - gap * (racers.length - 1)) / racers.length);
+          final width = min(widget.maxTile, (c.maxWidth - gap * (racers.length - 1)) / racers.length);
           return AnimatedBuilder(
             animation: _in,
             builder: (context, _) {

@@ -114,6 +114,7 @@ import {
   markOut,
   newVsRound,
   newVsSeries,
+  progressOf,
   seriesDecision,
   stopSeries,
   vsHeatedFor,
@@ -121,6 +122,7 @@ import {
   vsRoundSnapshot,
   vsRoundStartFields,
   vsSeriesResults,
+  watchesRound,
   type VsNextRound,
   type VsRound,
   type VsRoundEndFields,
@@ -1073,7 +1075,7 @@ export class RoomDO extends DurableObject<Env> {
         const heated = applyVsHeat(round, player.id, now);
         this.write(ROUND, round);
         reply("claimed", { word: outcome.word, slot: outcome.slot, auto: outcome.auto, ...(pickup === null ? {} : { pickup }) });
-        this.broadcast({ op: "PROGRESS", id: player.id, filled: outcome.filled, total: outcome.total });
+        this.sendProgress(round, series, player.id);
         if (heated) this.sendHeated([player.id], now);
         if (outcome.complete) {
           this.finishVsRound("finished", now);
@@ -1691,6 +1693,23 @@ export class RoomDO extends DurableObject<Env> {
     for (const ws of this.openSockets(except)) {
       try {
         ws.send(text);
+      } catch {
+        // Closing.
+      }
+    }
+  }
+
+  /** Versus PROGRESS for one racer: everyone gets the count; whoever is watching also gets their slots. */
+  private sendProgress(round: VsRound, series: VsSeries, id: string): void {
+    const progress = progressOf(round, true).find((p) => p.id === id);
+    if (progress === undefined) return;
+    const { slots, ...counts } = progress;
+    const forRacers = JSON.stringify({ op: "PROGRESS", ...counts } satisfies ServerMessage);
+    const forWatchers = JSON.stringify({ op: "PROGRESS", ...counts, slots: slots ?? [] } satisfies ServerMessage);
+    for (const ws of this.openSockets()) {
+      const uid = attachmentOf(ws)?.u;
+      try {
+        ws.send(uid === undefined || watchesRound(round, series, uid) ? forWatchers : forRacers);
       } catch {
         // Closing.
       }

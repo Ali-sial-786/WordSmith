@@ -305,11 +305,29 @@ export interface VsProgress {
   readonly id: string;
   readonly filled: number;
   readonly total: number;
+  /** Only for someone watching the round: the racer's complete slots, sorted (never letters). */
+  readonly slots?: readonly number[];
 }
 
-/** Every racer's progress (counts only, never words or cells). */
-export function progressOf(r: VsRound): VsProgress[] {
-  return r.playerIds.map((id) => ({ id, filled: r.molds[id]?.filled ?? 0, total: r.total }));
+/**
+ * Every racer's progress: counts only, never words or cells. Someone
+ * [watching] (sitting out a sudden death, or out of the series) also gets
+ * which slots each racer has done, to watch their molds fill; racers never
+ * see where their rivals are.
+ */
+export function progressOf(r: VsRound, watching = false): VsProgress[] {
+  const molds = watching ? moldsOf(r) : null;
+  return r.playerIds.map((id) => ({
+    id,
+    filled: r.molds[id]?.filled ?? 0,
+    total: r.total,
+    ...(molds === null ? {} : { slots: molds[id] ?? [] }),
+  }));
+}
+
+/** Whether [id] is watching rather than racing this round. */
+export function watchesRound(r: VsRound, s: VsSeries, id: string): boolean {
+  return !r.playerIds.includes(id) || !canRace(s, id);
 }
 
 /**
@@ -551,7 +569,7 @@ export function vsRoundSnapshot(r: VsRound, s: VsSeries, receiver: string, serve
   return {
     ...vsRoundStartFields(r, s, serverNow),
     mine: mineOf(r, receiver),
-    progress: progressOf(r),
+    progress: progressOf(r, watchesRound(r, s, receiver)),
     ...(r.survival === undefined
       ? {}
       : {

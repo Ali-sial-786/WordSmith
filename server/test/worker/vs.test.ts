@@ -365,9 +365,16 @@ describe("Versus rooms", () => {
       sd = await connect(d, `/v1/ws/room/${code}`);
       const watching = (await sd.next({ op: "SNAPSHOT" })).round;
       expect(watching).toMatchObject({ round: 4, suddenDeath: true, players: [a.uid, b.uid], mine: { claims: [], auto: [] } });
-      expect(watching.progress).toEqual([a.uid, b.uid].map((id) => ({ id, filled: 0, total: r4.total })));
+      // A watcher's progress names each racer's done slots (never letters), to watch their molds fill.
+      expect(watching.progress).toEqual([a.uid, b.uid].map((id) => ({ id, filled: 0, total: r4.total, slots: [] })));
       sockets[3] = sd;
+      const lastSlot = r4.puzzle.slots.length - 1;
       await forge(sa, r4.puzzle.slots.at(-1)!.word, 40);
+      expect((await sc.next({ op: "PROGRESS", id: a.uid })).slots).toContain(lastSlot);
+      expect((await sd.next({ op: "PROGRESS", id: a.uid })).slots).toContain(lastSlot);
+      const toRival = await sb.next({ op: "PROGRESS", id: a.uid });
+      expect(toRival).not.toHaveProperty("slots");
+      expect(toRival.filled).toBeGreaterThan(0);
       await fillMold(sb, code, b.uid, 40);
       const end4 = await sa.next({ op: "ROUND_END" });
       expect(end4).toMatchObject({ round: 4, reason: "finished", winner: b.uid, how: "finished", next: null, standingsEndsAt: null });

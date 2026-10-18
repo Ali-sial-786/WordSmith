@@ -251,6 +251,26 @@ void main() {
     expect(find.textContaining("You're watching"), findsOneWidget);
   });
 
+  testWidgets("sitting out sudden death, the racers' molds fill live, without letters", (tester) async {
+    final start = _start(sudden: true);
+    final s = _session('round')
+      ..round = start
+      ..mold = RemoteMold(start, () => _lobby('round'))
+      // As PROGRESS sends it to a watcher: u2 has CAT (slot 0); u3 nothing yet.
+      ..progress = {
+        'u2': const RacerProgress('u2', 3, 7, slots: [0]),
+        'u3': const RacerProgress('u3', 0, 7, slots: []),
+      };
+    await _pump(tester, VsRoundView(session: s, cues: MoldCues(), onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.byType(RivalMolds), findsOneWidget);
+    expect(find.textContaining('their molds fill as they forge'), findsOneWidget);
+    expect(find.text('sam'), findsWidgets);
+    expect(find.text('Kit_the_Smith'), findsWidgets);
+    expect(find.text('CAT'), findsNothing, reason: 'letters never show');
+    expect(find.descendant(of: find.byType(RivalMolds), matching: find.text('3/7')), findsOneWidget);
+  });
+
   testWidgets('watching sudden death with video, my own bubble shows beside the racers', (tester) async {
     final start = _start(sudden: true);
     final s = _session('round')

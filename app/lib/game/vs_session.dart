@@ -94,7 +94,8 @@ class VsSession extends RoomSession {
     feed.clear();
     mold = RemoteMold(start, () => lobby!, initials: false);
     final total = mold!.cells.length;
-    progress = {for (final id in start.racers) id: RacerProgress(id, 0, total)};
+    // Watching: empty molds to fill as the racers' PROGRESS comes with their slots.
+    progress = {for (final id in start.racers) id: RacerProgress(id, 0, total, slots: racing ? null : const [])};
     tally = {...start.tally};
     syncClock(start.serverNow);
   }

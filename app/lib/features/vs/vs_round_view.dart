@@ -417,7 +417,9 @@ class _MyStatus extends StatelessWidget {
   }
 }
 
-/// Someone sitting out a sudden-death round watches the racers' bars.
+/// Someone sitting out a sudden-death round watches it: each racer's mold
+/// filling in their colour as they forge (never the letters), or just their
+/// bars from a server that doesn't say where they are.
 class _Watching extends StatelessWidget {
   const _Watching({required this.session});
 
@@ -427,15 +429,18 @@ class _Watching extends StatelessWidget {
   Widget build(BuildContext context) {
     final racers = session.round?.racers ?? const [];
     final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Sudden death', style: displayStyle(26, color: Palette.quenchRed)),
-          const SizedBox(height: 6),
-          Text(racers.map(session.nameOf).join('  vs  '), textAlign: TextAlign.center, style: text.titleMedium),
-          const SizedBox(height: 18),
+    final molds = {for (final id in racers) id: ?session.progress[id]?.slots};
+    final live = molds.length == racers.length && racers.isNotEmpty;
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Sudden death', style: displayStyle(26, color: Palette.quenchRed)),
+        const SizedBox(height: 6),
+        Text(racers.map(session.nameOf).join('  vs  '), textAlign: TextAlign.center, style: text.titleMedium),
+        const SizedBox(height: 18),
+        if (live)
+          RivalMolds.live(session: session, molds: molds)
+        else
           for (final id in racers)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -456,9 +461,26 @@ class _Watching extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(height: 12),
-          Text("You're watching this one. Cheer them on!", style: text.bodySmall),
-        ],
+        const SizedBox(height: 12),
+        Text(
+          live
+              ? "You're watching this one: their molds fill as they forge. Cheer them on!"
+              : "You're watching this one. Cheer them on!",
+          textAlign: TextAlign.center,
+          style: text.bodySmall,
+        ),
+      ],
+    );
+    // Shrinks to fit between the top strip and the anvil, whatever the phone.
+    return LayoutBuilder(
+      builder: (context, c) => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: c.maxWidth,
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: content),
+          ),
+        ),
       ),
     );
   }

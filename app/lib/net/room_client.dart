@@ -339,14 +339,21 @@ class WordResult extends RoomEvent {
 
 /// Versus: how full a racer's mold is (never their words).
 class RacerProgress extends RoomEvent {
-  const RacerProgress(this.id, this.filled, this.total);
+  const RacerProgress(this.id, this.filled, this.total, {this.slots});
 
-  factory RacerProgress.fromJson(Map<String, dynamic> j) =>
-      RacerProgress(j['id'] as String, (j['filled'] as num?)?.toInt() ?? 0, (j['total'] as num?)?.toInt() ?? 0);
+  factory RacerProgress.fromJson(Map<String, dynamic> j) => RacerProgress(
+    j['id'] as String,
+    (j['filled'] as num?)?.toInt() ?? 0,
+    (j['total'] as num?)?.toInt() ?? 0,
+    slots: j['slots'] is List ? [for (final s in j['slots'] as List) (s as num).toInt()] : null,
+  );
 
   final String id;
   final int filled;
   final int total;
+
+  /// Only while I'm watching the round: the racer's complete slots (no letters).
+  final List<int>? slots;
 
   double get fraction => total == 0 ? 0 : filled / total;
 }
