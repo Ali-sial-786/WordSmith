@@ -114,17 +114,16 @@ Future<void> _pumpRoom(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('changing my username from Settings, with its rules, errors and weekly limit', (tester) async {
+  testWidgets('changing my username from Settings, with its rules and errors, as often as I like', (tester) async {
     final server = FakeServer()..username = 'Ali';
     await _pumpApp(tester, server, '/settings');
 
     await _scrollToAccount(tester);
-    expect(find.text('Pick a new smith name (once a week)'), findsOneWidget);
+    expect(find.text('Pick a new smith name'), findsOneWidget);
     await tester.tap(find.text('Change username'));
     await tester.pumpAndSettle();
     expect(find.text('Friends know you as'), findsOneWidget);
     expect(find.text('Ali'), findsOneWidget);
-    expect(find.text('You can change it once a week'), findsOneWidget);
 
     final field = find.byKey(const ValueKey('new-username'));
     Future<void> submit(String name) async {
@@ -144,32 +143,14 @@ void main() {
     await submit('Ali_Smith');
     expect(server.username, 'Ali_Smith');
     expect(find.text("You're now Ali_Smith."), findsOneWidget);
-    // Back in Settings, with the new name and when it can change again.
+    // Back in Settings with the new name, and free to change it again straight away.
     expect(find.text('Ali_Smith'), findsOneWidget);
-    expect(find.textContaining('You can change it again on'), findsOneWidget);
-
-    // Locked for a week: the screen says until when, and won't send.
     await tester.tap(find.text('Change username'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('You changed your name recently.'), findsOneWidget);
-    expect(find.textContaining('(in 7 days)'), findsOneWidget);
-    expect(tester.widget<TextField>(find.descendant(of: field, matching: find.byType(TextField))).enabled, isFalse);
-  });
-
-  testWidgets('a change made on another phone this week is explained, not just refused', (tester) async {
-    final server = FakeServer()..username = 'Ali';
-    await _pumpApp(tester, server, '/settings');
-    await _scrollToAccount(tester);
-    await tester.tap(find.text('Change username'));
-    await tester.pumpAndSettle();
-
-    server.usernameChangedAt = DateTime.now().subtract(const Duration(days: 2)).millisecondsSinceEpoch;
-    await tester.enterText(find.byKey(const ValueKey('new-username')), 'Ali_Two');
-    await tester.tap(find.text('Change name'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('You can change your name again on'), findsOneWidget);
-    expect(find.textContaining('(in 5 days)'), findsWidgets);
-    expect(server.username, 'Ali');
+    expect(tester.widget<TextField>(find.descendant(of: field, matching: find.byType(TextField))).enabled, isTrue);
+    await submit('Ali_Again');
+    expect(server.username, 'Ali_Again');
+    expect(find.text('Ali_Again'), findsOneWidget);
   });
 
   testWidgets('a nickname replaces the username in the friends list, the leaderboard and a room', (tester) async {

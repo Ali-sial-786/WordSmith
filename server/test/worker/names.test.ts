@@ -5,7 +5,6 @@
 
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { USERNAME_CHANGE_COOLDOWN_MS } from "../../src/account/username";
 import { befriend, body, client, request, setUpClient, uniqueName, type Client } from "./helpers";
 import { closeAll, connect, type Socket } from "./sockets";
 
@@ -34,13 +33,6 @@ const rename = (c: Client, username: unknown) => c.post("/v1/me/username", { use
 const nickname = (c: Client, friend: string, nick: unknown) => put(c, `/v1/friends/${encodeURIComponent(friend)}/nickname`, { nickname: nick });
 const friendsOf = async (c: Client) => body<FriendsList>(await c.get("/v1/friends"));
 
-/** Lets the cooldown run out, as if the last change was a week and a bit ago. */
-async function weekPasses(uid: string): Promise<void> {
-  await env.DB.prepare("UPDATE users SET username_changed_at = username_changed_at - ?2 WHERE id = ?1")
-    .bind(uid, USERNAME_CHANGE_COOLDOWN_MS + 1000)
-    .run();
-}
-
 async function hubSocket(c: Client): Promise<Socket> {
   const s = await connect(c, "/v1/ws/hub");
   await s.next({ op: "OPEN_ROOMS" });
@@ -64,15 +56,13 @@ describe("POST /v1/me/username", () => {
     // A gift from me waiting on the friend's Forge Board.
     expect((await me.post(`/v1/friends/${friend.uid}/gift`, {})).status).toBe(200);
 
-    expect(await body(await me.get("/v1/me"))).toMatchObject({ username: me.username, nextUsernameChangeAt: null });
+    expect(await body(await me.get("/v1/me"))).toMatchObject({ username: me.username });
     const name = uniqueName("New");
-    const before = Date.now();
     const res = await rename(me, `  ${name} `);
     expect(res.status, await res.clone().text()).toBe(200);
-    const profile = await body<{ username: string; nextUsernameChangeAt: number }>(res);
+    const profile = await body<Record<string, unknown>>(res);
     expect(profile.username).toBe(name);
-    expect(profile.nextUsernameChangeAt).toBeGreaterThanOrEqual(before + USERNAME_CHANGE_COOLDOWN_MS);
-    expect(profile.nextUsernameChangeAt).toBeLessThanOrEqual(Date.now() + USERNAME_CHANGE_COOLDOWN_MS);
+    expect(profile).not.toHaveProperty("nextUsernameChangeAt");
     expect(await body(await me.get("/v1/me"))).toMatchObject({ username: name });
 
     // Friends, the leaderboard, the board's Trials and gifts all join users.
@@ -98,8 +88,7 @@ describe("POST /v1/me/username", () => {
       expect(res.status).toBe(409);
       expect(await body(res)).toMatchObject({ error: "username_taken" });
     }
-    // Nothing changed, so the cooldown hasn't started.
-    expect(await body(await me.get("/v1/me"))).toMatchObject({ username: me.username, nextUsernameChangeAt: null });
+    expect(await body(await me.get("/v1/me"))).toMatchObject({ username: me.username });
   });
 
   it.each([
@@ -127,29 +116,29 @@ describe("POST /v1/me/username", () => {
     expect(await body(res)).toMatchObject({ error: "setup_required" });
   });
 
-  it("allows one change a week, says when the next is, and lets a case change count", async () => {
+  it("allows as many changes as the player likes, and a case change counts", async () => {
     const me = await setUpClient(uniqueName("kai"));
     const first = uniqueName("kai");
     expect((await rename(me, first)).status).toBe(200);
-    const { nextUsernameChangeAt } = await body<{ nextUsernameChangeAt: number }>(await me.get("/v1/me"));
-
-    const again = await rename(me, uniqueName("kai"));
-    expect(again.status).toBe(429);
-    expect(await body(again)).toEqual({ error: "too_soon", message: expect.any(String), nextChangeAt: nextUsernameChangeAt });
+    const second = uniqueName("kai");
+    const again = await rename(me, second);
+    expect(again.status).toBe(200);
+    expect(await body(again)).toMatchObject({ username: second });
     // Asking for the name I already have is fine (a retry), and changes nothing.
-    const retry = await rename(me, first);
+    const retry = await rename(me, second);
     expect(retry.status).toBe(200);
-    expect(await body(retry)).toMatchObject({ username: first, nextUsernameChangeAt });
+    expect(await body(retry)).toMatchObject({ username: second });
 
-    await weekPasses(me.uid);
-    const upper = first.toUpperCase();
+    const upper = second.toUpperCase();
     const res = await rename(me, upper);
     expect(res.status).toBe(200);
     expect(await body(res)).toMatchObject({ username: upper });
-    expect((await rename(me, first)).status).toBe(429);
+    // And straight back again.
+    expect((await rename(me, first)).status).toBe(200);
+    expect(await body(await me.get("/v1/me"))).toMatchObject({ username: first });
   });
 
-  it("settles races: one of two players gets a free name, and one of two changes goes through", async () => {
+  it("settles races: one of two players gets a free name", async () => {
     const a = await setUpClient();
     const b = await setUpClient();
     const wanted = uniqueName("Race");
@@ -158,11 +147,7 @@ describe("POST /v1/me/username", () => {
     const owners = await env.DB.prepare("SELECT id FROM users WHERE username = ?1").bind(wanted).all<{ id: string }>();
     expect(owners.results).toHaveLength(1);
     const loser = owners.results[0]!.id === a.uid ? b : a;
-    expect(await body(await loser.get("/v1/me"))).toMatchObject({ username: loser.username, nextUsernameChangeAt: null });
-
-    const c = await setUpClient();
-    const changes = await Promise.all([rename(c, uniqueName("One")), rename(c, uniqueName("Two"))]);
-    expect(changes.map((r) => r.status).sort()).toEqual([200, 429]);
+    expect(await body(await loser.get("/v1/me"))).toMatchObject({ username: loser.username });
   });
 
   it("tells the hub: friends see the new name on the room I host, and on my invites", async () => {

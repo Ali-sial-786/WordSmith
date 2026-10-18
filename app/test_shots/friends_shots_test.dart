@@ -187,17 +187,6 @@ void main() {
     await _close(tester);
   });
 
-  testWidgets('change username, locked for the week', (tester) async {
-    final server = _server()
-      ..usernameChangedAt = DateTime.now().subtract(const Duration(days: 3)).millisecondsSinceEpoch;
-    await _pump(tester, server, '/settings');
-    await tester.scrollUntilVisible(find.text('Change username'), 300, scrollable: find.byType(Scrollable).first);
-    await tester.tap(find.text('Change username'));
-    await _wait(tester);
-    await _shot('change_username_locked');
-    await _close(tester);
-  });
-
   testWidgets('lobby with a nickname', (tester) async {
     final server = _server();
     server.rooms['K7Q2AB'] = {

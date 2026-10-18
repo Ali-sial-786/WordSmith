@@ -48,9 +48,8 @@ export async function postSetup(c: AuthedContext): Promise<Response> {
 /**
  * `{username}` → my profile, with the new username. Setup's rules (400
  * `invalid_username` / `username_not_allowed`, 409 `username_taken`, unique
- * ignoring case), at most once a week: `429 {error: "too_soon",
- * nextChangeAt}`. Asking for exactly the name I have changes nothing (a
- * retry is fine). The hub and any room I'm in or host are told before the
+ * ignoring case), as often as I like. Asking for exactly the name I have
+ * changes nothing (a retry is fine). The hub and any room I'm in or host are told before the
  * answer, so friends see the new name at once.
  */
 export async function postUsername(c: AuthedContext): Promise<Response> {
@@ -63,8 +62,6 @@ export async function postUsername(c: AuthedContext): Promise<Response> {
   switch (result.kind) {
     case "taken":
       throw new ApiError(409, "username_taken", "That username is taken");
-    case "too_soon":
-      return json({ error: "too_soon", message: "You can change your username once a week", nextChangeAt: result.nextChangeAt }, 429);
     case "ok":
       await renamedEverywhere(c, name.username);
       break;

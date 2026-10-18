@@ -272,11 +272,7 @@ class _AccountSection extends ConsumerWidget {
           if (account.isReady)
             ListTile(
               title: const Text('Change username'),
-              subtitle: Text(
-                account.server!.usernameLocked
-                    ? 'You can change it again on ${nextChangeLabel(context, account.server!.nextUsernameChangeAt!)}'
-                    : 'Pick a new smith name (once a week)',
-              ),
+              subtitle: const Text('Pick a new smith name'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () =>
                   Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChangeUsernameScreen())),

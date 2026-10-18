@@ -89,7 +89,7 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 | `GET /define/:word` | What a word means, from an online dictionary (the Free Dictionary API, then Wiktionary), for words the app's offline lexicon lacks (never names: a word with only name senses is a 404). No token needed; cached in the Workers Cache API (definitions 30 days, misses a day). |
 | `GET /me` | My profile, level, XP, hint stock, stats, campaign progress, Masterwork pieces and reminder hour |
 | `POST /me/setup` | Set my username and avatar on first sign-in (profanity-checked, must be unique) |
-| `POST /me/username` | Change my username: the same rules, at most once every 7 days (`429 too_soon` says when) |
+| `POST /me/username` | Change my username: the same rules, as often as I like |
 | `DELETE /me` | Delete my account data |
 | `POST /me/push-token` · `DELETE /me/push-token` | This phone's FCM token for notifications (`shared/push.md`) |
 | `PUT /me/reminder` | The UTC hour of a daily reminder, or none (`shared/push.md`) |
@@ -245,7 +245,7 @@ their avatar, with voice.
 ## 7. Data model (D1)
 
 ```sql
-users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT, username_changed_at INT /*once a week*/)
+users        (id TEXT PK /*firebase uid*/, username TEXT UNIQUE, avatar TEXT, created_at INT, username_changed_at INT /*latest change*/)
 profiles     (user_id PK, xp INT /*lifetime total*/, level INT, campaign_stage INT /*highest completed; the app's campaignStage = this + 1*/, scrap_bin INT, updated_at INT)
 inventory    (user_id, item TEXT /*hammer|chisel|sparks*/, count INT, PRIMARY KEY(user_id, item))
 stats        (user_id PK, words_forged INT, longest_word TEXT, solo_done INT,

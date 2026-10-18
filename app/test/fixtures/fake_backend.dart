@@ -110,10 +110,6 @@ class FakeServer {
   final synced = <Map<String, dynamic>>[];
   final takenNames = <String>{'taken'};
 
-  /// When `POST /me/username` last changed the name (epoch ms); changes are once a week.
-  int? usernameChangedAt;
-  static const usernameCooldownMs = 7 * 24 * 3600 * 1000;
-
   /// Friends as `GET /friends` lists them; `nickname` is mine for them.
   final friends = <Map<String, Object>>[];
   final incoming = <Map<String, Object>>[];
@@ -229,7 +225,6 @@ class FakeServer {
     'username': username,
     'avatar': username == null ? null : avatar,
     'needsSetup': username == null,
-    'nextUsernameChangeAt': usernameChangedAt == null ? null : usernameChangedAt! + usernameCooldownMs,
     'totalXp': totalXp,
     'level': 1,
     'xpIntoLevel': totalXp,
@@ -269,13 +264,8 @@ class FakeServer {
         final name = body['username'] as String? ?? '';
         if (!RegExp(r'^[A-Za-z0-9_]{3,16}$').hasMatch(name)) return _json(400, {'error': 'invalid_username'});
         if (name == username) return _json(200, profile(token));
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (usernameChangedAt != null && now < usernameChangedAt! + usernameCooldownMs) {
-          return _json(429, {'error': 'too_soon', 'nextChangeAt': usernameChangedAt! + usernameCooldownMs});
-        }
         if (takenNames.contains(name.toLowerCase())) return _json(409, {'error': 'username_taken'});
         username = name;
-        usernameChangedAt = now;
         return _json(200, profile(token));
       case 'POST /solo/sync':
         final entries = (body['entries'] as List).cast<Map<String, dynamic>>();

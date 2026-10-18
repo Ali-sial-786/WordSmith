@@ -3,7 +3,7 @@
  * (docs/TECH.md §7), and the JSON shapes the API returns for them.
  */
 
-import { DELETED_NAME, nextUsernameChangeAt, USERNAME_CHANGE_COOLDOWN_MS } from "../account/username";
+import { DELETED_NAME } from "../account/username";
 import { levelProgress, rankForLevel, STARTING_HINTS, type HintCounts } from "../rules/progression";
 import type { SurvivalBest } from "../rules/survival";
 
@@ -166,8 +166,6 @@ export interface ProfileBody {
   readonly avatar: string | null;
   /** True until `POST /v1/me/setup` has set a username and avatar. */
   readonly needsSetup: boolean;
-  /** When `POST /v1/me/username` may next change the username (epoch ms); `null` or a past time means now. */
-  readonly nextUsernameChangeAt: number | null;
   readonly totalXp: number;
   readonly level: number;
   readonly xpIntoLevel: number;
@@ -196,7 +194,6 @@ export function profileBody(account: Account): ProfileBody {
     username: account.username,
     avatar: account.avatar,
     needsSetup: !isSetUp(account),
-    nextUsernameChangeAt: nextUsernameChangeAt(account.usernameChangedAt),
     totalXp: account.totalXp,
     level: progress.level,
     xpIntoLevel: progress.xpIntoLevel,
@@ -276,40 +273,28 @@ export async function setupAccount(db: D1Database, account: Account, username: s
 
 export type RenameResult =
   | { readonly kind: "ok" }
-  /** It already was exactly that name: nothing changed, and no cooldown started. */
+  /** It already was exactly that name: nothing changed. */
   | { readonly kind: "unchanged" }
-  | { readonly kind: "taken" }
-  | { readonly kind: "too_soon"; readonly nextChangeAt: number };
+  | { readonly kind: "taken" };
 
 /**
- * Changes a set-up account's username, at most once per
- * {@link USERNAME_CHANGE_COOLDOWN_MS}. A change of case only is a change.
+ * Changes a set-up account's username, as often as the player likes. A
+ * change of case only is a change.
  *
- * One UPDATE decides it, so races are settled by the database: two players
- * asking for the same name meet the UNIQUE index (one gets `taken`), and two
- * changes for the same account meet the cooldown in the WHERE clause (the
- * second gets `too_soon`). The caller tells the hub and rooms, which keep
- * copies of the name; everything else in D1 joins `users` for it.
+ * Two players asking for the same name at once meet the UNIQUE index (one
+ * gets `taken`). `username_changed_at` records when, for support. The caller
+ * tells the hub and rooms, which keep copies of the name; everything else in
+ * D1 joins `users` for it.
  */
 export async function changeUsername(db: D1Database, account: SetUpAccount, username: string, now: number): Promise<RenameResult> {
   if (account.username === username) return { kind: "unchanged" };
-  const next = nextUsernameChangeAt(account.usernameChangedAt);
-  if (next !== null && now < next) return { kind: "too_soon", nextChangeAt: next };
   const holder = await userIdByUsername(db, username);
   if (holder !== null && holder !== account.id) return { kind: "taken" };
   try {
-    const res = await db
-      .prepare(
-        `UPDATE users SET username = ?2, username_changed_at = ?3
-          WHERE id = ?1 AND username IS NOT NULL AND (username_changed_at IS NULL OR username_changed_at <= ?4)`,
-      )
-      .bind(account.id, username, now, now - USERNAME_CHANGE_COOLDOWN_MS)
+    await db
+      .prepare("UPDATE users SET username = ?2, username_changed_at = ?3 WHERE id = ?1 AND username IS NOT NULL")
+      .bind(account.id, username, now)
       .run();
-    if (res.meta.changes === 0) {
-      // Another change for this account got there first.
-      const fresh = await loadAccount(db, account.id);
-      return { kind: "too_soon", nextChangeAt: nextUsernameChangeAt(fresh?.usernameChangedAt ?? now) ?? now };
-    }
   } catch (err) {
     if (String(err).includes("UNIQUE")) return { kind: "taken" };
     throw err;

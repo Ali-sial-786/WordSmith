@@ -10,7 +10,7 @@ contract.
 |---|---|
 | `src/index.ts` | The router (every route, and which need a token), and the hourly Cron Trigger's `scheduled` handler |
 | `src/auth/` | Firebase ID token checks with WebCrypto (`firebase.ts`) and reading the token from a request (`request.ts`) |
-| `src/account/` | Username, avatar and nickname rules, the username cooldown, and the profanity blocklist |
+| `src/account/` | Username, avatar and nickname rules, and the profanity blocklist |
 | `src/routes/` | The REST and WebSocket handlers |
 | `src/db/` | D1 queries |
 | `src/hub/` | HubDO (`hub.ts`) and its message protocol (`protocol.ts`) |
@@ -60,7 +60,7 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 | `GET /define/:word` | `{word, senses: [{pos, gloss}], source}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it (or has it only as a name), `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |
 | `GET /me` | My profile (below). The first call creates the account with 3 Hammer Strikes; `needsSetup` stays true until setup. |
 | `POST /me/setup` | `{username, avatar}` → my profile. Username: 3–16 of `A–Z a–z 0–9 _`, unique ignoring case, not blocked or reserved (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`). Avatar: `avatar_01` … `avatar_16` (`400 invalid_avatar`). Setup can't change the username (`409 already_set`; that's `POST /me/username`), but repeating it with another avatar changes the avatar. |
-| `POST /me/username` | `{username}` → my profile, renamed. Setup's rules (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`, unique ignoring case; a change of case only is fine), once every 7 days: `429 {error: "too_soon", message, nextChangeAt}` (epoch ms). The first change after setup is free; the profile's `nextUsernameChangeAt` says when the next is allowed. Asking for exactly my current name changes nothing and answers 200 (a retry). See "Changing the username" below. |
+| `POST /me/username` | `{username}` → my profile, renamed. Setup's rules (`400 invalid_username`, `400 username_not_allowed`, `409 username_taken`, unique ignoring case; a change of case only is fine), as often as the player likes. Asking for exactly my current name changes nothing and answers 200 (a retry). See "Changing the username" below. |
 | `DELETE /me` | `{ok: true}`. Deletes all my rows (push tokens too). Past matches keep a row under a placeholder ID, which shows as "Deleted smith". The app should then delete the Firebase user; another `GET /me` before that would start a fresh account. |
 | `POST /me/push-token` | `{token}` → `{ok: true}`: this phone's FCM registration token gets invite notifications (below). A token another account had moves here; an account keeps its 5 newest. `400 invalid_push_token` unless `token` is 1–4096 printable ASCII characters without spaces. |
 | `DELETE /me/push-token` | `{token}` → `{ok: true}`: no more notifications to that phone (sign-out, or turned off). Only removes my own token; unknown tokens are fine. `400 invalid_push_token` as above. |
@@ -110,7 +110,7 @@ often the case for rarer words:
 ```json
 {
   "id": "<firebase uid>", "username": "Ali", "avatar": "avatar_03", "needsSetup": false,
-  "nextUsernameChangeAt": null, "totalXp": 1000, "level": 10, "xpIntoLevel": 100, "xpForLevel": 150, "rank": "Journeyman",
+  "totalXp": 1000, "level": 10, "xpIntoLevel": 100, "xpForLevel": 150, "rank": "Journeyman",
   "campaignCompleted": 12, "nextStage": 13,
   "scrapBin": 4, "hints": {"hammer": 5, "chisel": 1, "sparks": 0},
   "stats": {"wordsForged": 40, "longestWord": "THREAD", "soloDone": 12, "coopRounds": 0,
@@ -123,17 +123,14 @@ often the case for rarer words:
 
 `campaignCompleted` is the highest stage completed (`profiles.campaign_stage`,
 0 = none). `nextStage` is `campaignCompleted + 1`, which is what the app's
-`Profile.campaignStage` holds. `nextUsernameChangeAt` is when
-`POST /me/username` may next change the name (epoch ms): `null` until the
-first change, then 7 days after the last (`users.username_changed_at`).
+`Profile.campaignStage` holds.
 
 ### Changing the username
 
 `POST /me/username` (`src/routes/me.ts`, `changeUsername` in
-`src/db/accounts.ts`) decides with one `UPDATE … WHERE` the cooldown has
-passed: two players racing for a name meet the `UNIQUE COLLATE NOCASE`
-index (one gets `409 username_taken`), and two changes for one account meet
-the cooldown (one gets `429 too_soon`). In D1 the name lives only in
+`src/db/accounts.ts`) has no limit on how often: two players racing for a
+name meet the `UNIQUE COLLATE NOCASE` index (one gets `409 username_taken`),
+and `users.username_changed_at` records the latest change. In D1 the name lives only in
 `users`: friends, requests, the leaderboard, the Forge Board's Weekly Trials
 and gifts, and `GET /users/:username` all join it, and match summaries only
 hold user IDs. Two places keep a copy, and are told before the answer (best

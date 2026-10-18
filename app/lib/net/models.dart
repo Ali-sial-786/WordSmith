@@ -52,7 +52,6 @@ class ServerProfile {
     required this.stats,
     this.masterworkPieces = 0,
     this.survivalBest,
-    this.nextUsernameChangeAt,
   });
 
   factory ServerProfile.fromJson(Map<String, dynamic> j) => ServerProfile(
@@ -60,10 +59,6 @@ class ServerProfile {
     username: j['username'] as String?,
     avatar: j['avatar'] as String?,
     needsSetup: j['needsSetup'] as bool? ?? false,
-    nextUsernameChangeAt: switch (j['nextUsernameChangeAt']) {
-      final num at => DateTime.fromMillisecondsSinceEpoch(at.toInt()),
-      _ => null,
-    },
     totalXp: j['totalXp'] as int? ?? 0,
     level: j['level'] as int? ?? 1,
     rank: j['rank'] as String? ?? '',
@@ -93,12 +88,6 @@ class ServerProfile {
 
   /// The best Crucible run (shared/survival.md).
   final SurvivalBest? survivalBest;
-
-  /// When the username may next change (once a week); null or past means now.
-  final DateTime? nextUsernameChangeAt;
-
-  /// Whether `POST /v1/me/username` would be turned away as too soon.
-  bool get usernameLocked => nextUsernameChangeAt?.isAfter(DateTime.now()) ?? false;
 }
 
 /// A Crucible run's score: puzzles cleared, then words, then saved.

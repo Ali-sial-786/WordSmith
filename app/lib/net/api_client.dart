@@ -16,16 +16,10 @@ class ApiException implements Exception {
   final String code;
   final String? message;
 
-  /// The whole error body, for codes that carry more (e.g. `too_soon`'s `nextChangeAt`).
+  /// The whole error body, for codes that carry more.
   final Map<String, dynamic> data;
 
   bool get offline => status == 0;
-
-  /// `too_soon`: when the username may change again.
-  DateTime? get nextChangeAt => switch (data['nextChangeAt']) {
-    final num at => DateTime.fromMillisecondsSinceEpoch(at.toInt()),
-    _ => null,
-  };
 
   /// Words for players.
   String get friendly => switch (code) {
@@ -33,7 +27,6 @@ class ApiException implements Exception {
     'username_taken' => 'That name is taken. Try another.',
     'invalid_username' => 'Use 3–16 letters, numbers or _.',
     'username_not_allowed' => "That name isn't allowed. Try another.",
-    'too_soon' => 'You can change your name once a week.',
     'invalid_nickname' => 'Nicknames are 1–20 characters, on one line.',
     'user_not_found' => 'No smith by that name.',
     'cannot_friend_self' => "That's you!",
@@ -144,7 +137,7 @@ class ApiClient {
   Future<ServerProfile> setup(String username, String avatar) async =>
       ServerProfile.fromJson(await _send('POST', '/me/setup', body: {'username': username, 'avatar': avatar}));
 
-  /// A new username, at most once a week (`too_soon` carries when it's allowed).
+  /// A new username, as often as the player likes.
   Future<ServerProfile> changeUsername(String username) async =>
       ServerProfile.fromJson(await _send('POST', '/me/username', body: {'username': username}));
 

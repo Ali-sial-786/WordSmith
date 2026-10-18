@@ -11,7 +11,7 @@ import '../../ui/widgets/metal_button.dart';
 
 final _validName = RegExp(r'^[A-Za-z0-9_]{3,16}$');
 
-/// First-time setup: pick a smith name (it can change later, once a week)
+/// First-time setup: pick a smith name (it can change later in Settings)
 /// and an emblem.
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -66,7 +66,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         children: [
           Text('Pick a name', style: text.titleMedium),
           const SizedBox(height: 6),
-          Text('Friends find you by it. You can change it later, once a week.', style: text.bodySmall),
+          Text('Friends find you by it. You can change it later in Settings.', style: text.bodySmall),
           const SizedBox(height: 10),
           TextField(
             controller: _name,

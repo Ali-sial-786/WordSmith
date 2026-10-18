@@ -12,19 +12,8 @@ import '../../ui/widgets/metal_button.dart';
 
 final _validName = RegExp(r'^[A-Za-z0-9_]{3,16}$');
 
-/// When the name may change again, for players: "Tue, Oct 21 (in 3 days)".
-String nextChangeLabel(BuildContext context, DateTime at) {
-  final left = at.difference(DateTime.now());
-  final days = (left.inHours / 24).ceil();
-  final hours = left.inMinutes <= 60 ? 1 : (left.inMinutes / 60).ceil();
-  final when = left.inHours < 24
-      ? 'in $hours ${hours == 1 ? 'hour' : 'hours'}'
-      : 'in $days ${days == 1 ? 'day' : 'days'}';
-  return '${MaterialLocalizations.of(context).formatMediumDate(at)} ($when)';
-}
-
 /// A new smith name (server/README.md, `POST /v1/me/username`): setup's
-/// rules, at most once a week. Reached from Settings → Account.
+/// rules, as often as the player likes. Reached from Settings → Account.
 class ChangeUsernameScreen extends ConsumerStatefulWidget {
   const ChangeUsernameScreen({super.key});
 
@@ -65,14 +54,7 @@ class _ChangeUsernameScreenState extends ConsumerState<ChangeUsernameScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You're now $name.")));
       Navigator.of(context).pop();
     } on ApiException catch (e) {
-      if (!mounted) return;
-      final next = e.nextChangeAt;
-      setState(
-        () =>
-            _error = next != null ? 'You can change your name again on ${nextChangeLabel(context, next)}.' : e.friendly,
-      );
-      // Changed on another phone? The profile says when, from now on.
-      if (e.code == 'too_soon') await n.sync();
+      if (mounted) setState(() => _error = e.friendly);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,7 +64,6 @@ class _ChangeUsernameScreenState extends ConsumerState<ChangeUsernameScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final server = ref.watch(accountProvider.select((a) => a.server));
-    final locked = server?.usernameLocked ?? false;
     return Scaffold(
       appBar: AppBar(title: Text('Your smith name', style: displayStyle(22)), centerTitle: true),
       body: ListView(
@@ -120,7 +101,7 @@ class _ChangeUsernameScreenState extends ConsumerState<ChangeUsernameScreen> {
             hint: 'New smith name',
             icon: Icons.edit_outlined,
             maxLength: 16,
-            enabled: !locked && !_busy,
+            enabled: !_busy,
             error: _error,
             textInputAction: TextInputAction.done,
             onChanged: (_) => setState(() => _error = null),
@@ -131,7 +112,6 @@ class _ChangeUsernameScreenState extends ConsumerState<ChangeUsernameScreen> {
             '3–16 letters, numbers or _',
             'Nobody else can have it, whatever the capitals',
             'Friends see it everywhere at once, and find you by it',
-            'You can change it once a week',
           ])
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
@@ -146,32 +126,12 @@ class _ChangeUsernameScreenState extends ConsumerState<ChangeUsernameScreen> {
                 ],
               ),
             ),
-          if (locked && server?.nextUsernameChangeAt != null) ...[
-            const SizedBox(height: 14),
-            ForgePanel(
-              padding: const EdgeInsets.all(12),
-              gold: true,
-              child: Row(
-                children: [
-                  Icon(Icons.hourglass_bottom, color: Palette.gold),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'You changed your name recently. You can change it again on '
-                      '${nextChangeLabel(context, server!.nextUsernameChangeAt!)}.',
-                      style: text.bodyMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 24),
           PlateButton(
             label: _busy ? 'Forging…' : 'Change name',
             icon: 'anvil',
             primary: true,
-            onPressed: locked || _busy ? null : _submit,
+            onPressed: _busy ? null : _submit,
           ),
         ],
       ),

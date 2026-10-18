@@ -6,8 +6,6 @@ import {
   checkUsername,
   isAvatar,
   looksLikeUsername,
-  nextUsernameChangeAt,
-  USERNAME_CHANGE_COOLDOWN_MS,
 } from "../../src/account/username";
 
 describe("checkUsername", () => {
@@ -45,14 +43,6 @@ describe("looksLikeUsername", () => {
     expect(looksLikeUsername("abc")).toBe(true);
     expect(looksLikeUsername("ab")).toBe(false);
     expect(looksLikeUsername("a/b")).toBe(false);
-  });
-});
-
-describe("nextUsernameChangeAt", () => {
-  it("is now before the first change, then a week after the last", () => {
-    expect(USERNAME_CHANGE_COOLDOWN_MS).toBe(7 * 24 * 3600_000);
-    expect(nextUsernameChangeAt(null)).toBeNull();
-    expect(nextUsernameChangeAt(1_000)).toBe(1_000 + USERNAME_CHANGE_COOLDOWN_MS);
   });
 });
 

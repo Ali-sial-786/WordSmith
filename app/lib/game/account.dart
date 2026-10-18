@@ -237,8 +237,7 @@ class AccountController extends Notifier<AccountState> {
     await _becomeReady(profile);
   }
 
-  /// A new smith name (at most once a week). Throws [ApiException]: taken,
-  /// not allowed, or `too_soon` with [ApiException.nextChangeAt].
+  /// A new smith name. Throws [ApiException]: taken or not allowed.
   Future<void> changeUsername(String username) async {
     final profile = await _api!.changeUsername(username.trim());
     if (ref.mounted) state = state.copyWith(server: profile);

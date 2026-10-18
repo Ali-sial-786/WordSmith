@@ -44,14 +44,6 @@ export function checkUsername(raw: unknown): UsernameCheck {
   return { ok: true, username };
 }
 
-/** A username can change once in this long (the first change after setup is free). */
-export const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 3600_000;
-
-/** When a username last changed at `changedAt` may next change; `null` (never changed) means now. */
-export function nextUsernameChangeAt(changedAt: number | null): number | null {
-  return changedAt === null ? null : changedAt + USERNAME_CHANGE_COOLDOWN_MS;
-}
-
 /** Whether a string could be a username at all (for lookups by name). */
 export function looksLikeUsername(raw: string): boolean {
   return raw.length >= USERNAME_MIN && raw.length <= USERNAME_MAX && USERNAME_SHAPE.test(raw);
