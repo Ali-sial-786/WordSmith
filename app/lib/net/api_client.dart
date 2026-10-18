@@ -54,7 +54,7 @@ class ApiException implements Exception {
     'no_prize' => 'No prize from last week.',
     'nothing_to_claim' => 'No gifts to collect right now.',
     'already_sent' => 'You already sent them a gift today.',
-    'not_friends' => 'You can only send gifts to friends.',
+    'not_friends' => "That smith isn't on your friends list any more.",
     'invalid_run' => "The forge couldn't count that run.",
     // An unknown route: the server is older than this app.
     'not_found' => "The forge server doesn't have that yet. Try again after it's updated.",
