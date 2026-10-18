@@ -48,7 +48,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
     final s = widget.session;
     final end = s.standings;
     final text = Theme.of(context).textTheme;
-    if (end == null) return const Center(child: CircularProgressIndicator(color: Palette.molten));
+    if (end == null) return Center(child: CircularProgressIndicator(color: Palette.molten));
     final winner = end.winner;
     final next = end.next;
     final secs = end.standingsEndsAt == null ? 0 : ((end.standingsEndsAt! - s.serverNow) / 1000).ceil().clamp(0, 99);
@@ -60,7 +60,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
           children: [
             IconButton(
               onPressed: widget.onLeave,
-              icon: const Icon(Icons.close, color: Palette.steel),
+              icon: Icon(Icons.close, color: Palette.steel),
             ),
             const Spacer(),
             EmoteButton(onEmote: s.emote),
@@ -72,7 +72,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
           style: displayStyle(
             28,
             color: winner == s.me ? Palette.molten : Palette.whiteHeat,
-          ).copyWith(shadows: winner == s.me ? const [Shadow(color: Palette.ember, blurRadius: 20)] : null),
+          ).copyWith(shadows: winner == s.me ? [Shadow(color: Palette.ember, blurRadius: 20)] : null),
         ),
         const SizedBox(height: 4),
         Text(

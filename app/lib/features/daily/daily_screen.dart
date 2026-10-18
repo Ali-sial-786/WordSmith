@@ -44,13 +44,15 @@ class _DailyScreenState extends ConsumerState<DailyScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ref.invalidate(dailyProvider);
       });
-      return const _Frame(
+      return _Frame(
         child: Center(child: CircularProgressIndicator(color: Palette.molten)),
       );
     }
     return switch (daily) {
       AsyncData(:final value?) when !value.completed => PuzzleScreen.daily(daily: _playing = value),
-      AsyncData(:final value?) => _Frame(child: _Done(info: value, late: late)),
+      AsyncData(:final value?) => _Frame(
+        child: _Done(info: value, late: late),
+      ),
       AsyncData() => _Frame(
         child: _Message(
           'Sign in to take on the Daily Commission.',
@@ -65,7 +67,9 @@ class _DailyScreenState extends ConsumerState<DailyScreen> {
           onPressed: () => late ? ref.invalidate(dailyForDateProvider(widget.date!)) : ref.invalidate(dailyProvider),
         ),
       ),
-      _ => const _Frame(child: Center(child: CircularProgressIndicator(color: Palette.molten))),
+      _ => _Frame(
+        child: Center(child: CircularProgressIndicator(color: Palette.molten)),
+      ),
     };
   }
 }
@@ -146,12 +150,9 @@ class _Done extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const GameIcon('flame', size: 64, color: Palette.molten),
+            GameIcon('flame', size: 64, color: Palette.molten),
             const SizedBox(height: 10),
-            Text(
-              late ? 'Forged!' : 'Forged for today!',
-              style: displayStyle(28, color: Palette.molten),
-            ),
+            Text(late ? 'Forged!' : 'Forged for today!', style: displayStyle(28, color: Palette.molten)),
             const SizedBox(height: 8),
             Text(
               late ? "${prettyDate(info.date)}'s commission is done." : '${info.streak}-day streak · best ${info.best}',

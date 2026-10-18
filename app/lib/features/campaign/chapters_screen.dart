@@ -54,10 +54,7 @@ class ChaptersScreen extends ConsumerWidget {
                               image: AssetImage(chapterBackground(ch.id)),
                               fit: BoxFit.cover,
                               alignment: const Alignment(0, -0.3),
-                              colorFilter: ColorFilter.mode(
-                                Colors.black.withValues(alpha: 0.55),
-                                BlendMode.darken,
-                              ),
+                              colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.55), BlendMode.darken),
                             )
                           : null,
                       borderRadius: BorderRadius.circular(16),
@@ -78,9 +75,7 @@ class ChaptersScreen extends ConsumerWidget {
                               colors: [metal.highlight, metal.base, Color.lerp(metal.base, Colors.black, 0.5)!],
                             ),
                           ),
-                          child: locked
-                              ? const Center(child: GameIcon('lock', size: 20, color: Palette.forgeBlack))
-                              : null,
+                          child: locked ? Center(child: GameIcon('lock', size: 20, color: Palette.forgeBlack)) : null,
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -110,10 +105,7 @@ class ChaptersScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        if (current) ...[
-                          const SizedBox(width: 10),
-                          const GameIcon('anvil', size: 26, color: Palette.molten),
-                        ],
+                        if (current) ...[const SizedBox(width: 10), GameIcon('anvil', size: 26, color: Palette.molten)],
                       ],
                     ),
                   ),

@@ -91,7 +91,7 @@ class RoundMetalButton extends StatelessWidget {
                   child: Text(
                     badge!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: Fonts.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
@@ -122,7 +122,7 @@ class _PaintedRound extends StatelessWidget {
       gradient: RadialGradient(
         center: const Alignment(-0.3, -0.4),
         colors: active
-            ? const [Palette.molten, Palette.ember, Color(0xFF7A2A0A)]
+            ? [Palette.molten, Palette.ember, Color(0xFF7A2A0A)]
             : const [Color(0xFF55504B), Color(0xFF34302C), Color(0xFF1E1B19)],
       ),
       border: Border.all(color: active ? Palette.whiteHeat : const Color(0xFF8C6B47), width: 2),

@@ -2,23 +2,87 @@ import 'package:flutter/painting.dart';
 
 import '../../engine/heat.dart';
 
-/// Colour tokens from docs/ART_AND_AUDIO.md §2.
+/// A colour scheme: the forge's own, or another the player picks in
+/// Settings. Colour tokens from docs/ART_AND_AUDIO.md §2.
+class PaletteScheme {
+  const PaletteScheme({
+    required this.id,
+    required this.name,
+    required this.forgeBlack,
+    required this.soot,
+    required this.ash,
+    required this.iron,
+    required this.steel,
+    required this.ember,
+    required this.molten,
+    required this.whiteHeat,
+    required this.quenchRed,
+    required this.verdigris,
+    required this.gold,
+    required this.darkLetter,
+  });
+
+  /// Stored in Settings.
+  final String id;
+
+  /// Shown in Settings.
+  final String name;
+
+  final Color forgeBlack;
+  final Color soot;
+  final Color ash;
+  final Color iron;
+  final Color steel;
+  final Color ember;
+  final Color molten;
+  final Color whiteHeat;
+  final Color quenchRed;
+  final Color verdigris;
+  final Color gold;
+  final Color darkLetter;
+
+  static const forge = PaletteScheme(
+    id: 'forge',
+    name: 'Forge',
+    forgeBlack: Color(0xFF17110E),
+    soot: Color(0xFF241B16),
+    ash: Color(0xFF3A2F28),
+    iron: Color(0xFF6B6F75),
+    steel: Color(0xFFA3ACB5),
+    ember: Color(0xFFFF6A13),
+    molten: Color(0xFFFFB23F),
+    whiteHeat: Color(0xFFFFF1D0),
+    quenchRed: Color(0xFFD9433B),
+    verdigris: Color(0xFF3FA58E),
+    gold: Color(0xFFE8C04A),
+    darkLetter: Color(0xFF2A1608),
+  );
+
+  static const all = [forge];
+
+  static PaletteScheme byId(String? id) => all.firstWhere((s) => s.id == id, orElse: () => forge);
+}
+
+/// The colours in use: the current [scheme]'s. Not constants, since the
+/// player can change the scheme while playing.
 abstract final class Palette {
-  static const forgeBlack = Color(0xFF17110E);
-  static const soot = Color(0xFF241B16);
-  static const ash = Color(0xFF3A2F28);
-  static const iron = Color(0xFF6B6F75);
-  static const steel = Color(0xFFA3ACB5);
-  static const ember = Color(0xFFFF6A13);
-  static const molten = Color(0xFFFFB23F);
-  static const whiteHeat = Color(0xFFFFF1D0);
-  static const quenchRed = Color(0xFFD9433B);
-  static const verdigris = Color(0xFF3FA58E);
+  static PaletteScheme scheme = PaletteScheme.forge;
+
+  static Color get forgeBlack => scheme.forgeBlack;
+  static Color get soot => scheme.soot;
+  static Color get ash => scheme.ash;
+  static Color get iron => scheme.iron;
+  static Color get steel => scheme.steel;
+  static Color get ember => scheme.ember;
+  static Color get molten => scheme.molten;
+  static Color get whiteHeat => scheme.whiteHeat;
+  static Color get quenchRed => scheme.quenchRed;
+  static Color get verdigris => scheme.verdigris;
 
   /// Gilded cells and Masterwork pieces.
-  static const gold = Color(0xFFE8C04A);
+  static Color get gold => scheme.gold;
 
-  static const darkLetter = Color(0xFF2A1608);
+  static Color get darkLetter => scheme.darkLetter;
 
   static Color heat(Heat heat) => switch (heat) {
     Heat.ember => const Color(0xFF5A2A1C),
@@ -76,17 +140,7 @@ class MetalStyle {
 
 /// Chapters with their own scene (docs/ART_AND_AUDIO.md §4); anything else
 /// uses the Forge Hall.
-const _chapterScenes = {
-  'tin',
-  'copper',
-  'bronze',
-  'iron',
-  'steel',
-  'silver',
-  'gold',
-  'damascus',
-  'starmetal',
-};
+const _chapterScenes = {'tin', 'copper', 'bronze', 'iron', 'steel', 'silver', 'gold', 'damascus', 'starmetal'};
 
 /// Moonlit and cool scenes keep most of their blue under the warm grade.
 const _coolScenes = {'iron', 'steel', 'silver', 'starmetal'};

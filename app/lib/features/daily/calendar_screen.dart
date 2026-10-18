@@ -25,7 +25,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 const bronzeDays = 7;
 const silverDays = 15;
 
-const trophyColors = {'bronze': Color(0xFFC07A45), 'silver': Color(0xFFC9CED6), 'gold': Palette.gold};
+final trophyColors = {'bronze': Color(0xFFC07A45), 'silver': Color(0xFFC9CED6), 'gold': Palette.gold};
 
 String _month(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
 
@@ -101,7 +101,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   padding: EdgeInsets.all(24),
                   child: Text('Sign in to keep a calendar.', textAlign: TextAlign.center),
                 ),
-                _ => const Padding(
+                _ => Padding(
                   padding: EdgeInsets.all(40),
                   child: Center(child: CircularProgressIndicator(color: Palette.molten)),
                 ),
@@ -248,7 +248,7 @@ class _Day extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              if (isDone) const GameIcon('flame', size: 26, color: Palette.molten),
+              if (isDone) GameIcon('flame', size: 26, color: Palette.molten),
               Positioned(
                 top: 3,
                 left: 5,
@@ -263,7 +263,7 @@ class _Day extends StatelessWidget {
                   ),
                 ),
               ),
-              if (missed) const Icon(Icons.play_arrow_rounded, size: 18, color: Palette.steel),
+              if (missed) Icon(Icons.play_arrow_rounded, size: 18, color: Palette.steel),
             ],
           ),
         ),

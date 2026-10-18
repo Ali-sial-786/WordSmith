@@ -239,7 +239,7 @@ class _MoldTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(pad, pad + 1, pad, pad),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [Color(0xFF2C221C), Palette.soot, Color(0xFF1B1411)],
@@ -306,7 +306,7 @@ class _MoldTile extends StatelessWidget {
               ],
             ),
           ),
-          if (winner) const Positioned(top: -11, child: GameIcon('crown', size: 18, color: Palette.molten)),
+          if (winner) Positioned(top: -11, child: GameIcon('crown', size: 18, color: Palette.molten)),
         ],
       ),
     );

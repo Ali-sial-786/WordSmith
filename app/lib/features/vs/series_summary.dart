@@ -54,7 +54,7 @@ class _SeriesSummaryState extends State<SeriesSummary> {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [Color(0xFF2C221C), Palette.soot, Color(0xFF1B1411)],
@@ -213,7 +213,7 @@ class _RoundRow extends StatelessWidget {
                     TextSpan(
                       children: [
                         if (sudden)
-                          const TextSpan(
+                          TextSpan(
                             text: 'Sudden death · ',
                             style: TextStyle(color: Palette.quenchRed, fontWeight: FontWeight.w700),
                           ),
@@ -255,7 +255,7 @@ class _RoundRow extends StatelessWidget {
       if (winner == null)
         const TextSpan(text: 'No winner')
       else ...[
-        const WidgetSpan(
+        WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: Padding(
             padding: EdgeInsets.only(right: 3),
@@ -277,7 +277,7 @@ class _RoundRow extends StatelessWidget {
       if (melted != null)
         TextSpan(
           text: ' · ${melted.id == s.me ? 'you' : s.nameOf(melted.id)} melted',
-          style: const TextStyle(color: Palette.quenchRed),
+          style: TextStyle(color: Palette.quenchRed),
         ),
     ];
   }

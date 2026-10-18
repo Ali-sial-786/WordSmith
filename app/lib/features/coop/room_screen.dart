@@ -428,7 +428,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (busy) const CircularProgressIndicator(color: Palette.molten),
+          if (busy) CircularProgressIndicator(color: Palette.molten),
           const SizedBox(height: 16),
           Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
           if (action != null) ...[

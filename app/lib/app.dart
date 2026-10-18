@@ -25,6 +25,7 @@ import 'game/account.dart';
 import 'game/providers.dart';
 import 'game/daily_game.dart';
 import 'net/push.dart';
+import 'ui/theme/appearance.dart';
 import 'ui/theme/palette.dart';
 import 'ui/theme/theme.dart';
 
@@ -146,6 +147,9 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     ref.watch(accountProvider); // keep the account alive for the whole app
+    // Only a new look rebuilds the app, not every volume change.
+    final look = ref.watch(settingsProvider.select(appearanceKey));
+    applyAppearance(ref.read(settingsProvider));
     return MaterialApp.router(
       title: 'Wordsmith',
       debugShowCheckedModeBanner: false,
@@ -156,7 +160,8 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
       // phone's bigger or bold text settings would only misshape it.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
-        child: child!,
+        // A new colour scheme or font: build every screen afresh to pick it up.
+        child: KeyedSubtree(key: ValueKey(look), child: child!),
       ),
     );
   }

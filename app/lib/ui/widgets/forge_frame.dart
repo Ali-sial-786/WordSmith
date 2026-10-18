@@ -53,7 +53,7 @@ enum ForgeFrameKind {
     ),
     platePrimary => BoxDecoration(
       borderRadius: BorderRadius.circular(radius),
-      gradient: const LinearGradient(
+      gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [Color(0xFFFFC45E), Palette.molten, Palette.ember],

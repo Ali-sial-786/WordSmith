@@ -9,13 +9,7 @@ import '../theme/palette.dart';
 /// A Masterwork drawn as a blueprint: the outline in pale blueprint lines,
 /// with every collected piece cast in gold. A finished one is all gold.
 class MasterworkArt extends StatelessWidget {
-  const MasterworkArt({
-    super.key,
-    required this.spec,
-    required this.collected,
-    this.size = 96,
-    this.locked = false,
-  });
+  const MasterworkArt({super.key, required this.spec, required this.collected, this.size = 96, this.locked = false});
 
   final MasterworkSpec spec;
 
@@ -64,7 +58,7 @@ class MasterworkArt extends StatelessWidget {
     final done = collected >= spec.pieces;
     final gold = ShaderMask(
       blendMode: BlendMode.srcIn,
-      shaderCallback: (r) => const LinearGradient(
+      shaderCallback: (r) => LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [Color(0xFFFFF0B8), Palette.gold, Color(0xFFA9781C)],

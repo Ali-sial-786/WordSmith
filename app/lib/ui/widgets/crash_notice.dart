@@ -41,7 +41,7 @@ class _CrashNoticeState extends ConsumerState<CrashNotice> {
     final copy = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const GameIcon('ember', size: 40, color: Palette.molten),
+        icon: GameIcon('ember', size: 40, color: Palette.molten),
         title: const Text('The forge went cold'),
         content: Text(
           'Wordsmith closed unexpectedly last time. '

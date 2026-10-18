@@ -232,7 +232,7 @@ class _CodeCard extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Copy code',
-              icon: const Icon(Icons.copy, color: Palette.steel),
+              icon: Icon(Icons.copy, color: Palette.steel),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: code));
                 ScaffoldMessenger.of(context)

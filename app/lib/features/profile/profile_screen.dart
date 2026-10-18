@@ -37,7 +37,9 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           Center(child: RankBadge(rank: p.rank, size: 72)),
           const SizedBox(height: 6),
-          Center(child: Text(p.rank.title, style: displayStyle(28, color: Palette.molten))),
+          Center(
+            child: Text(p.rank.title, style: displayStyle(28, color: Palette.molten)),
+          ),
           Center(child: Text('Smith Level ${progress.level}', style: text.titleMedium)),
           const SizedBox(height: 14),
           XpBar(fraction: progress.fraction, height: 12),
@@ -63,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const GameIcon('scrap_bucket', color: Palette.verdigris),
+            leading: GameIcon('scrap_bucket', color: Palette.verdigris),
             title: const Text('Scrap Bin'),
             subtitle: Text('Every $scrapBinCapacity bonus words become a Hammer Strike'),
             trailing: Text('${p.scrapBin}/$scrapBinCapacity', style: displayStyle(18)),
@@ -85,17 +87,17 @@ class ProfileScreen extends ConsumerWidget {
               _Stat('Monthly trophies', '${t.gold} gold · ${t.silver} silver · ${t.bronze} bronze'),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const GameIcon('book', color: Palette.molten),
+              leading: GameIcon('book', color: Palette.molten),
               title: const Text("Smith's Lore"),
               subtitle: Text('${daily.total} ${daily.total == 1 ? 'page' : 'pages'} found'),
-              trailing: const Icon(Icons.chevron_right, color: Palette.steel),
+              trailing: Icon(Icons.chevron_right, color: Palette.steel),
               onTap: () => context.push('/lore'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const GameIcon('calendar', color: Palette.molten),
+              leading: GameIcon('calendar', color: Palette.molten),
               title: const Text('Commission calendar'),
-              trailing: const Icon(Icons.chevron_right, color: Palette.steel),
+              trailing: Icon(Icons.chevron_right, color: Palette.steel),
               onTap: () => context.push('/daily/calendar'),
             ),
           ],
@@ -109,7 +111,9 @@ class ProfileScreen extends ConsumerWidget {
             _Stat('Versus rounds won', '${server.stats.vsRoundsWon}'),
           ] else if (account.phase != AccountPhase.unavailable) ...[
             const SizedBox(height: 24),
-            ForgePanel(padding: const EdgeInsets.all(14), child: Column(
+            ForgePanel(
+              padding: const EdgeInsets.all(14),
+              child: Column(
                 children: [
                   Text(
                     'Sign in to keep your progress safe on every phone, and to play Co-op, '
@@ -118,7 +122,8 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   TextButton(onPressed: () => context.push('/sign-in'), child: const Text('Sign in')),
                 ],
-              )),
+              ),
+            ),
           ],
         ],
       ),
@@ -196,7 +201,7 @@ class _ArmoryCard extends ConsumerWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Palette.steel),
+            Icon(Icons.chevron_right, color: Palette.steel),
           ],
         ),
       ),

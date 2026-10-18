@@ -14,7 +14,7 @@ class VideoBubble extends StatelessWidget {
     required this.avatar,
     required this.size,
     this.call,
-    this.color = Palette.molten,
+    this.color,
     this.dimmed = false,
     this.me = false,
   });
@@ -23,7 +23,11 @@ class VideoBubble extends StatelessWidget {
   final String avatar;
   final double size;
   final VideoCall? call;
-  final Color color;
+
+  /// The player's colour; molten unless given.
+  final Color? color;
+
+  Color get _color => color ?? Palette.molten;
 
   /// For players who are reconnecting.
   final bool dimmed;
@@ -53,7 +57,7 @@ class VideoBubble extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Palette.soot,
-        border: Border.all(color: color, width: 2),
+        border: Border.all(color: _color, width: 2),
       ),
       child: ClipOval(child: child),
     ),
@@ -61,7 +65,7 @@ class VideoBubble extends StatelessWidget {
 
   Widget _badge(IconData icon) => Container(
     padding: const EdgeInsets.all(2),
-    decoration: const BoxDecoration(color: Palette.soot, shape: BoxShape.circle),
+    decoration: BoxDecoration(color: Palette.soot, shape: BoxShape.circle),
     child: Icon(icon, size: size * 0.3, color: Palette.steel),
   );
 
@@ -90,7 +94,7 @@ class VideoBubble extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              boxShadow: speaking ? [BoxShadow(color: color, blurRadius: 10, spreadRadius: 2)] : const [],
+              boxShadow: speaking ? [BoxShadow(color: _color, blurRadius: 10, spreadRadius: 2)] : const [],
             ),
             child: face,
           ),
@@ -121,7 +125,7 @@ class VideoToggles extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           child: SizedBox.square(
             dimension: size * 0.8,
-            child: const CircularProgressIndicator(strokeWidth: 2, color: Palette.molten),
+            child: CircularProgressIndicator(strokeWidth: 2, color: Palette.molten),
           ),
         );
       }

@@ -179,10 +179,7 @@ class AnvilRingState extends State<AnvilRing> {
                 top: _tileCenter(tile).dy - d / 2,
                 width: d,
                 height: d,
-                child: LetterTile(
-                  letter: widget.letters[tile],
-                  hot: _selected.contains(tile),
-                ),
+                child: LetterTile(letter: widget.letters[tile], hot: _selected.contains(tile)),
               ),
             if (widget.guide case final guide? when _selected.isEmpty && !_moving && guide.length > 1)
               Positioned.fill(
@@ -245,15 +242,10 @@ class LetterTile extends StatelessWidget {
               ),
               Text(
                 letter,
-                style: letterStyle(
-                  d * 0.5,
-                  color: hot ? Palette.darkLetter : Palette.whiteHeat,
-                ).copyWith(
+                style: letterStyle(d * 0.5, color: hot ? Palette.darkLetter : Palette.whiteHeat).copyWith(
                   shadows: [
                     Shadow(
-                      color: hot
-                          ? Palette.whiteHeat.withValues(alpha: 0.5)
-                          : Colors.black.withValues(alpha: 0.7),
+                      color: hot ? Palette.whiteHeat.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.7),
                       offset: Offset(0, d * 0.015),
                       blurRadius: d * 0.03,
                     ),
@@ -280,14 +272,11 @@ class _PaintedTile extends StatelessWidget {
       gradient: RadialGradient(
         center: const Alignment(-0.3, -0.35),
         colors: hot
-            ? const [Palette.whiteHeat, Palette.molten, Palette.ember]
+            ? [Palette.whiteHeat, Palette.molten, Palette.ember]
             : const [Color(0xFF5A5C62), Color(0xFF3A3B3F), Color(0xFF232427)],
         stops: const [0, 0.55, 1],
       ),
-      border: Border.all(
-        color: hot ? Palette.molten : const Color(0xFF8A6A4A),
-        width: 1.5,
-      ),
+      border: Border.all(color: hot ? Palette.molten : const Color(0xFF8A6A4A), width: 1.5),
     ),
   );
 }
@@ -324,10 +313,7 @@ class _AnvilFace extends StatelessWidget {
           errorBuilder: (_, _, _) => DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Palette.ember.withValues(alpha: 0.5),
-                width: 3,
-              ),
+              border: Border.all(color: Palette.ember.withValues(alpha: 0.5), width: 3),
             ),
           ),
         ),
@@ -411,7 +397,11 @@ class _SwipeGuideState extends State<SwipeGuide> with SingleTickerProviderStateM
       final t = _loop.value;
       // Rest on the first tile, trace the word, then fade out.
       final move = Curves.easeInOut.transform(((t - 0.12) / 0.66).clamp(0.0, 1.0));
-      final fade = t < 0.08 ? t / 0.08 : t > 0.85 ? (1 - t) / 0.15 : 1.0;
+      final fade = t < 0.08
+          ? t / 0.08
+          : t > 0.85
+          ? (1 - t) / 0.15
+          : 1.0;
       final head = _along(move);
       final path = [
         widget.points.first,

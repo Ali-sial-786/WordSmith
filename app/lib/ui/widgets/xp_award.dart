@@ -32,7 +32,7 @@ class XpAwardBanner extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Palette.ember, Palette.molten]),
+                gradient: LinearGradient(colors: [Palette.ember, Palette.molten]),
                 borderRadius: BorderRadius.circular(22),
                 boxShadow: [BoxShadow(color: Palette.ember.withValues(alpha: 0.7), blurRadius: 22)],
               ),

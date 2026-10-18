@@ -6,16 +6,15 @@ import '../theme/palette.dart';
 /// A single-colour SVG from assets/icons, tinted, with a Material fallback
 /// while the art is missing.
 class GameIcon extends StatelessWidget {
-  const GameIcon(
-    this.name, {
-    super.key,
-    this.size = 24,
-    this.color = Palette.whiteHeat,
-  });
+  const GameIcon(this.name, {super.key, this.size = 24, this.color});
 
   final String name;
   final double size;
-  final Color color;
+
+  /// White heat unless given.
+  final Color? color;
+
+  Color get _color => color ?? Palette.whiteHeat;
 
   static const _fallbacks = <String, IconData>{
     'hammer': Icons.gavel,
@@ -51,16 +50,8 @@ class GameIcon extends StatelessWidget {
     'assets/icons/$name.svg',
     width: size,
     height: size,
-    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-    placeholderBuilder: (_) => Icon(
-      _fallbacks[name] ?? Icons.circle_outlined,
-      size: size,
-      color: color,
-    ),
-    errorBuilder: (_, _, _) => Icon(
-      _fallbacks[name] ?? Icons.circle_outlined,
-      size: size,
-      color: color,
-    ),
+    colorFilter: ColorFilter.mode(_color, BlendMode.srcIn),
+    placeholderBuilder: (_) => Icon(_fallbacks[name] ?? Icons.circle_outlined, size: size, color: _color),
+    errorBuilder: (_, _, _) => Icon(_fallbacks[name] ?? Icons.circle_outlined, size: size, color: _color),
   );
 }

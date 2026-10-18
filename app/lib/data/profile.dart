@@ -124,6 +124,8 @@ class Settings {
     this.inviteNotifications = true,
     this.leftHanded = false,
     this.reminderHour,
+    this.colorScheme = 'forge',
+    this.font = 'forge',
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) => Settings(
@@ -139,6 +141,8 @@ class Settings {
     inviteNotifications: json['inviteNotifications'] as bool? ?? true,
     leftHanded: json['leftHanded'] as bool? ?? false,
     reminderHour: json['reminderHour'] as int?,
+    colorScheme: json['colorScheme'] as String? ?? 'forge',
+    font: json['font'] as String? ?? 'forge',
   );
 
   final double sfxVolume;
@@ -168,6 +172,12 @@ class Settings {
   /// Local hour (0–23) for the Daily Commission reminder; null for none.
   final int? reminderHour;
 
+  /// The colour scheme's id (PaletteScheme.all).
+  final String colorScheme;
+
+  /// The font choice's id (FontChoice.all).
+  final String font;
+
   Settings copyWith({
     double? sfxVolume,
     double? musicVolume,
@@ -181,6 +191,8 @@ class Settings {
     bool? inviteNotifications,
     bool? leftHanded,
     int? Function()? reminderHour,
+    String? colorScheme,
+    String? font,
   }) => Settings(
     sfxVolume: sfxVolume ?? this.sfxVolume,
     musicVolume: musicVolume ?? this.musicVolume,
@@ -194,6 +206,8 @@ class Settings {
     inviteNotifications: inviteNotifications ?? this.inviteNotifications,
     leftHanded: leftHanded ?? this.leftHanded,
     reminderHour: reminderHour == null ? this.reminderHour : reminderHour(),
+    colorScheme: colorScheme ?? this.colorScheme,
+    font: font ?? this.font,
   );
 
   Map<String, Object> toJson() => {
@@ -209,5 +223,7 @@ class Settings {
     'inviteNotifications': inviteNotifications,
     'leftHanded': leftHanded,
     'reminderHour': ?reminderHour,
+    'colorScheme': colorScheme,
+    'font': font,
   };
 }

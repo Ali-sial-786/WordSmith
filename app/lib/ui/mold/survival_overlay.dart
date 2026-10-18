@@ -538,7 +538,7 @@ class _HeatBarState extends State<HeatBar> with SingleTickerProviderStateMixin {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              const ColoredBox(color: Palette.forgeBlack),
+                              ColoredBox(color: Palette.forgeBlack),
                               FractionallySizedBox(
                                 alignment: Alignment.centerLeft,
                                 widthFactor: f,

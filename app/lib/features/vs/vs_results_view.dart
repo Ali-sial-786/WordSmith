@@ -53,7 +53,7 @@ class VsResultsView extends StatelessWidget {
                 style: displayStyle(
                   26,
                   color: iWon ? Palette.molten : Palette.whiteHeat,
-                ).copyWith(shadows: iWon ? const [Shadow(color: Palette.ember, blurRadius: 24)] : null),
+                ).copyWith(shadows: iWon ? [Shadow(color: Palette.ember, blurRadius: 24)] : null),
               ),
               const SizedBox(height: 4),
               Text(
@@ -135,7 +135,7 @@ class _Actions extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [Palette.forgeBlack.withValues(alpha: 0.55), Palette.forgeBlack.withValues(alpha: 0.9)],
         ),
-        border: const Border(top: BorderSide(color: Palette.ash)),
+        border: Border(top: BorderSide(color: Palette.ash)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
@@ -217,7 +217,7 @@ class _Step extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (place.place == 1) const GameIcon('crown', size: 28, color: Palette.molten),
+          if (place.place == 1) GameIcon('crown', size: 28, color: Palette.molten),
           AvatarBadge(avatar: player?.avatar ?? 'avatar_01', size: place.place == 1 ? 58 : 46),
           const SizedBox(height: 4),
           Text(

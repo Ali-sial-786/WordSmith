@@ -298,7 +298,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
                           style: displayStyle(
                             30,
                             color: Palette.molten,
-                          ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 24)]),
+                          ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 24)]),
                         ),
                         // What everyone had forged, now it can be shown.
                         RivalMolds(session: _s, end: _s.standings!, padding: const EdgeInsets.only(top: 22)),
@@ -340,7 +340,7 @@ class _VsTopStrip extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onLeave,
-            icon: const Icon(Icons.close, color: Palette.steel),
+            icon: Icon(Icons.close, color: Palette.steel),
           ),
           Expanded(
             child: Text(

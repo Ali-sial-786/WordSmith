@@ -477,7 +477,7 @@ class _RunOver extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const GameIcon('ember', size: 44, color: Palette.quenchRed),
+            GameIcon('ember', size: 44, color: Palette.quenchRed),
             const SizedBox(height: 6),
             Text('It melted!', style: displayStyle(26, color: Palette.molten)),
             const SizedBox(height: 12),

@@ -77,7 +77,7 @@ class VideoBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.videocam, size: 18, color: Palette.steel),
+                  Icon(Icons.videocam, size: 18, color: Palette.steel),
                   const SizedBox(width: 8),
                   Expanded(child: Text(label, style: text.bodyMedium)),
                   if (call.status != VideoStatus.failed)

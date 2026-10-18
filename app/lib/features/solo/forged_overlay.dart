@@ -161,7 +161,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     style: displayStyle(
                       40,
                       color: Palette.molten,
-                    ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 24)]),
+                    ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 24)]),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -233,7 +233,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const GameIcon('ember', size: 20, color: Palette.molten),
+                        GameIcon('ember', size: 20, color: Palette.molten),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
@@ -284,7 +284,7 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const GameIcon('flame', size: 26, color: Palette.molten),
+                        GameIcon('flame', size: 26, color: Palette.molten),
                         const SizedBox(width: 8),
                         Text('${daily.streak}-day streak', style: displayStyle(20, color: Palette.molten)),
                       ],
@@ -412,7 +412,7 @@ class _MasterworkNote extends ConsumerWidget {
               'assets/masterworks/${done.id}.svg',
               width: 72,
               height: 72,
-              colorFilter: const ColorFilter.mode(Palette.gold, BlendMode.srcIn),
+              colorFilter: ColorFilter.mode(Palette.gold, BlendMode.srcIn),
               placeholderBuilder: (_) => const SizedBox.square(dimension: 72),
             ),
             const SizedBox(height: 6),
@@ -446,7 +446,7 @@ class _MasterworkNote extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const GameIcon('gilded', size: 20, color: Palette.gold),
+        GameIcon('gilded', size: 20, color: Palette.gold),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
@@ -486,7 +486,7 @@ class _LoreNote extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const GameIcon('book', size: 18, color: Palette.molten),
+              GameIcon('book', size: 18, color: Palette.molten),
               const SizedBox(width: 6),
               Flexible(
                 child: Text("New page of Smith's Lore", style: text.labelMedium?.copyWith(color: Palette.molten)),

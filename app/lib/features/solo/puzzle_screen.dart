@@ -596,7 +596,7 @@ class _TopBar extends StatelessWidget {
           IconButton(
             tooltip: 'Settings',
             onPressed: () => context.push('/settings'),
-            icon: const GameIcon('settings', size: 24, color: Palette.steel),
+            icon: GameIcon('settings', size: 24, color: Palette.steel),
           ),
         ],
       ),
@@ -666,12 +666,12 @@ class _ScrapBin extends StatelessWidget {
                 color: Palette.verdigris,
               ),
             ),
-            const GameIcon('scrap_bucket', size: 28, color: Palette.steel),
+            GameIcon('scrap_bucket', size: 28, color: Palette.steel),
             Positioned(
               bottom: 2,
               child: Text(
                 '$count/$scrapBinCapacity',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: Fonts.ui,
                   fontSize: 10,
                   fontWeight: FontWeight.w900,

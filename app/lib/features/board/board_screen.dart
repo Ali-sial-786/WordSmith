@@ -114,7 +114,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
               error is ApiException ? error.friendly : "Can't reach the forge right now.",
               onRetry: () => ref.invalidate(forgeBoardProvider),
             ),
-            _ => const Center(child: CircularProgressIndicator(color: Palette.molten)),
+            _ => Center(child: CircularProgressIndicator(color: Palette.molten)),
           },
         ),
       ),
@@ -298,7 +298,7 @@ class _StokeStep extends StatelessWidget {
                   ),
                 ),
                 if (done)
-                  const Icon(Icons.check, size: 20, color: Palette.verdigris)
+                  Icon(Icons.check, size: 20, color: Palette.verdigris)
                 else
                   GameIcon(
                     icon,
@@ -352,7 +352,7 @@ class _OrdersCard extends StatelessWidget {
             gold: true,
             child: Row(
               children: [
-                const GameIcon('crown', size: 26, color: Palette.gold),
+                GameIcon('crown', size: 26, color: Palette.gold),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -365,7 +365,7 @@ class _OrdersCard extends StatelessWidget {
                   ),
                 ),
                 if (orders.chestClaimed)
-                  const Icon(Icons.check_circle, color: Palette.verdigris)
+                  Icon(Icons.check_circle, color: Palette.verdigris)
                 else
                   ForgeChipButton(
                     onPressed: orders.chestReady && busy == null ? () => onClaim('chest') : null,
@@ -429,10 +429,7 @@ class _OrderTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (o.friends) ...[
-                      const SizedBox(width: 6),
-                      const GameIcon('friends', size: 14, color: Palette.steel),
-                    ],
+                    if (o.friends) ...[const SizedBox(width: 6), GameIcon('friends', size: 14, color: Palette.steel)],
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -450,14 +447,14 @@ class _OrderTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           if (o.claimed)
-            const Icon(Icons.check_circle, color: Palette.verdigris)
+            Icon(Icons.check_circle, color: Palette.verdigris)
           else if (o.done)
             ForgeChipButton(onPressed: busy ? null : onClaim, label: 'Claim')
           else if (canSwap)
             IconButton(
               tooltip: 'Swap this order',
               onPressed: busy ? null : onSwap,
-              icon: const GameIcon('swap', size: 22, color: Palette.steel),
+              icon: GameIcon('swap', size: 22, color: Palette.steel),
             )
           else
             const SizedBox(width: 48),
@@ -546,7 +543,7 @@ class _TrialsCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onClaim;
 
-  static const _medals = [Palette.gold, Color(0xFFC9CED6), Color(0xFFC07A45)];
+  static final _medals = [Palette.gold, Color(0xFFC9CED6), Color(0xFFC07A45)];
 
   static String _place(int n) => switch (n) {
     1 => '1st',

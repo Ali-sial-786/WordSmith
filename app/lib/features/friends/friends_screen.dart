@@ -32,8 +32,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     super.dispose();
   }
 
-  void _toast(String message) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  void _toast(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _add() async {
     final name = _name.text.trim();
@@ -72,10 +71,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         appBar: AppBar(
           title: Text('Friends', style: displayStyle(22)),
           centerTitle: true,
-          bottom: const TabBar(
+          bottom: TabBar(
             indicatorColor: Palette.molten,
             labelColor: Palette.molten,
-            tabs: [Tab(text: 'Friends'), Tab(text: 'Leaderboard')],
+            tabs: [
+              Tab(text: 'Friends'),
+              Tab(text: 'Leaderboard'),
+            ],
           ),
         ),
         body: TabBarView(children: [_friendsTab(context), const _LeaderboardTab()]),
@@ -88,11 +90,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final n = ref.read(accountProvider.notifier);
     final f = account.friends;
     final text = Theme.of(context).textTheme;
-    final sorted = [...f.friends]..sort((a, b) {
-      final ao = (account.presence[a.id] ?? 'offline') == 'offline' ? 1 : 0;
-      final bo = (account.presence[b.id] ?? 'offline') == 'offline' ? 1 : 0;
-      return ao != bo ? ao - bo : a.username.toLowerCase().compareTo(b.username.toLowerCase());
-    });
+    final sorted = [...f.friends]
+      ..sort((a, b) {
+        final ao = (account.presence[a.id] ?? 'offline') == 'offline' ? 1 : 0;
+        final bo = (account.presence[b.id] ?? 'offline') == 'offline' ? 1 : 0;
+        return ao != bo ? ao - bo : a.username.toLowerCase().compareTo(b.username.toLowerCase());
+      });
     return RefreshIndicator(
       onRefresh: n.refreshFriends,
       child: ListView(
@@ -103,10 +106,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               Expanded(
                 child: TextField(
                   controller: _name,
-                  decoration: const InputDecoration(
-                    labelText: 'Add a friend by smith name',
-                    isDense: true,
-                  ),
+                  decoration: const InputDecoration(labelText: 'Add a friend by smith name', isDense: true),
                   onSubmitted: (_) => _add(),
                 ),
               ),
@@ -129,12 +129,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   children: [
                     IconButton(
                       tooltip: 'Accept',
-                      icon: const Icon(Icons.check_circle, color: Palette.verdigris),
+                      icon: Icon(Icons.check_circle, color: Palette.verdigris),
                       onPressed: () => _act(() => n.respondFriend(p.id, accept: true)),
                     ),
                     IconButton(
                       tooltip: 'Decline',
-                      icon: const Icon(Icons.cancel, color: Palette.iron),
+                      icon: Icon(Icons.cancel, color: Palette.iron),
                       onPressed: () => _act(() => n.respondFriend(p.id, accept: false)),
                     ),
                   ],
@@ -142,17 +142,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               ),
           ],
           const SizedBox(height: 22),
-          Text(
-            'Friends · ${account.friendsOnline} online',
-            style: text.titleMedium,
-          ),
+          Text('Friends · ${account.friendsOnline} online', style: text.titleMedium),
           if (sorted.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'No friends yet. Add someone by their smith name above.',
-                style: text.bodySmall,
-              ),
+              child: Text('No friends yet. Add someone by their smith name above.', style: text.bodySmall),
             ),
           for (final p in sorted)
             _PlayerTile(
@@ -168,9 +162,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     ),
                   PopupMenuButton<String>(
                     onSelected: (_) => _act(() => n.removeFriend(p.id)),
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(value: 'remove', child: Text('Remove friend')),
-                    ],
+                    itemBuilder: (_) => [const PopupMenuItem(value: 'remove', child: Text('Remove friend'))],
                   ),
                 ],
               ),
@@ -181,10 +173,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             for (final p in f.outgoing)
               _PlayerTile(
                 player: p,
-                trailing: TextButton(
-                  onPressed: () => _act(() => n.removeFriend(p.id)),
-                  child: const Text('Cancel'),
-                ),
+                trailing: TextButton(onPressed: () => _act(() => n.removeFriend(p.id)), child: const Text('Cancel')),
               ),
           ],
         ],
@@ -206,9 +195,7 @@ class _PlayerTile extends StatelessWidget {
     leading: AvatarBadge(avatar: player.avatar, size: 44, presence: presence),
     title: Text(player.username),
     subtitle: Text(
-      presence == null
-          ? 'Lv ${player.level} · ${player.rank}'
-          : '${presenceLabel(presence)} · Lv ${player.level}',
+      presence == null ? 'Lv ${player.level} · ${player.rank}' : '${presenceLabel(presence)} · Lv ${player.level}',
     ),
     trailing: trailing,
   );
@@ -222,8 +209,7 @@ class _LeaderboardTab extends ConsumerStatefulWidget {
 }
 
 class _LeaderboardTabState extends ConsumerState<_LeaderboardTab> {
-  late Future<List<LeaderboardEntry>> _entries =
-      ref.read(accountProvider.notifier).leaderboard();
+  late Future<List<LeaderboardEntry>> _entries = ref.read(accountProvider.notifier).leaderboard();
 
   @override
   Widget build(BuildContext context) {
@@ -238,10 +224,7 @@ class _LeaderboardTabState extends ConsumerState<_LeaderboardTab> {
         builder: (context, snap) {
           if (snap.hasError) {
             final e = snap.error;
-            return ListView(
-              padding: const EdgeInsets.all(24),
-              children: [Text(e is ApiException ? e.friendly : '$e')],
-            );
+            return ListView(padding: const EdgeInsets.all(24), children: [Text(e is ApiException ? e.friendly : '$e')]);
           }
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           return ListView(
@@ -269,10 +252,7 @@ class _LeaderboardTabState extends ConsumerState<_LeaderboardTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(e.player.username, style: text.titleSmall),
-                            Text(
-                              'Lv ${e.player.level} · ${e.player.rank}',
-                              style: text.bodySmall,
-                            ),
+                            Text('Lv ${e.player.level} · ${e.player.rank}', style: text.bodySmall),
                           ],
                         ),
                       ),

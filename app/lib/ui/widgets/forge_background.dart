@@ -41,13 +41,11 @@ class ForgeBackground extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reducedMotion = ref.watch(
-      settingsProvider.select((s) => s.reducedMotion),
-    );
+    final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
     return Stack(
       fit: StackFit.expand,
       children: [
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: RadialGradient(
               center: Alignment(0, 0.9),

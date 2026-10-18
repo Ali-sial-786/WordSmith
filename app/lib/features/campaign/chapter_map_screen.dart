@@ -104,7 +104,7 @@ class ChapterMapScreen extends ConsumerWidget {
                                       '${i + 1}',
                                       style: displayStyle(20, color: done ? metal.letter : Palette.molten),
                                     )
-                                  : const GameIcon('lock', size: 18, color: Palette.ash),
+                                  : GameIcon('lock', size: 18, color: Palette.ash),
                             ),
                           ),
                         ),

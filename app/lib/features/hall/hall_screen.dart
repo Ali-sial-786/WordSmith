@@ -69,7 +69,7 @@ class HallScreen extends ConsumerWidget {
                           style: displayStyle(
                             40,
                             color: Palette.molten,
-                          ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 28)]),
+                          ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 28)]),
                         ),
                         Text(
                           'Forge words. Level up.',
@@ -325,7 +325,7 @@ class _BoardButtonState extends ConsumerState<_BoardButton> {
     final claim = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const GameIcon('bellows', size: 40, color: Palette.molten),
+        icon: GameIcon('bellows', size: 40, color: Palette.molten),
         title: Text('Stoke the Forge · Day ${board.stoke.day}'),
         content: Text("Today's reward: ${reward.label}.", textAlign: TextAlign.center),
         actions: [
@@ -408,7 +408,7 @@ class _InviteBanner extends ConsumerWidget {
               n.dismissInvite(invite);
               context.push('/room/${invite.code}?mode=${invite.mode}');
             },
-            child: const Text('Join', style: TextStyle(color: Palette.molten)),
+            child: Text('Join', style: TextStyle(color: Palette.molten)),
           ),
           IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => n.dismissInvite(invite)),
         ],
@@ -448,7 +448,7 @@ class _AccountBanner extends ConsumerWidget {
           if (action != null)
             TextButton(
               onPressed: onTap,
-              child: Text(action, style: const TextStyle(color: Palette.molten)),
+              child: Text(action, style: TextStyle(color: Palette.molten)),
             ),
         ],
       ),

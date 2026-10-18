@@ -343,7 +343,7 @@ class _RoundViewState extends ConsumerState<RoundView> {
                   style: displayStyle(
                     110,
                     color: Palette.molten,
-                  ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 40)]),
+                  ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 40)]),
                 ),
               ),
             ),
@@ -379,7 +379,7 @@ class _TopStrip extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onLeave,
-            icon: const Icon(Icons.close, color: Palette.steel),
+            icon: Icon(Icons.close, color: Palette.steel),
           ),
           Expanded(child: Text('Team $team', style: displayStyle(18))),
           if (video.call != null)

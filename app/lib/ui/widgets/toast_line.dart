@@ -11,17 +11,14 @@ class ToastLine extends StatefulWidget {
 }
 
 class ToastLineState extends State<ToastLine> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2200),
-  );
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
   String _text = '';
   Color _color = Palette.whiteHeat;
 
-  void show(String text, {Color color = Palette.whiteHeat}) {
+  void show(String text, {Color? color}) {
     setState(() {
       _text = text;
-      _color = color;
+      _color = color ?? Palette.whiteHeat;
     });
     _c.forward(from: 0);
   }

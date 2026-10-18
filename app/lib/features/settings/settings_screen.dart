@@ -15,6 +15,8 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/crash_notice.dart';
 import '../../update/app_updater.dart';
 import '../update/update_sheet.dart';
+import 'font_picker.dart';
+import 'scheme_picker.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -57,6 +59,7 @@ class SettingsScreen extends ConsumerWidget {
               value: s.haptics,
               onChanged: (v) => n.update((s) => s.copyWith(haptics: v)),
             ),
+          const _Appearance(),
           SwitchListTile(
             title: const Text('Left-handed layout'),
             subtitle: const Text('Hint buttons on the left of the anvil'),
@@ -167,6 +170,15 @@ class _Troubleshooting extends ConsumerWidget {
   }
 }
 
+/// The colour scheme and fonts.
+class _Appearance extends StatelessWidget {
+  const _Appearance();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [SchemePicker(), FontPicker()]);
+}
+
 /// The version, and in the Android app a check for a newer one, which it
 /// can download and install.
 class _VersionTile extends ConsumerStatefulWidget {
@@ -265,7 +277,7 @@ class _AccountSection extends ConsumerWidget {
           ),
           ListTile(title: const Text('Sign out'), onTap: n.signOut),
           ListTile(
-            title: const Text('Delete account', style: TextStyle(color: Palette.quenchRed)),
+            title: Text('Delete account', style: TextStyle(color: Palette.quenchRed)),
             subtitle: const Text('Removes your account, progress and friends for good'),
             onTap: () => showDialog<void>(context: context, builder: (_) => const _DeleteDialog()),
           ),
@@ -335,7 +347,7 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
             ),
           if (_error != null) ...[
             const SizedBox(height: 10),
-            Text(_error!, style: const TextStyle(color: Palette.quenchRed)),
+            Text(_error!, style: TextStyle(color: Palette.quenchRed)),
           ],
         ],
       ),
@@ -343,7 +355,7 @@ class _DeleteDialogState extends ConsumerState<_DeleteDialog> {
         TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('Keep it')),
         TextButton(
           onPressed: _busy ? null : _delete,
-          child: const Text('Delete', style: TextStyle(color: Palette.quenchRed)),
+          child: Text('Delete', style: TextStyle(color: Palette.quenchRed)),
         ),
       ],
     );

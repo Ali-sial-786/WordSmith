@@ -131,15 +131,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: Palette.ash)),
+                        Expanded(child: Divider(color: Palette.ash)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'or use email',
-                            style: text.labelMedium?.copyWith(color: Palette.steel),
-                          ),
+                          child: Text('or use email', style: text.labelMedium?.copyWith(color: Palette.steel)),
                         ),
-                        const Expanded(child: Divider(color: Palette.ash)),
+                        Expanded(child: Divider(color: Palette.ash)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -183,15 +180,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             _create = !_create;
                             _error = null;
                           }),
-                    child: Text(
-                      _create ? 'Already have an account? Sign in' : 'New here? Create an account',
-                    ),
+                    child: Text(_create ? 'Already have an account? Sign in' : 'New here? Create an account'),
                   ),
-                  if (!_create)
-                    TextButton(
-                      onPressed: _busy ? null : _forgot,
-                      child: const Text('Forgot password?'),
-                    ),
+                  if (!_create) TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot password?')),
                 ],
               ),
             ),

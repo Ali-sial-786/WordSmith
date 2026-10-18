@@ -9,14 +9,17 @@ import '../../video/video_call.dart';
 
 /// Round wins as little flames (a number past five).
 class WinPips extends StatelessWidget {
-  const WinPips({super.key, required this.wins, this.color = Palette.molten, this.size = 12});
+  const WinPips({super.key, required this.wins, this.color, this.size = 12});
 
   final int wins;
-  final Color color;
+
+  /// Molten unless given.
+  final Color? color;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? Palette.molten;
     if (wins == 0) return SizedBox(height: size);
     if (wins > 5) {
       return Row(
@@ -145,7 +148,7 @@ class _MyTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 2, 6, 2),
       // A faint line between the rivals and me.
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(left: BorderSide(color: Palette.ash)),
       ),
       child: Column(
@@ -213,7 +216,7 @@ class VsCountdown extends StatelessWidget {
             style: displayStyle(
               110,
               color: Palette.molten,
-            ).copyWith(shadows: const [Shadow(color: Palette.ember, blurRadius: 40)]),
+            ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 40)]),
           ),
           if (!session.racing) Text('You watch this one', style: Theme.of(context).textTheme.titleMedium),
         ],

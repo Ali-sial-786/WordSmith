@@ -66,15 +66,13 @@ class _MeaningPagesState extends State<_MeaningPages> {
               spacing: 8,
               children: [
                 for (var i = 0; i < words.length; i++)
-                  ChoiceChip(
-                    label: Text(words[i]),
-                    selected: i == _page,
-                    onSelected: (_) => setState(() => _page = i),
-                  ),
+                  ChoiceChip(label: Text(words[i]), selected: i == _page, onSelected: (_) => setState(() => _page = i)),
               ],
             ),
           ),
-        Flexible(child: MeaningView(word: words[_page], key: ValueKey(words[_page]))),
+        Flexible(
+          child: MeaningView(word: words[_page], key: ValueKey(words[_page])),
+        ),
       ],
     );
   }
@@ -104,7 +102,7 @@ class MeaningView extends ConsumerWidget {
               IconButton(
                 tooltip: 'Hear it',
                 onPressed: () => ref.read(speakerProvider).say(word),
-                icon: const GameIcon('speaker', size: 26, color: Palette.whiteHeat),
+                icon: GameIcon('speaker', size: 26, color: Palette.whiteHeat),
               ),
             ],
           ),
@@ -156,7 +154,7 @@ class MeaningView extends ConsumerWidget {
                 style: text.bodyMedium?.copyWith(color: Palette.steel),
               ),
             ),
-            _ => const Padding(
+            _ => Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator(color: Palette.molten)),
             ),

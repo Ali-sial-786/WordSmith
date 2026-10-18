@@ -33,9 +33,10 @@ class ResultsView extends StatelessWidget {
               ? 'IT MELTED!'
               : "TIME'S UP",
           textAlign: TextAlign.center,
-          style: displayStyle(32, color: r.completed ? Palette.molten : Palette.steel).copyWith(
-            shadows: r.completed ? const [Shadow(color: Palette.ember, blurRadius: 20)] : null,
-          ),
+          style: displayStyle(
+            32,
+            color: r.completed ? Palette.molten : Palette.steel,
+          ).copyWith(shadows: r.completed ? [Shadow(color: Palette.ember, blurRadius: 20)] : null),
         ),
         const SizedBox(height: 8),
         Row(
@@ -44,11 +45,7 @@ class ResultsView extends StatelessWidget {
             for (var i = 0; i < 3; i++)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: GameIcon(
-                  'star',
-                  size: 40,
-                  color: i < r.stars ? Palette.molten : Palette.ash,
-                ),
+                child: GameIcon('star', size: 40, color: i < r.stars ? Palette.molten : Palette.ash),
               ),
           ],
         ),
@@ -66,10 +63,13 @@ class ResultsView extends StatelessWidget {
           ),
         if (r.mvp != null) ...[
           const SizedBox(height: 14),
-          ForgePanel(padding: const EdgeInsets.all(12), gold: true, child: Row(
+          ForgePanel(
+            padding: const EdgeInsets.all(12),
+            gold: true,
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const GameIcon('crown', size: 28, color: Palette.molten),
+                GameIcon('crown', size: 28, color: Palette.molten),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
@@ -78,7 +78,8 @@ class ResultsView extends StatelessWidget {
                   ),
                 ),
               ],
-            )),
+            ),
+          ),
         ],
         const SizedBox(height: 14),
         for (final p in r.players)
@@ -96,10 +97,7 @@ class ResultsView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        session.nameOf(p.id) + (p.id == session.me ? ' (you)' : ''),
-                        style: text.titleSmall,
-                      ),
+                      Text(session.nameOf(p.id) + (p.id == session.me ? ' (you)' : ''), style: text.titleSmall),
                       Text(
                         [
                           '${p.words} ${p.words == 1 ? 'word' : 'words'}',
@@ -148,7 +146,13 @@ class ResultsView extends StatelessWidget {
           ),
         const SizedBox(height: 18),
         if (session.isHost)
-          PlateButton(label: 'Forge again', sublabel: 'New puzzle, same crew', icon: 'anvil', primary: true, onPressed: session.again)
+          PlateButton(
+            label: 'Forge again',
+            sublabel: 'New puzzle, same crew',
+            icon: 'anvil',
+            primary: true,
+            onPressed: session.again,
+          )
         else
           Text(
             'Waiting for ${session.nameOf(session.lobby?.hostId)} to forge again…',

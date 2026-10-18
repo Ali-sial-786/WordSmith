@@ -450,8 +450,8 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
             ),
             child: SvgPicture.asset(
               'assets/icons/ember.svg',
-              colorFilter: const ColorFilter.mode(Palette.molten, BlendMode.srcIn),
-              placeholderBuilder: (_) => const Icon(Icons.local_fire_department, color: Palette.molten),
+              colorFilter: ColorFilter.mode(Palette.molten, BlendMode.srcIn),
+              placeholderBuilder: (_) => Icon(Icons.local_fire_department, color: Palette.molten),
             ),
           ),
         ),

@@ -29,15 +29,13 @@ class SparkField extends StatefulWidget {
   /// Multiplier on particle counts (lowered for reduced motion).
   final double intensity;
 
-  static SparkFieldState? of(BuildContext context) =>
-      context.findAncestorStateOfType<SparkFieldState>();
+  static SparkFieldState? of(BuildContext context) => context.findAncestorStateOfType<SparkFieldState>();
 
   @override
   State<SparkField> createState() => SparkFieldState();
 }
 
-class SparkFieldState extends State<SparkField>
-    with SingleTickerProviderStateMixin {
+class SparkFieldState extends State<SparkField> with SingleTickerProviderStateMixin {
   final _sparks = <_Spark>[];
   final _rng = Random();
   final _repaint = ValueNotifier<int>(0);
@@ -52,13 +50,14 @@ class SparkFieldState extends State<SparkField>
     double angle = -pi / 2,
     double spread = pi * 1.6,
     double gravity = 700,
-    List<Color> colors = const [Palette.molten, Palette.ember, Palette.whiteHeat],
+    List<Color>? colors,
     double size = 2.2,
   }) {
     final box = _boxKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) return;
     final local = box.globalToLocal(global);
     final n = (count * widget.intensity).round();
+    colors ??= [Palette.molten, Palette.ember, Palette.whiteHeat];
     for (var i = 0; i < n; i++) {
       final a = angle + (_rng.nextDouble() - 0.5) * spread;
       final s = speed * (0.35 + _rng.nextDouble() * 0.9);
@@ -80,9 +79,7 @@ class SparkFieldState extends State<SparkField>
   }
 
   void _tick(Duration elapsed) {
-    final dt = _last == Duration.zero
-        ? 1 / 60
-        : (elapsed - _last).inMicroseconds / 1e6;
+    final dt = _last == Duration.zero ? 1 / 60 : (elapsed - _last).inMicroseconds / 1e6;
     _last = elapsed;
     for (final s in _sparks) {
       s.age += dt;
@@ -109,9 +106,7 @@ class SparkFieldState extends State<SparkField>
       widget.child,
       Positioned.fill(
         child: IgnorePointer(
-          child: RepaintBoundary(
-            child: CustomPaint(painter: _SparkPainter(_sparks, _repaint)),
-          ),
+          child: RepaintBoundary(child: CustomPaint(painter: _SparkPainter(_sparks, _repaint))),
         ),
       ),
     ],
@@ -156,8 +151,7 @@ class _Ember {
   double x = 0, y = 0, speed = 0, sway = 0, phase = 0, size = 0, life = 0;
 }
 
-class _EmberDriftState extends State<EmberDrift>
-    with SingleTickerProviderStateMixin {
+class _EmberDriftState extends State<EmberDrift> with SingleTickerProviderStateMixin {
   final _rng = Random();
   late final List<_Ember> _embers = List.generate(widget.count, (_) {
     final e = _Ember();
@@ -180,9 +174,7 @@ class _EmberDriftState extends State<EmberDrift>
   }
 
   void _tick(Duration elapsed) {
-    final dt = _last == Duration.zero
-        ? 1 / 60
-        : (elapsed - _last).inMicroseconds / 1e6;
+    final dt = _last == Duration.zero ? 1 / 60 : (elapsed - _last).inMicroseconds / 1e6;
     _last = elapsed;
     for (final e in _embers) {
       e.life += dt;
@@ -202,10 +194,7 @@ class _EmberDriftState extends State<EmberDrift>
   @override
   Widget build(BuildContext context) => IgnorePointer(
     child: RepaintBoundary(
-      child: CustomPaint(
-        size: Size.infinite,
-        painter: _EmberPainter(_embers, _repaint),
-      ),
+      child: CustomPaint(size: Size.infinite, painter: _EmberPainter(_embers, _repaint)),
     ),
   );
 }
@@ -225,10 +214,7 @@ class _EmberPainter extends CustomPainter {
       final flicker = 0.55 + 0.45 * sin(e.life * 5 + e.phase);
       final fadeTop = (e.y * 3).clamp(0.0, 1.0);
       final a = flicker * fadeTop;
-      final p = Offset(
-        (e.x + sin(e.life * 1.3 + e.phase) * e.sway) * size.width,
-        e.y * size.height,
-      );
+      final p = Offset((e.x + sin(e.life * 1.3 + e.phase) * e.sway) * size.width, e.y * size.height);
       glow.color = Palette.ember.withValues(alpha: 0.5 * a);
       core.color = Palette.molten.withValues(alpha: 0.9 * a);
       canvas.drawCircle(p, e.size * 2.2, glow);
