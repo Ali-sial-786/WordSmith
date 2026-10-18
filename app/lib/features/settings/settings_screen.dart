@@ -127,6 +127,12 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.open_in_new),
             onTap: () => openWebPage(context, WebPage.terms),
           ),
+          ListTile(
+            title: Text(WebPage.contact.title),
+            subtitle: const Text('Help, bugs and ideas: a message straight to the developer'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => openWebPage(context, WebPage.contact),
+          ),
           const _VersionTile(),
         ],
       ),

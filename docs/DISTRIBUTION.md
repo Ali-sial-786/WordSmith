@@ -143,6 +143,21 @@ Back up the `.jks` file and its password somewhere safe, such as a password mana
 3. Add a GitHub **secret** named `FCM_SERVICE_ACCOUNT` containing the whole JSON file, then delete the file.
 4. GitHub → **Actions → Deploy server → Run workflow**. The run copies it to the Worker. Friends get a notification when invited, and tapping it opens the room.
 
+**Contact form emails (Resend, free):** the web pages' contact form
+(`/contact`, shared/contact.md) keeps every message in the database (§7).
+To get them by email as well:
+1. Sign up at **https://resend.com** with the email address the messages
+   should go to. Until you verify a domain of your own, Resend only sends to
+   its account's own address, so it must be the same one.
+2. **API Keys → Create API key**, permission **Sending access**. Copy it
+   (it's shown once).
+3. Add the GitHub **secrets** `RESEND_API_KEY` (the key) and `CONTACT_EMAIL`
+   (that email address). The address stays out of the public repo and off the
+   pages.
+4. GitHub → **Actions → Deploy server → Run workflow**. Messages from the past
+   week that weren't emailed yet arrive within the hour. The first ones may
+   land in spam: mark them *Not spam*.
+
 Developer note: local builds read these settings from `app/dart_defines.json` (git-ignored), with
 `flutter build apk --dart-define-from-file=dart_defines.json`.
 
@@ -168,7 +183,7 @@ push to the default branch touching app/ (not app/android/) or webhost/
 - **Secrets:** nothing new. It uses the same `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as the server (§5), plus `FIREBASE_ANDROID_API_KEY` for accounts, and the optional `API_BASE_URL` variable. Without the Cloudflare secrets it skips with a notice. The first run creates the `play` Worker.
 - **By hand:** **Actions → Deploy web → Run workflow**. The run's summary shows the URL and the version.
 - **Updates reach players** on their next start: the page, `flutter_bootstrap.js`, `main.dart.js`, `version.json` and `manifest.json` are served `no-cache`, so the browser checks for a new copy every time. The renderer (`canvaskit/`), images, sounds, fonts and word lists are cached for a day (`app/web/_headers`). There's no service worker, so nothing can keep an old build alive. A Home Screen app that's reopened after 15 minutes or more away reloads itself if a newer build is live.
-- **The web shell** is `app/web/`: `index.html` (loading screen, safe areas, Home Screen settings, the install hint), `flutter_bootstrap.js` (starts the game inside the safe area), `manifest.json`, `_headers` and `.assetsignore` (for Cloudflare), and three plain pages for the app and a store listing to link to: `privacy.html`, `terms.html` and `delete-account.html`, served at `/privacy`, `/terms` and `/delete-account` (they share one set of styles, so change all three together; each has its contact details in one `id="contact"` spot). `python3 art/web_icons.py` rebuilds the icons and the iPhone launch images from `art/icon/`.
+- **The web shell** is `app/web/`: `index.html` (loading screen, safe areas, Home Screen settings, the install hint), `flutter_bootstrap.js` (starts the game inside the safe area), `manifest.json`, `_headers` and `.assetsignore` (for Cloudflare), and four plain pages for the app and a store listing to link to: `privacy.html`, `terms.html`, `delete-account.html` and `contact.html`, served at `/privacy`, `/terms`, `/delete-account` and `/contact` (they share one set of styles, so change them together; the first three point to the contact form from one `id="contact"` spot each). `python3 art/web_icons.py` rebuilds the icons and the iPhone launch images from `art/icon/`.
 - **Locally:** `cd app && flutter build web --release --no-web-resources-cdn --dart-define-from-file=dart_defines.json`, then `cd ../webhost && npx wrangler@4.151.1 dev` (the same headers as Cloudflare) or `python3 -m http.server -d ../app/build/web`.
 
 ### How friends install it on an iPhone
@@ -206,6 +221,13 @@ for you in the database:
 Check them every few days once the game reaches people you don't know: app
 stores expect reports to be acted on. There's no ban tool yet; ask for one
 when it's needed.
+
+**Contact form messages** are emailed to you once the Resend secrets are set
+(§5). They're also kept in the same database, for a year:
+`SELECT id, created_at, topic, username, email, message, emailed_at FROM contact_messages WHERE status = 'open' ORDER BY created_at DESC;`
+and once handled: `UPDATE contact_messages SET status = 'done' WHERE id = 3;`
+To answer one, reply to its email, or write to the address in `email` (none
+means they didn't leave one).
 
 ## 8. The Google Play version (later, not started)
 

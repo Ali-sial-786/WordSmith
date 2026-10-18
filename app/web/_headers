@@ -33,8 +33,9 @@
 /flutter_service_worker.js
   Cache-Control: no-cache
 
-# The privacy policy, terms and account-deletion pages (privacy.html,
-# terms.html, delete-account.html), which Cloudflare serves without ".html".
+# The privacy policy, terms, account-deletion and contact pages (privacy.html,
+# terms.html, delete-account.html, contact.html), which Cloudflare serves
+# without ".html".
 # Plain pages that rarely change: a short cache, so an update shows within
 # minutes.
 /privacy
@@ -42,6 +43,8 @@
 /terms
   Cache-Control: public, max-age=300
 /delete-account
+  Cache-Control: public, max-age=300
+/contact
   Cache-Control: public, max-age=300
 
 # Flutter's renderer: big, and only changes with the Flutter version.

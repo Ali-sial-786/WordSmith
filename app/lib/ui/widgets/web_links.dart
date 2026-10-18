@@ -7,7 +7,8 @@ import '../../net/config.dart';
 enum WebPage {
   privacy('/privacy', 'Privacy policy'),
   terms('/terms', 'Terms and chat rules'),
-  deleteAccount('/delete-account', 'Delete your account');
+  deleteAccount('/delete-account', 'Delete your account'),
+  contact('/contact', 'Contact us');
 
   const WebPage(this.path, this.title);
   final String path;

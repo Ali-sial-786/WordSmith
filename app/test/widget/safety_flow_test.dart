@@ -218,10 +218,11 @@ void main() {
     expect(find.textContaining("You haven't blocked anyone"), findsOneWidget);
     expect(container.read(accountProvider).blocked, isEmpty);
 
-    // Further down Settings: the privacy policy, terms and deleting on the web.
+    // Further down Settings: the privacy policy, terms, the contact form and deleting on the web.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Terms and chat rules'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(find.text('Contact us'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Terms and chat rules'), findsOneWidget);
     expect(find.text('Privacy policy'), findsOneWidget);
     expect(find.text('Delete your account on the web'), findsOneWidget);
     expect(find.text('play.wordsmith-forge.workers.dev/delete-account'), findsOneWidget);

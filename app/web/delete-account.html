@@ -11,10 +11,10 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <!-- Served at /delete-account (Cloudflare drops ".html"), for Google Play's
-       account-deletion link. The same styles are in privacy.html and
-       terms.html: change all three together. -->
+       account-deletion link. The same styles are in privacy.html, terms.html
+       and contact.html: change them together. -->
   <style>
-    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html) */
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html, contact.html) */
     @font-face {
       font-family: "Wordsmith Cinzel";
       src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
@@ -134,6 +134,11 @@
     }
     .site-nav a:hover { color: var(--text); border-color: var(--rule); }
     .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    /* Four pages fit one row on a 360-wide phone. */
+    @media (max-width: 479px) {
+      .site-nav { gap: 2px; margin-left: -8px; }
+      .site-nav a { padding: 6px 8px; font-size: 14px; }
+    }
     .play {
       order: 2;
       display: inline-block;
@@ -285,6 +290,7 @@
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/delete-account" aria-current="page">Delete account</a>
+        <a href="/contact">Contact</a>
       </nav>
     </div>
   </header>
@@ -314,7 +320,7 @@
     <h3>Can't sign in?</h3>
     <ul>
       <li><strong>Forgot your password?</strong> Tap <em>Forgot password?</em> on the sign-in screen and you'll get an email with a link to reset it. Then sign in and delete your account.</li>
-      <li><strong>Can't get into your Google account or email at all?</strong> <a href="#contact">Contact us</a> with your Wordsmith username.</li>
+      <li><strong>Can't get into your Google account or email at all?</strong> <a href="/contact?topic=deletion">Send us a message</a> with your Wordsmith username, and we'll delete it for you.</li>
     </ul>
 
     <h2 id="deleted">What's deleted straight away</h2>
@@ -346,18 +352,17 @@
     <p>On any other phone where you've played, uninstalling Wordsmith removes what it kept there. In a browser, clear the site's data for play.wordsmith-forge.workers.dev.</p>
     <p>More about what we collect is in the <a href="/privacy">privacy policy</a>.</p>
 
-    <!-- CONTACT: the one place on this page with contact details. Swap it
-         for an email address when there is one (and in privacy.html and
-         terms.html too). -->
+    <!-- CONTACT: the one place on this page with contact details: the
+         contact form (contact.html), as in privacy.html and terms.html. -->
     <section id="contact" class="card contact" aria-labelledby="contact-title">
       <h2 id="contact-title">Contact</h2>
-      <p>Need help deleting your account: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>.</p>
-      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+      <p>Need help deleting your account: send us a message with the <a href="/contact?topic=deletion">contact form</a>. Include your Wordsmith username so we can find the account, and your email address so we can tell you when it's done.</p>
+      <p>We'll never ask for your password.</p>
     </section>
   </main>
 
   <footer class="wrap site-foot">
-    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/contact">Contact</a> · <a href="/">Play Wordsmith</a></p>
     <p>Wordsmith is a free, independent word game.</p>
   </footer>
 </body>

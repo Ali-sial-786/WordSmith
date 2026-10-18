@@ -11,9 +11,9 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <!-- Served at /terms (Cloudflare drops ".html"). The same styles are in
-       privacy.html and delete-account.html: change all three together. -->
+       privacy.html, delete-account.html and contact.html: change them together. -->
   <style>
-    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html) */
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html, contact.html) */
     @font-face {
       font-family: "Wordsmith Cinzel";
       src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
@@ -133,6 +133,11 @@
     }
     .site-nav a:hover { color: var(--text); border-color: var(--rule); }
     .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    /* Four pages fit one row on a 360-wide phone. */
+    @media (max-width: 479px) {
+      .site-nav { gap: 2px; margin-left: -8px; }
+      .site-nav a { padding: 6px 8px; font-size: 14px; }
+    }
     .play {
       order: 2;
       display: inline-block;
@@ -264,6 +269,7 @@
         <a href="/privacy">Privacy</a>
         <a href="/terms" aria-current="page">Terms</a>
         <a href="/delete-account">Delete account</a>
+        <a href="/contact">Contact</a>
       </nav>
     </div>
   </header>
@@ -340,18 +346,17 @@
     <h2 id="changes">Changes to these terms</h2>
     <p>If we change these terms, we'll update them here and change the date at the top. If you keep playing after a change, the new terms apply.</p>
 
-    <!-- CONTACT: the one place on this page with contact details. Swap it
-         for an email address when there is one (and in privacy.html and
-         delete-account.html too). -->
+    <!-- CONTACT: the one place on this page with contact details: the
+         contact form (contact.html), as in privacy.html and delete-account.html. -->
     <section id="contact" class="card contact" aria-labelledby="contact-title">
       <h2 id="contact-title">Contact</h2>
-      <p>Questions about these terms: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>. To report a player, use <strong>Report</strong> in the game rather than posting about them there.</p>
-      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+      <p>Questions about these terms, or something to tell us: send us a message with the <a href="/contact">contact form</a>. Leave your email address so we can reply.</p>
+      <p>To report a player, the quickest way is <strong>Report</strong> in the game, which sends us what they wrote.</p>
     </section>
   </main>
 
   <footer class="wrap site-foot">
-    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/contact">Contact</a> · <a href="/">Play Wordsmith</a></p>
     <p>Wordsmith is a free, independent word game.</p>
   </footer>
 </body>

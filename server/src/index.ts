@@ -1,14 +1,16 @@
 /**
  * Wordsmith API Worker: the router for the REST routes in docs/TECH.md §4,
- * and the hourly Cron Trigger that sends daily reminders (shared/push.md).
+ * and the hourly Cron Trigger that sends daily reminders (shared/push.md)
+ * and tidies the contact form's messages (shared/contact.md).
  *
- * Every route except `/v1/version`, `/v1/health` and `/v1/define/:word`
- * needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
+ * Every route except `/v1/version`, `/v1/health`, `/v1/define/:word` and
+ * `/v1/contact` needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
  * route reads it from `Sec-WebSocket-Protocol` instead). Errors are JSON
  * `{error, message?}`.
  */
 
 import { authenticate } from "./auth/request";
+import { contactUpkeep } from "./contact/upkeep";
 import { allowedOrigin, preflight, withCors } from "./cors";
 import type { Env } from "./env";
 import { ApiError, errorResponse, json } from "./http";
@@ -18,6 +20,7 @@ import type { AuthedContext, RequestContext } from "./routes/context";
 import { deleteFriend, getFriends, getLeaderboard, postFriendRequest, postFriendRespond, putNickname } from "./routes/friends";
 import { sendDailyReminders } from "./push/reminder";
 import { deleteMe, deletePushToken, getMe, getUser, postPushToken, postSetup, postUsername, putReminder } from "./routes/me";
+import { postContact } from "./routes/contact";
 import { getRoom, getRoomSocket, postRoom, postRoomVideo } from "./routes/rooms";
 import { getDaily, getDailyCalendar, postDailyComplete } from "./routes/daily";
 import { getDefine } from "./routes/define";
@@ -42,6 +45,8 @@ const router = new Router<Handler>([
   { method: "GET", path: "/v1/health", handler: open(() => json({ ok: true })) },
   // Meanings work signed out (src/routes/define.ts).
   { method: "GET", path: "/v1/define/:word", handler: open(getDefine) },
+  // The web pages' contact form, for people who may not be able to sign in (shared/contact.md).
+  { method: "POST", path: "/v1/contact", handler: open(postContact) },
 
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
   { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
@@ -119,11 +124,19 @@ export default {
     return withCors(await handle(request, env, ctx), origin);
   },
 
-  /** The hourly Cron Trigger (wrangler.jsonc): today's daily reminders for this UTC hour. */
+  /**
+   * The hourly Cron Trigger (wrangler.jsonc): today's daily reminders for
+   * this UTC hour, and the contact form's upkeep.
+   */
   async scheduled(controller, env, ctx): Promise<void> {
     ctx.waitUntil(
       sendDailyReminders(env, controller.scheduledTime).catch((err: unknown) => {
         console.error("daily reminders failed", err);
+      }),
+    );
+    ctx.waitUntil(
+      contactUpkeep(env, controller.scheduledTime).catch((err: unknown) => {
+        console.error("contact upkeep failed", err);
       }),
     );
   },

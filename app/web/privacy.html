@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <!-- Served at /privacy (Cloudflare drops ".html"). The same styles are in
-       terms.html and delete-account.html: change all three together. -->
+       terms.html, delete-account.html and contact.html: change them together. -->
   <style>
     @font-face {
       font-family: "Wordsmith Cinzel";
@@ -132,6 +132,11 @@
     }
     .site-nav a:hover { color: var(--text); border-color: var(--rule); }
     .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    /* Four pages fit one row on a 360-wide phone. */
+    @media (max-width: 479px) {
+      .site-nav { gap: 2px; margin-left: -8px; }
+      .site-nav a { padding: 6px 8px; font-size: 14px; }
+    }
     .play {
       order: 2;
       display: inline-block;
@@ -241,6 +246,7 @@
         <a href="/privacy" aria-current="page">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/delete-account">Delete account</a>
+        <a href="/contact">Contact</a>
       </nav>
     </div>
   </header>
@@ -280,7 +286,7 @@
     </nav>
 
     <h2 id="who-we-are">Who we are</h2>
-    <p>Wordsmith is a free, independent word game with a blacksmithing theme. In this policy, “we”, “us” and “the developer” mean the developer of Wordsmith. You can reach us using the details under <a href="#contact">Contact</a>.</p>
+    <p>Wordsmith is a free, independent word game with a blacksmithing theme. In this policy, “we”, “us” and “the developer” mean the developer of Wordsmith. You can reach us with the <a href="/contact">contact form</a>.</p>
 
     <h2 id="what-we-collect">What we collect and why</h2>
 
@@ -322,6 +328,10 @@
     <h3>Blocks and reports</h3>
     <p>The players you've blocked, and when. If you report someone, we keep who made the report, who it's about, their username at the time, the reason, any details you add (up to 500 characters), the room code and up to 20 of their chat lines. The player you block or report isn't told.</p>
     <p><em>Why:</em> to keep chat friendly and act on players who break the <a href="/terms">rules</a>.</p>
+
+    <h3 id="contact-form">Messages you send us</h3>
+    <p>If you write to us with the <a href="/contact">contact form</a>, we keep the topic you choose and what you write, plus your email address and Wordsmith username if you give them. To stop the form being flooded, we also keep a scrambled form (a hash) of your IP address for a day, which only lets us count how many messages came from it. The message is emailed to the developer through <strong>Resend</strong>, an email delivery service. If you left an email address, the reply comes from the developer's own email.</p>
+    <p><em>Why:</em> to answer you and sort out what you asked about.</p>
 
     <h3>Crash reports</h3>
     <p>Nothing is sent automatically. On Android, if the game closed unexpectedly last time, it tells you and offers to copy a crash report: the game's version, your phone's make and model and Android version, when and how the game closed, the graphics mode, memory use, the last few errors the game noted and a technical trace. It's plain text that stays on your phone unless you paste it into a message yourself.</p>
@@ -367,6 +377,10 @@
         <dd>Meanings of rarer words. They get only the word, from our server. <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy">Wikimedia privacy</a></dd>
       </div>
       <div>
+        <dt>Resend</dt>
+        <dd>Delivers messages from the contact form to the developer's inbox. <a href="https://resend.com/legal/privacy-policy">Resend privacy</a></dd>
+      </div>
+      <div>
         <dt>GitHub</dt>
         <dd>Where the Android app's updates are published: when you tap <em>Update now</em>, the new version downloads from GitHub, which sees your IP address like any download. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy</a></dd>
       </div>
@@ -383,6 +397,7 @@
       <li><strong>Chat:</strong> until the room closes.</li>
       <li><strong>Voice and video:</strong> never kept.</li>
       <li><strong>Reports and blocks:</strong> deleted when either player's account is deleted. Reports may be deleted sooner once they've been dealt with.</li>
+      <li><strong>Messages from the contact form:</strong> up to a year, then deleted, and sooner once they've been dealt with if you ask. They aren't tied to your account, so deleting your account doesn't remove them: ask in a message and we'll delete them. The scrambled IP address is deleted after a day.</li>
       <li><strong>Notification tokens:</strong> until you sign out, turn notifications off or delete your account, or until Firebase tells us a token no longer works.</li>
       <li><strong>Server logs:</strong> a few days (at most 7).</li>
     </ul>
@@ -405,18 +420,17 @@
     <h2 id="changes">Changes to this policy</h2>
     <p>If we change this policy, we'll update it here and change the date at the top.</p>
 
-    <!-- CONTACT: the one place on this page with contact details. Swap it
-         for an email address when there is one (and in terms.html and
-         delete-account.html too). -->
+    <!-- CONTACT: the one place on this page with contact details: the
+         contact form (contact.html), as in terms.html and delete-account.html. -->
     <section id="contact" class="card contact" aria-labelledby="contact-title">
       <h2 id="contact-title">Contact</h2>
-      <p>Questions or requests about your privacy or your data: open an issue on the project's GitHub page, <a href="https://github.com/Ali-sial-786/WordSmith/issues">github.com/Ali-sial-786/WordSmith/issues</a>.</p>
-      <p><strong>Issues there are public, so please don't post personal information</strong> such as your email address. Your username is enough for us to find your account.</p>
+      <p>Questions or requests about your privacy or your data: send us a message with the <a href="/contact?topic=privacy">contact form</a>. Leave your email address so we can reply, and your Wordsmith username so we can find your account.</p>
+      <p>We'll never ask for your password.</p>
     </section>
   </main>
 
   <footer class="wrap site-foot">
-    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/">Play Wordsmith</a></p>
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/contact">Contact</a> · <a href="/">Play Wordsmith</a></p>
     <p>Wordsmith is a free, independent word game.</p>
   </footer>
 </body>

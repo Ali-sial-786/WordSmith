@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Contact · Wordsmith</title>
+  <meta name="description" content="Write to the developer of Wordsmith: help with your account, bugs, other players, privacy or ideas.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#140F0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F7EFE2" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <!-- Served at /contact (Cloudflare drops ".html"). The same styles are in
+       privacy.html, terms.html and delete-account.html: change them together. -->
+  <style>
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html, contact.html) */
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #140F0C;
+      --card: #1E1612;
+      --card-edge: rgba(255, 178, 63, 0.18);
+      --rule: rgba(255, 178, 63, 0.14);
+      --text: #F4E8D4;
+      --muted: #C7B59D;
+      --heading: #FFB23F;
+      --gold: #E9B949;
+      --ember: #FF6A13;
+      --link: #FFC266;
+      --link-hover: #FFE3AE;
+      --glow: rgba(255, 106, 19, 0.17);
+      --button-top: #FFC35C;
+      --button-bottom: #FF8A1F;
+      --button-text: #1C1007;
+      --display: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #F7EFE2;
+        --card: #FFFAF2;
+        --card-edge: rgba(140, 78, 18, 0.22);
+        --rule: rgba(140, 78, 18, 0.18);
+        --text: #2A1C12;
+        --muted: #5E4A3A;
+        --heading: #9A4708;
+        --gold: #85600C;
+        --ember: #C2410C;
+        --link: #A14600;
+        --link-hover: #6A2E00;
+        --glow: rgba(255, 150, 60, 0.20);
+        --button-top: #FFC35C;
+        --button-bottom: #FF9A3C;
+        --button-text: #1C1007;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 900px 380px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 400 17px/1.65 var(--body);
+      overflow-wrap: break-word;
+    }
+    @media (min-width: 640px) { body { font-size: 18px; } }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+    a:hover { color: var(--link-hover); }
+    a:focus-visible { outline: 2px solid var(--heading); outline-offset: 2px; border-radius: 4px; }
+
+    /* Header: the name and Play on top, the pages under them on a phone;
+       one row from 640px. */
+    .site-head { border-bottom: 1px solid var(--rule); }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-bottom: 12px;
+    }
+    .brand {
+      order: 1;
+      margin-right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--heading);
+    }
+    .brand img { width: 34px; height: auto; display: block; }
+    .brand span {
+      font: 700 19px/1 var(--display);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--heading);
+    }
+    .site-nav { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+    .site-nav a {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .site-nav a:hover { color: var(--text); border-color: var(--rule); }
+    .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    /* Four pages fit one row on a 360-wide phone. */
+    @media (max-width: 479px) {
+      .site-nav { gap: 2px; margin-left: -8px; }
+      .site-nav a { padding: 6px 8px; font-size: 14px; }
+    }
+    .play {
+      order: 2;
+      display: inline-block;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play:hover { filter: brightness(1.06); color: var(--button-text); }
+    @media (min-width: 640px) {
+      .site-nav { order: 2; flex-basis: auto; }
+      .play { order: 3; }
+    }
+
+    main { padding-top: 30px; padding-bottom: 24px; }
+
+    h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.2; color: var(--heading); }
+    h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.02em; }
+    @media (min-width: 640px) { h1 { font-size: 42px; } }
+    @media not all and (prefers-color-scheme: light) {
+      h1 {
+        background: linear-gradient(180deg, #FFF1D0 0%, #FFB23F 55%, #FF7A24 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+    h2 {
+      margin: 40px 0 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 24px;
+      scroll-margin-top: 16px;
+    }
+    h3 { margin: 26px 0 6px; font-size: 1.06em; line-height: 1.35; color: var(--gold); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3em; }
+    li { margin: 0 0 8px; }
+    li::marker { color: var(--ember); }
+    strong { color: var(--text); font-weight: 650; }
+    code {
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--card);
+      font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 0.9em; letter-spacing: 0.02em; }
+    .lead { font-size: 1.06em; }
+
+    .card {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      background: var(--card);
+    }
+    .card > :last-child { margin-bottom: 0; }
+    .card h2 { margin-top: 0; padding-top: 0; border-top: 0; font-size: 21px; }
+
+    .contents { margin: 22px 0 8px; }
+    .contents p { margin: 0 0 8px; color: var(--muted); font-size: 0.9em; }
+    .contents ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .contents li { margin: 0; }
+    .contents a {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-size: 0.86em;
+      text-decoration: none;
+    }
+
+    .who { margin: 0 0 16px; }
+    .who div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .who div:first-child { padding-top: 4px; }
+    .who dt { font-weight: 650; color: var(--gold); }
+    .who dd { margin: 4px 0 0; }
+
+    .contact { border-color: var(--heading); }
+
+    .site-foot {
+      padding-top: 18px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+    .site-foot p { margin: 0 0 8px; }
+    .site-foot a { color: var(--muted); white-space: nowrap; }
+    .site-foot a:hover { color: var(--text); }
+    /* END shared styles */
+    .lead { margin-bottom: 4px; }
+
+    .form { padding: 22px 20px 20px; }
+    .field { margin: 0 0 20px; }
+    .field > label {
+      display: block;
+      margin: 0 0 7px;
+      color: var(--gold);
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .optional { color: var(--muted); font-weight: 400; }
+    input[type="text"], input[type="email"], select, textarea {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--card-edge);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--text);
+      /* At least 16px, or iPhones zoom in on the field. */
+      font: 400 17px/1.45 var(--body);
+    }
+    textarea { min-height: 170px; resize: vertical; }
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      padding-right: 42px;
+      background-image: linear-gradient(45deg, transparent 50%, var(--heading) 50%), linear-gradient(135deg, var(--heading) 50%, transparent 50%);
+      background-position: calc(100% - 22px) 52%, calc(100% - 16px) 52%;
+      background-size: 6px 6px;
+      background-repeat: no-repeat;
+    }
+    input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--heading);
+      outline-offset: 1px;
+      border-color: var(--heading);
+    }
+    [aria-invalid="true"] { border-color: var(--ember); }
+    .hint, .error { margin: 7px 0 0; font-size: 0.86em; line-height: 1.45; }
+    .hint { color: var(--muted); }
+    .error { color: var(--ember); font-weight: 600; }
+    .error:empty { display: none; }
+    .count { float: right; margin-left: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .count.over { color: var(--ember); font-weight: 650; }
+    .tip {
+      margin: 10px 0 0;
+      padding: 10px 13px;
+      border-left: 3px solid var(--heading);
+      border-radius: 0 10px 10px 0;
+      background: var(--bg);
+      font-size: 0.92em;
+    }
+
+    /* Hidden from people (and screen readers); bots fill it in. */
+    .trap { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+
+    .note { color: var(--muted); font-size: 0.9em; }
+    .button {
+      display: block;
+      width: 100%;
+      max-width: 420px;
+      margin: 6px auto 0;
+      padding: 15px 18px;
+      border: 0;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      box-shadow: 0 6px 22px rgba(255, 106, 19, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      color: var(--button-text);
+      font: 700 18px/1.3 var(--body);
+      text-align: center;
+      cursor: pointer;
+    }
+    .button:hover { filter: brightness(1.06); }
+    .button:focus-visible { outline: 3px solid var(--heading); outline-offset: 3px; }
+    .button[disabled] { cursor: progress; filter: saturate(0.6); opacity: 0.75; }
+    .status { margin: 14px 0 0; text-align: center; font-weight: 600; }
+    .status:empty { display: none; }
+    .status.bad { color: var(--ember); }
+
+    .sent { text-align: center; padding: 26px 20px; }
+    .sent:focus { outline: none; }
+    .sent .mark {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font: 700 30px/54px var(--body);
+    }
+    .link-button {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--link);
+      font: inherit;
+      text-decoration: underline;
+      text-underline-offset: 0.18em;
+      cursor: pointer;
+    }
+    .link-button:hover { color: var(--link-hover); }
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="brand" href="/"><img src="/icons/anvil.webp" alt="" width="34" height="26"><span>Wordsmith</span></a>
+      <a class="play" href="/">Play</a>
+      <nav class="site-nav" aria-label="Wordsmith pages">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/delete-account">Delete account</a>
+        <a href="/contact" aria-current="page">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Contact us</h1>
+    <p class="lead">Stuck, found a bug, need help with your account, or have an idea? Write here. Every message is read.</p>
+    <p class="hint">If you leave your email address, the reply comes there. It usually takes a few days.</p>
+
+    <!-- Sends to POST /v1/contact (shared/contact.md), which emails the
+         developer. The developer's address is never on this page. -->
+    <form id="contact-form" class="card form" novalidate>
+      <div class="field">
+        <label for="topic">What's it about?</label>
+        <select id="topic" name="topic" required aria-describedby="topic-error topic-tip">
+          <option value="" selected disabled>Choose one</option>
+          <option value="account">Help with my account</option>
+          <option value="deletion">Deleting my account</option>
+          <option value="bug">A bug or problem in the game</option>
+          <option value="player">Another player</option>
+          <option value="privacy">Privacy and my data</option>
+          <option value="feedback">Ideas and feedback</option>
+          <option value="other">Something else</option>
+        </select>
+        <p class="error" id="topic-error"></p>
+        <p class="tip" id="topic-tip" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="message">Your message</label>
+        <textarea id="message" name="message" rows="7" required aria-describedby="message-hint message-error"></textarea>
+        <p class="hint" id="message-hint"><span class="count" id="message-count">0 / 2000</span>For a bug, say what you were doing and what happened, and which phone or browser.</p>
+        <p class="error" id="message-error"></p>
+      </div>
+
+      <div class="field">
+        <label for="email">Your email <span class="optional">(optional, so we can reply)</span></label>
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" aria-describedby="email-error">
+        <p class="error" id="email-error"></p>
+      </div>
+
+      <div class="field">
+        <label for="username">Your Wordsmith username <span class="optional">(optional)</span></label>
+        <input id="username" name="username" type="text" autocomplete="nickname" autocapitalize="off" spellcheck="false" maxlength="40" aria-describedby="username-hint">
+        <p class="hint" id="username-hint">It helps us find your account. It's on your profile in the game.</p>
+      </div>
+
+      <div class="trap" aria-hidden="true">
+        <label for="website">Leave this empty</label>
+        <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p class="note"><strong>Never send your password.</strong> We'll never ask for it. What you send is only used to answer you; the <a href="/privacy#contact-form">privacy policy</a> says how it's kept.</p>
+      <button type="submit" class="button" id="send">Send message</button>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <section id="sent" class="card sent" tabindex="-1" aria-labelledby="sent-title" hidden>
+      <div class="mark" aria-hidden="true">✓</div>
+      <h2 id="sent-title">Thanks, your message is on its way</h2>
+      <p id="sent-reply">We'll reply to the email address you gave.</p>
+      <p><a href="/">Back to the game</a> · <button type="button" class="link-button" id="another">Send another message</button></p>
+    </section>
+
+    <noscript>
+      <p class="card">The contact form needs JavaScript. Please turn it on for this site, or try another browser.</p>
+    </noscript>
+  </main>
+
+  <footer class="wrap site-foot">
+    <p><a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a> · <a href="/delete-account">Delete your account</a> · <a href="/contact">Contact</a> · <a href="/">Play Wordsmith</a></p>
+    <p>Wordsmith is a free, independent word game.</p>
+  </footer>
+
+  <script>
+    (() => {
+      'use strict';
+      // The game's server (app/lib/net/config.dart). shared/contact.md has the contract.
+      const API = 'https://wordsmith-api.wordsmith-forge.workers.dev';
+      const MAX_MESSAGE = 2000;
+      // As loose as the server's check: one @, a dot in the domain, nothing that breaks a header.
+      const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[^\s@<>()[\]\\,;:".]+$/;
+      const DRAFT_KEY = 'wordsmith.contact.draft';
+      const TIPS = {
+        deletion: 'You can delete your account yourself, straight away: see <a href="/delete-account">Delete your account</a>. Write here if that doesn\'t work for you.',
+        player: 'The quickest way to report someone is in the game: hold down one of their chat lines, or tap ⋮ next to their name in the lobby. That sends us what they wrote.',
+        account: 'Forgotten your password? Use <em>Forgot password?</em> on the sign-in screen.',
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const form = $('contact-form');
+      const fields = { topic: $('topic'), message: $('message'), email: $('email'), username: $('username'), website: $('website') };
+      const send = $('send');
+      const status = $('status');
+      const count = $('message-count');
+      const tip = $('topic-tip');
+      const codePoints = (s) => Array.from(s).length;
+
+      function store(fn) {
+        try { return fn(window.localStorage); } catch (_) { return null; }
+      }
+
+      function showTip() {
+        const text = TIPS[fields.topic.value];
+        tip.hidden = !text;
+        tip.innerHTML = text || '';
+      }
+
+      function updateCount() {
+        const n = codePoints(fields.message.value.trim());
+        count.textContent = n + ' / ' + MAX_MESSAGE;
+        count.classList.toggle('over', n > MAX_MESSAGE);
+      }
+
+      function saveDraft() {
+        const draft = { topic: fields.topic.value, message: fields.message.value, email: fields.email.value, username: fields.username.value };
+        store((s) => s.setItem(DRAFT_KEY, JSON.stringify(draft)));
+      }
+
+      function restore() {
+        let draft = null;
+        try { draft = JSON.parse(store((s) => s.getItem(DRAFT_KEY)) || 'null'); } catch (_) { draft = null; }
+        if (draft && typeof draft === 'object') {
+          for (const key of ['message', 'email', 'username']) {
+            if (typeof draft[key] === 'string') fields[key].value = draft[key];
+          }
+          if (typeof draft.topic === 'string') setTopic(draft.topic);
+        }
+        // A link like /contact?topic=deletion picks the topic.
+        setTopic(new URLSearchParams(window.location.search).get('topic'));
+        showTip();
+        updateCount();
+      }
+
+      function setTopic(value) {
+        if (value && Array.from(fields.topic.options).some((o) => o.value === value && !o.disabled)) fields.topic.value = value;
+      }
+
+      function setError(name, text) {
+        const el = $(name + '-error');
+        if (el) el.textContent = text || '';
+        fields[name].setAttribute('aria-invalid', text ? 'true' : 'false');
+      }
+
+      /** What's wrong, field by field (the same rules as the server). */
+      function check() {
+        const errors = {};
+        if (!fields.topic.value) errors.topic = 'Choose what your message is about.';
+        const message = fields.message.value.trim();
+        if (!message) errors.message = 'Write your message.';
+        else if (codePoints(message) > MAX_MESSAGE) errors.message = 'That\'s over ' + MAX_MESSAGE + ' characters. Please shorten it.';
+        const email = fields.email.value.trim();
+        if (email && (email.length > 254 || !EMAIL_RE.test(email))) errors.email = 'That email address doesn\'t look right. Check it, or leave it empty.';
+        for (const name of ['topic', 'message', 'email']) setError(name, errors[name]);
+        return errors;
+      }
+
+      function say(text, bad) {
+        status.textContent = text;
+        status.classList.toggle('bad', !!bad);
+      }
+
+      function failure(code, message) {
+        switch (code) {
+          case 'too_many_messages': return 'You\'ve sent several messages in the last hour. Please try again a bit later.';
+          case 'contact_busy': return 'We\'ve had a lot of messages today. Please try again tomorrow.';
+          case 'bad_request': return (message ? message + '.' : 'Something in the form isn\'t right.') + ' Please check it and try again.';
+          default: return 'Something went wrong on our side. Please try again in a few minutes.';
+        }
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (send.disabled) return;
+        const errors = check();
+        const first = ['topic', 'message', 'email'].find((name) => errors[name]);
+        if (first) {
+          say('Please fix the highlighted ' + (Object.keys(errors).length > 1 ? 'fields.' : 'field.'), true);
+          fields[first].focus();
+          return;
+        }
+        const email = fields.email.value.trim();
+        const payload = {
+          topic: fields.topic.value,
+          message: fields.message.value.trim(),
+          email: email || null,
+          username: fields.username.value.trim() || null,
+          website: fields.website.value,
+        };
+        send.disabled = true;
+        send.textContent = 'Sending…';
+        say('');
+        try {
+          const res = await fetch(API + '/v1/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (res.status === 201) {
+            store((s) => s.removeItem(DRAFT_KEY));
+            $('sent-reply').textContent = email
+              ? 'We\'ll reply to ' + email + '.'
+              : 'You didn\'t leave an email address, so we can\'t reply, but we\'ll read it.';
+            form.hidden = true;
+            $('sent').hidden = false;
+            $('sent').focus();
+            return;
+          }
+          let body = {};
+          try { body = await res.json(); } catch (_) { body = {}; }
+          say(failure(body.error, body.message), true);
+        } catch (_) {
+          say('Couldn\'t send it: check your connection and try again. Your message is still here.', true);
+        } finally {
+          send.disabled = false;
+          send.textContent = 'Send message';
+        }
+      });
+
+      $('another').addEventListener('click', () => {
+        form.reset();
+        fields.topic.value = '';
+        rememberTopic();
+        showTip();
+        updateCount();
+        say('');
+        $('sent').hidden = true;
+        form.hidden = false;
+        fields.topic.focus();
+      });
+
+      /** Keeps ?topic= in step with the choice, so a reload doesn't bring back the link's. */
+      function rememberTopic() {
+        const url = new URL(window.location.href);
+        if (fields.topic.value) url.searchParams.set('topic', fields.topic.value);
+        else url.searchParams.delete('topic');
+        try { window.history.replaceState(null, '', url); } catch (_) { /* a sandboxed preview */ }
+      }
+
+      fields.topic.addEventListener('change', () => { showTip(); setError('topic', ''); rememberTopic(); saveDraft(); });
+      fields.message.addEventListener('input', () => { updateCount(); saveDraft(); });
+      fields.email.addEventListener('input', saveDraft);
+      fields.username.addEventListener('input', saveDraft);
+      // Errors clear as soon as the field is fixed, once they've been shown.
+      for (const name of ['message', 'email']) {
+        fields[name].addEventListener('input', () => {
+          if (fields[name].getAttribute('aria-invalid') === 'true') check();
+        });
+      }
+
+      restore();
+    })();
+  </script>
+</body>
+</html>

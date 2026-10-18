@@ -80,7 +80,7 @@ that's ever needed.
 
 ## 4. REST API (Worker)
 
-All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/health` and `/v1/define/:word`. Friends, leaderboard and the hub return `403 setup_required` until the player has picked a username. The full request and response shapes are in `server/README.md`.
+All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/health`, `/v1/define/:word` and `/v1/contact`. Friends, leaderboard and the hub return `403 setup_required` until the player has picked a username. The full request and response shapes are in `server/README.md`.
 
 | Method & path | Purpose |
 |---|---|
@@ -102,6 +102,7 @@ All routes are under `/v1` and need a valid token, except `/v1/version`, `/v1/he
 | `PUT /me/blocks/:id` | Block a player: ends any friendship or friend request between us, and refuses new ones either way (`shared/safety.md`) |
 | `DELETE /me/blocks/:id` | Unblock a player; the friendship doesn't come back (`shared/safety.md`) |
 | `POST /reports` | Report a player (a reason, optional details, the room and their chat lines I saw), stored for review and never shown to them (`shared/safety.md`) |
+| `POST /contact` | The web pages' contact form: a topic, a message and optionally an email and username. No token needed; 5 an hour from one IP, 80 a day in all. Stored, then emailed to the developer (`shared/contact.md`) |
 | `POST /rooms` | Create a room `{mode: coop \| vs}` and get back `{code}` |
 | `GET /rooms/:code` | Room summary (mode, host, player count, state) |
 | `POST /rooms/:code/video` | A LiveKit token for the room's optional video chat (§6, "Video chat") |
@@ -276,6 +277,8 @@ gifts        (id INTEGER PK, from_user, to_user, sent_date TEXT, sent_at INT, cl
 blocks       (user_id, blocked_id, created_at INT, PRIMARY KEY(user_id, blocked_id))  -- shared/safety.md
 reports      (id INTEGER PK, reporter_id, reported_id, reported_username TEXT /*at the time*/, reason TEXT, details TEXT, room TEXT,
               lines TEXT /*json*/, created_at INT, status TEXT /*open*/)
+contact_messages (id INTEGER PK, topic TEXT, message TEXT, email TEXT, username TEXT, ip_hash TEXT /*a day*/, created_at INT,
+              emailed_at INT, email_attempts INT, status TEXT /*open*/)  -- shared/contact.md
 ```
 
 `profiles` also has `stoke_claims` and `stoke_last` (the Daily Stoke),

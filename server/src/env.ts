@@ -35,4 +35,13 @@ export interface Env {
    * Notifications are off while it's missing or malformed (src/push/fcm.ts).
    */
   FCM_SERVICE_ACCOUNT?: string;
+  /**
+   * Resend API key and the inbox that contact form messages are forwarded to
+   * (Worker secrets, set by the deploy workflow; shared/contact.md). While
+   * either is missing, messages are only kept in D1 (src/contact/mail.ts).
+   */
+  RESEND_API_KEY?: string;
+  CONTACT_EMAIL?: string;
+  /** Sender for those emails, once there's a verified domain; Resend's shared address otherwise. */
+  CONTACT_FROM?: string;
 }

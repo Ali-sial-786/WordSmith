@@ -147,3 +147,18 @@ jobs:
           npx wrangler secret bulk "$RUNNER_TEMP/fcm.json"
           rm -f "$RUNNER_TEMP/fcm.json"
           echo "Invite notifications: FCM secret set." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set the Resend secrets (contact form emails)
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CONTACT_EMAIL: ${{ secrets.CONTACT_EMAIL }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ] || [ -z "$CONTACT_EMAIL" ]; then
+            echo "::notice::The RESEND_API_KEY and CONTACT_EMAIL secrets are not set, so contact form messages are only kept in D1 (docs/DISTRIBUTION.md §5)."
+            exit 0
+          fi
+          node -e 'const e = process.env; process.stdout.write(JSON.stringify({ RESEND_API_KEY: e.RESEND_API_KEY, CONTACT_EMAIL: e.CONTACT_EMAIL }))' > "$RUNNER_TEMP/resend.json"
+          npx wrangler secret bulk "$RUNNER_TEMP/resend.json"
+          rm -f "$RUNNER_TEMP/resend.json"
+          echo "Contact form: Resend secrets set." >> "$GITHUB_STEP_SUMMARY"
