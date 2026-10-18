@@ -336,6 +336,9 @@ class _VariantPicker extends StatelessWidget {
                 label: Text(label),
                 selected: survival == (id == 'survival'),
                 selectedColor: Palette.ember.withValues(alpha: 0.35),
+                // The text colour on the tint too: pale on a dark scheme's, dark on a light one's.
+                labelStyle: TextStyle(color: Palette.whiteHeat),
+                checkmarkColor: Palette.whiteHeat,
                 side: BorderSide(color: survival == (id == 'survival') ? Palette.molten : Palette.ash),
                 onSelected: session.isHost ? (_) => session.setVariant(id) : null,
               ),
@@ -381,6 +384,8 @@ class _SeriesPicker extends StatelessWidget {
                 label: Text('$n'),
                 selected: series == n,
                 selectedColor: Palette.ember.withValues(alpha: 0.35),
+                labelStyle: TextStyle(color: Palette.whiteHeat),
+                checkmarkColor: Palette.whiteHeat,
                 side: BorderSide(color: series == n ? Palette.molten : Palette.ash),
                 onSelected: session.isHost ? (_) => session.config(n) : null,
               ),

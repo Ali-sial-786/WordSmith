@@ -70,16 +70,63 @@ void main() {
 
   test('every scheme has its own id and readable text', () {
     expect(PaletteScheme.all.map((s) => s.id).toSet(), hasLength(PaletteScheme.all.length));
-    expect(PaletteScheme.all.length, inInclusiveRange(5, 6));
-    expect(PaletteScheme.all.where((s) => s.isLight), isNotEmpty, reason: 'a light scheme, in white and gold');
+    expect(PaletteScheme.all.length, 10);
+    expect(PaletteScheme.all.where((s) => s.isLight).length, greaterThan(2), reason: 'a few light schemes');
     for (final s in PaletteScheme.all) {
       for (final (name, ground) in [('background', s.forgeBlack), ('panel', s.soot)]) {
         expect(_contrast(s.whiteHeat, ground), greaterThan(7), reason: '${s.id}: text on $name');
         expect(_contrast(s.steel, ground), greaterThan(4.5), reason: '${s.id}: secondary text on $name');
         expect(_contrast(s.molten, ground), greaterThan(4.5), reason: '${s.id}: highlighted text on $name');
+        // Links, typed text, "Delete account" and reward lines.
+        for (final (accent, c) in [
+          ('ember', s.ember),
+          ('gold', s.gold),
+          ('red', s.quenchRed),
+          ('green', s.verdigris),
+        ]) {
+          expect(_contrast(c, ground), greaterThan(3.5), reason: '${s.id}: $accent text on $name');
+        }
+      }
+      // Feed lines in the players' colours.
+      Palette.scheme = s;
+      for (final c in Palette.players) {
+        expect(_contrast(Palette.legible(c), s.forgeBlack), greaterThan(3), reason: '${s.id}: player $c');
       }
       for (final face in [s.plate.$1, s.plate.$2]) {
         expect(_contrast(s.onAccent, face), greaterThan(4.5), reason: '${s.id}: text on an accent button');
+      }
+    }
+  });
+
+  test("a light scheme's pale metal, mold hollows and scene shadows take its own hue", () {
+    // [m] (a colour matrix) applied to [c].
+    Color through(List<double> m, Color c) {
+      double row(int i) => (m[i] * c.r + m[i + 1] * c.g + m[i + 2] * c.b) * 255 + m[i + 4];
+      return Color.fromARGB(
+        255,
+        row(0).round().clamp(0, 255),
+        row(5).round().clamp(0, 255),
+        row(10).round().clamp(0, 255),
+      );
+    }
+
+    // The shading of the renders' iron, and a scene's shadows.
+    const iron = Color(0xFF404040);
+    const shadow = Color(0xFF202020);
+    for (final (s, cool) in [
+      (PaletteScheme.gilded, false),
+      (PaletteScheme.parchment, false),
+      (PaletteScheme.roseGold, false),
+      (PaletteScheme.frost, true),
+    ]) {
+      Palette.scheme = s;
+      for (final (what, c) in [
+        ('anvil', through(SchemeFilters.iron()!, iron)),
+        ('scene shadow', through(SchemeFilters.scene()!, shadow)),
+        ('mold hollow', Palette.recess.top),
+      ]) {
+        expect(c.b > c.r, cool, reason: '${s.id}: $what is ${cool ? 'cool' : 'warm'}');
+        expect(c.computeLuminance(), lessThan(s.forgeBlack.computeLuminance()), reason: '${s.id}: $what shows');
       }
     }
   });
@@ -131,6 +178,36 @@ void main() {
       expect(Theme.of(tester.element(find.byType(SchemePicker))).scaffoldBackgroundColor, s.forgeBlack);
       // Settings was built afresh in the new colours, at the same place.
       expect(tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels, closeTo(scrolled, 1));
+    }
+  });
+
+  testWidgets('the picker shows every scheme at once, in two rows of five, even on a small phone', (tester) async {
+    final container = await _container();
+    addTearDown(container.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    for (final width in [320.0, 412.0]) {
+      await tester.binding.setSurfaceSize(Size(width, 640));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: SchemePicker()),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull, reason: '$width');
+      final names = [for (final s in PaletteScheme.all) tester.getRect(find.text(s.name))];
+      expect(names.map((r) => r.top.round()).toSet(), hasLength(2), reason: '$width: two rows');
+      expect(names.map((r) => r.height.toStringAsFixed(1)).toSet(), hasLength(1), reason: '$width: names at one size');
+      for (final row in [names.take(5).toList(), names.skip(5).toList()]) {
+        expect(row, hasLength(5));
+        for (var i = 0; i < row.length; i++) {
+          expect(row[i].left, greaterThanOrEqualTo(0), reason: '$width');
+          expect(row[i].right, lessThanOrEqualTo(width), reason: '$width');
+          if (i > 0) expect(row[i].left, greaterThanOrEqualTo(row[i - 1].right), reason: '$width: names apart');
+        }
+      }
     }
   });
 

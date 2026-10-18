@@ -111,6 +111,14 @@ Future<void> _app(
   await _wait(tester);
 }
 
+/// Scrolls Settings so the colour swatches start [top] down the screen.
+Future<void> _toPicker(WidgetTester tester, double top) async {
+  final position = tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+  final picker = tester.getTopLeft(find.byType(SchemePicker)).dy;
+  position.jumpTo((position.pixels + picker - top).clamp(0, position.maxScrollExtent));
+  await _wait(tester);
+}
+
 /// [child] in a room screen's background, as the room screen shows its views.
 Future<void> _room(WidgetTester tester, PaletteScheme scheme, Widget Function() child) async {
   SharedPreferences.setMockInitialValues({'settings.v1': _settings(scheme)});
@@ -313,10 +321,7 @@ final _screens = <String, Future<void> Function(WidgetTester, PaletteScheme)>{
   // Scrolled to the colour swatches.
   'settings': (t, s) async {
     await _app(t, s, '/settings');
-    final position = t.state<ScrollableState>(find.byType(Scrollable).first).position;
-    final picker = t.getTopLeft(find.byType(SchemePicker)).dy;
-    position.jumpTo((position.pixels + picker - 140).clamp(0, position.maxScrollExtent));
-    await _wait(t);
+    await _toPicker(t, 140);
   },
   'vs_round': (t, s) => _room(t, s, () => VsRoundView(session: _vsRound(), cues: MoldCues(), onLeave: () {})),
   'chapters': (t, s) => _app(t, s, '/chapters'),
@@ -372,6 +377,17 @@ void main() {
       await tester.pageBack();
       await _wait(tester);
       await _shot('scheme_${scheme.id}_hall_switched');
+    });
+  }
+
+  // The swatches on the narrowest phones, where the longest names shrink to fit.
+  for (final scheme in [PaletteScheme.forge, PaletteScheme.frost]) {
+    testWidgets('${scheme.id} picker small phone', (tester) async {
+      await _app(tester, scheme, '/settings');
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      await _wait(tester);
+      await _toPicker(tester, 100);
+      await _shot('scheme_${scheme.id}_picker_small');
     });
   }
 

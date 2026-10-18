@@ -227,7 +227,113 @@ class PaletteScheme {
     scene: Color(0xFF8F86E6),
   );
 
-  static const all = [forge, gilded, steelBlue, verdigrisCopper, crimson, starmetal];
+  /// Oiled walnut with brass fittings.
+  static const walnut = PaletteScheme(
+    id: 'walnut',
+    name: 'Walnut',
+    forgeBlack: Color(0xFF3A2619),
+    soot: Color(0xFF4A3122),
+    ash: Color(0xFF6B4A35),
+    iron: Color(0xFF957760),
+    steel: Color(0xFFD3B99A),
+    ember: Color(0xFFD9A54A),
+    molten: Color(0xFFF3D08A),
+    whiteHeat: Color(0xFFFDF0DC),
+    quenchRed: Color(0xFFFF8070),
+    verdigris: Color(0xFF6CCBA5),
+    gold: Color(0xFFF0CC62),
+    darkLetter: Color(0xFF2A1608),
+    onAccent: Color(0xFF2E1B06),
+    panel: Color(0xFF432C1F),
+    rim: Color(0xFFBE9550),
+    plate: (Color(0xFFC2913F), Color(0xFFF6E0A6)),
+    scene: Color(0xFFC08A5C),
+  );
+
+  /// Aged parchment in brown ink, with bronze.
+  static const parchment = PaletteScheme(
+    id: 'parchment',
+    name: 'Parchment',
+    brightness: Brightness.light,
+    forgeBlack: Color(0xFFE9DCC3),
+    soot: Color(0xFFF8F1E3),
+    ash: Color(0xFFC4AA86),
+    iron: Color(0xFF9A8064),
+    steel: Color(0xFF654C38),
+    ember: Color(0xFF8E4E22),
+    molten: Color(0xFF7A3F18),
+    whiteHeat: Color(0xFF2E1D12),
+    quenchRed: Color(0xFFA8281E),
+    verdigris: Color(0xFF1D6B55),
+    gold: Color(0xFF80600E),
+    darkLetter: Color(0xFF2A1608),
+    onAccent: Color(0xFF2E1A0A),
+    panel: Color(0xFFF5ECDA),
+    rim: Color(0xFFA4733F),
+    plate: (Color(0xFFC08A52), Color(0xFFF2D9B4)),
+    scene: Color(0xFFD2B080),
+  );
+
+  /// Pale blush and rose gold, with copper.
+  static const roseGold = PaletteScheme(
+    id: 'rosegold',
+    name: 'Rose Gold',
+    brightness: Brightness.light,
+    forgeBlack: Color(0xFFF6E7E3),
+    soot: Color(0xFFFFF8F6),
+    ash: Color(0xFFDDB8AF),
+    iron: Color(0xFFAE8E87),
+    steel: Color(0xFF6F5450),
+    ember: Color(0xFFA9533A),
+    molten: Color(0xFF91412C),
+    whiteHeat: Color(0xFF2F1A18),
+    quenchRed: Color(0xFFB0262E),
+    verdigris: Color(0xFF1C705C),
+    gold: Color(0xFF8C651C),
+    darkLetter: Color(0xFF2A1608),
+    onAccent: Color(0xFF3A160C),
+    panel: Color(0xFFFDF1EE),
+    rim: Color(0xFFCC8D74),
+    plate: (Color(0xFFDF9677), Color(0xFFFBDACD)),
+    scene: Color(0xFFE8B6A8),
+  );
+
+  /// Hoarfrost: pale silver-blue, steel frames and tempered-blue accents.
+  static const frost = PaletteScheme(
+    id: 'frost',
+    name: 'Frost',
+    brightness: Brightness.light,
+    forgeBlack: Color(0xFFE4EBF2),
+    soot: Color(0xFFF6F9FC),
+    ash: Color(0xFFAFBFCF),
+    iron: Color(0xFF8394A7),
+    steel: Color(0xFF4F5F72),
+    ember: Color(0xFF2E68A6),
+    molten: Color(0xFF24598F),
+    whiteHeat: Color(0xFF15202D),
+    quenchRed: Color(0xFFB3262F),
+    verdigris: Color(0xFF16705E),
+    gold: Color(0xFF7E6312),
+    darkLetter: Color(0xFF2A1608),
+    onAccent: Color(0xFF0E2036),
+    panel: Color(0xFFF1F5F9),
+    rim: Color(0xFF93A5B9),
+    plate: (Color(0xFF8AB2DC), Color(0xFFE3EEF9)),
+    scene: Color(0xFFB9CDE2),
+  );
+
+  static const all = [
+    forge,
+    gilded,
+    steelBlue,
+    verdigrisCopper,
+    crimson,
+    starmetal,
+    walnut,
+    parchment,
+    roseGold,
+    frost,
+  ];
 
   static PaletteScheme byId(String? id) => all.firstWhere((s) => s.id == id, orElse: () => forge);
 }
@@ -286,7 +392,11 @@ abstract final class Palette {
   static ({Color top, Color bottom, Color edge}) get recess => scheme.asRendered
       ? (top: const Color(0xFF0F0B09), bottom: const Color(0xFF221A15), edge: const Color(0xFF3E322A))
       : scheme.isLight
-      ? (top: const Color(0xFFCFC6B6), bottom: const Color(0xFFE9E2D4), edge: const Color(0xFFB9AD98))
+      ? (
+          top: Color.lerp(scheme.forgeBlack, _pewter(scheme), 0.4)!,
+          bottom: Color.lerp(scheme.forgeBlack, _pewter(scheme), 0.1)!,
+          edge: Color.lerp(scheme.forgeBlack, _pewter(scheme), 0.7)!,
+        )
       : (
           top: Color.lerp(scheme.forgeBlack, const Color(0xFF000000), 0.4)!,
           bottom: Color.lerp(scheme.forgeBlack, scheme.soot, 0.6)!,
@@ -324,6 +434,10 @@ abstract final class Palette {
   /// A room player's colour (0–4).
   static Color player(int color) => players[color % players.length];
 }
+
+/// The pale metal of a light scheme's anvil, tiles and molds: its iron,
+/// greyed, so a cool scheme's is cool and a warm one's warm.
+Color _pewter(PaletteScheme s) => Color.lerp(s.iron, const Color(0xFF9A9A9A), 0.45)!;
 
 /// Colour matrices (for [ColorFilter.matrix]) that repaint the renders, which
 /// were made for the forge, in the current scheme's colours.
@@ -380,8 +494,12 @@ abstract final class SchemeFilters {
     final s = Palette.scheme;
     final tint = s.scene;
     if (tint == null) return null;
-    // A light scheme lifts the shadows too: a sepia print under the wash.
-    if (s.isLight) return duotone(Color.lerp(tint, const Color(0xFF5A4630), 0.55)!, const Color(0xFFFFFBF0), hi: 0.6);
+    // A light scheme lifts the shadows too: a print in its own ink (sepia in
+    // Gilded) under the wash.
+    if (s.isLight) {
+      final ink = Color.lerp(s.whiteHeat, s.steel, 0.75)!;
+      return duotone(Color.lerp(tint, ink, 0.55)!, Color.lerp(s.soot, const Color(0xFFFFFFFF), 0.15)!, hi: 0.6);
+    }
     return mix(identity, metal(tint, at: 0.6), 0.8);
   }
 
@@ -400,12 +518,12 @@ abstract final class SchemeFilters {
   }
 
   /// The hero objects (anvil, letter tiles, mold cells): the forge's warm iron
-  /// takes on a little of the scheme's colour, or turns to pale polished steel
-  /// in a light scheme. Null for the forge.
+  /// takes on a little of the scheme's colour, or turns to pale polished
+  /// pewter in a light scheme. Null for the forge.
   static List<double>? iron() {
     final s = Palette.scheme;
     if (s.asRendered) return null;
-    if (s.isLight) return duotone(const Color(0xFF9C9182), const Color(0xFFFFFCF4), lo: 0.08, hi: 0.4);
+    if (s.isLight) return duotone(_pewter(s), Color.lerp(s.soot, const Color(0xFFFFFFFF), 0.3)!, lo: 0.08, hi: 0.4);
     final tint = Color.lerp(s.scene ?? s.rim, const Color(0xFF9A9A9A), 0.45)!;
     return mix(identity, duotone(const Color(0xFF000000), tint, hi: 0.6), 0.7);
   }
