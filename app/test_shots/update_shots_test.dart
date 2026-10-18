@@ -62,7 +62,7 @@ Future<void> _pump(WidgetTester tester, _Updater updater, String location) async
       campaignProvider.overrideWithValue(await tester.runAsync(Campaign.load) ?? (throw StateError('no campaign'))),
       appUpdaterProvider.overrideWithValue(updater),
       serverVersionProvider.overrideWith(
-        (_) async => (latest: '0.4.2', minSupported: '0.1.0', apk: 'https://example.com/wordsmith-0.4.2.apk'),
+        (_) async => (latest: '9.9.9', minSupported: '0.1.0', apk: 'https://example.com/wordsmith-9.9.9.apk'),
       ),
     ],
   );
