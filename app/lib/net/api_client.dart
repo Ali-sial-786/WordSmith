@@ -50,6 +50,7 @@ class ApiException implements Exception {
     'not_friends' => "That smith isn't on your friends list any more.",
     'invalid_run' => "The forge couldn't count that run.",
     'under_13' => 'Online play is for players 13 and over. Solo play is all yours.',
+    'under_14_quebec' => 'In Quebec, online play is for players 14 and over. Solo play is all yours.',
     'invalid_birth' => 'Choose the month and year you were born.',
     'age_already_set' => 'Your age is already set. Write to us through Contact us if it needs fixing.',
     // An unknown route: the server is older than this app.

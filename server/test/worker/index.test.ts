@@ -17,6 +17,7 @@ describe("routes", () => {
       minSupported: "0.1.0",
       protocol: 1,
       apk: `${BASE}/v1/apk/0.6.0`,
+      quebec: false,
     });
   });
 

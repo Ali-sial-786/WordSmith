@@ -221,13 +221,13 @@ class _OnlineClosed extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Online play is for 13 and over',
+                      'Online play is closed on this phone',
                       textAlign: TextAlign.center,
                       style: displayStyle(24, color: Palette.molten),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Signing in isn't available on this phone. Solo play and your progress here are still yours.",
+                      "It's for players 13 and over (14 and over in Quebec). Solo play and your progress here are still yours.",
                       textAlign: TextAlign.center,
                       style: text.bodyMedium?.copyWith(color: Palette.steel),
                     ),

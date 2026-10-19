@@ -77,8 +77,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       }
       if (mounted) context.go('/');
     } on ApiException catch (e) {
-      if (e.code == 'under_13') {
-        if (mounted) await _tooYoung();
+      if (tooYoung(e)) {
+        if (mounted) await _tooYoung(quebec: e.code == 'under_14_quebec');
         return;
       }
       if (mounted) setState(() => _error = e.friendly);
@@ -88,12 +88,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   /// Online play closed on this phone (the account is already gone).
-  Future<void> _tooYoung() async {
+  Future<void> _tooYoung({required bool quebec}) async {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Online play is for 13 and over'),
+        title: Text(quebec ? 'In Quebec, online play is for 14 and over' : 'Online play is for 13 and over'),
         content: const Text(
           "Your account has been removed, so friends and rooms aren't available on this phone. "
           'Solo play and your progress on this phone are still yours.',

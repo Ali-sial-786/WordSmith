@@ -235,14 +235,18 @@ class FakeServer {
     return now.year - year - (now.month <= month ? 1 : 0);
   }
 
-  /// `403 under_13` after deleting the account, or null if old enough.
+  /// Whether the player connects from Quebec, where online play starts at 14.
+  bool quebec = false;
+
+  /// `403 under_13` (or `under_14_quebec`) after deleting the account, or null if old enough.
   http.Response? _refuseUnder13(int year, int month) {
-    if (ageOf(year, month) >= 13) return null;
+    final age = ageOf(year, month);
+    if (age >= (quebec ? 14 : 13)) return null;
     deletedMe = true;
     username = null;
     birthYear = null;
     birthMonth = null;
-    return _json(403, {'error': 'under_13'});
+    return _json(403, {'error': age < 13 ? 'under_13' : 'under_14_quebec'});
   }
 
   Map<String, Object?> profile(String uid) => {

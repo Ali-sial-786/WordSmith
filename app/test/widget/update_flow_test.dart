@@ -72,7 +72,9 @@ Future<void> _pumpApp(WidgetTester tester, _FakeUpdater updater, {String latest 
         }),
       ),
       appUpdaterProvider.overrideWithValue(updater),
-      serverVersionProvider.overrideWith((_) async => (latest: latest, minSupported: '0.1.0', apk: _apk)),
+      serverVersionProvider.overrideWith(
+        (_) async => (latest: latest, minSupported: '0.1.0', apk: _apk, quebec: false),
+      ),
     ],
   );
   addTearDown(container.dispose);

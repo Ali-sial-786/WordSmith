@@ -158,8 +158,24 @@ void main() {
 
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
-    expect(find.text('Online play is for 13 and over'), findsOneWidget, reason: 'sign-in stays closed here');
+    expect(find.text('Online play is closed on this phone'), findsOneWidget, reason: 'sign-in stays closed here');
     expect(find.text('Create account'), findsNothing);
+  });
+
+  testWidgets('from Quebec, a 13-year-old is turned away too (14 and over there)', (tester) async {
+    final auth = FakeAuth();
+    final server = FakeServer()
+      ..birthYear = null
+      ..quebec = true;
+    await _pumpApp(tester, auth, server);
+    await _signUp(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'Kiddo');
+    await _pickBirth(tester, year: DateTime.now().year - 13, month: 'January');
+    await _tapStart(tester);
+
+    expect(find.text('In Quebec, online play is for 14 and over'), findsOneWidget);
+    expect(server.deletedMe, isTrue);
   });
 
   testWidgets('an account made before ages were asked confirms its age once', (tester) async {

@@ -53,9 +53,12 @@ final dailyCalendarProvider = FutureProvider.family<DailyCalendar?, String>((ref
 }, retry: (_, _) => null);
 
 /// The server's `/v1/version`: the newest app version, the oldest one it
-/// still plays online with, and the newest one's APK. Null offline or
-/// without a server. Invalidate it to check again.
-final serverVersionProvider = FutureProvider<({String latest, String minSupported, String? apk})?>((ref) async {
+/// still plays online with, the newest one's APK, and whether this player
+/// connects from Quebec. Null offline or without a server. Invalidate it to
+/// check again.
+final serverVersionProvider = FutureProvider<({String latest, String minSupported, String? apk, bool quebec})?>((
+  ref,
+) async {
   final api = ref.read(apiClientProvider);
   if (api == null) return null;
   try {
@@ -64,6 +67,7 @@ final serverVersionProvider = FutureProvider<({String latest, String minSupporte
       latest: v['latest'] as String? ?? '0.0.0',
       minSupported: v['minSupported'] as String? ?? '0.0.0',
       apk: v['apk'] as String?,
+      quebec: v['quebec'] as bool? ?? false,
     );
   } on ApiException {
     return null;
@@ -74,6 +78,10 @@ final serverVersionProvider = FutureProvider<({String latest, String minSupporte
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 
 final accountProvider = NotifierProvider<AccountController, AccountState>(AccountController.new);
+
+/// The server turned a player away for their age: under 13, or under 14 from
+/// Quebec (shared/age.md).
+bool tooYoung(ApiException e) => e.code == 'under_13' || e.code == 'under_14_quebec';
 
 enum AccountPhase {
   /// This build has no sign-in or server configured.
@@ -255,7 +263,7 @@ class AccountController extends Notifier<AccountState> {
     try {
       profile = await call();
     } on ApiException catch (e) {
-      if (e.code == 'under_13') await _closeOnlineForAge();
+      if (tooYoung(e)) await _closeOnlineForAge();
       rethrow;
     }
     await _arrive(profile);

@@ -29,6 +29,7 @@ import { deleteBlock, getBlocks, postReport, putBlock } from "./routes/safety";
 import { postSync } from "./routes/solo";
 import { postSurvivalSolo } from "./routes/survival";
 import { getHubSocket } from "./routes/ws";
+import { fromQuebec } from "./region";
 import { versionInfo } from "./version";
 
 export { HubDO } from "./hub/hub";
@@ -42,7 +43,11 @@ const open = (run: (c: RequestContext) => Response | Promise<Response>): Handler
 const authed = (run: (c: AuthedContext) => Response | Promise<Response>): Handler => ({ auth: true, run });
 
 const router = new Router<Handler>([
-  { method: "GET", path: "/v1/version", handler: open((c) => json(versionInfo(c.env, new URL(c.request.url).origin))) },
+  {
+    method: "GET",
+    path: "/v1/version",
+    handler: open((c) => json(versionInfo(c.env, new URL(c.request.url).origin, fromQuebec(c.request)))),
+  },
   // The in-app updater's download (src/routes/apk.ts).
   { method: "GET", path: "/v1/apk/:version", handler: open(getApk) },
   { method: "HEAD", path: "/v1/apk/:version", handler: open(getApk) },
