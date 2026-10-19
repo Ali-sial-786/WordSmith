@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Conditions d'utilisation · Wordsmith</title>
+  <meta name="description" content="Les règles pour jouer à Wordsmith, y compris les règles du clavardage, de la voix et de la vidéo dans les salles Co-op et Versus.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#140F0C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F7EFE2" media="(prefers-color-scheme: light)">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="alternate" hreflang="en" href="https://play.wordsmith-forge.workers.dev/terms">
+  <link rel="alternate" hreflang="fr" href="https://play.wordsmith-forge.workers.dev/terms-fr">
+  <!-- Served at /terms-fr (Cloudflare drops ".html"). The French version of
+       terms.html: keep the two in step, in wording and in styles. The same
+       styles are in privacy.html, delete-account.html and contact.html:
+       change them together. -->
+  <style>
+    /* BEGIN shared styles (same in privacy.html, terms.html, delete-account.html, contact.html) */
+    @font-face {
+      font-family: "Wordsmith Cinzel";
+      src: url("/assets/assets/fonts/Cinzel-Variable.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: dark;
+      --bg: #140F0C;
+      --card: #1E1612;
+      --card-edge: rgba(255, 178, 63, 0.18);
+      --rule: rgba(255, 178, 63, 0.14);
+      --text: #F4E8D4;
+      --muted: #C7B59D;
+      --heading: #FFB23F;
+      --gold: #E9B949;
+      --ember: #FF6A13;
+      --link: #FFC266;
+      --link-hover: #FFE3AE;
+      --glow: rgba(255, 106, 19, 0.17);
+      --button-top: #FFC35C;
+      --button-bottom: #FF8A1F;
+      --button-text: #1C1007;
+      --display: "Wordsmith Cinzel", "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #F7EFE2;
+        --card: #FFFAF2;
+        --card-edge: rgba(140, 78, 18, 0.22);
+        --rule: rgba(140, 78, 18, 0.18);
+        --text: #2A1C12;
+        --muted: #5E4A3A;
+        --heading: #9A4708;
+        --gold: #85600C;
+        --ember: #C2410C;
+        --link: #A14600;
+        --link-hover: #6A2E00;
+        --glow: rgba(255, 150, 60, 0.20);
+        --button-top: #FFC35C;
+        --button-bottom: #FF9A3C;
+        --button-text: #1C1007;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 900px 380px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+      color: var(--text);
+      font: 400 17px/1.65 var(--body);
+      overflow-wrap: break-word;
+    }
+    @media (min-width: 640px) { body { font-size: 18px; } }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+    a:hover { color: var(--link-hover); }
+    a:focus-visible { outline: 2px solid var(--heading); outline-offset: 2px; border-radius: 4px; }
+
+    /* Header: the name and Play on top, the pages under them on a phone;
+       one row from 640px. */
+    .site-head { border-bottom: 1px solid var(--rule); }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-bottom: 12px;
+    }
+    .brand {
+      order: 1;
+      margin-right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--heading);
+    }
+    .brand img { width: 34px; height: auto; display: block; }
+    .brand span {
+      font: 700 19px/1 var(--display);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--heading);
+    }
+    .site-nav { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+    .site-nav a {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .site-nav a:hover { color: var(--text); border-color: var(--rule); }
+    .site-nav a[aria-current="page"] { color: var(--heading); background: var(--card); border-color: var(--card-edge); }
+    /* Four pages fit one row on a 360-wide phone. */
+    @media (max-width: 479px) {
+      .site-nav { gap: 2px; margin-left: -8px; }
+      .site-nav a { padding: 6px 8px; font-size: 14px; }
+    }
+    .play {
+      order: 2;
+      display: inline-block;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--button-top), var(--button-bottom));
+      color: var(--button-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.3;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .play:hover { filter: brightness(1.06); color: var(--button-text); }
+    @media (min-width: 640px) {
+      .site-nav { order: 2; flex-basis: auto; }
+      .play { order: 3; }
+    }
+
+    main { padding-top: 30px; padding-bottom: 24px; }
+
+    h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.2; color: var(--heading); }
+    h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: 0.02em; }
+    @media (min-width: 640px) { h1 { font-size: 42px; } }
+    @media not all and (prefers-color-scheme: light) {
+      h1 {
+        background: linear-gradient(180deg, #FFF1D0 0%, #FFB23F 55%, #FF7A24 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+    h2 {
+      margin: 40px 0 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 24px;
+      scroll-margin-top: 16px;
+    }
+    h3 { margin: 26px 0 6px; font-size: 1.06em; line-height: 1.35; color: var(--gold); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3em; }
+    li { margin: 0 0 8px; }
+    li::marker { color: var(--ember); }
+    strong { color: var(--text); font-weight: 650; }
+    code {
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--card);
+      font: 0.86em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .updated { margin: 0 0 22px; color: var(--muted); font-size: 0.9em; letter-spacing: 0.02em; }
+    .lead { font-size: 1.06em; }
+
+    .card {
+      margin: 24px 0;
+      padding: 18px 20px;
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      background: var(--card);
+    }
+    .card > :last-child { margin-bottom: 0; }
+    .card h2 { margin-top: 0; padding-top: 0; border-top: 0; font-size: 21px; }
+
+    .contents { margin: 22px 0 8px; }
+    .contents p { margin: 0 0 8px; color: var(--muted); font-size: 0.9em; }
+    .contents ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .contents li { margin: 0; }
+    .contents a {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-size: 0.86em;
+      text-decoration: none;
+    }
+
+    .who { margin: 0 0 16px; }
+    .who div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .who div:first-child { padding-top: 4px; }
+    .who dt { font-weight: 650; color: var(--gold); }
+    .who dd { margin: 4px 0 0; }
+
+    .contact { border-color: var(--heading); }
+
+    .site-foot {
+      padding-top: 18px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+    .site-foot p { margin: 0 0 8px; }
+    .site-foot a { color: var(--muted); white-space: nowrap; }
+    .site-foot a:hover { color: var(--text); }
+    /* END shared styles */
+    .rules { margin: 0 0 16px; padding: 0; list-style: none; }
+    .rules li {
+      position: relative;
+      margin: 0;
+      padding: 9px 0 9px 30px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .rules li:last-child { border-bottom: 0; }
+    .rules li::before {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 1.05em;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--ember);
+      transform: rotate(45deg);
+      box-shadow: 0 0 8px rgba(255, 106, 19, 0.55);
+    }
+    .be-kind { font: 700 22px/1.3 var(--display); color: var(--heading); margin: 0 0 6px; }
+  </style>
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap bar">
+      <a class="brand" href="/"><img src="/icons/anvil.webp" alt="" width="34" height="26"><span>Wordsmith</span></a>
+      <a class="play" href="/">Jouer</a>
+      <nav class="site-nav" aria-label="Pages de Wordsmith">
+        <a href="/privacy-fr">Vie privée</a>
+        <a href="/terms-fr" aria-current="page">Conditions</a>
+        <a href="/delete-account" aria-label="Effacer le compte">Effacer</a>
+        <a href="/contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Conditions d'utilisation</h1>
+    <p class="updated">Dernière mise à jour&nbsp;: 19&nbsp;octobre&nbsp;2026 · <a href="/terms" lang="en" hreflang="en">English version</a></p>
+
+    <p class="lead">Voici les règles pour jouer à Wordsmith, dans l'application Android et dans le navigateur. En jouant, vous les acceptez. Elles sont courtes, alors prenez le temps de les lire, surtout les règles du clavardage.</p>
+
+    <h2 id="who-can-play">Qui peut jouer</h2>
+    <ul>
+      <li>Vous devez avoir <strong>13&nbsp;ans ou plus</strong> (<strong>14&nbsp;ans ou plus au Québec</strong>) pour créer un compte et jouer en ligne&nbsp;: amis, salles, clavardage, voix et vidéo. Lorsque vous créez un compte, nous vous demandons votre mois et votre année de naissance. Tout le monde peut jouer en solo sans compte.</li>
+      <li>Si vous avez moins de 18&nbsp;ans (ou si vous n'avez pas atteint l'âge de la majorité là où vous habitez), vous avez besoin de l'autorisation d'un parent ou d'un tuteur pour utiliser Wordsmith, et c'est cette personne qui accepte ces conditions pour vous. Les parents et les tuteurs peuvent <a href="#contact">communiquer avec nous</a> en tout temps au sujet du compte de leur adolescent, ou le supprimer dans l'application, sous <strong lang="en">Settings › Delete account</strong> (Paramètres › Supprimer le compte), ou à l'adresse <a href="/delete-account">/delete-account</a>.</li>
+      <li>Les joueurs de moins de 18&nbsp;ans entrent dans les salles avec le micro coupé et l'activent eux-mêmes. La caméra est désactivée au départ pour tout le monde.</li>
+      <li>La loi québécoise sur la protection des renseignements personnels exige le consentement d'un parent pour recueillir des renseignements personnels auprès d'une personne de moins de 14&nbsp;ans. Wordsmith ne recueille pas ce consentement&nbsp;: au Québec, le jeu en ligne commence donc à 14&nbsp;ans. Nous déterminons si vous jouez depuis le Québec d'après l'emplacement de votre connexion Internet (voir la <a href="/privacy-fr">politique de confidentialité</a>).</li>
+      <li>Si nous apprenons qu'un compte appartient à une personne qui n'a pas l'âge minimum, nous le supprimons.</li>
+      <li>Ces conditions s'appliquent aux joueurs de tous les États américains et de toutes les provinces et de tous les territoires canadiens, y compris l'Ontario et le Québec. Au Canada, les règles de la section <a href="#canada">Ontario et Québec</a> ci-dessous s'appliquent aussi. Certains États ont des lois sur les adolescents et les applications, qui obligent par exemple les boutiques d'applications à transmettre une tranche d'âge ou le consentement d'un parent. Lorsque vous obtenez Wordsmith par une boutique d'applications dans l'un de ces États, nous respectons les renseignements sur l'âge et le consentement que la boutique nous transmet.</li>
+      <li>Wordsmith n'est pas offert dans l'Union européenne ni au Royaume-Uni.</li>
+    </ul>
+
+    <h2 id="using">Utilisation de Wordsmith</h2>
+    <ul>
+      <li>Wordsmith est gratuit. Il n'y a aucune publicité et rien à acheter.</li>
+      <li>Jouez franc jeu. N'essayez pas de perturber, de surcharger ou de contourner le fonctionnement du jeu, par exemple avec des applications modifiées, des robots ou des scripts, ou en attaquant nos serveurs.</li>
+            <li>La façon dont nous traitons vos renseignements est expliquée dans la <a href="/privacy-fr">politique de confidentialité</a>.</li>
+    </ul>
+
+    <h2 id="account">Votre compte</h2>
+    <ul>
+      <li>Une seule personne par compte. Ne partagez pas votre compte et n'utilisez pas celui de quelqu'un d'autre.</li>
+      <li>Protégez vos identifiants de connexion. Vous êtes responsable de ce qui est fait avec votre compte. Si vous pensez que quelqu'un d'autre y a accédé, changez votre mot de passe (<em lang="en">Forgot password?</em> [Mot de passe oublié&#8239;?] sur l'écran de connexion) et <a href="#contact">informez-nous</a>.</li>
+      <li>Votre nom d'utilisateur doit respecter les règles ci-dessous. Les noms d'utilisateur offensants sont interdits, même si l'un d'eux échappe au filtre.</li>
+    </ul>
+
+    <h2 id="chat-rules">Règles du clavardage écrit et vocal</h2>
+    <p>Ces règles s'appliquent à tout ce que vous partagez avec les autres joueurs&nbsp;: clavardage écrit, voix, vidéo, émoticônes et nom d'utilisateur.</p>
+    <div class="card">
+      <p class="be-kind">Soyez aimable.</p>
+      <p>Traitez les autres joueurs comme vous aimeriez qu'on vous traite. Les comportements suivants sont interdits&nbsp;:</p>
+      <ul class="rules">
+        <li><strong>Intimidation ou harcèlement</strong>, y compris le fait de se liguer contre quelqu'un ou de le suivre d'une salle à l'autre.</li>
+        <li><strong>Haine&nbsp;:</strong> attaquer ou ridiculiser une personne pour ce qu'elle est, par exemple pour sa race, son origine ethnique, sa religion, sa nationalité, son genre, son orientation sexuelle ou son handicap.</li>
+        <li><strong>Contenu sexuel</strong> de toute nature, par écrit, de vive voix ou à la caméra.</li>
+        <li><strong>Menaces</strong>, ou encourager quelqu'un à se faire du mal ou à faire du mal à d'autres.</li>
+        <li><strong>Pourriel</strong>, publicité ou liens vers des arnaques.</li>
+        <li><strong>Tricherie</strong>, ou aider d'autres personnes à tricher.</li>
+        <li><strong>Usurpation d'identité&nbsp;:</strong> se faire passer pour un autre joueur, une personne réelle ou le développeur.</li>
+        <li><strong>Partage de renseignements personnels</strong>, comme un nom réel, une adresse, un numéro de téléphone, une école ou une photo, qu'il s'agisse des vôtres ou de ceux de quelqu'un d'autre.</li>
+        <li><strong>Noms d'utilisateur offensants.</strong></li>
+      </ul>
+    </div>
+
+    <h2 id="what-we-do">Ce que nous faisons pour garder une ambiance amicale</h2>
+    <ul>
+      <li>Les jurons dans le clavardage sont automatiquement remplacés par des astérisques, et les noms d'utilisateur qui en contiennent sont refusés.</li>
+      <li>Vous pouvez <strong>mettre en sourdine</strong> n'importe quel joueur d'une salle en appuyant longuement sur l'un de ses messages, le <strong>bloquer</strong> (ses messages et ses émoticônes sont alors masqués partout, et vous cessez d'être amis) et le <strong>signaler</strong> depuis le clavardage de la salle, la salle d'attente ou votre liste d'amis.</li>
+      <li>Les signalements sont examinés, et les comptes qui enfreignent ces règles peuvent être supprimés.</li>
+      <li>La voix et la vidéo ne sont pas enregistrées. Si quelqu'un y enfreint les règles, signalez-le et décrivez ce qui s'est passé.</li>
+      <li>Si vous pensez que quelqu'un est en danger, communiquez avec les services d'urgence de votre région.</li>
+    </ul>
+
+    <h2 id="as-is">Le jeu est fourni tel quel</h2>
+    <p class="card"><strong>Si vous habitez au Québec&nbsp;:</strong> les limites de responsabilité prévues dans cette section ne s'appliquent pas à vous dans la mesure où le droit québécois ne les permet pas. En particulier, nous n'excluons pas notre responsabilité pour nos propres actes ni pour ceux des personnes qui agissent en notre nom.</p>
+    <ul>
+      <li>Wordsmith est un jeu gratuit créé par un développeur indépendant et fourni «&nbsp;tel quel&nbsp;». Nous nous efforçons d'en assurer le bon fonctionnement et l'équité, mais nous ne pouvons pas promettre qu'il sera toujours disponible ou exempt d'erreurs, ni qu'aucune progression ne sera jamais perdue.</li>
+      <li>Nous pouvons améliorer ou modifier certaines parties du jeu, et l'interrompre temporairement pour l'entretien ou pour régler un problème. Si nous cessons un jour d'offrir Wordsmith de façon définitive, nous l'annoncerons dans le jeu au moins 60&nbsp;jours à l'avance.</li>
+      <li>Dans la mesure permise par la loi, le développeur n'est responsable d'aucune perte découlant de l'utilisation de Wordsmith ou de l'impossibilité de l'utiliser. Rien dans ces conditions ne vous retire les droits que la loi vous accorde, notamment en vertu des lois sur la protection du consommateur de l'État, de la province ou du territoire où vous habitez. Si une loi ne permet pas une limite prévue dans ces conditions, cette limite s'applique seulement dans la mesure permise par cette loi.</li>
+    </ul>
+
+    <h2 id="canada">Ontario et Québec</h2>
+    <ul>
+      <li><strong>Ontario&nbsp;:</strong> rien dans ces conditions ne limite les droits que vous confère la <em>Loi de 2002 sur la protection du consommateur</em> de l'Ontario. Ces conditions ne contiennent aucune clause d'arbitrage obligatoire et ne vous empêchent pas de vous adresser aux tribunaux ni de participer à un recours collectif.</li>
+      <li><strong>Québec&nbsp;:</strong> si vous êtes un consommateur au Québec, le droit québécois, y compris la <em>Loi sur la protection du consommateur</em>, s'applique à vous, et vous pouvez vous adresser aux tribunaux du Québec. Toute disposition de ces conditions que le droit québécois ne permet pas ne s'applique pas à vous.</li>
+      <li><strong>Langue&nbsp;:</strong> ces conditions et la <a href="/privacy-fr">politique de confidentialité</a> sont offertes en français et en anglais (<a href="/terms" lang="en" hreflang="en">Terms of use</a> et <a href="/privacy" lang="en" hreflang="en">Privacy policy</a>). Si vous habitez au Québec, c'est la version française qui s'applique à vous, sauf si vous choisissez expressément la version anglaise.</li>
+    </ul>
+
+    <h2 id="content">Notre contenu et celui des autres</h2>
+    <ul>
+      <li>Les illustrations, les sons, les casse-tête et le code propres à Wordsmith sont l'œuvre du développeur. Veuillez ne pas les copier dans d'autres jeux ou applications sans nous le demander. Cela ne s'applique pas au contenu sous licence ouverte décrit ci-dessous, que vous pouvez réutiliser selon sa propre licence.</li>
+      <li>Bon nombre des polices de caractères, des sons, des icônes et des listes de mots ont été créés par d'autres personnes et sont utilisés sous des licences ouvertes, comme la SIL Open Font License, les licences Creative Commons (CC0, CC BY 3.0 et CC BY 4.0) et l'Apache License 2.0. Leurs auteurs sont nommés dans le jeu, sous <strong lang="en">Settings › Credits</strong> (Paramètres › Crédits), où se trouvent aussi les textes complets des licences.</li>
+      <li>Les définitions des mots proviennent d'Open English WordNet (CC BY 4.0) et, pour les mots plus rares, de Wiktionary, par ses contributeurs, sous licence CC BY-SA. Dans le jeu, chaque définition tirée de Wiktionary renvoie à son article et à sa licence. Nous abrégeons ces définitions, et les versions abrégées restent sous la même licence&nbsp;: tout le monde peut donc les réutiliser selon les conditions de cette licence.</li>
+      <li>Ce que vous écrivez et dites vous appartient, et vous en êtes responsable. En l'envoyant, vous permettez au jeu de le montrer aux autres joueurs de la salle.</li>
+    </ul>
+
+    <h2 id="ending">Fin de l'utilisation</h2>
+    <ul>
+      <li>Vous pouvez cesser de jouer et supprimer votre compte en tout temps&nbsp;: dans l'application, sous <strong lang="en">Settings › Delete account</strong>, ou à l'adresse <a href="/delete-account">/delete-account</a>.</li>
+      <li>Nous pouvons suspendre ou supprimer les comptes qui enfreignent ces conditions. Nous vous en donnerons la raison, et vous pourrez nous demander de réexaminer la décision au moyen du <a href="/contact?topic=account">formulaire de contact</a>.</li>
+    </ul>
+
+    <h2 id="changes">Modifications de ces conditions</h2>
+    <p>Nous pouvons modifier ces conditions, par exemple les règles du clavardage, le fonctionnement des fonctions du jeu ou ce qui est inclus. Pour une modification importante, nous l'afficherons dans le jeu et sur cette page au moins 30&nbsp;jours avant son entrée en vigueur, avec l'ancien et le nouveau texte, et la date. Si vous n'êtes pas d'accord, vous pouvez cesser de jouer et supprimer votre compte sans frais, avant la modification ou dans les 30&nbsp;jours suivant son entrée en vigueur. Les modifications ne sont jamais rétroactives. De petites corrections, comme des fautes de frappe ou une formulation plus claire, peuvent être apportées en tout temps, et nous mettons toujours à jour la date en haut de la page.</p>
+
+    <!-- CONTACT: the one place on this page with contact details: the
+         contact form (contact.html), as in terms.html, privacy-fr.html and delete-account.html. -->
+    <section id="contact" class="card contact" aria-labelledby="contact-title">
+      <h2 id="contact-title">Nous joindre</h2>
+      <p>Vous avez des questions sur ces conditions ou quelque chose à nous dire&#8239;? Envoyez-nous un message au moyen du <a href="/contact">formulaire de contact</a>. Laissez votre adresse courriel pour que nous puissions vous répondre.</p>
+      <p>Pour signaler un joueur, le plus rapide est d'utiliser <strong lang="en">Report</strong> (Signaler) dans le jeu, ce qui nous transmet ce qu'il a écrit.</p>
+    </section>
+  </main>
+
+  <footer class="wrap site-foot">
+    <p><a href="/privacy-fr">Politique de confidentialité</a> · <a href="/terms-fr">Conditions d'utilisation</a> · <a href="/delete-account">Supprimer votre compte</a> · <a href="/contact">Nous joindre</a> · <a href="/">Jouer à Wordsmith</a></p>
+    <p>Wordsmith est un jeu de lettres gratuit et indépendant.</p>
+  </footer>
+</body>
+</html>
