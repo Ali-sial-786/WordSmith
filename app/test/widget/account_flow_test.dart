@@ -123,6 +123,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Use 3–16 letters, numbers or _.'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Smith name'),
+      -200,
+      scrollable: find.ancestor(of: find.text('When were you born?'), matching: find.byType(Scrollable)).first,
+    );
     await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'Ali_Smith');
     await _tapStart(tester);
     await tester.pumpAndSettle();

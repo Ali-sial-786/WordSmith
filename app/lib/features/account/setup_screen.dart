@@ -8,6 +8,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/metal_button.dart';
+import '../../ui/widgets/web_links.dart';
 
 final _validName = RegExp(r'^[A-Za-z0-9_]{3,16}$');
 
@@ -143,7 +144,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             const SizedBox(height: 14),
             Text(_error!, style: text.bodyMedium?.copyWith(color: Palette.quenchRed)),
           ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
+          const _AgreeLine(),
+          const SizedBox(height: 14),
           PlateButton(
             label: _busy ? 'Forging…' : (ageOnly ? 'Continue' : 'Start forging'),
             primary: true,
@@ -194,6 +197,38 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     ),
     const SizedBox(height: 24),
   ];
+}
+
+/// What carrying on means, with the terms and privacy policy in English and
+/// French (Quebec needs the French ones offered; terms.html "Ontario and Quebec").
+class _AgreeLine extends StatelessWidget {
+  const _AgreeLine();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    Widget link(String label, WebPage page) => Semantics(
+      link: true,
+      child: InkWell(
+        onTap: () => openWebPage(context, page),
+        child: Text(label, style: style?.copyWith(decoration: TextDecoration.underline)),
+      ),
+    );
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text('By continuing, you agree to the ', style: style),
+        link('Terms of use', WebPage.terms),
+        Text(' and the ', style: style),
+        link('Privacy policy', WebPage.privacy),
+        Text('. En français : ', style: style),
+        link("Conditions d'utilisation", WebPage.termsFrench),
+        Text(', ', style: style),
+        link('Politique de confidentialité', WebPage.privacyFrench),
+        Text('.', style: style),
+      ],
+    );
+  }
 }
 
 /// Month and year dropdowns, both empty to start: nothing suggests an answer.
