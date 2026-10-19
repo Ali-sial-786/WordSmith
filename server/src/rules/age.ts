@@ -7,12 +7,6 @@
 
 /** Online play (an account) is for this age and over. */
 export const MIN_AGE = 13;
-/**
- * In Quebec, personal information of a child under 14 needs a parent's
- * consent (Law 25, s. 4.1), which Wordsmith doesn't collect, so online play
- * there starts at 14.
- */
-export const MIN_AGE_QUEBEC = 14;
 /** Under this age, a player gets the defaults for minors (the microphone starts muted). */
 export const ADULT_AGE = 18;
 /** Oldest birth year accepted, as years before now. */

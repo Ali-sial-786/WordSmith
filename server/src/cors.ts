@@ -7,6 +7,7 @@
  */
 
 import type { Env } from "./env";
+import { NOT_IN_QUEBEC_HEADER } from "./region";
 
 /** `http://localhost:<port>` or `http://127.0.0.1:<port>`, for `flutter run -d chrome`. */
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
@@ -31,7 +32,7 @@ export function preflight(origin: string | null): Response {
     headers: {
       "Access-Control-Allow-Origin": origin,
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+      "Access-Control-Allow-Headers": `Authorization, Content-Type, Accept, ${NOT_IN_QUEBEC_HEADER}`,
       "Access-Control-Max-Age": String(MAX_AGE),
       Vary: "Origin",
     },

@@ -91,7 +91,7 @@ jobs:
         working-directory: app/build/web
         run: |
           # Leave out what app/web/.assetsignore keeps from being uploaded.
-          files=$(find . -type f ! -name '*.symbols' ! -name '.last_build_id' ! -name '.assetsignore' ! -name '_headers' -printf '%s %p\n')
+          files=$(find . -type f ! -name '*.symbols' ! -name '.last_build_id' ! -name '.assetsignore' ! -name '_headers' ! -name '_redirects' -printf '%s %p\n')
           count=$(echo "$files" | wc -l)
           read -r size largest < <(echo "$files" | sort -rn | head -1)
           total=$(echo "$files" | awk '{ s += $1 } END { printf "%.1f", s / 1048576 }')

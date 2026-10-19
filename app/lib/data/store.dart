@@ -139,6 +139,7 @@ class Store {
   static const _syncKey = 'sync_queue.v1';
   static const _tipsKey = 'tips_seen.v1';
   static const _ageGateKey = 'age_gate.v1';
+  static const _notInQuebecKey = 'not_in_quebec.v1';
   static const _errorsKey = 'errors.v1';
   static const _crashSeenKey = 'crash_seen.v1';
   static const _historyKey = 'history.v1';
@@ -237,6 +238,13 @@ class Store {
   bool get onlineAgeBlocked => _prefs.getBool(_ageGateKey) ?? false;
 
   Future<void> blockOnlineForAge() => _prefs.setBool(_ageGateKey, true);
+
+  /// Whether the player said they don't live in Quebec, where online play
+  /// isn't offered, after their connection placed them there
+  /// (shared/region.md). Only kept on this phone.
+  bool get notInQuebec => _prefs.getBool(_notInQuebecKey) ?? false;
+
+  Future<void> declareNotInQuebec() => _prefs.setBool(_notInQuebecKey, true);
 
   /// One-time tips the player has already been shown.
   bool seenTip(String id) => _prefs.getStringList(_tipsKey)?.contains(id) ?? false;

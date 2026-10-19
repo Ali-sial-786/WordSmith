@@ -50,13 +50,17 @@ contract.
 Everything is under `/v1`. Every route except `/version`, `/health`,
 `/apk/:version`, `/define/:word` and `/contact` needs `Authorization: Bearer <Firebase ID token>`; the
 WebSocket route reads the token from `Sec-WebSocket-Protocol` instead.
+From Quebec, where online play isn't offered, every route that needs a token
+answers `403 quebec_not_offered` before reading it, except `DELETE /me` and
+`DELETE /me/push-token`, unless the request has `X-Not-In-Quebec: 1`
+([shared/region.md](../shared/region.md)).
 Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or bad token is
 `401 {"error": "unauthorized", "message": "<reason>"}` (`missing_token`,
 `expired`, `bad_signature`, `unknown_kid`, `bad_audience`, …).
 
 | Route | Body → response |
 |---|---|
-| `GET /version` | `{latest, minSupported, protocol, apk}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself: this server's `/apk/<latest>`, or null without `APK_SOURCE_URL` |
+| `GET /version` | `{latest, minSupported, protocol, apk, quebec}`, from the `vars` in `wrangler.jsonc`. `apk` is where the Android app downloads `latest` to update itself: this server's `/apk/<latest>`, or null without `APK_SOURCE_URL`. `quebec` is true when the request comes from Quebec ([shared/region.md](../shared/region.md)) |
 | `GET /apk/:version` · `HEAD` | The APK for a version (`1.2.3`) or `latest`, streamed from `APK_SOURCE_URL` (where release.yml publishes it) with its length, as `wordsmith-<version>.apk`, so players never see where builds are kept (`src/routes/apk.ts`). No token needed. `404 apk_not_found` when it isn't published (yet), `502 apk_unavailable` when the source fails. |
 | `GET /health` | `{ok: true}` |
 | `GET /define/:word` | `{word, senses: [{pos, gloss}], source, sourceUrl, license, licenseUrl}`: what a word means, from an online dictionary, for words the app's offline lexicon lacks (below). No token needed. `word` is lowercased; `source` is `dictionaryapi.dev` or `wiktionary`; `sourceUrl` is the Wiktionary entry and `license`/`licenseUrl` its CC BY-SA licence, which the app shows with the text. `400 invalid_word` unless it's 2–15 letters A–Z, `404 word_not_found` when neither dictionary has it (or has it only as a name), `502 dictionary_unavailable` when one couldn't be asked and the other didn't have it. |

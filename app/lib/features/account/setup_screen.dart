@@ -79,7 +79,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       if (mounted) context.go('/');
     } on ApiException catch (e) {
       if (tooYoung(e)) {
-        if (mounted) await _tooYoung(quebec: e.code == 'under_14_quebec');
+        if (mounted) await _tooYoung();
+        return;
+      }
+      if (notOfferedHere(e)) {
+        // The sign-in screen says why, and offers a way through (shared/region.md).
+        if (mounted) context.go('/sign-in');
         return;
       }
       if (mounted) setState(() => _error = e.friendly);
@@ -89,12 +94,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   /// Online play closed on this phone (the account is already gone).
-  Future<void> _tooYoung({required bool quebec}) async {
+  Future<void> _tooYoung() async {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text(quebec ? 'In Quebec, online play is for 14 and over' : 'Online play is for 13 and over'),
+        title: const Text('Online play is for 13 and over'),
         content: const Text(
           "Your account has been removed, so friends and rooms aren't available on this phone. "
           'Solo play and your progress on this phone are still yours.',
@@ -221,10 +226,6 @@ class _AgreeLine extends StatelessWidget {
         link('Terms of use', WebPage.terms),
         Text(' and the ', style: style),
         link('Privacy policy', WebPage.privacy),
-        Text('. En français : ', style: style),
-        link("Conditions d'utilisation", WebPage.termsFrench),
-        Text(', ', style: style),
-        link('Politique de confidentialité', WebPage.privacyFrench),
         Text('.', style: style),
       ],
     );

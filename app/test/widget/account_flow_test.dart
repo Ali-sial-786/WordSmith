@@ -42,7 +42,7 @@ Future<void> _pumpApp(
         }),
       ),
       authServiceProvider.overrideWithValue(auth),
-      apiClientProvider.overrideWithValue(server.client(auth)),
+      apiClientProvider.overrideWithValue(server.client(auth, notInQuebec: () => store.notInQuebec)),
       if (push != null) pushServiceProvider.overrideWithValue(push),
       if (rooms)
         roomClientFactoryProvider.overrideWithValue(
@@ -167,20 +167,65 @@ void main() {
     expect(find.text('Create account'), findsNothing);
   });
 
-  testWidgets('from Quebec, a 13-year-old is turned away too (14 and over there)', (tester) async {
+  testWidgets("from Quebec, sign-in says online play isn't offered, unless they live elsewhere", (tester) async {
     final auth = FakeAuth();
+    final server = FakeServer()..quebec = true;
+    await _pumpApp(tester, auth, server);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text("Online play isn't offered in Quebec"), findsOneWidget);
+    expect(find.text('Create account'), findsNothing);
+    expect(find.text('Your account is kept. You can delete it in Settings.'), findsNothing, reason: 'not signed in');
+
+    await tester.tap(find.text("I don't live in Quebec"));
+    await tester.pumpAndSettle();
+    expect(find.text("Don't live in Quebec?"), findsOneWidget, reason: 'it asks first');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text("Online play isn't offered in Quebec"), findsOneWidget);
+
+    await tester.tap(find.text("I don't live in Quebec"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, "I don't live in Quebec").last);
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome back'), findsOneWidget, reason: 'sign-in opens');
+
+    await tester.tap(find.text('New here? Create an account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'ali@example.com');
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret1');
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pick a name'), findsOneWidget, reason: 'every call now says they live elsewhere');
+    expect(server.calls.where((c) => c.contains('refused')), isEmpty);
+  });
+
+  testWidgets('a signed-in player in Quebec keeps their account, and gets in after saying they live elsewhere', (
+    tester,
+  ) async {
+    final auth = FakeAuth(
+      signedIn: const AuthUser(uid: 'u1', email: 'ali@example.com'),
+    );
     final server = FakeServer()
-      ..birthYear = null
+      ..username = 'Ali'
       ..quebec = true;
     await _pumpApp(tester, auth, server);
-    await _signUp(tester);
 
-    await tester.enterText(find.widgetWithText(TextField, 'Smith name'), 'Kiddo');
-    await _pickBirth(tester, year: DateTime.now().year - 13, month: 'January');
-    await _tapStart(tester);
+    expect(find.text("Online play isn't offered in Quebec."), findsOneWidget);
+    expect(server.calls, contains('GET /me (refused in Quebec)'));
+    expect(server.deletedMe, isFalse, reason: 'an IP address can be wrong, so the account stays');
 
-    expect(find.text('In Quebec, online play is for 14 and over'), findsOneWidget);
-    expect(server.deletedMe, isTrue);
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your account is kept. You can delete it in Settings.'), findsOneWidget);
+    await tester.tap(find.text("I don't live in Quebec"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, "I don't live in Quebec").last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ali'), findsOneWidget, reason: 'back at the Forge Hall, signed in');
+    expect(find.text("Online play isn't offered in Quebec."), findsNothing);
   });
 
   testWidgets('an account made before ages were asked confirms its age once', (tester) async {

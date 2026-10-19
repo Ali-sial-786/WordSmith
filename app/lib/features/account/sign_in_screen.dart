@@ -100,6 +100,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
     final text = Theme.of(context).textTheme;
     if (ref.read(storeProvider).onlineAgeBlocked) return const _OnlineClosed();
+    final phase = ref.watch(accountProvider.select((a) => a.phase));
+    final fromQuebec = ref.watch(serverVersionProvider).value?.quebec ?? false;
+    if (phase == AccountPhase.notOffered || (fromQuebec && !ref.read(storeProvider).notInQuebec)) {
+      return _NotOfferedInQuebec(signedIn: phase == AccountPhase.notOffered, onDeclared: () => setState(() {}));
+    }
     final google = ref.read(accountProvider.notifier).googleAvailable;
     return Scaffold(
       appBar: AppBar(backgroundColor: Colors.transparent),
@@ -227,7 +232,7 @@ class _OnlineClosed extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "It's for players 13 and over (14 and over in Quebec). Solo play and your progress here are still yours.",
+                      "It's for players 13 and over. Solo play and your progress here are still yours.",
                       textAlign: TextAlign.center,
                       style: text.bodyMedium?.copyWith(color: Palette.steel),
                     ),
@@ -235,6 +240,103 @@ class _OnlineClosed extends StatelessWidget {
                     PlateButton(label: 'Back to the forge', primary: true, onPressed: () => context.go('/')),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sign-in from Quebec, where online play isn't offered (shared/region.md),
+/// with a way through for players their connection places there by mistake.
+class _NotOfferedInQuebec extends ConsumerStatefulWidget {
+  const _NotOfferedInQuebec({required this.signedIn, required this.onDeclared});
+
+  /// Signed in already: the account is kept.
+  final bool signedIn;
+  final VoidCallback onDeclared;
+
+  @override
+  ConsumerState<_NotOfferedInQuebec> createState() => _NotOfferedInQuebecState();
+}
+
+class _NotOfferedInQuebecState extends ConsumerState<_NotOfferedInQuebec> {
+  bool _busy = false;
+
+  Future<void> _notInQuebec() async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Don't live in Quebec?"),
+        content: const Text(
+          'Your internet connection looks like it comes from Quebec, but that can be wrong near the border '
+          'or on mobile data. If you live somewhere else, you can play online. Saying so if you live in '
+          'Quebec breaks the Terms of use.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("I don't live in Quebec")),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(accountProvider.notifier).declareNotInQuebec();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (mounted) widget.onDeclared();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.transparent),
+      extendBodyBehindAppBar: true,
+      body: ForgeBackground(
+        image: 'assets/images/bg_hall.webp',
+        fire: 0.6,
+        dim: 0.7,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                shrinkWrap: true,
+                children: [
+                  Text(
+                    "Online play isn't offered in Quebec",
+                    textAlign: TextAlign.center,
+                    style: displayStyle(24, color: Palette.molten),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Accounts, friends, rooms and the Daily Commission are for players outside Quebec. '
+                    'Solo play and your progress on this device are still yours.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: Palette.steel),
+                  ),
+                  if (widget.signedIn) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your account is kept. You can delete it in Settings.',
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium?.copyWith(color: Palette.steel),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  PlateButton(label: 'Back to the forge', primary: true, onPressed: () => context.go('/')),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: _busy ? null : _notInQuebec,
+                    child: Text(_busy ? 'Working…' : "I don't live in Quebec"),
+                  ),
+                ],
               ),
             ),
           ),

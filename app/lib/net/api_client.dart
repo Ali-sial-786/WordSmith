@@ -50,7 +50,7 @@ class ApiException implements Exception {
     'not_friends' => "That smith isn't on your friends list any more.",
     'invalid_run' => "The forge couldn't count that run.",
     'under_13' => 'Online play is for players 13 and over. Solo play is all yours.',
-    'under_14_quebec' => 'In Quebec, online play is for players 14 and over. Solo play is all yours.',
+    'quebec_not_offered' => "Online play isn't offered in Quebec. Solo play is all yours.",
     'invalid_birth' => 'Choose the month and year you were born.',
     'age_already_set' => 'Your age is already set. Write to us through Contact us if it needs fixing.',
     // An unknown route: the server is older than this app.
@@ -65,10 +65,15 @@ class ApiException implements Exception {
 /// REST client for the Worker (server/README.md). [token] supplies a fresh
 /// Firebase ID token for each call.
 class ApiClient {
-  ApiClient({required this.baseUrl, required this.token, http.Client? client}) : _http = client ?? http.Client();
+  ApiClient({required this.baseUrl, required this.token, this.notInQuebec, http.Client? client})
+    : _http = client ?? http.Client();
 
   final String baseUrl;
   final Future<String?> Function() token;
+
+  /// Whether the player has said they don't live in Quebec: every call then
+  /// says so, for when their connection places them there (shared/region.md).
+  final bool Function()? notInQuebec;
   final http.Client _http;
 
   static const _timeout = Duration(seconds: 15);
@@ -76,6 +81,7 @@ class ApiClient {
   Future<Map<String, dynamic>> _send(String method, String path, {Object? body, bool auth = true}) async {
     final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) headers['Content-Type'] = 'application/json';
+    if (notInQuebec?.call() ?? false) headers['X-Not-In-Quebec'] = '1';
     if (auth) {
       String? t;
       try {

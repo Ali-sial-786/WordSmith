@@ -54,8 +54,8 @@ final dailyCalendarProvider = FutureProvider.family<DailyCalendar?, String>((ref
 
 /// The server's `/v1/version`: the newest app version, the oldest one it
 /// still plays online with, the newest one's APK, and whether this player
-/// connects from Quebec. Null offline or without a server. Invalidate it to
-/// check again.
+/// connects from Quebec, where online play isn't offered (shared/region.md).
+/// Null offline or without a server. Invalidate it to check again.
 final serverVersionProvider = FutureProvider<({String latest, String minSupported, String? apk, bool quebec})?>((
   ref,
 ) async {
@@ -79,9 +79,12 @@ final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) =>
 
 final accountProvider = NotifierProvider<AccountController, AccountState>(AccountController.new);
 
-/// The server turned a player away for their age: under 13, or under 14 from
-/// Quebec (shared/age.md).
-bool tooYoung(ApiException e) => e.code == 'under_13' || e.code == 'under_14_quebec';
+/// The server turned a player away for their age: under 13 (shared/age.md).
+bool tooYoung(ApiException e) => e.code == 'under_13';
+
+/// The server turned a player away because they connect from Quebec, where
+/// online play isn't offered (shared/region.md).
+bool notOfferedHere(ApiException e) => e.code == 'quebec_not_offered';
 
 enum AccountPhase {
   /// This build has no sign-in or server configured.
@@ -96,6 +99,10 @@ enum AccountPhase {
 
   /// Signed in, but the server couldn't be reached; solo play carries on.
   failed,
+
+  /// Signed in from Quebec, where online play isn't offered
+  /// (shared/region.md). The account is kept, and can still be deleted.
+  notOffered,
 }
 
 class AccountState {
@@ -220,8 +227,18 @@ class AccountController extends Notifier<AccountState> {
       if (!_current(uid)) return;
       await _arrive(profile);
     } on ApiException catch (e) {
-      if (_current(uid)) state = state.copyWith(phase: AccountPhase.failed, error: e.friendly);
+      if (!_current(uid)) return;
+      state = notOfferedHere(e)
+          ? state.copyWith(phase: AccountPhase.notOffered, clearError: true)
+          : state.copyWith(phase: AccountPhase.failed, error: e.friendly);
     }
+  }
+
+  /// The player says they don't live in Quebec (shared/region.md): this
+  /// phone says so from now on, and a signed-in player is let in.
+  Future<void> declareNotInQuebec() async {
+    await ref.read(storeProvider).declareNotInQuebec();
+    if (state.phase == AccountPhase.notOffered) await retry();
   }
 
   /// Tries again after a failure.
@@ -264,6 +281,7 @@ class AccountController extends Notifier<AccountState> {
       profile = await call();
     } on ApiException catch (e) {
       if (tooYoung(e)) await _closeOnlineForAge();
+      if (notOfferedHere(e)) state = state.copyWith(phase: AccountPhase.notOffered, clearError: true);
       rethrow;
     }
     await _arrive(profile);

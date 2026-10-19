@@ -3,11 +3,9 @@
  * under-13s refused with their account deleted, and the `minor` flag.
  */
 
-import { createExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import worker from "../../src/index";
-import { BASE, body, client, setUpClient, uniqueName, type Client } from "./helpers";
+import { body, client, setUpClient, uniqueName, type Client } from "./helpers";
 
 interface Profile {
   username: string | null;
@@ -118,52 +116,5 @@ describe("POST /v1/me/age", () => {
     vi.setSystemTime(new Date(Date.UTC(born.birthYear + 18, born.birthMonth, 2)));
     const later = await client(c.uid);
     expect(await body<Profile>(await later.get("/v1/me"))).toMatchObject({ minor: false });
-  });
-});
-
-/** A request as Cloudflare delivers it from `country`/`regionCode`. */
-function from(path: string, c: Client, where: { country: string; regionCode: string }, payload?: unknown): Promise<Response> {
-  const init: RequestInit<IncomingRequestCfProperties> = {
-    method: payload === undefined ? "GET" : "POST",
-    headers: { authorization: `Bearer ${c.token}`, "content-type": "application/json" },
-    cf: where as IncomingRequestCfProperties,
-    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
-  };
-  return worker.fetch(new Request(`${BASE}${path}`, init), env, createExecutionContext());
-}
-
-const QUEBEC = { country: "CA", regionCode: "QC" };
-const ONTARIO = { country: "CA", regionCode: "ON" };
-
-describe("Quebec (Law 25: a parent's consent under 14)", () => {
-  it("starts online play at 14 from Quebec, and deletes a 13-year-old's account", async () => {
-    const c = await client();
-    const res = await from("/v1/me/setup", c, QUEBEC, { username: uniqueName(), avatar: "avatar_01", ...bornYearsAgo(13) });
-    expect(res.status).toBe(403);
-    expect(await body(res)).toMatchObject({ error: "under_14_quebec" });
-    expect(await userRow(c.uid)).toBeNull();
-
-    const fourteen = await from("/v1/me/setup", await client(), QUEBEC, { username: uniqueName(), avatar: "avatar_01", ...bornYearsAgo(14) });
-    expect(fourteen.status).toBe(200);
-    const younger = await from("/v1/me/setup", await client(), QUEBEC, { username: uniqueName(), avatar: "avatar_01", ...bornYearsAgo(12) });
-    expect(await body(younger)).toMatchObject({ error: "under_13" });
-  });
-
-  it("keeps 13 as the minimum elsewhere in Canada", async () => {
-    const res = await from("/v1/me/setup", await client(), ONTARIO, { username: uniqueName(), avatar: "avatar_01", ...bornYearsAgo(13) });
-    expect(res.status).toBe(200);
-  });
-
-  it("applies to an older account giving its age from Quebec", async () => {
-    const c = await setUpClient();
-    const res = await from("/v1/me/age", c, QUEBEC, bornYearsAgo(13));
-    expect(await body(res)).toMatchObject({ error: "under_14_quebec" });
-    expect(await userRow(c.uid)).toBeNull();
-  });
-
-  it("tells the app, in /v1/version, to start rooms muted in Quebec", async () => {
-    const c = await client();
-    expect(await body(await from("/v1/version", c, QUEBEC))).toMatchObject({ quebec: true });
-    expect(await body(await from("/v1/version", c, ONTARIO))).toMatchObject({ quebec: false });
   });
 });

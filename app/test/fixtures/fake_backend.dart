@@ -235,18 +235,18 @@ class FakeServer {
     return now.year - year - (now.month <= month ? 1 : 0);
   }
 
-  /// Whether the player connects from Quebec, where online play starts at 14.
+  /// Whether the player connects from Quebec, where online play isn't
+  /// offered unless they say they live elsewhere (shared/region.md).
   bool quebec = false;
 
-  /// `403 under_13` (or `under_14_quebec`) after deleting the account, or null if old enough.
+  /// `403 under_13` after deleting the account, or null if old enough.
   http.Response? _refuseUnder13(int year, int month) {
-    final age = ageOf(year, month);
-    if (age >= (quebec ? 14 : 13)) return null;
+    if (ageOf(year, month) >= 13) return null;
     deletedMe = true;
     username = null;
     birthYear = null;
     birthMonth = null;
-    return _json(403, {'error': age < 13 ? 'under_13' : 'under_14_quebec'});
+    return _json(403, {'error': 'under_13'});
   }
 
   Map<String, Object?> profile(String uid) => {
@@ -270,14 +270,28 @@ class FakeServer {
     'survivalBest': survivalBest,
   };
 
-  ApiClient client(AuthService auth) =>
-      ApiClient(baseUrl: 'https://forge.test', token: auth.idToken, client: MockClient(_handle));
+  ApiClient client(AuthService auth, {bool Function()? notInQuebec}) => ApiClient(
+    baseUrl: 'https://forge.test',
+    token: auth.idToken,
+    notInQuebec: notInQuebec,
+    client: MockClient(_handle),
+  );
 
   Future<http.Response> _handle(http.Request req) async {
     if (down) throw http.ClientException('offline');
+    final path = req.url.path.replaceFirst('/v1', '');
+    if (quebec) {
+      if (path == '/version') {
+        return _json(200, {'latest': '0.0.0', 'minSupported': '0.0.0', 'apk': null, 'quebec': true});
+      }
+      final leaving = req.method == 'DELETE' && (path == '/me' || path == '/me/push-token');
+      if (!leaving && req.headers['X-Not-In-Quebec'] != '1') {
+        calls.add('${req.method} $path (refused in Quebec)');
+        return _json(403, {'error': 'quebec_not_offered', 'message': "Online play isn't offered in Quebec"});
+      }
+    }
     final token = req.headers['Authorization']?.replaceFirst('Bearer token-', '');
     if (token == null) return _json(401, {'error': 'unauthorized'});
-    final path = req.url.path.replaceFirst('/v1', '');
     calls.add('${req.method} $path');
     final body = req.body.isEmpty ? <String, dynamic>{} : jsonDecode(req.body) as Map<String, dynamic>;
     switch ('${req.method} $path') {

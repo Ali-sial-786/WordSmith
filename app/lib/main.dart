@@ -29,7 +29,7 @@ Future<void> main() async {
   final sfx = Sfx(enabled: true, settings: store.loadSettings());
   final auth = await _startAuth();
   final api = AppConfig.hasServer && auth is FirebaseAuthService
-      ? ApiClient(baseUrl: AppConfig.apiBase, token: auth.idToken)
+      ? ApiClient(baseUrl: AppConfig.apiBase, token: auth.idToken, notInQuebec: () => store.notInQuebec)
       : null;
   final hub = api == null ? null : HubClient(baseUrl: AppConfig.apiBase, token: auth.idToken);
   runApp(

@@ -16,9 +16,8 @@ export interface VersionInfo {
    */
   apk: string | null;
   /**
-   * Whether this request comes from Quebec (src/region.ts): the app then
-   * starts every room with the microphone muted, Quebec's privacy law asking
-   * for the most private settings by default (shared/age.md).
+   * Whether this request comes from Quebec (src/region.ts), where online
+   * play isn't offered: the app says so before sign-in (shared/region.md).
    */
   quebec: boolean;
 }

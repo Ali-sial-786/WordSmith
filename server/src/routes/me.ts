@@ -22,8 +22,7 @@ import { isPushToken, registerPushToken, unregisterPushToken } from "../db/push"
 import { setReminderHour } from "../db/reminders";
 import { ApiError, json, readJsonObject } from "../http";
 import { isReminderHour } from "../push/reminder";
-import { fromQuebec } from "../region";
-import { ageAt, MIN_AGE, MIN_AGE_QUEBEC, parseBirth, type Birth } from "../rules/age";
+import { ageAt, MIN_AGE, parseBirth, type Birth } from "../rules/age";
 import { notifyHub, requireSetUp, type AuthedContext } from "./context";
 import { roomStub } from "./rooms";
 
@@ -35,7 +34,7 @@ export async function getMe(c: AuthedContext): Promise<Response> {
 /**
  * `{username, avatar, birthYear, birthMonth}` → my profile. The birth date
  * may be left out (apps before 0.7 don't ask), and the profile then says
- * `needsAge`. Under 13 (14 from Quebec): the account is deleted, and `403 under_13` (`under_14_quebec`).
+ * `needsAge`. Under 13: the account is deleted, and `403 under_13`.
  */
 export async function postSetup(c: AuthedContext): Promise<Response> {
   const body = await readJsonObject(c.request);
@@ -58,7 +57,7 @@ export async function postSetup(c: AuthedContext): Promise<Response> {
 /**
  * `{birthYear, birthMonth}` → my profile: when I was born, for an account
  * made before ages were asked. Given once: `409 age_already_set` after.
- * Under 13 (14 from Quebec): the account is deleted, and `403 under_13` (`under_14_quebec`).
+ * Under 13: the account is deleted, and `403 under_13`.
  */
 export async function postAge(c: AuthedContext): Promise<Response> {
   const birth = birthOf(await readJsonObject(c.request), c.now);
@@ -76,17 +75,13 @@ function birthOf(body: Record<string, unknown>, now: number): Birth {
 }
 
 /**
- * Online play is for 13 and over, and 14 and over from Quebec (shared/age.md).
- * A younger player's account, and everything it holds, is deleted on the
- * spot, as `DELETE /v1/me` would.
+ * Online play is for 13 and over (shared/age.md). A younger player's account,
+ * and everything it holds, is deleted on the spot, as `DELETE /v1/me` would.
  */
 async function refuseTooYoung(c: AuthedContext, birth: Birth): Promise<void> {
-  const age = ageAt(birth, c.now);
-  const quebec = fromQuebec(c.request);
-  if (age >= (quebec ? MIN_AGE_QUEBEC : MIN_AGE)) return;
+  if (ageAt(birth, c.now) >= MIN_AGE) return;
   await removeAccount(c);
-  if (age < MIN_AGE) throw new ApiError(403, "under_13", "Online play is for players 13 and over");
-  throw new ApiError(403, "under_14_quebec", "In Quebec, online play is for players 14 and over");
+  throw new ApiError(403, "under_13", "Online play is for players 13 and over");
 }
 
 async function removeAccount(c: AuthedContext): Promise<void> {

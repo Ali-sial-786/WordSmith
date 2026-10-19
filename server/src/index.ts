@@ -7,6 +7,10 @@
  * `/v1/define/:word` and `/v1/contact` needs a Firebase ID token (`Authorization: Bearer <token>`; the WebSocket
  * route reads it from `Sec-WebSocket-Protocol` instead). Errors are JSON
  * `{error, message?}`.
+ *
+ * Online play isn't offered in Quebec (shared/region.md): routes that need a
+ * token answer `403 quebec_not_offered` there, except deleting an account
+ * and turning off its notifications.
  */
 
 import { authenticate } from "./auth/request";
@@ -29,7 +33,7 @@ import { deleteBlock, getBlocks, postReport, putBlock } from "./routes/safety";
 import { postSync } from "./routes/solo";
 import { postSurvivalSolo } from "./routes/survival";
 import { getHubSocket } from "./routes/ws";
-import { fromQuebec } from "./region";
+import { fromQuebec, refuseQuebec } from "./region";
 import { versionInfo } from "./version";
 
 export { HubDO } from "./hub/hub";
@@ -37,10 +41,19 @@ export { RoomDO } from "./room/room";
 
 type Handler =
   | { readonly auth: false; readonly run: (c: RequestContext) => Response | Promise<Response> }
-  | { readonly auth: true; readonly run: (c: AuthedContext) => Response | Promise<Response> };
+  | {
+      readonly auth: true;
+      readonly run: (c: AuthedContext) => Response | Promise<Response>;
+      /** Whether players in Quebec may use it, to leave (shared/region.md). */
+      readonly inQuebec: boolean;
+    };
 
 const open = (run: (c: RequestContext) => Response | Promise<Response>): Handler => ({ auth: false, run });
-const authed = (run: (c: AuthedContext) => Response | Promise<Response>): Handler => ({ auth: true, run });
+const authed = (run: (c: AuthedContext) => Response | Promise<Response>, inQuebec = false): Handler => ({
+  auth: true,
+  run,
+  inQuebec,
+});
 
 const router = new Router<Handler>([
   {
@@ -58,12 +71,12 @@ const router = new Router<Handler>([
   { method: "POST", path: "/v1/contact", handler: open(postContact) },
 
   { method: "GET", path: "/v1/me", handler: authed(getMe) },
-  { method: "DELETE", path: "/v1/me", handler: authed(deleteMe) },
+  { method: "DELETE", path: "/v1/me", handler: authed(deleteMe, true) },
   { method: "POST", path: "/v1/me/setup", handler: authed(postSetup) },
   { method: "POST", path: "/v1/me/age", handler: authed(postAge) },
   { method: "POST", path: "/v1/me/username", handler: authed(postUsername) },
   { method: "POST", path: "/v1/me/push-token", handler: authed(postPushToken) },
-  { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken) },
+  { method: "DELETE", path: "/v1/me/push-token", handler: authed(deletePushToken, true) },
   { method: "PUT", path: "/v1/me/reminder", handler: authed(putReminder) },
   { method: "GET", path: "/v1/users/:username", handler: authed(getUser) },
 
@@ -117,6 +130,7 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
     const c: RequestContext = { request, env, ctx, params: match.params, now: Date.now() };
     const { handler } = match;
     if (!handler.auth) return await handler.run(c);
+    if (!handler.inQuebec) refuseQuebec(request);
     const uid = await authenticate(request, env);
     return await handler.run({ ...c, uid });
   } catch (err) {

@@ -46,10 +46,6 @@
   Cache-Control: public, max-age=300
 /contact
   Cache-Control: public, max-age=300
-/terms-fr
-  Cache-Control: public, max-age=300
-/privacy-fr
-  Cache-Control: public, max-age=300
 
 # Flutter's renderer: big, and only changes with the Flutter version.
 /canvaskit/*

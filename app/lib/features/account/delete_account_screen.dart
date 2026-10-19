@@ -31,7 +31,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   Widget build(BuildContext context) {
     final account = ref.watch(accountProvider);
     final text = Theme.of(context).textTheme;
-    final signedIn = account.isReady || account.phase == AccountPhase.needsSetup;
+    final signedIn =
+        account.isReady || account.phase == AccountPhase.needsSetup || account.phase == AccountPhase.notOffered;
     final Widget body;
     if (_deleted) {
       body = Column(

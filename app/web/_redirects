@@ -1,0 +1,8 @@
+# Redirects for the browser version on Cloudflare (webhost/), from
+# https://developers.cloudflare.com/workers/static-assets/redirects/
+# `flutter build web` copies this file into build/web; it isn't served itself.
+
+# The French terms and privacy policy were only for Quebec, where online play
+# is no longer offered (shared/region.md).
+/terms-fr /terms 301
+/privacy-fr /privacy 301
