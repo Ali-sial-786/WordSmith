@@ -112,7 +112,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final me = ref.read(accountProvider).user?.uid ?? '';
     final client = factory(widget.code);
     setState(() {
-      _session = (widget.mode == 'vs' ? VsSession(client: client, me: me) : CoopSession(client: client, me: me))
+      _session = (widget.mode == 'coop' ? CoopSession(client: client, me: me) : VsSession(client: client, me: me))
         ..nicknameOf = _account.nicknameOf
         ..chatEnabled = ref.read(settingsProvider).textChat
         ..isBlocked = _account.isBlocked
@@ -301,6 +301,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           'no_puzzle' => 'The forge has no puzzles ready. Try again in a minute.',
           'not_host' => 'Only the host can do that.',
           'not_enough_players' => 'Waiting for a smith to connect.',
+          'uneven_teams' => 'Teams need the same number of smiths.',
+          'team_full' => 'That team is full: three smiths at most.',
           _ => null,
         };
         if (message != null && mounted) {

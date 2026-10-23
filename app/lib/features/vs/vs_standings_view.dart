@@ -14,6 +14,7 @@ import '../coop/emotes.dart';
 import '../coop/room_chat.dart';
 import 'rival_molds.dart';
 import 'round_flash.dart';
+import 'team_widgets.dart';
 import 'vs_widgets.dart';
 
 /// The 10 seconds between Versus rounds: the round's card (who won and how),
@@ -78,13 +79,23 @@ class _VsStandingsViewState extends State<VsStandingsView> {
         // Rising in as the card makes way.
         RivalMolds(key: ValueKey(_revealed), session: s, end: end, padding: const EdgeInsets.only(top: 14)),
         const SizedBox(height: 18),
-        for (final id in s.standingsOrder)
-          _TallyRow(session: s, id: id, wins: end.tally[id] ?? 0, filled: lastFilled[id], wonThis: id == winner),
+        if (end.isTeam) ...[
+          TeamTally(session: s, tally: end.teamTally!, winner: end.team, scores: end.teamScores),
+          const SizedBox(height: 12),
+        ],
+        for (final id in end.isTeam ? _byTeam(s) : s.standingsOrder)
+          _TallyRow(
+            session: s,
+            id: id,
+            wins: end.tally[id] ?? 0,
+            filled: lastFilled[id],
+            wonThis: end.isTeam ? end.team != null && s.teamOf(id) == end.team : id == winner,
+          ),
         const SizedBox(height: 18),
         if (next != null) ...[
           Text(
             next.suddenDeath
-                ? 'Sudden death: ${next.racers.map(s.nameOf).join(' vs ')}'
+                ? 'Sudden death: ${end.isTeam ? 'Copper vs Cobalt' : next.racers.map(s.nameOf).join(' vs ')}'
                 : 'Round ${next.round} of up to ${s.series}',
             textAlign: TextAlign.center,
             style: displayStyle(18, color: next.suddenDeath ? Palette.quenchRed : Palette.molten),
@@ -188,6 +199,18 @@ class _SeeResults extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Team Versus: everyone in the series, my team first, each team in tally order.
+List<String> _byTeam(VsSession s) {
+  final mine = s.myTeam;
+  final ids = s.standingsOrder;
+  return [
+    for (final id in ids)
+      if (s.teamOf(id) == mine) id,
+    for (final id in ids)
+      if (s.teamOf(id) != mine) id,
+  ];
 }
 
 class _TallyRow extends StatelessWidget {

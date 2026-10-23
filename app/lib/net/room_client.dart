@@ -64,6 +64,9 @@ Map<String, int> _scores(Object? j) => {
   for (final e in ((j as Map?) ?? const {}).entries) e.key as String: (e.value as num).toInt(),
 };
 
+/// Team Versus `[copper, cobalt]` pairs (team tallies and scores); null when absent.
+List<int>? _teamPair(Object? j) => j is List && j.length == 2 ? [for (final n in j) (n as num).toInt()] : null;
+
 List<(int, String)> _slotWords(Object? j) => [
   for (final a in ((j as List?) ?? const []).cast<Map<String, dynamic>>()) (a['slot'] as int, a['word'] as String),
 ];
@@ -88,6 +91,7 @@ class RoomPlayer {
     required this.color,
     required this.ready,
     required this.connected,
+    this.team,
   });
 
   factory RoomPlayer.fromJson(Map<String, dynamic> j) => RoomPlayer(
@@ -98,6 +102,7 @@ class RoomPlayer {
     color: j['color'] as int? ?? 0,
     ready: j['ready'] as bool? ?? false,
     connected: j['connected'] as bool? ?? true,
+    team: (j['team'] as num?)?.toInt(),
   );
 
   final String id;
@@ -107,6 +112,9 @@ class RoomPlayer {
   final int color;
   final bool ready;
   final bool connected;
+
+  /// Team Versus: 0 Copper, 1 Cobalt.
+  final int? team;
 }
 
 class RoomLobby extends RoomEvent {
@@ -121,6 +129,7 @@ class RoomLobby extends RoomEvent {
     this.variant = 'classic',
     this.chosenHeat,
     int? autoHeat,
+    this.rule = 'combined',
   }) : autoHeat = autoHeat ?? heat;
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
@@ -137,6 +146,7 @@ class RoomLobby extends RoomEvent {
     // `heatChoice` is a tier or "auto"; older servers send neither field.
     chosenHeat: j['heatChoice'] is int ? j['heatChoice'] as int : null,
     autoHeat: j['autoHeat'] as int?,
+    rule: j['rule'] as String? ?? 'combined',
   );
 
   final String code;
@@ -160,10 +170,31 @@ class RoomLobby extends RoomEvent {
   /// `classic` or `survival` (shared/survival.md).
   final String variant;
 
-  bool get isVs => mode == 'vs';
+  /// Team Versus: how rounds are won, `combined` or `first`.
+  final String rule;
+
+  /// Versus series are played in Versus and Team Versus rooms.
+  bool get isVs => mode == 'vs' || mode == 'team';
+  bool get isTeam => mode == 'team';
   bool get survival => variant == 'survival';
   bool get autoHeatOn => chosenHeat == null;
-  int get maxPlayers => isVs ? 5 : 4;
+  int get maxPlayers => switch (mode) {
+    'team' => 6,
+    'vs' => 5,
+    _ => 4,
+  };
+
+  /// Team Versus: the players on [team], in join order.
+  List<RoomPlayer> team(int team) => [
+    for (final p in players)
+      if (p.team == team) p,
+  ];
+
+  /// Team Versus: both teams the same size, with someone on each, so a series can start.
+  bool get teamsEven {
+    final copper = team(0).length;
+    return copper > 0 && copper == team(1).length && copper * 2 == players.length;
+  }
 
   RoomPlayer? player(String id) {
     for (final p in players) {
@@ -216,6 +247,9 @@ class RoundStart extends RoomEvent implements MoldShape {
     this.tally = const {},
     this.variant = 'classic',
     this.heated,
+    this.teams = const {},
+    this.teamTally,
+    this.rule,
   });
 
   factory RoundStart.fromJson(Map<String, dynamic> j) => RoundStart(
@@ -239,6 +273,9 @@ class RoundStart extends RoomEvent implements MoldShape {
     tally: _scores(j['tally']),
     variant: j['variant'] as String? ?? 'classic',
     heated: j['heated'] is Map ? HeatedSlot.fromJson((j['heated'] as Map).cast()) : null,
+    teams: _scores(j['teams']),
+    teamTally: _teamPair(j['teamTally']),
+    rule: j['rule'] as String?,
   );
 
   final int round;
@@ -266,6 +303,12 @@ class RoundStart extends RoomEvent implements MoldShape {
   /// Survival: `survival`, with the first heated slot.
   final String variant;
   final HeatedSlot? heated;
+
+  /// Team Versus: everyone's team (0 Copper, 1 Cobalt), the teams' round wins
+  /// before this round, and the rule. Empty and null in Versus.
+  final Map<String, int> teams;
+  final List<int>? teamTally;
+  final String? rule;
 
   bool get survival => variant == 'survival';
 }
@@ -392,6 +435,10 @@ class VsRoundEnd extends RoomEvent {
     this.round,
     this.melted,
     this.molds = const {},
+    this.team,
+    this.teamScores,
+    this.teamTally,
+    this.teams = const {},
   });
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
@@ -412,6 +459,10 @@ class VsRoundEnd extends RoomEvent {
       round: (j['round'] as num?)?.toInt(),
       melted: _melted(j['melted']),
       molds: _molds(j['molds']),
+      team: (j['team'] as num?)?.toInt(),
+      teamScores: _teamPair(j['teamScores']),
+      teamTally: _teamPair(j['teamTally']),
+      teams: _scores(j['teams']),
     );
   }
 
@@ -436,15 +487,28 @@ class VsRoundEnd extends RoomEvent {
 
   /// The round that ended.
   final int? round;
+
+  /// Team Versus: the team that won the round (null: nobody, or Versus),
+  /// each team's letters added up, the teams' round wins after it, and
+  /// everyone's team.
+  final int? team;
+  final List<int>? teamScores;
+  final List<int>? teamTally;
+  final Map<String, int> teams;
+
+  bool get isTeam => teamTally != null;
 }
 
 class PodiumPlace {
-  const PodiumPlace(this.id, this.username, this.wins, this.place);
+  const PodiumPlace(this.id, this.username, this.wins, this.place, [this.team]);
 
   final String id;
   final String username;
   final int wins;
   final int place;
+
+  /// Team Versus only.
+  final int? team;
 }
 
 Map<String, List<String>> _bins(Object? j) => {
@@ -473,6 +537,8 @@ class SeriesRound implements MoldShape {
     this.answers = const [],
     this.bins = const {},
     this.saved = const {},
+    this.team,
+    this.teamScores,
   });
 
   factory SeriesRound.fromJson(Map<String, dynamic> j) => SeriesRound(
@@ -491,6 +557,8 @@ class SeriesRound implements MoldShape {
     answers: _slotWords(j['answers']),
     bins: _bins(j['bins']),
     saved: _scores(j['saved']),
+    team: (j['team'] as num?)?.toInt(),
+    teamScores: _teamPair(j['teamScores']),
   );
 
   final int round;
@@ -525,6 +593,10 @@ class SeriesRound implements MoldShape {
   final String letters;
   final List<(int, String)> answers;
   final Map<String, List<String>> bins;
+
+  /// Team Versus: the team that won it, and each team's letters.
+  final int? team;
+  final List<int>? teamScores;
 }
 
 class SeriesEnd extends RoomEvent {
@@ -537,6 +609,9 @@ class SeriesEnd extends RoomEvent {
     required this.xp,
     this.history = const [],
     this.json = const {},
+    this.team,
+    this.teamTally,
+    this.rule,
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -551,6 +626,7 @@ class SeriesEnd extends RoomEvent {
           p['username'] as String? ?? '',
           (p['wins'] as num?)?.toInt() ?? 0,
           (p['place'] as num?)?.toInt() ?? 0,
+          (p['team'] as num?)?.toInt(),
         ),
     ],
     xp: _xpAwards(j['xp']),
@@ -558,6 +634,9 @@ class SeriesEnd extends RoomEvent {
       for (final r in ((j['history'] as List?) ?? const []).cast<Map<String, dynamic>>()) SeriesRound.fromJson(r),
     ],
     json: j,
+    team: (j['team'] as num?)?.toInt(),
+    teamTally: _teamPair(j['teamTally']),
+    rule: j['rule'] as String?,
   );
 
   final String? winner;
@@ -572,6 +651,14 @@ class SeriesEnd extends RoomEvent {
 
   /// The message as it came, kept in the puzzle history.
   final Map<String, dynamic> json;
+
+  /// Team Versus: the team that won (null: neither), the teams' round wins
+  /// and the rule.
+  final int? team;
+  final List<int>? teamTally;
+  final String? rule;
+
+  bool get isTeam => teamTally != null;
 
   /// Letters each racer filled over the rounds they raced.
   Map<String, int> get letters {
@@ -925,8 +1012,11 @@ class RoomClient {
 
   /// Host only: best of [series] rounds (Versus), the variant (`classic` or
   /// `survival`), and the [heat]: a tier 1–6, or `'auto'`.
-  void config({int? series, String? variant, Object? heat}) =>
-      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant, 'heat': ?heat});
+  void config({int? series, String? variant, Object? heat, String? rule}) =>
+      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant, 'heat': ?heat, 'rule': ?rule});
+
+  /// Team Versus, in the lobby or results: joins [team], or (host only) moves [id] there.
+  void team(int team, {String? id}) => _send({'op': 'TEAM', 'team': team, 'id': ?id});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});

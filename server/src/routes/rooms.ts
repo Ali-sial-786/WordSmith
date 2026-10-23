@@ -1,7 +1,7 @@
 /**
  * Rooms (shared/room-protocol.md):
  *
- * - `POST /v1/rooms {mode: "coop" | "vs"}` → `{code}`; the caller is the host
+ * - `POST /v1/rooms {mode: "coop" | "vs" | "team"}` → `{code}`; the caller is the host
  * - `GET /v1/rooms/:code` → `{code, mode, phase, host: {id, username}, players, maxPlayers, seated}`, or 404 `room_not_found`
  * - `GET /v1/ws/room/:code` → WebSocket upgrade to that room's RoomDO
  * - `POST /v1/rooms/:code/video` → `{url, token, room, expiresAt}`: a LiveKit
@@ -17,7 +17,7 @@ import { ApiError, json, readJsonObject } from "../http";
 import type { RoomIdentity } from "../room/protocol";
 import { ROOM_IDENTITY_HEADER, ROOM_PROTOCOL_HEADER, type RoomDO } from "../room/room";
 import { levelFromTotalXp } from "../rules/progression";
-import { normalizeRoomCode, roomCodeFromBytes, ROOM_CODE_LENGTH, type RoomMode } from "../rules/room";
+import { isRoomMode, normalizeRoomCode, roomCodeFromBytes, ROOM_CODE_LENGTH, type RoomMode } from "../rules/room";
 import type { SetUpAccount } from "../db/accounts";
 import { liveKitConfig, liveKitToken, VIDEO_TOKEN_TTL_MS } from "../video/livekit";
 import { requireSetUp, type AuthedContext, type RequestContext } from "./context";
@@ -43,7 +43,7 @@ function codeParam(c: RequestContext): string {
 export async function postRoom(c: AuthedContext): Promise<Response> {
   const account = await requireSetUp(c);
   const body = await readJsonObject(c.request);
-  if (body.mode !== "coop" && body.mode !== "vs") throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop" | "vs"}');
+  if (!isRoomMode(body.mode)) throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop" | "vs" | "team"}');
   const mode: RoomMode = body.mode;
 
   const me = identityOf(account);

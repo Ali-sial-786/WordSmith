@@ -113,8 +113,16 @@ PlayRecord? vsRecord(VsSession s, SeriesEnd end, {required int at}) {
     id: 'vs-${lobby.code}-${s.round?.startsAt ?? at}',
     kind: PlayKind.vs,
     at: at,
-    title: end.history.any((r) => r.saved.isNotEmpty || r.reason == 'melted') ? 'Versus Survival' : 'Versus',
-    subtitle: others <= 0 ? 'Best of ${lobby.series}' : 'Against ${others == 1 ? '1 smith' : '$others smiths'}',
+    title: end.isTeam
+        ? 'Team Versus'
+        : end.history.any((r) => r.saved.isNotEmpty || r.reason == 'melted')
+        ? 'Versus Survival'
+        : 'Versus',
+    subtitle: end.isTeam
+        ? '${end.podium.length ~/ 2} against ${end.podium.length - end.podium.length ~/ 2} · best of ${lobby.series}'
+        : others <= 0
+        ? 'Best of ${lobby.series}'
+        : 'Against ${others == 1 ? '1 smith' : '$others smiths'}',
     look: 'steel',
     players: _players(lobby, [for (final p in end.podium) (p.id, p.username)]),
     me: s.me,

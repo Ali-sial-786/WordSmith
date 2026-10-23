@@ -25,6 +25,7 @@ class RivalMolds extends ConsumerStatefulWidget {
     : source = end,
       round = end.round,
       winner = end.winner,
+      winningTeam = end.team,
       molds = end.molds,
       melted = end.melted,
       shape = null,
@@ -38,6 +39,7 @@ class RivalMolds extends ConsumerStatefulWidget {
     : source = session.round?.round ?? 0,
       round = session.round?.round,
       winner = null,
+      winningTeam = null,
       melted = null,
       shape = null,
       order = session.round?.racers,
@@ -54,6 +56,7 @@ class RivalMolds extends ConsumerStatefulWidget {
   }) : source = past,
        round = past.round,
        winner = past.winner,
+       winningTeam = past.team,
        molds = past.molds,
        melted = past.melted,
        shape = past,
@@ -65,6 +68,9 @@ class RivalMolds extends ConsumerStatefulWidget {
   final Object source;
   final int? round;
   final String? winner;
+
+  /// Team Versus: the team that won, every one of its racers crowned.
+  final int? winningTeam;
   final Map<String, List<int>> molds;
   final ({String id, int slot})? melted;
 
@@ -140,6 +146,8 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
       for (final id in <String>{
         if (order != null) ...order.where(molds.containsKey),
         if (molds.containsKey(s.me)) s.me,
+        // Team Versus: my teammates next, then the other team.
+        if (s.isTeam) ...molds.keys.where((id) => s.teamOf(id) == s.myTeam),
         ...molds.keys,
       })
         (id: id, filled: {for (final slot in molds[id]!) ...?slotCells[slot]}),
@@ -178,7 +186,9 @@ class _RivalMoldsState extends ConsumerState<RivalMolds> with SingleTickerProvid
                         name: r.id == s.me ? 'You' : s.nameOf(r.id),
                         player: s.lobby?.player(r.id),
                         mine: r.id == s.me,
-                        winner: r.id == widget.winner,
+                        winner: widget.winningTeam != null
+                            ? s.teamOf(r.id) == widget.winningTeam
+                            : r.id == widget.winner,
                         cool: Curves.easeOut.transform(_phase(i, ms).$2),
                       ),
                     ),

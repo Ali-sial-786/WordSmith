@@ -22,6 +22,7 @@ import '../coop/emotes.dart';
 import '../coop/room_chat.dart';
 import '../coop/room_video.dart';
 import 'rival_molds.dart';
+import 'team_widgets.dart';
 import 'vs_widgets.dart';
 
 /// A Versus round: everyone races the same puzzle on their own mold. Rivals'
@@ -202,6 +203,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
               children: [
                 _VsTopStrip(session: _s, timeLeft: left, onLeave: widget.onLeave, video: widget.video),
                 RivalStrip(session: _s, call: widget.video.call),
+                if (_s.isTeam) TeamScoreBar(session: _s),
                 if (_s.survival && _s.racing)
                   HeatBar(
                     heat: heat,

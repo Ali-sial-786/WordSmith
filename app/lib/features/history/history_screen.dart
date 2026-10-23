@@ -304,7 +304,9 @@ class _PlayDetailScreenState extends ConsumerState<PlayDetailScreen> {
               ..nicknameOf = ref.read(accountProvider.notifier).nicknameOf
               ..lobby = RoomLobby.fromJson({
                 'code': _r.get<String>('code') ?? '',
-                'mode': 'vs',
+                // A Team Versus series says which team everyone was on.
+                'mode': _series!.isTeam ? 'team' : 'vs',
+                'rule': ?_series!.rule,
                 'phase': 'results',
                 'hostId': null,
                 'heat': 1,
@@ -317,6 +319,7 @@ class _PlayDetailScreenState extends ConsumerState<PlayDetailScreen> {
                       'color': p.color,
                       'ready': true,
                       'connected': true,
+                      'team': ?_series!.podium.where((x) => x.id == p.id).firstOrNull?.team,
                     },
                 ],
               })

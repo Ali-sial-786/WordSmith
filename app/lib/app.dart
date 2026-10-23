@@ -78,7 +78,11 @@ final GoRouter appRouter = GoRouter(
       builder: (_, state) => RoomScreen(
         key: ValueKey(state.pathParameters['code']),
         code: state.pathParameters['code']!.toUpperCase(),
-        mode: state.uri.queryParameters['mode'] == 'vs' ? 'vs' : 'coop',
+        mode: switch (state.uri.queryParameters['mode']) {
+          'vs' => 'vs',
+          'team' => 'team',
+          _ => 'coop',
+        },
       ),
     ),
   ],

@@ -16,7 +16,14 @@ const roomCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /// Start or join a co-op room.
 Future<void> showCoopEntry(BuildContext context) => showRoomEntry(context, 'coop');
 
-/// Start or join a room: `coop` or `vs`.
+/// What a room mode is called: Co-op, Versus or Team Versus.
+String modeName(String mode) => switch (mode) {
+  'vs' => 'Versus',
+  'team' => 'Team Versus',
+  _ => 'Co-op',
+};
+
+/// Start or join a room: `coop`, `vs` or `team`.
 Future<void> showRoomEntry(BuildContext context, String mode) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -44,7 +51,8 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
     super.dispose();
   }
 
-  bool get _vs => widget.mode == 'vs';
+  bool get _vs => widget.mode != 'coop';
+  bool get _team => widget.mode == 'team';
 
   /// [getRoom] returns the room's code and mode.
   Future<void> _run(Future<(String, String)> Function() getRoom) async {
@@ -82,13 +90,20 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            _vs ? 'Anvil Clash' : 'The Guild Forge',
+            _team
+                ? 'Team Clash'
+                : _vs
+                ? 'Anvil Clash'
+                : 'The Guild Forge',
             textAlign: TextAlign.center,
             style: displayStyle(24, color: Palette.molten),
           ),
           const SizedBox(height: 4),
           Text(
-            _vs
+            _team
+                ? 'Two teams of 1 to 3 smiths, each on their own mold. Win rounds on letters added up, or by '
+                      'being first to finish; best of 3, 5, 7 or 10.'
+                : _vs
                 ? 'Up to 5 smiths race the same puzzle. First to fill their mold wins the round; best of 3, 5, 7 or 10.'
                 : 'Up to 4 smiths, one mold, one timer. First to forge a word scores it.',
             textAlign: TextAlign.center,
@@ -97,7 +112,11 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
           const SizedBox(height: 18),
           PlateButton(
             label: _vs ? 'Call a clash' : 'Light a forge',
-            sublabel: _vs ? 'You host and pick the series length' : 'You host; your level sets the heat',
+            sublabel: _team
+                ? 'You host; pick how rounds are won'
+                : _vs
+                ? 'You host and pick the series length'
+                : 'You host; your level sets the heat',
             icon: _vs ? 'trophy' : 'anvil',
             primary: true,
             onPressed: _busy

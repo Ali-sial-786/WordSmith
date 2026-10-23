@@ -110,6 +110,83 @@ void main() {
     expect(room.received[1], {'op': 'START'});
   });
 
+  test('Team Versus: teams, the rule, team tallies and letters added up', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final teams = {'u1': 0, 'u2': 1, 'u3': 0, 'u4': 1};
+    room.send({
+      ..._lobby('lobby'),
+      'mode': 'team',
+      'rule': 'first',
+      'players': [
+        for (final (i, id) in ['u1', 'u2', 'u3', 'u4'].indexed)
+          {'id': id, 'username': 'P$i', 'avatar': 'avatar_01', 'level': 1, 'color': i, 'team': teams[id]},
+      ],
+    });
+    await until(() => session.lobby != null);
+    expect(session.isTeam, isTrue);
+    expect(session.lobby!.isVs, isTrue, reason: 'Team Versus plays Versus series');
+    expect(session.lobby!.maxPlayers, 6);
+    expect(session.lobby!.teamsEven, isTrue);
+    expect(session.lobby!.team(0).map((p) => p.id), ['u1', 'u3']);
+    expect(session.myTeam, 0);
+    expect(session.rule, 'first');
+
+    session
+      ..setRule('combined')
+      ..joinTeam(1)
+      ..moveToTeam('u3', 1);
+    await until(() => room.received.length == 3);
+    expect(room.received, [
+      {'op': 'CONFIG', 'rule': 'combined'},
+      {'op': 'TEAM', 'team': 1},
+      {'op': 'TEAM', 'team': 1, 'id': 'u3'},
+    ]);
+
+    room.send({
+      ..._roundStart(now, racers: ['u1', 'u2', 'u3', 'u4']),
+      'rule': 'combined',
+      'teams': teams,
+      'teamTally': [1, 2],
+    });
+    await until(() => session.round != null);
+    expect(session.teamTally, [1, 2]);
+    room
+      ..send({'op': 'PROGRESS', 'id': 'u1', 'filled': 3, 'total': 7})
+      ..send({'op': 'PROGRESS', 'id': 'u3', 'filled': 4, 'total': 7})
+      ..send({'op': 'PROGRESS', 'id': 'u2', 'filled': 6, 'total': 7});
+    await until(() => session.progress['u2']?.filled == 6);
+    expect(session.teamLetters, [7, 6]);
+    expect(session.teamBest, [4, 6]);
+    expect(session.teamRacers, [2, 2]);
+
+    room.send({
+      'op': 'ROUND_END',
+      'round': 1,
+      'reason': 'timeout',
+      'winner': null,
+      'how': 'timeout',
+      'team': 0,
+      'teamScores': [7, 6],
+      'teamTally': [2, 2],
+      'teams': teams,
+      'rule': 'combined',
+      'progress': [],
+      'tally': {'u1': 2, 'u3': 2, 'u2': 2, 'u4': 2},
+      'answers': [],
+      'next': {
+        'round': 5,
+        'suddenDeath': true,
+        'players': ['u1', 'u2', 'u3', 'u4'],
+      },
+      'standingsEndsAt': now + 10000,
+    });
+    await until(() => session.standings != null);
+    expect(session.standings!.isTeam, isTrue);
+    expect(session.standings!.team, 0);
+    expect(session.teamTally, [2, 2]);
+  });
+
   test('my own mold fills from my claims; rivals only show progress', () async {
     await until(() => room.sockets.isNotEmpty);
     final now = DateTime.now().millisecondsSinceEpoch;

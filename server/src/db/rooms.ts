@@ -18,7 +18,8 @@ import { HINT_KINDS, levelFromTotalXp, noHints, type HintCounts, type HintKind }
 import type { PlayFacts } from "../rules/orders";
 import { choosePuzzle, type PuzzleCandidate, type RoomMode } from "../rules/room";
 import type { SeriesLength } from "../rules/vs";
-import { vsAward, type VsSeriesResults } from "../rules/vs-round";
+import { vsAward, wonSeries, type VsSeriesResults } from "../rules/vs-round";
+import type { TeamRule } from "../rules/teams";
 import type { VsXpBody, XpBody } from "../room/protocol";
 
 // ---------------------------------------------------------------------------
@@ -366,6 +367,8 @@ export interface VsSeriesRecord {
   readonly forged?: Readonly<Record<string, readonly string[]>>;
   /** Survival series only. */
   readonly variant?: "survival";
+  /** Team Versus only: the rule its rounds were won by. */
+  readonly rule?: TeamRule;
 }
 
 /**
@@ -374,7 +377,9 @@ export interface VsSeriesRecord {
  * the series' heat (`vsAward`), level-up rewards, Scrap Bin hammers from the series' bonus words, the
  * embers collected, and stats `vs_series`, `vs_series_won`,
  * `vs_rounds_won`, `words_forged` and `longest_word`. `match_players` gets
- * the podium place and round wins. Returns each written player's XP.
+ * the podium place and round wins. Team Versus is written the same way, as
+ * a `vs` match whose summary adds `teams`, and a player wins the series
+ * when their team does. Returns each written player's XP.
  */
 export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now: number): Promise<Record<string, VsXpBody>> {
   const { results } = record;
@@ -388,6 +393,16 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     players: results.players.map(({ id, wins, place, rounds, words, longest }) => ({ id, wins, place, rounds, words, longest })),
     // Survival series only (shared/survival.md "Records").
     ...(record.variant === undefined ? {} : { variant: record.variant }),
+    // Team Versus only: the rule, the winning team, and everyone's team.
+    ...(results.team === undefined
+      ? {}
+      : {
+          teams: {
+            rule: record.rule ?? "combined",
+            winner: results.team,
+            members: Object.fromEntries(results.players.map((p) => [p.id, p.team ?? 0])),
+          },
+        }),
   });
   const match = { matchId: record.matchId, mode: "vs" as const, code: record.code, startedAt: record.startedAt, endedAt: record.endedAt, summary };
 
@@ -398,7 +413,8 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     now,
     (uid, profile) => {
       const player = results.players.find((p) => p.id === uid)!;
-      const award = vsAward(player, results.winner, profile, record.heat);
+      const won = wonSeries(results, player);
+      const award = vsAward(player, won, profile, record.heat);
       return {
         xp: award.amount,
         totalXp: award.xp.totalXp,
@@ -410,7 +426,7 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
         roundsWon: player.wins,
         statsSet: `vs_series = vs_series + 1, vs_series_won = vs_series_won + ?3, vs_rounds_won = vs_rounds_won + ?4,
                    words_forged = words_forged + ?5, ${longestWordSet(6)}`,
-        statsBinds: [results.winner === uid ? 1 : 0, player.wins, player.words, player.longest],
+        statsBinds: [won ? 1 : 0, player.wins, player.words, player.longest],
         facts: { vsSeries: 1, bonusWords: player.bonus, forged: record.forged?.[uid] ?? [] },
         body: {
           xp: award.amount,

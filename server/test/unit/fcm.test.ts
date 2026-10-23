@@ -150,6 +150,10 @@ describe("inviteMessage", () => {
       data: { type: "invite", code: "ZZ22QQ", mode: "coop", from: "uid-sam" },
       android: { collapse_key: "invite-ZZ22QQ" },
     });
+    expect(inviteMessage("tok-3", { from: "uid-kim", fromUsername: "Kim", code: "TT22QQ", mode: "team" })).toMatchObject({
+      notification: { title: "Kim invited you to Team Versus" },
+      data: { mode: "team" },
+    });
   });
 
   it("names the inviter by the friend's nickname for them, if any", () => {

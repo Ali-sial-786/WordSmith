@@ -184,6 +184,18 @@ class HallScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        PlateButton(
+                          key: const ValueKey('hall-team'),
+                          label: 'Team Versus',
+                          sublabel: account.isReady
+                              ? 'Two teams, up to 3 smiths each'
+                              : online
+                              ? 'Sign in first'
+                              : 'Coming soon',
+                          icon: 'friends',
+                          onPressed: account.isReady ? () => showRoomEntry(context, 'team') : null,
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
@@ -403,7 +415,7 @@ class _InviteBanner extends ConsumerWidget {
           Expanded(
             child: Text(
               '${ref.watch(displayNamesProvider).of(invite.from, invite.fromUsername)} invited you to '
-              '${invite.mode == 'vs' ? 'Versus' : 'Co-op'}',
+              '${modeName(invite.mode)}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),

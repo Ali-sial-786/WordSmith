@@ -15,6 +15,7 @@ import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/forge_frame.dart';
 import '../../ui/widgets/game_icon.dart';
+import 'team_widgets.dart';
 import 'vs_widgets.dart';
 
 /// What a finished Versus round's card says, from my side of the anvil: who
@@ -27,8 +28,14 @@ class RoundResult {
 
   String? get winner => end.winner;
 
-  /// I won it: the hot plaque, the hammer and the sparks.
-  bool get won => winner != null && winner == session.me;
+  /// Team Versus: rounds are won by a team.
+  bool get team => end.isTeam;
+
+  /// Someone won it: a racer, or in Team Versus a team.
+  bool get hasWinner => team ? end.team != null : winner != null;
+
+  /// I won it (Team Versus: my team did): the hot plaque, the hammer and the sparks.
+  bool get won => team ? end.team != null && end.team == session.myTeam : winner != null && winner == session.me;
 
   /// The round that decided the series.
   bool get deciding => end.next == null;
@@ -49,6 +56,7 @@ class RoundResult {
 
   /// How it was won, or why nobody did.
   String get how {
+    if (team) return _teamHow;
     final mine = {for (final p in end.progress) p.id: p}[winner];
     final letters = mine == null ? '' : ' (${mine.filled}/${mine.total})';
     final melted = end.melted;
@@ -63,26 +71,82 @@ class RoundResult {
     };
   }
 
+  /// Team Versus: how the round was won, by the rule.
+  String get _teamHow {
+    final scores = end.teamScores ?? const [0, 0];
+    final t = end.team;
+    if (t == null) return 'Nobody filled a letter';
+    if (winner != null) {
+      final name = winner == session.me ? 'You' : session.nameOf(winner!);
+      return end.how == 'finished'
+          ? '$name filled the whole mold first'
+          : '$name had the most letters when time ran out';
+    }
+    return end.how == 'finished'
+        ? 'Every mold on the team filled first'
+        : 'Most letters added up: ${scores[t]} to ${scores[1 - t]}';
+  }
+
   /// "You won the round", for the banner once the series' result has taken
   /// the headline.
-  String get roundLine => switch (winner) {
-    null => 'No winner this round',
-    final id when id == session.me => 'You won the round',
-    final id => '${session.nameOf(id)} won the round',
-  };
+  String get roundLine => team
+      ? switch (end.team) {
+          null => 'No winner this round',
+          final t when t == session.myTeam => 'Your team won the round',
+          final t => '${teamName(t)} won the round',
+        }
+      : switch (winner) {
+          null => 'No winner this round',
+          final id when id == session.me => 'You won the round',
+          final id => '${session.nameOf(id)} won the round',
+        };
 
   /// The series is over and its result is in (SERIES_END): the round that
   /// decided it only.
   bool get seriesKnown => deciding && session.seriesEnd != null;
   String? get seriesWinner => session.seriesEnd?.winner;
-  bool get wonSeries => seriesKnown && seriesWinner != null && seriesWinner == session.me;
+  bool get wonSeries {
+    if (!seriesKnown) return false;
+    if (team) return session.seriesEnd?.team != null && session.seriesEnd?.team == session.myTeam;
+    return seriesWinner != null && seriesWinner == session.me;
+  }
 
   /// "YOU WON THE ROUND!", or the winner's name in their colour.
-  InlineSpan roundTitle(TextStyle style) =>
-      _title(winner, style, mine: 'YOU WON THE ROUND!', theirs: ' won the round', none: 'No winner this round');
+  InlineSpan roundTitle(TextStyle style) => team
+      ? _teamTitle(
+          end.team,
+          style,
+          mine: 'YOUR TEAM WON THE ROUND!',
+          theirs: ' won the round',
+          none: 'No winner this round',
+        )
+      : _title(winner, style, mine: 'YOU WON THE ROUND!', theirs: ' won the round', none: 'No winner this round');
 
-  InlineSpan seriesTitle(TextStyle style) =>
-      _title(seriesWinner, style, mine: 'YOU WIN THE SERIES!', theirs: ' wins the series', none: 'Series over');
+  InlineSpan seriesTitle(TextStyle style) => team
+      ? _teamTitle(
+          session.seriesEnd?.team,
+          style,
+          mine: 'YOUR TEAM WINS THE SERIES!',
+          theirs: ' wins the series',
+          none: 'Series over',
+        )
+      : _title(seriesWinner, style, mine: 'YOU WIN THE SERIES!', theirs: ' wins the series', none: 'Series over');
+
+  /// Team Versus: my team's line, or the team's name in its colour.
+  InlineSpan _teamTitle(int? t, TextStyle style, {required String mine, required String theirs, required String none}) {
+    if (t == null) return TextSpan(text: none, style: style);
+    if (t == session.myTeam) return TextSpan(text: mine, style: style);
+    return TextSpan(
+      style: style,
+      children: [
+        TextSpan(
+          text: teamName(t),
+          style: TextStyle(color: Palette.team(t)),
+        ),
+        TextSpan(text: theirs),
+      ],
+    );
+  }
 
   InlineSpan _title(String? id, TextStyle style, {required String mine, required String theirs, required String none}) {
     if (id == null) return TextSpan(text: none, style: style);
@@ -207,7 +271,7 @@ class _RoundFlashState extends ConsumerState<RoundFlash> with SingleTickerProvid
     }
     if (!_popped && _ms >= _land + 500) {
       _popped = true;
-      if (!_calm && r.won && r.winner != null) _burstAt(_rectOf(_chip)?.center, count: 10, speed: 170);
+      if (!_calm && r.won && r.hasWinner) _burstAt(_rectOf(_chip)?.center, count: 10, speed: 170);
     }
     if (r.deciding && _seriesAt == null && r.seriesKnown) _seriesAt = max(_ms, _seriesFrom.toDouble());
     if (!_seriesLanded && _seriesAt != null && _ms >= _seriesAt! + _seriesIn) {
@@ -642,7 +706,7 @@ class _Medallion extends StatelessWidget {
       ),
       child: Center(
         child: GameIcon(
-          r.winner == null ? 'anvil' : 'crown',
+          r.hasWinner ? 'crown' : 'anvil',
           size: size * 0.52,
           color: hot ? Palette.darkLetter : Palette.whiteHeat,
         ),
@@ -774,10 +838,51 @@ class _Score extends StatelessWidget {
   final double pop;
   final GlobalKey chipKey;
 
+  /// Team Versus: the two teams' round wins; the winning team's newest flares.
+  Widget _teamScore(BuildContext context) {
+    final s = r.session;
+    final text = Theme.of(context).textTheme;
+    final tally = r.end.teamTally ?? s.teamTally;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final team in const [0, 1]) ...[
+          if (team == 1) const SizedBox(width: 18),
+          Builder(
+            builder: (context) {
+              final flare = team == r.end.team ? sin(pop * pi) : 0.0;
+              return Transform.scale(
+                key: team == r.end.team ? chipKey : null,
+                scale: 1 + 0.3 * flare,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      team == s.myTeam ? '${teamName(team)} (you)' : teamName(team),
+                      style: text.labelMedium?.copyWith(color: Palette.team(team)),
+                    ),
+                    const SizedBox(height: 3),
+                    SizedBox(
+                      height: 16,
+                      child: tally[team] == 0
+                          ? Text('–', style: text.labelMedium?.copyWith(color: Palette.iron, height: 1))
+                          : WinPips(wins: tally[team], color: Palette.team(team), size: 15),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = r.session;
     final text = Theme.of(context).textTheme;
+    if (r.team) return _teamScore(context);
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 10,

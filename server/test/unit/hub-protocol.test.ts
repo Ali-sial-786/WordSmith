@@ -20,6 +20,10 @@ describe("parseClientMessage", () => {
       ok: true,
       message: { op: "INVITE", to: "u1", code: "ABC234", mode: "vs" },
     });
+    expect(parseClientMessage(JSON.stringify({ op: "INVITE", to: "u1", code: "ABC234", mode: "team" }))).toEqual({
+      ok: true,
+      message: { op: "INVITE", to: "u1", code: "ABC234", mode: "team" },
+    });
   });
 
   it.each<[string | ArrayBuffer, string]>([

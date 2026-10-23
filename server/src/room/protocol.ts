@@ -3,8 +3,9 @@
  * over one `wordsmith.v1` WebSocket per room. Pure, so it's unit-tested in
  * Node.
  *
- * Client → server: READY, CONFIG (the variant, the heat, and the Versus series),
- * START, SUBMIT, HINT, AGAIN, LEAVE, EMOTE, CHAT, and the exact text
+ * Client → server: READY, CONFIG (the variant, the heat, the Versus series and
+ * the Team Versus rule), TEAM (Team Versus), START, SUBMIT, HINT, AGAIN,
+ * LEAVE, EMOTE, CHAT, and the exact text
  * `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime without waking
  * the room).
  *
@@ -21,6 +22,7 @@ import { isHeatChoice, type HeatChoice, type HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
 import { MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
+import { isTeamId, isTeamRule, type TeamId, type TeamRule } from "../rules/teams";
 import { isSeriesLength, type SeriesLength } from "../rules/vs";
 import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields, VsRoundSummary } from "../rules/vs-round";
 
@@ -38,8 +40,14 @@ export type HintRequest = { readonly kind: "hammer" | "sparks" } | { readonly ki
 
 export type ClientMessage =
   | { readonly op: "READY"; readonly ready: boolean }
-  /** The host's choices: the variant and the heat (lobby or results), and the Versus series length (lobby). At least one. */
-  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength; readonly heat?: HeatChoice }
+  /**
+   * The host's choices: the variant and the heat (lobby or results), the
+   * Versus series length (lobby) and the Team Versus rule (lobby or
+   * results). At least one.
+   */
+  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength; readonly heat?: HeatChoice; readonly rule?: TeamRule }
+  /** Team Versus, in the lobby or results: moves the sender, or (host only) the player `id`, to `team`. */
+  | { readonly op: "TEAM"; readonly team: TeamId; readonly id?: string }
   | { readonly op: "START" }
   | { readonly op: "SUBMIT"; readonly word: string; readonly seq: number }
   | { readonly op: "HINT"; readonly hint: HintRequest }
@@ -64,7 +72,13 @@ export type RoomErrorCode =
   /** Versus: HINT isn't allowed. */
   | "no_hints"
   /** CHAT faster than the chat limit (rules/room.ts `CHAT_BURST`). */
-  | "chat_limit";
+  | "chat_limit"
+  /** Team Versus: START or AGAIN with teams of different sizes (or one empty). */
+  | "uneven_teams"
+  /** Team Versus: TEAM to a team that already has three. */
+  | "team_full"
+  /** TEAM for someone who isn't in the room. */
+  | "not_in_room";
 
 export type ParseResult = { readonly ok: true; readonly message: ClientMessage } | { readonly ok: false };
 
@@ -107,18 +121,24 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
     case "CONFIG": {
-      if (m.variant === undefined && m.series === undefined && m.heat === undefined) return BAD;
+      if (m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined) return BAD;
       if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
       if (m.series !== undefined && !isSeriesLength(m.series)) return BAD;
       if (m.heat !== undefined && !isHeatChoice(m.heat)) return BAD;
+      if (m.rule !== undefined && !isTeamRule(m.rule)) return BAD;
       const message: ClientMessage = {
         op: "CONFIG",
         ...(m.variant === undefined ? {} : { variant: m.variant }),
         ...(m.series === undefined ? {} : { series: m.series }),
         ...(m.heat === undefined ? {} : { heat: m.heat }),
+        ...(m.rule === undefined ? {} : { rule: m.rule }),
       };
       return { ok: true, message };
     }
+    case "TEAM":
+      if (!isTeamId(m.team)) return BAD;
+      if (m.id !== undefined && (typeof m.id !== "string" || m.id === "" || m.id.length > 128)) return BAD;
+      return { ok: true, message: { op: "TEAM", team: m.team, ...(m.id === undefined ? {} : { id: m.id }) } };
     case "START":
     case "AGAIN":
     case "LEAVE":
@@ -153,10 +173,12 @@ export interface LobbyPlayer {
   readonly username: string;
   readonly avatar: string;
   readonly level: number;
-  /** 0–3: copper, gold, verdigris, cobalt (Versus adds 4, titanium). Kept while the player is in the room. */
+  /** 0–3: copper, gold, verdigris, cobalt (Versus adds 4, titanium; Team Versus 5, rose gold). Kept while the player is in the room. */
   readonly color: number;
   readonly ready: boolean;
   readonly connected: boolean;
+  /** Team Versus only: 0 Copper, 1 Cobalt. */
+  readonly team?: TeamId;
 }
 
 export interface LobbyFields {
@@ -179,6 +201,8 @@ export interface LobbyFields {
   readonly series?: SeriesLength;
   /** Only while it's `"survival"` (CONFIG): left out, the room is classic. Applies from the next START or AGAIN. */
   readonly variant?: Variant;
+  /** Team Versus only: how rounds are won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
+  readonly rule?: TeamRule;
 }
 
 export interface XpBody {
@@ -225,13 +249,20 @@ export interface PodiumEntry {
   readonly id: string;
   readonly username: string;
   readonly wins: number;
-  /** 1-based; equal wins share a place. */
+  /** 1-based; equal wins share a place. Team Versus: the team's place, 1 or 2. */
   readonly place: number;
+  /** Team Versus only. */
+  readonly team?: TeamId;
 }
 
 /** `SERIES_END` (Versus). */
 export interface SeriesEndFields {
+  /** Team Versus: `null` (see `team`). */
   readonly winner: string | null;
+  /** Team Versus only: the winning team (`null`: none), the rule, and the teams' round wins as `[copper, cobalt]`. */
+  readonly team?: TeamId | null;
+  readonly rule?: TeamRule;
+  readonly teamTally?: readonly [number, number];
   readonly early: boolean;
   readonly forfeit: boolean;
   readonly rounds: number;

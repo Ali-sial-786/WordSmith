@@ -19,6 +19,7 @@ On top of that solo game, Wordsmith adds:
 - **Accounts and levels.** XP is earned in every mode, and your Smith Level rises with it.
 - **Co-op (2–4 players):** one shared, timed puzzle. Whoever enters a word first gets the points, and the host sets the difficulty (by default, from their level).
 - **Versus (2–5 players):** everyone gets the same puzzle and races on their own copy. The first to finish wins the round, and matches are best-of-3/5/7/10 series.
+- **Team Versus (2–6 players, two even teams):** Versus in two teams, Copper and Cobalt. A round goes to a team: on letters added up, or to whoever finishes first (§9.5).
 
 The theme is blacksmithing. You **forge** words on the **anvil**, and they're
 **cast** into the **mold**.
@@ -266,7 +267,7 @@ room codes.
 - **Rooms:**
   - The creator is the **host** and gets a **6-character room code**. Codes skip look-alike characters such as 0/O and 1/I.
   - Friends join with the code, through an **invite**, or from the open rooms list.
-  - Co-op rooms hold 2–4 players and Versus rooms hold 2–5. A Co-op room with just the host is allowed for testing.
+  - Co-op rooms hold 2–4 players, Versus rooms 2–5 and Team Versus rooms 2–6. A Co-op room with just the host is allowed for testing.
 - **Invites:** in-app while the app is open. Push notifications for invites come later (Firebase Cloud Messaging is free).
 - **Emotes:** preset reactions in rooms ("Nice strike!", "So close!", a fire emoji, a hammer emoji).
 - **Chat:** text chat for everyone in a Co-op or Versus room, in the lobby, during rounds and at results. New lines pop up over the game for a moment, and the chat button counts the ones not yet read. Quick phrases send in one tap. Holding down someone's line mutes them for the rest of the room, and Settings can turn chat off (shared/room-protocol.md, "Chat").
@@ -343,6 +344,16 @@ titanium).
 - A dropped player's mold freezes. They can rejoin within 30 seconds and carry on with that round.
 - If they don't return, they can't win any more rounds, and the series continues without them.
 - If only one player is left, they win the series by forfeit.
+
+### 9.5 Team Versus: "Team Clash" (2–6 players)
+- **Two teams:** Copper and Cobalt, 1 to 3 smiths each. A series starts only when both teams have the same number. Newcomers join the smaller team; anyone can switch teams in the lobby (or between series), and the host can move anyone.
+- Everyone races their **own mold** of the same puzzle, as in Versus, and a round is won by a **team**. The host picks how:
+  - **Combined:** a team's score is its smiths' letters added up. The first team whose every smith has filled their mold wins the round; a smith who finishes early waits for their teammates. At the timer, the higher total wins (a tie goes to the team that got there first).
+  - **First to finish:** the first smith to fill their mold wins the round for their team. At the timer, the smith with the most letters wins it for their team.
+- **Series:** best of 3, 5, 7 or 10, counted in team wins, with sudden death for everyone if the teams are level. A team whose smiths have all left loses by forfeit.
+- **XP:** as in Versus, but rounds and the series count as won when your team won them.
+- Player colours add **Rose gold** for a sixth smith. The teams show in copper and cobalt.
+- No Survival variant: teams play classic rounds.
 
 ---
 

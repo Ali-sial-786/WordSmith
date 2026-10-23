@@ -610,12 +610,12 @@ describe("vsSeriesResults and vsAward", () => {
     Object.assign(s.racers[1]!, { wins: 1, rounds: 3, bonus: 0 });
     const [a, b] = vsSeriesResults(s, { winner: "a", early: false, forfeit: false }).players;
     // 15 + 20 + 30 = 65 XP takes a new player from level 1 to 2 (60 XP): +1 Hammer Strike.
-    const award = vsAward(a!, "a", { totalXp: 0, scrapBin: 8 }, 1);
+    const award = vsAward(a!, true, { totalXp: 0, scrapBin: 8 }, 1);
     expect(award).toMatchObject({ amount: 65, heatBonus: 0, tiersAbove: 0 });
     expect(award.xp).toMatchObject({ level: 2, levelsGained: 1, rewards: { hammer: 1, chisel: 0, sparks: 0 } });
     expect(award.scrap).toEqual({ bin: 2, hammers: 1 });
     expect(award.gained).toEqual({ hammer: 3, chisel: 1, sparks: 0 });
-    expect(vsAward(b!, "a", { totalXp: 0, scrapBin: 0 }, 1)).toMatchObject({ amount: 25, gained: { hammer: 0, chisel: 0, sparks: 0 } });
+    expect(vsAward(b!, false, { totalXp: 0, scrapBin: 0 }, 1)).toMatchObject({ amount: 25, gained: { hammer: 0, chisel: 0, sparks: 0 } });
   });
 
   it("pays more at a hotter heat, and most to a newcomer playing up", () => {
@@ -626,11 +626,11 @@ describe("vsSeriesResults and vsAward", () => {
     const fresh = { totalXp: 0, scrapBin: 0 };
     const level90 = { totalXp: totalXpForLevel(90), scrapBin: 0 };
     // The newcomer: 15 + 10 = 25 XP at Ember, ×3.0 at White Heat (×2.0, and +0.2 for each of 5 tiers up).
-    expect(vsAward(newcomer!, "pro", fresh, 1)).toMatchObject({ amount: 25, heatBonus: 0, tiersAbove: 0 });
-    expect(vsAward(newcomer!, "pro", fresh, 6)).toMatchObject({ amount: 75, heatBonus: 50, tiersAbove: 5 });
+    expect(vsAward(newcomer!, false, fresh, 1)).toMatchObject({ amount: 25, heatBonus: 0, tiersAbove: 0 });
+    expect(vsAward(newcomer!, false, fresh, 6)).toMatchObject({ amount: 75, heatBonus: 50, tiersAbove: 5 });
     // The level 90 smith who won: 15 + 20 + 30 = 65, ×2.0 at their own heat, ×1.0 at Ember.
-    expect(vsAward(pro!, "pro", level90, 6)).toMatchObject({ amount: 130, heatBonus: 65, tiersAbove: 0 });
-    expect(vsAward(pro!, "pro", level90, 1)).toMatchObject({ amount: 65, heatBonus: 0, tiersAbove: 0 });
+    expect(vsAward(pro!, true, level90, 6)).toMatchObject({ amount: 130, heatBonus: 65, tiersAbove: 0 });
+    expect(vsAward(pro!, true, level90, 1)).toMatchObject({ amount: 65, heatBonus: 0, tiersAbove: 0 });
   });
 });
 
@@ -676,7 +676,7 @@ describe("a 5-player best of 3 with a timed-out round and sudden death", () => {
       ["jo", 0, 3, 3],
       ["max", 0, 3, 3],
     ]);
-    const xp = Object.fromEntries(results.players.map((p) => [p.id, vsAward(p, results.winner, { totalXp: 0, scrapBin: 0 }, 1).amount]));
+    const xp = Object.fromEntries(results.players.map((p) => [p.id, vsAward(p, results.winner === p.id, { totalXp: 0, scrapBin: 0 }, 1).amount]));
     expect(xp).toEqual({ sam: 70, ali: 30, kim: 15, jo: 15, max: 15 });
   });
 });

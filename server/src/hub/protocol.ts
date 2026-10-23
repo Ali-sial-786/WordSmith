@@ -7,7 +7,7 @@
  *
  * Client → server
  * - `{"op":"SET_STATUS","status":"online"|"solo"|"in_room:<CODE>"}`
- * - `{"op":"INVITE","to":"<friend user id>","code":"<CODE>","mode":"coop"|"vs"}`
+ * - `{"op":"INVITE","to":"<friend user id>","code":"<CODE>","mode":"coop"|"vs"|"team"}`
  * - the exact text `{"op":"PING"}`, answered with `{"op":"PONG"}` without
  *   waking the hub (a hibernation auto-response)
  *
@@ -23,7 +23,9 @@
  * OPEN_ROOMS, so OPEN_ROOMS also marks the end of the initial snapshot.
  */
 
-export type RoomMode = "coop" | "vs";
+import { isRoomMode, type RoomMode } from "../rules/room";
+
+export type { RoomMode } from "../rules/room";
 
 /** A status a client may set. */
 export type SettableStatus = "online" | "solo" | `in_room:${string}`;
@@ -109,7 +111,7 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
         to.length > 128 ||
         typeof code !== "string" ||
         !ROOM_CODE_PATTERN.test(code) ||
-        (mode !== "coop" && mode !== "vs")
+        !isRoomMode(mode)
       ) {
         return { ok: false, code: "bad_invite" };
       }

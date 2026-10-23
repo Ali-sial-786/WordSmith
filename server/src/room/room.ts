@@ -86,6 +86,7 @@ import {
   IDLE_CLOSE_MS,
   isJoinablePhase,
   isPlayingPhase,
+  isVersus,
   MAX_PLAYERS,
   MIN_PLAYERS,
   OTHER_BURST,
@@ -101,6 +102,7 @@ import {
   type Seat,
 } from "../rules/room";
 import { heatedFields, pauseClock, resumeClock, type HeatClock, type Variant } from "../rules/survival";
+import { DEFAULT_TEAM_RULE, MAX_TEAM_SIZE, teamForNewcomer, teamSizes, teamsEven, type TeamId, type TeamRule } from "../rules/teams";
 import type { SeriesLength } from "../rules/vs";
 import {
   activeRacers,
@@ -121,6 +123,7 @@ import {
   vsNextMelt,
   vsRoundSnapshot,
   vsRoundStartFields,
+  vsRoundDone,
   vsSeriesResults,
   watchesRound,
   type VsNextRound,
@@ -223,6 +226,10 @@ interface Room {
   heat?: HeatTier;
   /** The latest puzzles this room has played, newest last (rules/room.ts `RECENT_PUZZLES`). */
   recent?: string[];
+  /** Team Versus: each player's team, kept while they're in the room (rules/teams.ts). */
+  teams?: Record<string, TeamId>;
+  /** Team Versus: how the next series' rounds are won (CONFIG); `"combined"` while absent. */
+  rule?: TeamRule;
 }
 
 /** Where a round's clock stands, whatever the mode. */
@@ -398,7 +405,8 @@ export class RoomDO extends DurableObject<Env> {
       lastActivity: now,
       emptySince: now,
       listed: null,
-      ...(mode === "vs" ? { series: DEFAULT_SERIES } : {}),
+      ...(isVersus(mode) ? { series: DEFAULT_SERIES } : {}),
+      ...(mode === "team" ? { teams: { [creator.id]: 0 as TeamId } } : {}),
     };
     this.write(ROOM, room);
     await this.settle();
@@ -492,6 +500,11 @@ export class RoomDO extends DurableObject<Env> {
         left: false,
       };
       room.players.push(player);
+      if (room.mode === "team") {
+        const team = teamForNewcomer(room.teams ?? {}, seated(room).filter((p) => p.id !== me.id).map((p) => p.id));
+        // Two full teams are six players, which MAX_PLAYERS already turned away.
+        (room.teams ??= {})[me.id] = team ?? 0;
+      }
     } else {
       // Versus: a racer who left mid-series comes back to watch; they stay out of it.
       Object.assign(player, { username: me.username, avatar: me.avatar, level: me.level, graceUntil: null, left: false });
@@ -608,8 +621,10 @@ export class RoomDO extends DurableObject<Env> {
         return;
 
       case "CONFIG": {
-        // Co-op has no series to configure.
-        if (message.series !== undefined && room.mode !== "vs") return this.error(ws, "bad_message");
+        // Co-op has no series to configure, only Team Versus has a rule, and teams play classic rounds.
+        if (message.series !== undefined && !isVersus(room.mode)) return this.error(ws, "bad_message");
+        if (message.rule !== undefined && room.mode !== "team") return this.error(ws, "bad_message");
+        if (message.variant === "survival" && room.mode === "team") return this.error(ws, "bad_message");
         // The series is chosen in the lobby; the variant and heat in the lobby or results, for the next START or AGAIN.
         if (message.series !== undefined ? room.phase !== "lobby" : !isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
@@ -627,6 +642,10 @@ export class RoomDO extends DurableObject<Env> {
           else room.heat = message.heat;
           changed = true;
         }
+        if (message.rule !== undefined && (room.rule ?? DEFAULT_TEAM_RULE) !== message.rule) {
+          room.rule = message.rule;
+          changed = true;
+        }
         if (changed) {
           this.write(ROOM, room);
           this.broadcast(this.lobbyMessage(room));
@@ -642,15 +661,19 @@ export class RoomDO extends DurableObject<Env> {
         if (room.phase !== from || (from === "results" && award !== null && !award.announced)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
         if (this.connectedPlayers(room).length < MIN_PLAYERS[room.mode]) return this.error(ws, "not_enough_players");
-        return room.mode === "vs" ? this.startSeries(ws, from) : this.startRound(ws, from);
+        if (room.mode === "team" && !this.teamsEven(room)) return this.error(ws, "uneven_teams");
+        return isVersus(room.mode) ? this.startSeries(ws, from) : this.startRound(ws, from);
       }
 
+      case "TEAM":
+        return this.moveToTeam(ws, room, player, message.team, message.id ?? player.id);
+
       case "SUBMIT":
-        if (room.mode === "vs") return this.vsSubmit(ws, room, player, message.word, message.seq, now);
+        if (isVersus(room.mode)) return this.vsSubmit(ws, room, player, message.word, message.seq, now);
         return this.submit(ws, room, player, message.word, message.seq, now);
 
       case "HINT":
-        if (room.mode === "vs") return this.error(ws, "no_hints");
+        if (isVersus(room.mode)) return this.error(ws, "no_hints");
         return this.hint(ws, room, player, message.hint, now);
 
       case "LEAVE":
@@ -666,6 +689,29 @@ export class RoomDO extends DurableObject<Env> {
       case "CHAT":
         return this.chat(ws, player, message.text, now);
     }
+  }
+
+  /**
+   * TEAM (Team Versus), in the lobby or results: moves `target` (the
+   * sender, or anyone if the sender is host) to `team`, unless it's full.
+   */
+  private moveToTeam(ws: WebSocket, room: Room, player: Player, team: TeamId, target: string): void {
+    if (room.mode !== "team") return this.error(ws, "bad_message");
+    if (!isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
+    if (target !== player.id && room.hostId !== player.id) return this.error(ws, "not_host");
+    if (!seated(room).some((p) => p.id === target)) return this.error(ws, "not_in_room");
+    const teams = (room.teams ??= {});
+    if (teams[target] === team) return;
+    const others = seated(room).filter((p) => p.id !== target).map((p) => p.id);
+    if (teamSizes(teams, others)[team] >= MAX_TEAM_SIZE) return this.error(ws, "team_full");
+    teams[target] = team;
+    this.write(ROOM, room);
+    this.broadcast(this.lobbyMessage(room));
+  }
+
+  /** Team Versus: whether everyone seated is on a team, and both teams are the same size. */
+  private teamsEven(room: Room): boolean {
+    return teamsEven(room.teams ?? {}, seated(room).map((p) => p.id));
   }
 
   /** CHAT, in any phase: starred, kept for SNAPSHOT and sent to everyone, the sender too. */
@@ -699,6 +745,7 @@ export class RoomDO extends DurableObject<Env> {
       player.graceUntil = null;
     } else {
       room.players = room.players.filter((p) => p !== player);
+      if (room.teams !== undefined) delete room.teams[player.id];
     }
     room.hostId = pickHost(room.hostId, this.seats(room));
     for (const ws of this.socketsOf(player.id)) closeSocket(ws, CLOSE_LEFT, "left");
@@ -708,7 +755,7 @@ export class RoomDO extends DurableObject<Env> {
     this.write(ROOM, room);
     this.syncHeat(room, now);
     this.broadcast(this.lobbyMessage(room));
-    if (room.mode === "vs" && midGame) this.racerOut(room, player.id, now);
+    if (isVersus(room.mode) && midGame) this.racerOut(room, player.id, now);
   }
 
   // -------------------------------------------------------------------------
@@ -942,7 +989,8 @@ export class RoomDO extends DurableObject<Env> {
       const fresh = this.room();
       if (fresh === null || fresh.phase !== from) return;
       if (puzzle === null) return this.error(ws, "no_puzzle");
-      if (this.connectedPlayers(fresh).length < MIN_PLAYERS.vs) return this.error(ws, "not_enough_players");
+      if (this.connectedPlayers(fresh).length < MIN_PLAYERS[fresh.mode]) return this.error(ws, "not_enough_players");
+      if (fresh.mode === "team" && !this.teamsEven(fresh)) return this.error(ws, "uneven_teams");
       const racers = seated(fresh).map((p) => p.id);
       const series = newVsSeries({
         matchId: crypto.randomUUID(),
@@ -950,7 +998,9 @@ export class RoomDO extends DurableObject<Env> {
         heat,
         racerIds: racers,
         startedAt: now + COUNTDOWN_MS,
-        variant: fresh.variant,
+        ...(fresh.mode === "team"
+          ? { teams: { rule: fresh.rule ?? DEFAULT_TEAM_RULE, of: { ...fresh.teams } } }
+          : { variant: fresh.variant }),
       });
       for (const p of fresh.players) p.ready = false;
       this.write(STANDINGS, null);
@@ -1077,7 +1127,8 @@ export class RoomDO extends DurableObject<Env> {
         reply("claimed", { word: outcome.word, slot: outcome.slot, auto: outcome.auto, ...(pickup === null ? {} : { pickup }) });
         this.sendProgress(round, series, player.id);
         if (heated) this.sendHeated([player.id], now);
-        if (outcome.complete) {
+        // Team Versus `combined` goes on until a whole team has finished.
+        if (outcome.complete && vsRoundDone(series, round)) {
           this.finishVsRound("finished", now);
           await this.announceQueued();
         }
@@ -1142,6 +1193,9 @@ export class RoomDO extends DurableObject<Env> {
     series.standingsEndsAt = null;
     room.phase = "results";
     room.players = room.players.filter((p) => !p.left);
+    if (room.teams !== undefined) {
+      room.teams = Object.fromEntries(Object.entries(room.teams).filter(([id]) => room.players.some((p) => p.id === id)));
+    }
     room.hostId = pickHost(room.hostId, this.seats(room));
     const award: VsPendingAward = {
       kind: "vs",
@@ -1155,6 +1209,7 @@ export class RoomDO extends DurableObject<Env> {
         results,
         forged: series.forged ?? {},
         ...(series.variant === undefined ? {} : { variant: series.variant }),
+        ...(series.teams === undefined ? {} : { rule: series.teams.rule }),
       },
       usernames,
       history: series.history ?? [],
@@ -1197,7 +1252,7 @@ export class RoomDO extends DurableObject<Env> {
         continue;
       }
       if (room.phase === "round" && clock !== null && now >= clock.endsAt) {
-        if (room.mode === "vs") {
+        if (isVersus(room.mode)) {
           this.finishVsRound("timeout", now);
           if (await this.announceQueued()) wroteAward = true;
         } else {
@@ -1313,7 +1368,7 @@ export class RoomDO extends DurableObject<Env> {
         changed = true;
       }
     };
-    if (room.mode === "vs") {
+    if (isVersus(room.mode)) {
       const round = this.vsRound();
       const series = this.series();
       if (round?.survival === undefined || round.survival.melted !== null || series === null) return [];
@@ -1352,7 +1407,7 @@ export class RoomDO extends DurableObject<Env> {
 
   /** The round's next melt (deadline plus grace), and on whose mold (`null`: the co-op team's). `null` if none is coming. */
   private nextMelt(room: Room): { readonly at: number; readonly id: string | null } | null {
-    if (room.mode === "vs") {
+    if (isVersus(room.mode)) {
       const round = this.vsRound();
       const series = this.series();
       return round === null || series === null ? null : vsNextMelt(round, activeRacers(series));
@@ -1368,7 +1423,7 @@ export class RoomDO extends DurableObject<Env> {
    * results are written; Versus: ROUND_END now). False if nothing melted.
    */
   private melt(room: Room, id: string | null, now: number): boolean {
-    if (room.mode === "vs") {
+    if (isVersus(room.mode)) {
       const round = this.vsRound();
       if (round === null || id === null || !applyVsMelt(round, id)) return false;
       this.write(ROUND, round);
@@ -1473,7 +1528,7 @@ export class RoomDO extends DurableObject<Env> {
   private async closeRoom(now: number): Promise<void> {
     const room = this.room();
     if (room === null) return;
-    if (room.mode === "vs") this.stopSeriesNow(room, now);
+    if (isVersus(room.mode)) this.stopSeriesNow(room, now);
     else this.finishRound("timeout", now);
     if (this.read<PendingAward>(AWARD) !== null) await this.announceResults();
     for (const ws of this.ctx.getWebSockets()) closeSocket(ws, CLOSE_ROOM_CLOSED, "room_closed");
@@ -1531,7 +1586,7 @@ export class RoomDO extends DurableObject<Env> {
 
   /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus, the median level of the seated players. */
   private autoHeat(room: Room): HeatTier {
-    if (room.mode === "vs") {
+    if (isVersus(room.mode)) {
       const levels = seated(room).map((p) => p.level);
       return levels.length === 0 ? heatForLevel(1) : vsHeat(levels);
     }
@@ -1546,7 +1601,7 @@ export class RoomDO extends DurableObject<Env> {
 
   /** The co-op round's heat or the Versus series' while one is on, else {@link nextHeat}. */
   private heatOf(room: Room): HeatTier {
-    if (room.mode === "vs") {
+    if (isVersus(room.mode)) {
       const series = this.series();
       if (series !== null && isPlayingPhase(room.phase)) return series.heat;
       return this.nextHeat(room);
@@ -1576,10 +1631,19 @@ export class RoomDO extends DurableObject<Env> {
           color: p.color,
           ready: p.ready,
           connected: this.socketsOf(p.id, except).length > 0,
+          ...(room.mode === "team" ? { team: room.teams?.[p.id] ?? 0 } : {}),
         })),
-      ...(room.mode === "vs" ? { series: room.series ?? DEFAULT_SERIES } : {}),
-      ...(room.variant === "survival" ? { variant: room.variant } : {}),
+      ...(isVersus(room.mode) ? { series: room.series ?? DEFAULT_SERIES } : {}),
+      ...(room.variant === "survival" && room.mode !== "team" ? { variant: room.variant } : {}),
+      ...(room.mode === "team" ? { rule: this.ruleOf(room) } : {}),
     };
+  }
+
+  /** Team Versus: the series' rule while one is on, else what the next one plays. */
+  private ruleOf(room: Room): TeamRule {
+    const series = this.series();
+    if (series?.teams !== undefined && isPlayingPhase(room.phase)) return series.teams.rule;
+    return room.rule ?? DEFAULT_TEAM_RULE;
   }
 
   private lobbyMessage(room: Room, except?: WebSocket): ServerMessage {
@@ -1588,7 +1652,7 @@ export class RoomDO extends DurableObject<Env> {
 
   /** SNAPSHOT for `receiver` (Versus shows them their own mold). */
   private snapshot(room: Room, now: number, receiver: string): ServerMessage {
-    if (room.mode === "vs") return this.vsSnapshot(room, now, receiver);
+    if (isVersus(room.mode)) return this.vsSnapshot(room, now, receiver);
     const round = this.coopRound();
     const results = this.read<ResultsFields>(RESULTS);
     return {
@@ -1645,15 +1709,22 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private seriesEndFields(award: VsPendingAward, xp: Readonly<Record<string, VsXpBody>>): SeriesEndFields {
-    const { winner, early, forfeit, rounds, players } = award.record.results;
+    const { winner, early, forfeit, rounds, players, team, teamTally } = award.record.results;
     return {
       winner,
       early,
       forfeit,
       rounds,
-      podium: players.map((p) => ({ id: p.id, username: award.usernames[p.id] ?? "", wins: p.wins, place: p.place })),
+      podium: players.map((p) => ({
+        id: p.id,
+        username: award.usernames[p.id] ?? "",
+        wins: p.wins,
+        place: p.place,
+        ...(p.team === undefined ? {} : { team: p.team }),
+      })),
       history: award.history ?? [],
       xp,
+      ...(team === undefined ? {} : { team, rule: award.record.rule ?? DEFAULT_TEAM_RULE, teamTally: teamTally ?? [0, 0] }),
     };
   }
 

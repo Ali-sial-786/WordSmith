@@ -97,7 +97,7 @@ Errors are always JSON `{"error": "<code>", "message"?: "..."}`. A missing or ba
 | `POST /contact` | `{topic, message, email?, username?, website?}` → `201 {ok: true}`, no token needed: the web pages' contact form ([shared/contact.md](../shared/contact.md)). `topic`: `account`, `deletion`, `bug`, `player`, `privacy`, `feedback` or `other`; `message` 1 to 2000 characters; `email` an address to reply to; `username` at most 40 characters; `website` the hidden field, where anything means a bot (still `201`, nothing kept). `400 bad_request`, `429 too_many_messages` past 5 an hour from one IP, `429 contact_busy` past 80 a day in all. Stored in `contact_messages`, then emailed to `CONTACT_EMAIL` through Resend when the `RESEND_API_KEY` and `CONTACT_EMAIL` secrets are set (`src/contact/mail.ts`); the hourly cron retries failures and tidies up. |
 | `GET /leaderboard` | `{entries: [{place, id, username, avatar, level, rank, totalXp, vsSeriesWon, vsRoundsWon, coopRounds, coopMvps, me}]}`, me plus my friends by XP. There's no co-op best score yet: the schema has no column for it. |
 | `GET /ws/hub` | WebSocket upgrade to HubDO (below) |
-| `POST /rooms` | `{mode: "coop" \| "vs"}` → `{code}`: a new room with me as host (below). `400 invalid_mode` otherwise. |
+| `POST /rooms` | `{mode: "coop" \| "vs" \| "team"}` → `{code}`: a new room with me as host (below; `team` is Team Versus, shared/room-protocol.md). `400 invalid_mode` otherwise. |
 | `GET /rooms/:code` | `{code, mode, phase, host: {id, username} \| null, players, maxPlayers, seated}`; `players` is a count, `seated` whether the caller holds a seat. The code is case-insensitive. `404 room_not_found`. |
 | `GET /ws/room/:code` | WebSocket upgrade to that room's RoomDO (below). Refused before upgrading with `404 room_not_found`, `409 room_full` or `409 round_in_progress`. |
 | `POST /rooms/:code/video` | `{url, token, room, expiresAt}`: a LiveKit token for the room's video chat (`src/video/livekit.ts`). Only for players holding a seat: `403 not_in_room`. `503 video_unavailable` until the `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` secrets are set. |
@@ -209,7 +209,7 @@ JSON `{op, ...}`, defined in `src/hub/protocol.ts`:
 |---|---|---|
 | `PRESENCE` | S→C | `{userId, status}`; status is `online`, `solo`, `in_room:<CODE>` or `offline` |
 | `SET_STATUS` | C→S | `{status}`: `online`, `solo` or `in_room:<6 chars A–Z 0–9>` |
-| `INVITE` | C→S | `{to, code, mode: "coop" \| "vs"}`, only to an accepted friend who's online or, with push on, has a phone registered (below) |
+| `INVITE` | C→S | `{to, code, mode: "coop" \| "vs" \| "team"}`, only to an accepted friend who's online or, with push on, has a phone registered (below) |
 | `INVITE` | S→C | `{from, fromUsername, code, mode}` |
 | `OPEN_ROOMS` | S→C | `{rooms: [{code, mode, hostId, hostUsername, players, max}]}`: joinable rooms (lobby or results, not full) hosted by my friends, newest first |
 | `ERROR` | S→C | `{code}`: `bad_message`, `unknown_op`, `bad_status`, `bad_invite`, `not_friends`, `friend_offline`, `rate_limited` |

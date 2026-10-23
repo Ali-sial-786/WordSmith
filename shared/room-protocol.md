@@ -170,3 +170,58 @@ Everything above applies unless this section says otherwise. Game rules are in
 - If the room idle-closes mid-series, `SERIES_END` goes out with what was played (`winner: null` unless already decided) and XP is still written.
 - Heat is fixed at `START` (or `AGAIN`) for the whole series, sudden death included. The series length can only be changed in the lobby (before the first series); the heat also in results, for the next series.
 - `CONFIG` checks, as in survival.md: no field, a bad value, or `series` in co-op is `bad_message`; then `wrong_phase`; then `not_host`. An unchanged value sends no `LOBBY`.
+
+---
+
+# Team Versus
+
+Versus with two teams: **Copper** (team `0`) and **Cobalt** (team `1`).
+Everything in "Versus (M4)" applies unless this section says otherwise. The
+pure rules are in `server/src/rules/teams.ts`, applied to the round and the
+series in `vs-round.ts`.
+
+## Creating and joining
+
+- `POST /v1/rooms` with `{mode: "team"}`. Up to **6** players, at most 3 on a team; `color` is 0–5 (Versus' five, plus rose gold, 5).
+- `GET /v1/rooms/:code` reports `mode: "team"` and `maxPlayers: 6`. Open-room listings and invites carry `mode: "team"`.
+- A newcomer joins the smaller team (Copper on a tie) and keeps their team while seated, through AGAIN.
+
+## How a round is won (`rule`)
+
+Each player races their own copy of the mold, exactly as in Versus. A round is won by a **team**. The host picks how (`CONFIG rule`), from the next START or AGAIN:
+
+- **`combined`** (the default): a team's score is the letters its racers have filled, added up.
+  - A team wins at once when every one of its racers still in the series has filled their whole mold (`how: "finished"`). Until then the round goes on, so a racer who finishes early waits for their teammates.
+  - At the timer, the higher score wins (`timeout`). A tie goes to the team that reached its score first (its racers' latest change).
+  - Nobody filled anything: no winner (`none`).
+- **`first`**: the first racer to fill their whole mold wins the round for their team, and it ends at once (`finished`). At the timer, the racer with the most letters wins it for their team, a tie going to whoever got there first (`timeout`), as in Versus.
+- A racer who has left the series counts for nothing: their letters don't add to their team's score, and they can't win a round.
+
+## Series
+
+- Round wins are counted per team. Clinching and sudden death follow `seriesStatus` with the two teams' wins. **Sudden death** is played by every racer still in the series.
+- A team with nobody left in the series loses by **forfeit**.
+- Each racer's own `wins` are the rounds their team won while they raced.
+
+## Client → server (changes)
+
+| Op | Fields | Notes |
+|---|---|---|
+| `TEAM` | `team`: 0 · 1; `id` (optional) | In the lobby or results. Moves the sender; the host may move anyone with `id`. `team_full` if that team has 3, `not_host`, `not_in_room` (no such seated player), `wrong_phase`. Any other room: `bad_message`. |
+| `CONFIG` | adds `rule`: `"combined"` · `"first"` | Host only, in the lobby or results, for the next series. `rule` in another room, or `variant: "survival"` in a team room, is `bad_message`: teams play classic rounds. |
+| `START` · `AGAIN` | — | Also need both teams the same size, with at least one each, and everyone seated on one: `uneven_teams`. 1 against 1 to 3 against 3. |
+
+## Server → client (changes)
+
+| Op | Fields |
+|---|---|
+| `LOBBY` | adds `rule` (the series' own during a series), and `team` (0 or 1) on every player |
+| `ROUND_START` | adds `rule`, `teams` (`{userId: 0 \| 1}` for everyone in the series) and `teamTally` (`[copper, cobalt]` round wins before this round) |
+| `ROUND_END` | adds `team` (the winning team, or `null`), `teamScores` (`[copper, cobalt]`: letters added up over the racers still in the series), `teamTally` (after this round), `rule` and `teams`. `winner` is the racer who won it under `first`, and `null` under `combined`. |
+| `SERIES_END` | adds `team` (the winning team, or `null`), `rule` and `teamTally`. `winner` is `null`. `podium` entries add `team`; `place` is the team's: 1 for the winners, 2 for the others (both 1 if neither won; a stopped series ranks by round wins). `history` entries add `team` and `teamScores`. |
+| `ERROR` | adds `uneven_teams`, `team_full`, `not_in_room` |
+
+## XP and records
+
+- XP is Versus': 5 per round raced, 10 per round their team won while they raced, 30 if their team won the series, at the series' heat.
+- D1 keeps a Team Versus series as a Versus match (`matches.mode = 'vs'`), with `teams: {rule, winner, members: {userId: team}}` in its summary. It counts towards the Versus stats (`vs_series`, `vs_series_won` when their team won, `vs_rounds_won`).

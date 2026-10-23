@@ -20,6 +20,10 @@
  * - **Survival** (shared/survival.md): each racer has their own heated word
  *   on their own mold, all from the same order ({@link VsSurvival}). The
  *   first melt by anyone ends the round, and whoever melted can't win it.
+ * - **Team Versus** (shared/room-protocol.md "Team Versus"): every racer
+ *   is on a team ({@link VsTeams}), and a round is won by a team, under the
+ *   room's rule (teams.ts). Wins are counted per team; each racer's own
+ *   `wins` are the rounds their team won while they raced.
  *
  * Functions named `apply…`, `record…` and `mark…` change what they're given in place.
  */
@@ -52,6 +56,7 @@ import {
   type HeatedFields,
   type Variant,
 } from "./survival";
+import { resolveTeamRound, teamRoundDone, TEAMS, type TeamId, type TeamRacerProgress, type TeamRule } from "./teams";
 import { podium, resolveVsRound, seriesStatus, type SeriesLength, type VsRoundHow, type VsRoundResult } from "./vs";
 
 /** Series length until the host picks one (CONFIG). */
@@ -339,6 +344,38 @@ export function moldsOf(r: VsRound): Record<string, number[]> {
   return Object.fromEntries(r.playerIds.map((id) => [id, slots(r.molds[id])]));
 }
 
+/** A round's result: in Team Versus, also the team that won it and each team's letters. */
+export interface VsRoundOutcome extends VsRoundResult {
+  readonly team?: TeamId | null;
+  readonly teamScores?: [number, number];
+}
+
+/** Every racer of the round among `contenders`, with their team (Team Versus only). */
+function teamProgress(s: VsSeries, r: VsRound, contenders: readonly string[]): TeamRacerProgress[] {
+  return r.playerIds.flatMap((id) => {
+    const team = s.racers.find((x) => x.id === id)?.team;
+    if (team === undefined || !contenders.includes(id)) return [];
+    return [{ playerId: id, team, lettersFilled: r.molds[id]?.filled ?? 0, reachedAt: r.molds[id]?.reachedAt ?? 0 }];
+  });
+}
+
+/**
+ * Whether a racer filling their whole mold ends the round now. Versus and
+ * Team Versus's `first`: yes. `combined`: only once every racer still in
+ * the series on one team has.
+ */
+export function vsRoundDone(s: VsSeries, r: VsRound): boolean {
+  if (s.teams === undefined) return true;
+  return teamRoundDone(s.teams.rule, r.total, teamProgress(s, r, activeRacers(s)));
+}
+
+/** Who wins the round if it ends now, among `contenders` (the racers still in the series). */
+export function resolveSeriesRound(s: VsSeries, r: VsRound, contenders: readonly string[]): VsRoundOutcome {
+  if (s.teams === undefined) return resolveRound(r, contenders);
+  const { team, winner, how, scores } = resolveTeamRound(s.teams.rule, r.total, teamProgress(s, r, contenders));
+  return { winner, how, team, teamScores: scores };
+}
+
 /** Who wins the round if it ends now, among `contenders` (the racers still in the series). */
 export function resolveRound(r: VsRound, contenders: readonly string[]): VsRoundResult {
   return resolveVsRound(
@@ -369,6 +406,14 @@ export interface VsRacer {
   pickups: HintCounts;
   /** Left, or ran out of rejoin time: keeps their wins but can't win any more rounds. */
   out: boolean;
+  /** Team Versus: their team for the whole series. */
+  readonly team?: TeamId;
+}
+
+/** Team Versus: the rule rounds are won by, and each team's round wins as `[copper, cobalt]`. */
+export interface VsTeams {
+  readonly rule: TeamRule;
+  readonly wins: [number, number];
 }
 
 export interface VsSeries {
@@ -399,6 +444,8 @@ export interface VsSeries {
   history?: VsRoundSummary[];
   /** Survival: every round of the series is one (fixed at the start). Absent for classic. */
   readonly variant?: "survival";
+  /** Team Versus only (fixed at the start, like the racers' teams). */
+  readonly teams?: VsTeams;
 }
 
 export interface NewVsSeriesInput {
@@ -409,19 +456,43 @@ export interface NewVsSeriesInput {
   readonly startedAt: number;
   /** Classic unless given. */
   readonly variant?: Variant;
+  /** Team Versus: the rule, and every racer's team. */
+  readonly teams?: { readonly rule: TeamRule; readonly of: Readonly<Record<string, TeamId>> };
 }
 
 export function newVsSeries(input: NewVsSeriesInput): VsSeries {
+  const teams = input.teams;
   return {
     matchId: input.matchId,
     length: input.length,
     heat: input.heat,
     startedAt: input.startedAt,
-    racers: input.racerIds.map((id) => ({ id, wins: 0, rounds: 0, words: 0, longest: "", bonus: 0, pickups: noHints(), out: false })),
+    racers: input.racerIds.map((id) => ({
+      id,
+      wins: 0,
+      rounds: 0,
+      words: 0,
+      longest: "",
+      bonus: 0,
+      pickups: noHints(),
+      out: false,
+      ...(teams?.of[id] === undefined ? {} : { team: teams.of[id] }),
+    })),
     played: 0,
     standingsEndsAt: null,
     ...(input.variant === "survival" ? { variant: "survival" as const } : {}),
+    ...(teams === undefined ? {} : { teams: { rule: teams.rule, wins: [0, 0] as [number, number] } }),
   };
+}
+
+/** Team Versus: each racer's team, out or not. */
+export function teamsOf(s: VsSeries): Record<string, TeamId> {
+  return Object.fromEntries(s.racers.flatMap((r) => (r.team === undefined ? [] : [[r.id, r.team]])));
+}
+
+/** Team Versus: the teams with someone still in the series. */
+function activeTeams(s: VsSeries): TeamId[] {
+  return TEAMS.filter((team) => s.racers.some((r) => r.team === team && !r.out));
 }
 
 /** Wins so far for everyone in the series, out or not. */
@@ -447,8 +518,12 @@ export function markOut(s: VsSeries, id: string): boolean {
   return true;
 }
 
-/** Adds a finished round to the series: the winner's win, and each racer's rounds, words (and which), bonus words and embers. */
-export function recordRound(s: VsSeries, r: VsRound, result: VsRoundResult): void {
+/**
+ * Adds a finished round to the series: the winner's win (Team Versus: the
+ * team's, and a win for each of its racers in the round), and each racer's
+ * rounds, words (and which), bonus words and embers.
+ */
+export function recordRound(s: VsSeries, r: VsRound, result: VsRoundOutcome): void {
   s.played += 1;
   const forged = (s.forged ??= {});
   for (const id of r.playerIds) {
@@ -461,6 +536,14 @@ export function recordRound(s: VsSeries, r: VsRound, result: VsRoundResult): voi
     for (const c of mold.claims) if (c.word.length > racer.longest.length) racer.longest = c.word;
     racer.bonus += mold.bonus.length;
     for (const p of mold.pickups) racer.pickups[p.kind] += 1;
+  }
+  if (s.teams !== undefined) {
+    const team = result.team;
+    if (team === undefined || team === null) return;
+    s.teams.wins[team] += 1;
+    // Like a Versus racer, one who has left can't win any more rounds.
+    for (const racer of s.racers) if (racer.team === team && !racer.out && r.playerIds.includes(racer.id)) racer.wins += 1;
+    return;
   }
   const winner = s.racers.find((x) => x.id === result.winner);
   if (winner !== undefined) winner.wins += 1;
@@ -475,11 +558,14 @@ export interface VsNextRound {
 }
 
 export interface VsSeriesOutcome {
+  /** Team Versus: always `null` (see `team`). */
   readonly winner: string | null;
   /** Clinched before the last regular round. */
   readonly early: boolean;
   /** Won because every other contender left. */
   readonly forfeit: boolean;
+  /** Team Versus only: the team that won the series, or `null`. */
+  readonly team?: TeamId | null;
 }
 
 export type VsSeriesDecision = { readonly over: false; readonly next: VsNextRound } | ({ readonly over: true } & VsSeriesOutcome);
@@ -494,6 +580,7 @@ export type VsSeriesDecision = { readonly over: false; readonly next: VsNextRoun
  *   tied leaders (again with the same players if one had no winner).
  */
 export function seriesDecision(s: VsSeries): VsSeriesDecision {
+  if (s.teams !== undefined) return teamSeriesDecision(s, s.teams);
   const active = activeRacers(s);
   if (active.length <= 1) return { over: true, winner: active[0] ?? null, early: false, forfeit: true };
   const standings = s.racers.filter((r) => !r.out).map((r) => ({ playerId: r.id, wins: r.wins }));
@@ -505,12 +592,30 @@ export function seriesDecision(s: VsSeries): VsSeriesDecision {
 }
 
 /**
+ * Team Versus, judged on team wins: a team with nobody left in the series
+ * loses by forfeit; otherwise as in Versus, with every racer still in the
+ * series playing each round, sudden death included.
+ */
+function teamSeriesDecision(s: VsSeries, teams: VsTeams): VsSeriesDecision {
+  const left = activeTeams(s);
+  if (left.length <= 1) return { over: true, winner: null, team: left[0] ?? null, early: false, forfeit: true };
+  const status = seriesStatus(
+    TEAMS.map((team) => ({ playerId: String(team), wins: teams.wins[team] })),
+    s.length,
+    s.played,
+  );
+  if (status.state === "won") return { over: true, winner: null, team: Number(status.winner) as TeamId, early: status.early, forfeit: false };
+  return { over: false, next: { round: s.played + 1, suddenDeath: status.state === "sudden_death", players: activeRacers(s) } };
+}
+
+/**
  * How a series ends when it has to stop now (the room is closing): as
  * decided if it is, otherwise with no winner.
  */
 export function stopSeries(s: VsSeries): VsSeriesOutcome {
   const d = seriesDecision(s);
-  return d.over ? { winner: d.winner, early: d.early, forfeit: d.forfeit } : { winner: null, early: false, forfeit: false };
+  const team = s.teams === undefined ? {} : { team: d.over ? (d.team ?? null) : null };
+  return d.over ? { winner: d.winner, early: d.early, forfeit: d.forfeit, ...team } : { winner: null, early: false, forfeit: false, ...team };
 }
 
 // ---------------------------------------------------------------------------
@@ -518,7 +623,7 @@ export function stopSeries(s: VsSeries): VsSeriesOutcome {
 // ---------------------------------------------------------------------------
 
 /** `ROUND_START` in Versus: the co-op fields plus the series. */
-export interface VsRoundStartFields extends RoundStartFields {
+export interface VsRoundStartFields extends RoundStartFields, VsTeamFields {
   readonly series: SeriesLength;
   readonly regular: number | null;
   readonly suddenDeath: boolean;
@@ -535,7 +640,20 @@ export function vsRoundStartFields(r: VsRound, s: VsSeries, serverNow: number): 
     suddenDeath: r.regular === null,
     players: [...r.playerIds],
     tally: tallyOf(s),
+    ...teamFields(s),
   };
+}
+
+/** Team Versus: the rule, everyone's team, and the teams' round wins as `[copper, cobalt]`. */
+export interface VsTeamFields {
+  readonly rule?: TeamRule;
+  readonly teams?: Readonly<Record<string, TeamId>>;
+  readonly teamTally?: readonly [number, number];
+}
+
+function teamFields(s: VsSeries): VsTeamFields {
+  if (s.teams === undefined) return {};
+  return { rule: s.teams.rule, teams: teamsOf(s), teamTally: [s.teams.wins[0], s.teams.wins[1]] };
 }
 
 /** The receiver's own mold, in a `SNAPSHOT`. */
@@ -591,7 +709,7 @@ export type VsRoundEndReason = "finished" | "timeout" | "melted";
 export type VsRoundEndHow = VsRoundHow | "survived";
 
 /** `ROUND_END` in Versus. */
-export interface VsRoundEndFields {
+export interface VsRoundEndFields extends VsTeamFields {
   /** Not in the contract: the round that ended. */
   readonly round: number;
   readonly reason: VsRoundEndReason;
@@ -609,6 +727,9 @@ export interface VsRoundEndFields {
   readonly variant?: Variant;
   readonly saved?: Readonly<Record<string, number>>;
   readonly melted?: { readonly id: string; readonly slot: number } | null;
+  /** Team Versus only: the team that won the round (`null`: nobody), and each team's letters as `[copper, cobalt]`. */
+  readonly team?: TeamId | null;
+  readonly teamScores?: readonly [number, number];
 }
 
 export interface VsRoundEnd {
@@ -645,6 +766,9 @@ export interface VsRoundSummary {
   /** Survival only: who melted which slot (`null` if nobody did), and each racer's words saved. */
   readonly melted?: { readonly id: string; readonly slot: number } | null;
   readonly saved?: Readonly<Record<string, number>>;
+  /** Team Versus only: the team that won it, and each team's letters, as in its `ROUND_END`. */
+  readonly team?: TeamId | null;
+  readonly teamScores?: readonly [number, number];
 }
 
 /** Adds the round that `end` closed to the series' history, dropping the oldest past {@link MAX_HISTORY}. */
@@ -666,6 +790,7 @@ function recordHistory(s: VsSeries, r: VsRound, end: VsRoundEndFields): void {
     bins: Object.fromEntries(r.playerIds.map((id) => [id, [...(r.molds[id]?.bonus ?? [])]])),
     ...(end.melted === undefined ? {} : { melted: end.melted }),
     ...(end.saved === undefined ? {} : { saved: end.saved }),
+    ...(end.team === undefined ? {} : { team: end.team, teamScores: end.teamScores }),
   });
   if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
 }
@@ -682,12 +807,16 @@ function recordHistory(s: VsSeries, r: VsRound, end: VsRoundEndFields): void {
  */
 export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, now: number, stop = false): VsRoundEnd {
   const melter = reason === "melted" ? r.survival?.melted?.id : undefined;
-  const result = resolveRound(r, activeRacers(s).filter((id) => id !== melter));
+  const result = resolveSeriesRound(s, r, activeRacers(s).filter((id) => id !== melter));
   recordRound(s, r, result);
   // Nobody can have filled their mold, so a melt is won on letters, or not at all.
   const how: VsRoundEndHow = melter !== undefined && result.how === "timeout" ? "survived" : result.how;
   const decision = seriesDecision(s);
-  const outcome = decision.over ? { winner: decision.winner, early: decision.early, forfeit: decision.forfeit } : stop ? stopSeries(s) : null;
+  const outcome = decision.over
+    ? { winner: decision.winner, early: decision.early, forfeit: decision.forfeit, ...(decision.team === undefined ? {} : { team: decision.team }) }
+    : stop
+      ? stopSeries(s)
+      : null;
   const end: VsRoundEnd = {
     fields: {
       round: r.round,
@@ -707,6 +836,7 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
             saved: Object.fromEntries(r.playerIds.map((id) => [id, r.survival!.clocks[id]?.saved ?? 0])),
             melted: r.survival.melted === null ? null : { ...r.survival.melted },
           }),
+      ...(s.teams === undefined ? {} : { ...teamFields(s), team: result.team ?? null, teamScores: result.teamScores ?? [0, 0] }),
     },
     outcome,
   };
@@ -728,11 +858,15 @@ export interface VsPlayerResult {
   readonly longest: string;
   readonly bonus: number;
   readonly pickups: HintCounts;
+  /** Team Versus only. */
+  readonly team?: TeamId;
 }
 
 export interface VsSeriesResults extends VsSeriesOutcome {
   /** Rounds played, sudden death included. */
   readonly rounds: number;
+  /** Team Versus only: the teams' round wins, as `[copper, cobalt]`. */
+  readonly teamTally?: readonly [number, number];
   /** Everyone in the series, out or not, in podium order. */
   readonly players: readonly VsPlayerResult[];
 }
@@ -742,16 +876,43 @@ export interface VsSeriesResults extends VsSeriesOutcome {
  * and the winner comes first among them), and each racer's totals.
  */
 export function vsSeriesResults(s: VsSeries, outcome: VsSeriesOutcome): VsSeriesResults {
+  const result = (r: VsRacer, place: number): VsPlayerResult => ({
+    id: r.id,
+    wins: r.wins,
+    place,
+    rounds: r.rounds,
+    words: r.words,
+    longest: r.longest,
+    bonus: r.bonus,
+    pickups: { ...r.pickups },
+    ...(r.team === undefined ? {} : { team: r.team }),
+  });
+  if (s.teams !== undefined) {
+    // Places are the teams': the winners first (or the team with more round wins), then the rest.
+    const wins = s.teams.wins;
+    const winner = outcome.team ?? (wins[0] === wins[1] ? null : wins[0] > wins[1] ? 0 : 1);
+    const placeOf = (team: TeamId | undefined) => (winner === null || team === winner ? 1 : 2);
+    const ordered = [...s.racers].sort((a, b) => placeOf(a.team) - placeOf(b.team) || (a.team ?? 0) - (b.team ?? 0));
+    return {
+      ...outcome,
+      team: outcome.team ?? null,
+      rounds: s.played,
+      teamTally: [wins[0], wins[1]],
+      players: ordered.map((r) => result(r, placeOf(r.team))),
+    };
+  }
   const ordered = [...s.racers].sort((a, b) => Number(b.id === outcome.winner) - Number(a.id === outcome.winner));
   const places = podium(ordered.map((r) => ({ playerId: r.id, wins: r.wins })));
   return {
     ...outcome,
     rounds: s.played,
-    players: places.map((p) => {
-      const r = s.racers.find((x) => x.id === p.playerId)!;
-      return { id: r.id, wins: r.wins, place: p.place, rounds: r.rounds, words: r.words, longest: r.longest, bonus: r.bonus, pickups: { ...r.pickups } };
-    }),
+    players: places.map((p) => result(s.racers.find((x) => x.id === p.playerId)!, p.place)),
   };
+}
+
+/** Whether `player` won the series: their team did, in Team Versus. */
+export function wonSeries(results: VsSeriesResults, player: VsPlayerResult): boolean {
+  return results.team !== undefined ? results.team !== null && player.team === results.team : results.winner === player.id;
 }
 
 export interface VsAward {
@@ -767,17 +928,18 @@ export interface VsAward {
 
 /**
  * What one player gets for the series: VS XP (5 per round raced, 10 per
- * round won, 30 for the series) at the series' `heat` (more so above the
- * player's own tier, `heatXp`) with any level-ups and their rewards, the
- * series' bonus words smelted in the Scrap Bin, and the embers collected.
+ * round won, 30 for the series; Team Versus: rounds and the series their
+ * team won) at the series' `heat` (more so above the player's own tier,
+ * `heatXp`) with any level-ups and their rewards, the series' bonus words
+ * smelted in the Scrap Bin, and the embers collected.
  */
 export function vsAward(
   player: VsPlayerResult,
-  winner: string | null,
+  won: boolean,
   profile: { readonly totalXp: number; readonly scrapBin: number },
   heat: HeatTier,
 ): VsAward {
-  const base = vsSeriesXp({ roundsPlayed: player.rounds, roundsWon: player.wins, wonSeries: winner === player.id });
+  const base = vsSeriesXp({ roundsPlayed: player.rounds, roundsWon: player.wins, wonSeries: won });
   const hot = heatXp(base, heat, levelFromTotalXp(profile.totalXp));
   const xp = applyXp(profile.totalXp, hot.xp);
   const scrap = addToScrapBin(profile.scrapBin, player.bonus);

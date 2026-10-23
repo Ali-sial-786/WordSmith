@@ -34,14 +34,25 @@ export function normalizeRoomCode(raw: string): string | null {
 // Modes and timings
 // ---------------------------------------------------------------------------
 
-export type RoomMode = "coop" | "vs";
+/** `team` is Team Versus: Versus with two teams (rules/teams.ts). */
+export type RoomMode = "coop" | "vs" | "team";
+export const ROOM_MODES: readonly RoomMode[] = ["coop", "vs", "team"];
 /** `standings` (the 10 s between Versus rounds) is Versus only. */
 export type RoomPhase = "lobby" | "countdown" | "round" | "standings" | "results";
 
-/** Players a room holds, by mode. */
-export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4, vs: 5 };
-/** Connected players needed to START, by mode. Solo co-op is allowed (for testing). */
-export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1, vs: 2 };
+export function isRoomMode(value: unknown): value is RoomMode {
+  return (ROOM_MODES as readonly unknown[]).includes(value);
+}
+
+/** Whether rooms of this mode play Versus series: Versus and Team Versus. */
+export function isVersus(mode: RoomMode): boolean {
+  return mode !== "coop";
+}
+
+/** Players a room holds, by mode: Team Versus, two teams of three. */
+export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4, vs: 5, team: 6 };
+/** Connected players needed to START, by mode. Solo co-op is allowed (for testing); Team Versus also needs even teams. */
+export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1, vs: 2, team: 2 };
 
 /** Whether newcomers may take a seat in this phase (anyone already seated may always come back). */
 export function isJoinablePhase(phase: RoomPhase): boolean {
@@ -69,8 +80,8 @@ export const PUZZLE_REPEAT_WINDOW_MS = 60 * 24 * 3600_000;
 
 /** Player colours: copper, gold, verdigris, cobalt. */
 export const PLAYER_COLORS = 4;
-/** Colours by mode: Versus adds titanium (4) for its fifth player. */
-export const COLORS: Readonly<Record<RoomMode, number>> = { coop: PLAYER_COLORS, vs: 5 };
+/** Colours by mode: Versus adds titanium (4) for its fifth player, Team Versus rose gold (5) for its sixth. */
+export const COLORS: Readonly<Record<RoomMode, number>> = { coop: PLAYER_COLORS, vs: 5, team: 6 };
 
 /** The lowest colour nobody in `taken` has, or `null` if all are used. */
 export function freeColor(taken: readonly number[], colors = PLAYER_COLORS): number | null {

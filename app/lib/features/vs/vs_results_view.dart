@@ -13,6 +13,7 @@ import '../../ui/widgets/xp_award.dart';
 import '../coop/room_chat.dart';
 import 'rival_molds.dart';
 import 'series_summary.dart';
+import 'team_widgets.dart';
 import 'vs_widgets.dart';
 
 /// The end of a Versus series: the podium, my XP and embers, the series round
@@ -28,7 +29,8 @@ class VsResultsView extends StatelessWidget {
     final r = session.seriesEnd!;
     final text = Theme.of(context).textTheme;
     final mine = r.xp[session.me];
-    final iWon = r.winner == session.me;
+    final team = r.isTeam;
+    final iWon = team ? r.team != null && r.team == session.myTeam : r.winner == session.me;
     // The podium holds three; anyone sharing a place beyond that is listed.
     final top = r.podium.take(3).toList();
     final rest = r.podium.skip(3).toList();
@@ -46,7 +48,13 @@ class VsResultsView extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
             children: [
               Text(
-                r.winner == null
+                team
+                    ? r.team == null
+                          ? 'Series over'
+                          : iWon
+                          ? 'YOUR TEAM WINS THE SERIES!'
+                          : '${teamName(r.team!)} wins the series!'
+                    : r.winner == null
                     ? 'Series over'
                     : iWon
                     ? 'YOU WIN THE SERIES!'
@@ -62,20 +70,32 @@ class VsResultsView extends StatelessWidget {
                 [
                   '${r.rounds} ${r.rounds == 1 ? 'round' : 'rounds'}',
                   if (r.early) 'clinched early',
-                  if (r.forfeit) 'everyone else left',
+                  if (r.forfeit) team ? 'the other team left' : 'everyone else left',
                 ].join(' · '),
                 textAlign: TextAlign.center,
                 style: text.bodyMedium?.copyWith(color: Palette.steel),
               ),
               const SizedBox(height: 20),
-              _Podium(session: session, places: top),
-              for (final p in rest)
-                ListTile(
-                  dense: true,
-                  leading: Text('${p.place}', style: displayStyle(18)),
-                  title: Text(session.nameOf(p.id)),
-                  trailing: Text('${p.wins} ${p.wins == 1 ? 'win' : 'wins'}'),
-                ),
+              if (team) ...[
+                TeamResults(session: session, series: r),
+                // Change teams before a rematch.
+                if (session.lobby != null) ...[
+                  const SizedBox(height: 16),
+                  TeamPicker(
+                    session: session,
+                    row: (p) => _TeamRow(session: session, player: p),
+                  ),
+                ],
+              ] else
+                _Podium(session: session, places: top),
+              if (!team)
+                for (final p in rest)
+                  ListTile(
+                    dense: true,
+                    leading: Text('${p.place}', style: displayStyle(18)),
+                    title: Text(session.nameOf(p.id)),
+                    trailing: Text('${p.wins} ${p.wins == 1 ? 'win' : 'wins'}'),
+                  ),
               if (mine != null) ...[
                 const SizedBox(height: 14),
                 XpAwardBanner(xp: mine.xp, level: mine.level, levelUps: mine.levelUps),
@@ -134,6 +154,33 @@ class VsResultsView extends StatelessWidget {
       if (e.value > 0) 'Embers: +${e.value} ${HintKind.byName(e.key).title}${e.value == 1 ? '' : 's'}',
     if (a.scrapHammers > 0) 'Scrap Bin: +${a.scrapHammers} Hammer Strike${a.scrapHammers == 1 ? '' : 's'}',
   ];
+}
+
+/// One player in the results' team picker: their emblem and name.
+class _TeamRow extends StatelessWidget {
+  const _TeamRow({required this.session, required this.player});
+
+  final VsSession session;
+  final RoomPlayer player;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        AvatarBadge(avatar: player.avatar, size: 32),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            player.id == session.me ? 'You' : session.nameOf(player.id),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: session.colorOf(player.id)),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Leave, the host's rematch and the chat, kept in reach below however

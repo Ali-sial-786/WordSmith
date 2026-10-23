@@ -174,7 +174,7 @@ List<_Section> _sections() => [
     'Play with friends',
     signIn: true,
     intro:
-        'Tap **Co-op** or **Versus** and light a forge to host: you get a 6-letter room code to share, or '
+        'Tap **Co-op**, **Versus** or **Team Versus** and light a forge to host: you get a 6-letter room code to share, or '
         "invite friends straight in. To join, type a friend's code or tap their open room. In a room you "
         'can write in the chat, send quick emotes and talk over voice chat, and turn your camera on there '
         "for video. Hold someone's message, or tap the menu next to their name, to mute, block or report them.",
@@ -198,6 +198,17 @@ List<_Section> _sections() => [
             '**Survival clash:** the host can pick it in the lobby. Each smith gets their own hot word with a '
             'countdown. The first word to melt ends the round for everyone, and the smith who let it melt '
             "can't win that round.",
+      ),
+      _Entry(
+        'friends',
+        'Team Versus: Team Clash',
+        'Two teams, **Copper** and **Cobalt**, of 1 to 3 smiths each; both need the same number to start. '
+            'Everyone races on their own mold, and a round goes to a team. The host picks how:\n\n'
+            "**Combined:** your team's letters add up. The first team to fill every one of its molds wins the "
+            'round; when time runs out, the most letters wins.\n\n'
+            '**First to finish:** the first smith to fill their mold wins the round for their team.\n\n'
+            'Tap **Join** to switch teams in the lobby; the host can move anyone. If your team wins the series, '
+            "everyone on it gets the winner's XP.",
       ),
       _Entry(
         'friends',

@@ -22,6 +22,9 @@ class VsSession extends RoomSession {
   /// Round wins so far, by user id.
   Map<String, int> tally = {};
 
+  /// Team Versus: the teams' round wins so far, as `[copper, cobalt]`.
+  List<int> teamTally = const [0, 0];
+
   /// The last round's result, shown between rounds.
   VsRoundEnd? standings;
   SeriesEnd? seriesEnd;
@@ -62,6 +65,49 @@ class VsSession extends RoomSession {
   /// Racing this round (in sudden death, the rest watch).
   bool get racing => round?.racers.contains(me) ?? false;
 
+  /// A Team Versus room: two teams, Copper (0) and Cobalt (1).
+  bool get isTeam => lobby?.isTeam ?? false;
+
+  /// [id]'s team: the series' while one is on, else the lobby's.
+  int? teamOf(String id) => round?.teams[id] ?? standings?.teams[id] ?? lobby?.player(id)?.team;
+
+  int? get myTeam => teamOf(me);
+
+  /// How Team Versus rounds are won: `combined` (letters added up) or
+  /// `first` (first to fill their mold).
+  String get rule => round?.rule ?? lobby?.rule ?? 'combined';
+
+  /// Team Versus, live: each team's letters this round, added up over its
+  /// racers, as `[copper, cobalt]`.
+  List<int> get teamLetters {
+    final sums = [0, 0];
+    for (final p in progress.values) {
+      final team = teamOf(p.id);
+      if (team != null) sums[team] += p.filled;
+    }
+    return sums;
+  }
+
+  /// Team Versus, live: the letters each team's best racer has filled.
+  List<int> get teamBest {
+    final best = [0, 0];
+    for (final p in progress.values) {
+      final team = teamOf(p.id);
+      if (team != null && p.filled > best[team]) best[team] = p.filled;
+    }
+    return best;
+  }
+
+  /// Team Versus: how many of this round's racers are on each team.
+  List<int> get teamRacers {
+    final n = [0, 0];
+    for (final id in round?.racers ?? const <String>[]) {
+      final team = teamOf(id);
+      if (team != null) n[team]++;
+    }
+    return n;
+  }
+
   /// The round has been decided; boards freeze until the next one.
   bool get roundOver => standings != null && round != null && phase != 'countdown';
 
@@ -97,6 +143,7 @@ class VsSession extends RoomSession {
     // Watching: empty molds to fill as the racers' PROGRESS comes with their slots.
     progress = {for (final id in start.racers) id: RacerProgress(id, 0, total, slots: racing ? null : const [])};
     tally = {...start.tally};
+    teamTally = start.teamTally ?? const [0, 0];
     syncClock(start.serverNow);
   }
 
@@ -135,6 +182,7 @@ class VsSession extends RoomSession {
       case VsRoundEnd(:final answers, :final next):
         standings = e;
         tally = {...e.tally};
+        teamTally = e.teamTally ?? teamTally;
         for (final p in e.progress) {
           progress[p.id] = p;
         }
@@ -172,6 +220,7 @@ class VsSession extends RoomSession {
       final end = s.standings!;
       standings = end;
       tally = {...end.tally};
+      teamTally = end.teamTally ?? teamTally;
       // Back during the standings: show that round's answers on my mold, or
       // drop a mold left over from an earlier round.
       if (end.round != null && round?.round != end.round) {
@@ -187,6 +236,16 @@ class VsSession extends RoomSession {
 
   /// Host only, in the lobby: best of [length] rounds.
   void config(int length) => client.config(series: length);
+
+  /// Team Versus, host only, in the lobby or results: how the next series'
+  /// rounds are won (`combined` or `first`).
+  void setRule(String rule) => client.config(rule: rule);
+
+  /// Team Versus, in the lobby or results: joins [team].
+  void joinTeam(int team) => client.team(team);
+
+  /// Team Versus, host only: moves [id] to [team].
+  void moveToTeam(String id, int team) => client.team(team, id: id);
 
   /// Sends a word; the result arrives as a [WordResult] effect.
   void submit(String word) => client.submit(word);

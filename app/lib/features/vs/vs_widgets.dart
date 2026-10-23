@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../game/vs_session.dart';
+import 'team_widgets.dart';
 import '../../net/room_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -55,10 +56,15 @@ class RivalStrip extends StatelessWidget {
     if (round == null) return const SizedBox.shrink();
     final call = this.call;
     // Racers see their rivals; someone watching sudden death sees every racer.
+    // In Team Versus, my teammates come first.
     final ids = [
       for (final id in round.racers)
         if (id != session.me) id,
     ];
+    if (session.isTeam) {
+      final mine = session.myTeam;
+      ids.sort((a, b) => (session.teamOf(a) == mine ? 0 : 1).compareTo(session.teamOf(b) == mine ? 0 : 1));
+    }
     return SizedBox(
       height: call == null ? 74 : 86,
       child: Row(
@@ -110,7 +116,10 @@ class _RivalTile extends StatelessWidget {
             session.nameOf(id),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall,
+            // Team Versus: in their team's colour.
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: session.teamOf(id) == null || !session.isTeam ? null : Palette.team(session.teamOf(id)!),
+            ),
           ),
           const SizedBox(height: 3),
           ClipRRect(
@@ -180,6 +189,7 @@ String roundLabel(VsSession s) {
 
 /// The headline for a finished round.
 String roundHeadline(VsSession s, VsRoundEnd end) {
+  if (end.isTeam) return teamRoundHeadline(s, end);
   final winner = end.winner;
   final melted = end.melted;
   if (winner == null) {

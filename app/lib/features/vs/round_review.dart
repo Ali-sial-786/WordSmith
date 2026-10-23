@@ -191,7 +191,11 @@ class _RoundReviewState extends ConsumerState<RoundReview> {
               key: ValueKey('review-token-${history[i].round}'),
               round: history[i],
               open: i == _index,
-              color: history[i].winner == null ? null : s.colorOf(history[i].winner),
+              color: history[i].team != null
+                  ? Palette.team(history[i].team!)
+                  : history[i].winner == null
+                  ? null
+                  : s.colorOf(history[i].winner),
               onTap: () => _go(i),
             ),
           ),

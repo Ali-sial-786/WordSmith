@@ -14,12 +14,14 @@ import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 import '../safety/player_actions.dart';
+import '../vs/team_widgets.dart';
 import 'room_chat.dart';
 import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
 
 /// Before a round (co-op or Versus): the code to share, who's in, ready
-/// checks, the heat, the series length in Versus, and the host's start.
+/// checks, the heat, the series length in Versus, the teams and how a round
+/// is won in Team Versus, and the host's start.
 class LobbyView extends ConsumerWidget {
   const LobbyView({super.key, required this.session, required this.onLeave, this.video = RoomVideo.none});
 
@@ -35,16 +37,39 @@ class LobbyView extends ConsumerWidget {
     final hostName = host == null ? null : session.nameOf(host.id);
     final me = session.myPlayer;
     final vs = lobby.isVs;
+    final team = lobby.isTeam && session is VsSession;
     final max = lobby.maxPlayers;
     final connected = lobby.players.where((p) => p.connected).length;
-    final canStart = !vs || connected >= 2;
+    final canStart = !vs || (connected >= 2 && (!team || lobby.teamsEven));
+    Widget row(RoomPlayer p) => _PlayerRow(
+      player: p,
+      name: session.nameOf(p.id),
+      isHost: p.id == lobby.hostId,
+      isMe: p.id == session.me,
+      call: video.call,
+      blocked: ref.watch(accountProvider.select((a) => a.blocked.any((b) => b.id == p.id))),
+      onMore: p.id == session.me
+          ? null
+          : () => showPlayerActions(
+              context,
+              ref,
+              userId: p.id,
+              name: session.nameOf(p.id),
+              avatar: p.avatar,
+              session: session,
+            ),
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         ChatTitle(
           session: session,
           child: Text(
-            vs ? 'Anvil Clash' : 'The Guild Forge',
+            team
+                ? 'Team Clash'
+                : vs
+                ? 'Anvil Clash'
+                : 'The Guild Forge',
             textAlign: TextAlign.center,
             style: displayStyle(24, color: Palette.molten),
           ),
@@ -57,7 +82,11 @@ class LobbyView extends ConsumerWidget {
         else
           HeatBanner(lobby: lobby, me: me, hostName: session.nameOf(lobby.hostId)),
         const SizedBox(height: 12),
-        _VariantPicker(session: session, survival: lobby.survival, vs: vs),
+        // Teams race classic rounds only.
+        if (team)
+          RulePicker(session: session as VsSession)
+        else
+          _VariantPicker(session: session, survival: lobby.survival, vs: vs),
         if (vs && session is VsSession) ...[
           const SizedBox(height: 12),
           _SeriesPicker(session: session as VsSession, series: lobby.series),
@@ -65,30 +94,16 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 18),
         Text('Smiths ${lobby.players.length}/$max', style: text.titleMedium),
         const SizedBox(height: 6),
-        for (final p in lobby.players)
-          _PlayerRow(
-            player: p,
-            name: session.nameOf(p.id),
-            isHost: p.id == lobby.hostId,
-            isMe: p.id == session.me,
-            call: video.call,
-            blocked: ref.watch(accountProvider.select((a) => a.blocked.any((b) => b.id == p.id))),
-            onMore: p.id == session.me
-                ? null
-                : () => showPlayerActions(
-                    context,
-                    ref,
-                    userId: p.id,
-                    name: session.nameOf(p.id),
-                    avatar: p.avatar,
-                    session: session,
-                  ),
-          ),
-        for (var i = lobby.players.length; i < max; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text('Waiting for a smith…', style: text.bodySmall),
-          ),
+        if (team)
+          TeamPicker(session: session as VsSession, row: row)
+        else ...[
+          for (final p in lobby.players) row(p),
+          for (var i = lobby.players.length; i < max; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text('Waiting for a smith…', style: text.bodySmall),
+            ),
+        ],
         const SizedBox(height: 12),
         VideoBar(video: video),
         const SizedBox(height: 12),
@@ -103,7 +118,9 @@ class LobbyView extends ConsumerWidget {
           PlateButton(
             label: vs ? 'Start the series' : 'Start the round',
             sublabel: !canStart
-                ? 'Versus needs at least 2 smiths'
+                ? connected < 2
+                      ? '${team ? 'Team Versus' : 'Versus'} needs at least 2 smiths'
+                      : 'Teams must be the same size'
                 : lobby.players.every((p) => p.ready || p.id == session.me)
                 ? 'Everyone is ready'
                 : 'Not everyone is ready yet',

@@ -429,10 +429,14 @@ abstract final class Palette {
     Color(0xFF3FA58E), // verdigris
     Color(0xFF4A78C8), // cobalt
     Color(0xFF9A6BC8), // titanium
+    Color(0xFFE0849C), // rose gold
   ];
 
-  /// A room player's colour (0–4).
+  /// A room player's colour (0–5).
   static Color player(int color) => players[color % players.length];
+
+  /// Team Versus: Copper (0) and Cobalt (1), in the colours they're named after.
+  static Color team(int team) => team == 1 ? players[3] : players[0];
 }
 
 /// The pale metal of a light scheme's anvil, tiles and molds: its iron,

@@ -53,6 +53,29 @@ describe("room parseClientMessage", () => {
   });
 });
 
+describe("room parseClientMessage: Team Versus", () => {
+  it.each([
+    ['{"op":"TEAM","team":0}', { op: "TEAM", team: 0 }],
+    ['{"op":"TEAM","team":1,"id":"u2"}', { op: "TEAM", team: 1, id: "u2" }],
+    ['{"op":"CONFIG","rule":"first"}', { op: "CONFIG", rule: "first" }],
+    ['{"op":"CONFIG","rule":"combined","series":5}', { op: "CONFIG", rule: "combined", series: 5 }],
+  ])("reads %s", (raw, message) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: true, message });
+  });
+
+  it.each([
+    '{"op":"TEAM"}',
+    '{"op":"TEAM","team":2}',
+    '{"op":"TEAM","team":"0"}',
+    '{"op":"TEAM","team":0,"id":""}',
+    '{"op":"TEAM","team":0,"id":7}',
+    '{"op":"CONFIG","rule":"fastest"}',
+    '{"op":"CONFIG","rule":null}',
+  ])("refuses %j", (raw) => {
+    expect(parseClientMessage(raw)).toEqual({ ok: false });
+  });
+});
+
 describe("room parseClientMessage: CONFIG with a variant (shared/survival.md)", () => {
   it.each([
     ['{"op":"CONFIG","variant":"survival"}', { op: "CONFIG", variant: "survival" }],

@@ -103,5 +103,6 @@ class FirebasePushService implements PushService {
   if (data == null || data['type'] != 'invite') return null;
   final code = (data['code'] as String? ?? '').toUpperCase();
   if (!RegExp(r'^[A-HJ-NP-Z2-9]{6}$').hasMatch(code)) return null;
-  return (code: code, mode: data['mode'] == 'vs' ? 'vs' : 'coop');
+  final mode = data['mode'];
+  return (code: code, mode: mode == 'vs' || mode == 'team' ? mode as String : 'coop');
 }

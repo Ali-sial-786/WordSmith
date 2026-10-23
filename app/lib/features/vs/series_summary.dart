@@ -7,6 +7,7 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/avatar_badge.dart';
 import '../../ui/widgets/game_icon.dart';
 import 'round_review.dart';
+import 'team_widgets.dart';
 
 /// Everyone in a series in podium order, then anyone the podium left out.
 List<String> seriesRacers(SeriesEnd series) => <String>{
@@ -181,7 +182,7 @@ class _RoundRow extends StatelessWidget {
                       child: _Letters(
                         progress: progress[id],
                         color: s.colorOf(id),
-                        won: id == round.winner,
+                        won: round.team != null ? s.teamOf(id) == round.team : id == round.winner,
                         melted: id == round.melted?.id,
                       ),
                     ),
@@ -220,9 +221,34 @@ class _RoundRow extends StatelessWidget {
 }
 
 /// "Ada · finished first", or that nobody won, and whose word melted.
+/// Team Versus: the team that won, and how.
 List<InlineSpan> roundHow(VsSession s, SeriesRound round) {
   final winner = round.winner;
   final melted = round.melted;
+  final team = round.team;
+  if (s.isTeam && team != null) {
+    final scores = round.teamScores ?? const [0, 0];
+    return [
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 3),
+          child: GameIcon('crown', size: 13, color: Palette.molten),
+        ),
+      ),
+      TextSpan(
+        text: team == s.myTeam ? 'Your team' : teamName(team),
+        style: TextStyle(color: Palette.team(team), fontWeight: FontWeight.w700),
+      ),
+      TextSpan(
+        text: winner != null
+            ? ' · ${winner == s.me ? 'you' : s.nameOf(winner)} ${round.how == 'finished' ? 'finished first' : 'had the most letters'}'
+            : round.how == 'finished'
+            ? ' · filled every mold first'
+            : ' · ${scores[team]} letters to ${scores[1 - team]}',
+      ),
+    ];
+  }
   return [
     if (winner == null)
       const TextSpan(text: 'No winner')

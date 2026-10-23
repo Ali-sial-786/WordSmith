@@ -142,7 +142,9 @@ definition of the hub messages. Two hub details:
 
 Overview only. Co-op is specified exactly in
 [`shared/room-protocol.md`](../shared/room-protocol.md); the VS-only parts
-below are the M4 plan.
+below are the M4 plan. Team Versus (`mode: "team"`) is Versus in two teams,
+with a `TEAM` message, a `rule` in `CONFIG` and team fields on the round and
+series messages (shared/room-protocol.md, "Team Versus").
 
 | Op | Direction | Payload |
 |---|---|---|
