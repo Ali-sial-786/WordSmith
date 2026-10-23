@@ -13,7 +13,7 @@
   },
   "vars": {
     // Served by GET /v1/version (docs/TECH.md §13). Bump on each app release.
-    "LATEST_VERSION": "0.6.0",
+    "LATEST_VERSION": "0.7.0",
     "MIN_SUPPORTED_VERSION": "0.1.0",
     // Where release.yml publishes each version's APK ({version} is filled in
     // per download; the deploy workflow fills in {repository}). Players
