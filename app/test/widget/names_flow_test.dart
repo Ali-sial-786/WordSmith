@@ -154,6 +154,26 @@ void main() {
     expect(find.text('Ali_Again'), findsOneWidget);
   });
 
+  testWidgets('the Forge Hall shows the friends leaderboard, and See all opens the whole of it', (tester) async {
+    final server = FakeServer()
+      ..username = 'Ali'
+      ..totalXp = 340;
+    server.friends.add(_sam());
+    await _pumpApp(tester, server, '/');
+    final board = find.byKey(const ValueKey('hall-leaderboard'));
+    await tester.scrollUntilVisible(board, 200, scrollable: find.byType(Scrollable).first);
+    expect(find.descendant(of: board, matching: find.text('You')), findsOneWidget);
+    expect(find.descendant(of: board, matching: find.text('340 XP')), findsOneWidget);
+    expect(find.descendant(of: board, matching: find.text('sam')), findsOneWidget);
+    expect(server.calls.where((c) => c == 'GET /leaderboard'), hasLength(1));
+
+    await tester.ensureVisible(find.descendant(of: board, matching: find.text('See all')));
+    await tester.tap(find.descendant(of: board, matching: find.text('See all')));
+    await tester.pumpAndSettle();
+    final tabs = tester.widget<TabBar>(find.byType(TabBar));
+    expect(DefaultTabController.of(tester.element(find.byWidget(tabs))).index, 1, reason: 'on the leaderboard');
+  });
+
   testWidgets('a nickname replaces the username in the friends list, the leaderboard and a room', (tester) async {
     final server = FakeServer()..username = 'Ali';
     server.friends.add(_sam());

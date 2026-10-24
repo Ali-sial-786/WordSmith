@@ -90,6 +90,8 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('FORGED!'), findsOneWidget);
+    // The bonus word went to the Scrap Bin, and the card says so.
+    expect(find.descendant(of: find.byKey(const ValueKey('scrap-words')), matching: find.text('ART')), findsOneWidget);
 
     final history = container.read(historyProvider);
     expect(history, hasLength(1));
@@ -209,5 +211,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SeriesSummary), findsOneWidget);
     expect(find.byType(PlayDetailScreen), findsOneWidget);
+  });
+
+  testWidgets('Profile opens every word found, game words and Scrap Bin apart, newest first', (tester) async {
+    final vs = reviewSession();
+    addTearDown(vs.dispose);
+    final history = [
+      PlayRecord(
+        id: 'campaign-1',
+        kind: PlayKind.campaign,
+        at: _ago(const Duration(minutes: 2)),
+        title: 'Tin',
+        subtitle: 'Puzzle 1 of 2',
+        boards: [
+          PlayedBoard.fromBoard(Board(tearPuzzle(), foundSlots: [0, 2], bonusFound: ['ART'])),
+        ],
+      ),
+      vsRecord(vs, classicSeries(), at: _ago(const Duration(days: 1)))!,
+    ];
+    await _pumpApp(tester, '/profile', history: history);
+    await tester.scrollUntilVisible(find.text('Word history'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('15 game words · 6 in the Scrap Bin'), findsOneWidget);
+    await tester.tap(find.text('Word history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Game words (15)'), findsOneWidget);
+    expect(find.text('Scrap Bin (6)'), findsOneWidget);
+    final game = find.byKey(const ValueKey('words-game'));
+    expect(find.descendant(of: game, matching: find.text('Today')), findsOneWidget);
+    expect(find.descendant(of: game, matching: find.text('Yesterday')), findsOneWidget);
+    // Today's campaign words come before yesterday's Versus.
+    final tear = tester.getTopLeft(find.descendant(of: game, matching: find.text('TEAR'))).dy;
+    final stone = tester.getTopLeft(find.descendant(of: game, matching: find.text('STONE')).first).dy;
+    expect(tear, lessThan(stone));
+    expect(find.descendant(of: game, matching: find.text('ART')), findsNothing);
+
+    await tester.tap(find.text('Scrap Bin (6)'));
+    await tester.pumpAndSettle();
+    final scrap = find.byKey(const ValueKey('words-scrap'));
+    expect(find.descendant(of: scrap, matching: find.text('ART')), findsOneWidget);
+    expect(find.descendant(of: scrap, matching: find.text('TEN')), findsOneWidget);
+    expect(find.descendant(of: scrap, matching: find.textContaining('Versus · ')), findsNWidgets(5));
   });
 }

@@ -187,7 +187,9 @@ List<_Section> _sections() => [
             "**Master of the Forge**. Hints come from your own stock, and letters they reveal score nothing. "
             "The host's level sets the heat.\n\n"
             '**Survival:** the host can pick it in the lobby. The team shares one hot word, and if it melts '
-            'the round is over.',
+            'the round is over.\n\n'
+            'When the host forges again, everyone gets 20 seconds to look over the results; tap '
+            "**I'm ready** and the next round starts as soon as everyone has.",
       ),
       _Entry(
         'trophy',
@@ -197,7 +199,9 @@ List<_Section> _sections() => [
             'best of 3, 5, 7 or 10. No hints in a clash, but Turn is fine.\n\n'
             '**Survival clash:** the host can pick it in the lobby. Each smith gets their own hot word with a '
             'countdown. The first word to melt ends the round for everyone, and the smith who let it melt '
-            "can't win that round.",
+            "can't win that round.\n\n"
+            "Between rounds you get 30 seconds of standings; tap **I'm ready** and the next round starts as "
+            'soon as everyone playing it has.',
       ),
       _Entry(
         'friends',
@@ -214,8 +218,8 @@ List<_Section> _sections() => [
         'friends',
         'Friends',
         "Add friends by their smith name. See who's online, forging solo or in a room, and tap **Join** to "
-            'hop into their room. The **Leaderboard** tab ranks you and your friends by XP. Room invites '
-            'from friends pop up in the Forge Hall.',
+            'hop into their room. The **Leaderboard** tab ranks you and your friends by XP, and its top shows '
+            'in the Forge Hall. Room invites from friends pop up there too.',
       ),
     ],
   ),
@@ -276,6 +280,13 @@ List<_Section> _sections() => [
       'Every puzzle you finish on this phone, in every mode, newest first. Open one to see its whole mold: '
           'the words you forged, the ones you missed glowing, and your bonus words. Tap any word for its '
           'meaning. Open it from your Profile.',
+    ),
+    const _Entry(
+      'chisel',
+      'Word history',
+      'Every word you found in those puzzles, newest first: the **game words** you forged on one tab, '
+          'the bonus words that went to your **Scrap Bin** on the other. Tap any word for its meaning. Open '
+          'it from your Profile.',
     ),
     const _Entry(
       'book',

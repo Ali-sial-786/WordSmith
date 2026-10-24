@@ -381,6 +381,8 @@ describe("a co-op round", () => {
     sb.send({ op: "AGAIN" });
     expect(await sb.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "not_host" });
     sa.send({ op: "AGAIN" });
+    // The next round waits until everyone is ready; the host already is.
+    sb.send({ op: "NEXT" });
     const again = await sb.next({ op: "ROUND_START" });
     expect(again.round).toBe(2);
     expect((await sb.next({ op: "LOBBY" })).phase).toBe("countdown");

@@ -29,6 +29,7 @@ Future<ForgedAction> showForgedOverlay(
   required List<Pickup> pickups,
   required int bonusWords,
   List<String> words = const [],
+  List<String> scrapWords = const [],
   DailyOutcome? daily,
   bool dailyLate = false,
   int? lorePage,
@@ -53,6 +54,7 @@ Future<ForgedAction> showForgedOverlay(
       pickups: pickups,
       bonusWords: bonusWords,
       words: words,
+      scrapWords: scrapWords,
       daily: daily,
       dailyLate: dailyLate,
       lorePage: lorePage,
@@ -70,6 +72,7 @@ class _ForgedCard extends StatefulWidget {
     required this.pickups,
     required this.bonusWords,
     this.words = const [],
+    this.scrapWords = const [],
     this.daily,
     this.dailyLate = false,
     this.lorePage,
@@ -86,6 +89,9 @@ class _ForgedCard extends StatefulWidget {
 
   /// The puzzle's words, to look up.
   final List<String> words;
+
+  /// The bonus words found in it, which went to the Scrap Bin.
+  final List<String> scrapWords;
 
   /// The Daily Commission's streak, when that's what was forged.
   final DailyOutcome? daily;
@@ -263,6 +269,10 @@ class _ForgedCardState extends State<_ForgedCard> with SingleTickerProviderState
                           ),
                       ],
                     ),
+                  ],
+                  if (widget.scrapWords.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    ScrapWords(words: widget.scrapWords),
                   ],
                   if (r.gildedPiece) ...[const SizedBox(height: 14), _MasterworkNote(reward: r)],
                   if (chapterDone && !campaignDone) ...[
@@ -499,6 +509,57 @@ class _LoreNote extends ConsumerWidget {
           Text(page.text, style: text.bodyMedium),
         ],
       ),
+    );
+  }
+}
+
+/// The bonus words a game sent to the Scrap Bin, in the bin's green, each
+/// opening its meaning.
+class ScrapWords extends StatelessWidget {
+  const ScrapWords({super.key, required this.words, this.title = 'Into the Scrap Bin', this.colorOf = const {}});
+
+  final List<String> words;
+  final String title;
+
+  /// A word's colour instead of the bin's green: in a room, who found it.
+  final Map<String, Color> colorOf;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      key: const ValueKey('scrap-words'),
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GameIcon('scrap_bucket', size: 16, color: Palette.verdigris),
+            const SizedBox(width: 6),
+            Text(title, style: text.labelMedium?.copyWith(color: Palette.verdigris)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final w in words)
+              Builder(
+                builder: (context) {
+                  final color = colorOf[w] ?? Palette.verdigris;
+                  return ActionChip(
+                    label: Text(w, style: letterStyle(13, color: color)),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: color.withValues(alpha: 0.14),
+                    side: BorderSide(color: color.withValues(alpha: 0.5)),
+                    onPressed: () => showMeanings(context, [w]),
+                  );
+                },
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

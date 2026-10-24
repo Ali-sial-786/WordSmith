@@ -600,12 +600,25 @@ void main() {
     );
     expect(find.byType(VsResultsView), findsNothing);
 
+    expect(find.byKey(const ValueKey('victory-popup')), findsNothing, reason: 'not over the molds');
+
     await tester.tap(find.text('See the results'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     expect(find.byType(VsResultsView), findsOneWidget);
     expect(find.byType(VsStandingsView), findsNothing);
+
+    // The win, over the podium.
+    final popup = find.byKey(const ValueKey('victory-popup'));
+    expect(popup, findsOneWidget);
+    expect(find.descendant(of: popup, matching: find.text('YOU WON!')), findsOneWidget);
+    expect(find.descendant(of: popup, matching: find.text('Won the series 3–1')), findsOneWidget);
+    await tester.tap(find.text('See the podium'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(popup, findsNothing);
+    expect(find.byType(VsResultsView), findsOneWidget);
   });
 
   testWidgets('after the round that decides the series, the podium comes by itself', (tester) async {

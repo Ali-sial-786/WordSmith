@@ -390,6 +390,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
         replay: true,
         pickups: const [],
         bonusWords: game.board.bonusFound.length,
+        scrapWords: game.board.bonusFound.toList()..sort(),
         words: [for (final s in game.board.puzzle.slots) s.word]
           ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
       );
@@ -407,6 +408,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
       lorePage: game is DailyGame && game.outcome?.alreadyDone == false ? game.info.total : null,
       pickups: [for (final i in _game.board.collectedPickups) _game.board.pickups[i]],
       bonusWords: _game.board.bonusFound.length,
+      scrapWords: _game.board.bonusFound.toList()..sort(),
       words: [for (final s in _game.board.puzzle.slots) s.word]
         ..sort((a, b) => b.length != a.length ? b.length - a.length : a.compareTo(b)),
     );
@@ -480,11 +482,11 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      RoundMetalButton(icon: 'turn', tooltip: 'Turn the tiles', onPressed: _finishing ? null : _turn),
                       KeyedSubtree(
                         key: _scrapKey,
                         child: _ScrapBin(count: profile.scrapBin, words: _game.board.bonusFound),
                       ),
-                      RoundMetalButton(icon: 'turn', tooltip: 'Turn the tiles', onPressed: _finishing ? null : _turn),
                     ],
                   ),
                 );

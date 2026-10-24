@@ -28,6 +28,7 @@ import '../../ui/widgets/xp_bar.dart';
 import '../../update/app_updater.dart';
 import '../coop/coop_entry.dart';
 import '../update/update_sheet.dart';
+import 'hall_leaderboard.dart';
 import 'help_sheet.dart';
 import '../../ui/widgets/forge_frame.dart';
 
@@ -195,6 +196,7 @@ class HallScreen extends ConsumerWidget {
                           icon: 'friends',
                           onPressed: account.isReady ? () => showRoomEntry(context, 'team') : null,
                         ),
+                        if (account.isReady) ...[const SizedBox(height: 12), const HallLeaderboard()],
                         const SizedBox(height: 12),
                         Row(
                           children: [

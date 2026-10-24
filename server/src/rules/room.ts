@@ -37,7 +37,7 @@ export function normalizeRoomCode(raw: string): string | null {
 /** `team` is Team Versus: Versus with two teams (rules/teams.ts). */
 export type RoomMode = "coop" | "vs" | "team";
 export const ROOM_MODES: readonly RoomMode[] = ["coop", "vs", "team"];
-/** `standings` (the 10 s between Versus rounds) is Versus only. */
+/** `standings` (the time between Versus rounds) is Versus only. */
 export type RoomPhase = "lobby" | "countdown" | "round" | "standings" | "results";
 
 export function isRoomMode(value: unknown): value is RoomMode {
@@ -65,6 +65,12 @@ export function isPlayingPhase(phase: RoomPhase): boolean {
 }
 
 export const COUNTDOWN_MS = 3_000;
+/**
+ * Co-op: how long after the host's AGAIN the next round's countdown waits,
+ * so everyone can finish looking at the results; it starts sooner once
+ * every connected player is ready (NEXT).
+ */
+export const COOP_NEXT_MS = 20_000;
 /** A dropped player keeps their seat and points this long. */
 export const REJOIN_GRACE_MS = 30_000;
 /** A room nobody is connected to closes after this. */

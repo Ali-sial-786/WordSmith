@@ -74,6 +74,17 @@ final serverVersionProvider = FutureProvider<({String latest, String minSupporte
   }
 }, retry: (_, _) => null);
 
+/// My friends' leaderboard (and me), for the Forge Hall: fetched again when
+/// my XP or my friends change. Null without online play.
+final leaderboardProvider = FutureProvider<List<LeaderboardEntry>?>((ref) async {
+  final (ready, _, _) = ref.watch(
+    accountProvider.select((a) => (a.isReady, a.server?.totalXp, a.friends.friends.length)),
+  );
+  final api = ref.read(apiClientProvider);
+  if (!ready || api == null) return null;
+  return api.leaderboard();
+}, retry: (_, _) => null);
+
 /// Makes a room's video chat for this player (user ID); null without online play.
 final videoCallFactoryProvider = Provider<VideoCall Function(String me)?>((_) => null);
 

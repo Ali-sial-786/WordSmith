@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +20,7 @@ import '../../ui/widgets/forge_background.dart';
 import '../../video/video_call.dart';
 import '../vs/vs_results_view.dart';
 import '../vs/vs_round_view.dart';
+import '../vs/victory_popup.dart';
 import '../vs/vs_standings_view.dart';
 import 'emotes.dart';
 import 'lobby_view.dart';
@@ -254,9 +256,27 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     if (e == null || (s is VsSession && s.showingFinalRound)) return;
     _podium = null;
     final sfx = ref.read(sfxProvider);
-    e.winner == s?.me ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
+    // Team Versus: my team won it.
+    final won = e.isTeam ? e.team != null && s is VsSession && e.team == s.myTeam : e.winner == s?.me;
+    won ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
     if ((e.xp[s?.me]?.levelUps ?? 0) > 0) {
       Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
+    }
+    if (won) {
+      final tally = e.teamTally ?? [for (final p in e.podium.take(2)) p.wins];
+      final score = tally.length == 2 && tally[0] != tally[1]
+          ? 'Won the series ${max(tally[0], tally[1])}–${min(tally[0], tally[1])}'
+          : 'Won the series';
+      // After this frame: this can run while the session is notifying.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showVictoryPopup(
+          context,
+          title: e.isTeam ? 'YOUR TEAM WON!' : 'YOU WON!',
+          line: e.forfeit ? '$score: the others left' : score,
+          reducedMotion: ref.read(settingsProvider).reducedMotion,
+        );
+      });
     }
   }
 
@@ -283,9 +303,12 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           if (record != null) _history.add(record);
         }
       case VsRoundEnd(:final winner, :final melted):
+        final s = _session;
+        // Team Versus: my team won it.
+        final won = e.isTeam ? e.team != null && s is VsSession && e.team == s.myTeam : winner == s?.me;
         // After the melt, if there was one.
         Future.delayed(melted == null ? Duration.zero : meltDuration, () {
-          winner == _session?.me ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
+          won ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
         });
       case SeriesEnd():
         _podium = e;

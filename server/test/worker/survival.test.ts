@@ -60,6 +60,8 @@ async function forcePuzzle(uid: string, id: string): Promise<void> {
 /** START (or AGAIN), then skip the 3 s countdown by running the alarm. Returns the first socket's ROUND_START. */
 async function start(host: Socket, code: string, sockets: Socket[], op: "START" | "AGAIN" = "START"): Promise<Message> {
   host.send({ op });
+  // Co-op's AGAIN waits until everyone is ready (NEXT); the host already is.
+  if (op === "AGAIN") for (const s of sockets) if (s !== host) s.send({ op: "NEXT" });
   const first = await sockets[0]!.next({ op: "ROUND_START" });
   for (const s of sockets.slice(1)) await s.next({ op: "ROUND_START" });
   expect(await runDurableObjectAlarm(stub(code))).toBe(true);

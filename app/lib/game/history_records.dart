@@ -98,6 +98,11 @@ PlayRecord? coopRecord(CoopSession s, RoundEnd end, {required int at}) {
       'points': {for (final p in end.players) p.id: p.points},
       'words': {for (final p in end.players) p.id: p.words},
       if (mine != null) 'myPoints': mine.points,
+      // My own bonus words, for the word history (the board's are everyone's).
+      'scrap': [
+        for (final (w, by) in s.bonusWords)
+          if (by == s.me) w,
+      ],
       if (end.xp[s.me] != null) 'xp': end.xp[s.me]!.xp,
     },
   );

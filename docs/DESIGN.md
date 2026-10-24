@@ -294,7 +294,7 @@ One shared mold, one timer, everyone forging together.
    - Each player's points, words and longest word.
    - The **"Master of the Forge" (MVP)** banner goes to the top scorer. If two players are tied, the one who reached that score first gets it.
    - XP is added to everyone's profiles.
-7. The host can **Forge Again** (new puzzle, same group) or close the room.
+7. The host can **Forge Again** (new puzzle, same group) or close the room. Forge Again gives everyone 20 seconds to look over the results first; the round starts sooner if everyone taps "I'm ready".
 
 ### Scoring
 - **Grid word:** 10 points per letter not revealed by a hint, so THREAD with no hints is 60.
@@ -333,7 +333,7 @@ the player's initial, so it's still readable for colour-blind players.
 - **The series ends early once nobody can catch the leader.** That happens when the leader's wins are more than anyone else's wins plus the rounds left.
   - With 2 players: best of 3 is first to 2, best of 5 is first to 3, best of 7 is first to 4, and best of 10 is first to 6.
 - **Tied at the end?** Only the tied players play a **sudden-death round** under the same rules, while everyone else watches live. The "most letters, then who got there first" rule almost always produces a winner. In the rare case that nobody fills a single letter, the sudden-death round is played again.
-- **Between rounds:** 10 seconds of standings showing the round winner, how they won (finished or on time), the series tally, and "Round 4 of up to 7".
+- **Between rounds:** up to 30 seconds of standings showing the round winner, how they won (finished or on time), the series tally, "Round 4 of up to 7", and the bonus words that went to my Scrap Bin. The next round starts sooner once everyone playing it taps "I'm ready".
 - **End of the series:** a podium ranked by round wins, with XP added to everyone's profiles. Every round can be looked back at from there: the whole mold with the words you forged and the ones you missed, everyone's molds, and everyone's Scrap Bin.
 
 ### 9.3 Player colours

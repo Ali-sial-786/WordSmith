@@ -9,6 +9,7 @@ import '../../engine/progression.dart';
 import '../../game/account.dart';
 import '../../game/daily_game.dart';
 import '../../game/providers.dart';
+import '../../game/word_history.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
 import '../../ui/widgets/game_icon.dart';
@@ -77,6 +78,8 @@ class ProfileScreen extends ConsumerWidget {
           const _ArmoryCard(),
           const SizedBox(height: 12),
           const _HistoryCard(),
+          const SizedBox(height: 12),
+          const _WordsCard(),
           const SizedBox(height: 16),
           Text('Records', style: text.titleMedium),
           const SizedBox(height: 8),
@@ -199,6 +202,57 @@ class _Stat extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The way to the word history: every word forged, and every bonus word.
+class _WordsCard extends ConsumerWidget {
+  const _WordsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final words = WordHistory.from(ref.watch(historyProvider));
+    return InkWell(
+      key: const ValueKey('words-card'),
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.push('/words'),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Palette.soot,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Palette.verdigris.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: Center(child: GameIcon('chisel', size: 36, color: Palette.verdigris)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Word history', style: text.titleMedium),
+                  Text(
+                    words.game.isEmpty && words.scrap.isEmpty
+                        ? 'Every word you find, game words and Scrap Bin, newest first'
+                        : '${words.game.length} game words · ${words.scrap.length} in the Scrap Bin',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Palette.steel),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// The way into the puzzle history, with what was played last.

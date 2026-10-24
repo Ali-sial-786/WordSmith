@@ -130,6 +130,7 @@ class RoomLobby extends RoomEvent {
     this.chosenHeat,
     int? autoHeat,
     this.rule = 'combined',
+    this.nextAt,
   }) : autoHeat = autoHeat ?? heat;
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
@@ -147,6 +148,7 @@ class RoomLobby extends RoomEvent {
     chosenHeat: j['heatChoice'] is int ? j['heatChoice'] as int : null,
     autoHeat: j['autoHeat'] as int?,
     rule: j['rule'] as String? ?? 'combined',
+    nextAt: (j['nextAt'] as num?)?.toInt(),
   );
 
   final String code;
@@ -172,6 +174,10 @@ class RoomLobby extends RoomEvent {
 
   /// Team Versus: how rounds are won, `combined` or `first`.
   final String rule;
+
+  /// Co-op, after the host's AGAIN: when the next round starts (server ms),
+  /// unless everyone is ready sooner.
+  final int? nextAt;
 
   /// Versus series are played in Versus and Team Versus rooms.
   bool get isVs => mode == 'vs' || mode == 'team';
@@ -1019,6 +1025,9 @@ class RoomClient {
   void team(int team, {String? id}) => _send({'op': 'TEAM', 'team': team, 'id': ?id});
   void startRound() => _send({'op': 'START'});
   void again() => _send({'op': 'AGAIN'});
+
+  /// Ready for the next round (the Versus standings, or co-op's wait after AGAIN).
+  void next() => _send({'op': 'NEXT'});
   void emote(String emote) => _send({'op': 'EMOTE', 'emote': emote});
   void chat(String text) => _send({'op': 'CHAT', 'text': text});
 

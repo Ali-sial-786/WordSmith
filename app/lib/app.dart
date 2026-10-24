@@ -19,6 +19,7 @@ import 'features/daily/lore_screen.dart';
 import 'features/friends/friends_screen.dart';
 import 'features/hall/hall_screen.dart';
 import 'features/history/history_screen.dart';
+import 'features/history/words_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/safety/blocked_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -56,6 +57,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
     GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
+    GoRoute(path: '/words', builder: (_, _) => const WordsScreen()),
     GoRoute(path: '/blocked', builder: (_, _) => const BlockedScreen()),
     GoRoute(path: '/delete-account', builder: (_, _) => const DeleteAccountScreen()),
     GoRoute(path: '/armory', builder: (_, _) => const ArmoryScreen()),
@@ -64,7 +66,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/credits', builder: (_, _) => const CreditsScreen()),
     GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
     GoRoute(path: '/setup', builder: (_, _) => const SetupScreen()),
-    GoRoute(path: '/friends', builder: (_, _) => const FriendsScreen()),
+    GoRoute(
+      path: '/friends',
+      builder: (_, state) => FriendsScreen(leaderboard: state.uri.queryParameters['tab'] == 'leaderboard'),
+    ),
     GoRoute(
       path: '/daily',
       builder: (_, state) =>

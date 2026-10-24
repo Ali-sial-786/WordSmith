@@ -7,6 +7,7 @@ describe("room parseClientMessage", () => {
     ['{"op":"START"}', { op: "START" }],
     ['{"op":"AGAIN","extra":1}', { op: "AGAIN" }],
     ['{"op":"LEAVE"}', { op: "LEAVE" }],
+    ['{"op":"NEXT"}', { op: "NEXT" }],
     ['{"op":"SUBMIT","word":"tear","seq":0}', { op: "SUBMIT", word: "tear", seq: 0 }],
     ['{"op":"SUBMIT","word":"nonsense!","seq":12}', { op: "SUBMIT", word: "nonsense!", seq: 12 }],
     ['{"op":"HINT","kind":"hammer"}', { op: "HINT", hint: { kind: "hammer" } }],

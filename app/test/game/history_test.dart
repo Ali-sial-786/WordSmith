@@ -106,7 +106,9 @@ void main() {
         ..claim(0, 'STONE', 'u1')
         ..claim(3, 'TONES', 'u2')
         ..claim(4, 'NET', null));
-    s.bonusWords.add(('NOTE', 'u2'));
+    s.bonusWords
+      ..add(('NOTE', 'u2'))
+      ..add(('ONE', 'u1'));
     final end = RoundEnd.fromJson({
       'reason': 'timeout',
       'teamScore': 112,
@@ -136,7 +138,8 @@ void main() {
     expect(board.owners, {0: 'u1', 3: 'u2'});
     expect(board.auto, {4});
     expect([for (final s in board.missed) s.word], ['SEAT', 'EATS']);
-    expect(board.bonus, ['NOTE']);
+    expect(board.bonus, ['NOTE', 'ONE']);
+    expect(record.result['scrap'], ['ONE'], reason: 'the bonus words I found myself');
     // And it reads back the same.
     final back = PlayRecord.fromJson(jsonDecode(jsonEncode(record.toJson())) as Map<String, dynamic>);
     expect(back.boards.single.owners, {0: 'u1', 3: 'u2'});

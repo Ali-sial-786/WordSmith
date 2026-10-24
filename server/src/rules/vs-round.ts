@@ -61,8 +61,12 @@ import { podium, resolveVsRound, seriesStatus, type SeriesLength, type VsRoundHo
 
 /** Series length until the host picks one (CONFIG). */
 export const DEFAULT_SERIES: SeriesLength = 3;
-/** How long the standings show between rounds before the next countdown starts by itself. */
-export const STANDINGS_MS = 10_000;
+/**
+ * How long the standings show between rounds before the next countdown
+ * starts by itself; sooner once every connected racer of the next round is
+ * ready (NEXT).
+ */
+export const STANDINGS_MS = 30_000;
 /**
  * Round summaries a series keeps for `SERIES_END.history`: the latest this
  * many. Each is about 13 KB at most (5 racers who all found every bonus word

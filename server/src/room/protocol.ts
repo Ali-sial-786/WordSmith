@@ -5,7 +5,7 @@
  *
  * Client → server: READY, CONFIG (the variant, the heat, the Versus series and
  * the Team Versus rule), TEAM (Team Versus), START, SUBMIT, HINT, AGAIN,
- * LEAVE, EMOTE, CHAT, and the exact text
+ * NEXT (ready for the next round), LEAVE, EMOTE, CHAT, and the exact text
  * `{"op":"PING"}` (answered `{"op":"PONG"}` by the runtime without waking
  * the room).
  *
@@ -52,6 +52,8 @@ export type ClientMessage =
   | { readonly op: "SUBMIT"; readonly word: string; readonly seq: number }
   | { readonly op: "HINT"; readonly hint: HintRequest }
   | { readonly op: "AGAIN" }
+  /** Ready for the next round: during the Versus standings, or co-op's wait after AGAIN. */
+  | { readonly op: "NEXT" }
   | { readonly op: "LEAVE" }
   | { readonly op: "EMOTE"; readonly emote: Emote }
   /** `text` is already tidied ({@link cleanChatText}); the room stars out profanity before sending it on. */
@@ -141,6 +143,7 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
       return { ok: true, message: { op: "TEAM", team: m.team, ...(m.id === undefined ? {} : { id: m.id }) } };
     case "START":
     case "AGAIN":
+    case "NEXT":
     case "LEAVE":
       return { ok: true, message: { op: m.op } };
     case "SUBMIT":
@@ -203,6 +206,12 @@ export interface LobbyFields {
   readonly variant?: Variant;
   /** Team Versus only: how rounds are won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
   readonly rule?: TeamRule;
+  /**
+   * Co-op, after the host's AGAIN: when the next round's countdown starts
+   * (server ms), unless everyone is ready (NEXT) sooner. Players' `ready`
+   * says who is.
+   */
+  readonly nextAt?: number;
 }
 
 export interface XpBody {

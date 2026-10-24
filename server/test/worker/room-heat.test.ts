@@ -37,6 +37,8 @@ async function puzzleOf(code: string): Promise<MpPuzzle> {
 /** START or AGAIN, then the countdown alarm. */
 async function start(host: Socket, code: string, sockets: Socket[], op: "START" | "AGAIN" = "START"): Promise<Message> {
   host.send({ op });
+  // Co-op's AGAIN waits until everyone is ready (NEXT); the host already is.
+  if (op === "AGAIN") for (const s of sockets) if (s !== host) s.send({ op: "NEXT" });
   let first: Message | null = null;
   for (const s of sockets) first = await s.next({ op: "ROUND_START" });
   expect(await runDurableObjectAlarm(stub(code))).toBe(true);

@@ -10,7 +10,9 @@ import '../../ui/widgets/game_icon.dart';
 import '../../ui/widgets/metal_button.dart';
 import '../../ui/widgets/xp_award.dart';
 import '../../ui/widgets/forge_frame.dart';
+import '../solo/forged_overlay.dart' show ScrapWords;
 import 'lobby_view.dart' show HeatBanner, HeatPicker;
+import 'next_round_bar.dart';
 import 'room_chat.dart';
 
 /// After a round: stars, team score, MVP, everyone's points and XP (with
@@ -185,6 +187,15 @@ class ResultsView extends StatelessWidget {
               style: text.bodySmall,
             ),
           ),
+        // The bonus words the team found this round; mine went to my Scrap Bin.
+        if (session.bonusWords.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          ScrapWords(
+            title: 'Bonus words this round',
+            words: [for (final (w, _) in session.bonusWords) w]..sort(),
+            colorOf: {for (final (w, by) in session.bonusWords) w: session.colorOf(by)},
+          ),
+        ],
         const SizedBox(height: 18),
         if (session.lobby != null) ...[
           Text('Next round', textAlign: TextAlign.center, style: text.labelSmall),
@@ -195,7 +206,9 @@ class ResultsView extends StatelessWidget {
             HeatBanner(lobby: session.lobby!, me: session.myPlayer, hostName: session.nameOf(session.lobby!.hostId)),
           const SizedBox(height: 12),
         ],
-        if (session.isHost)
+        if (session.lobby?.nextAt case final nextAt?)
+          NextRoundBar(session: session, endsAt: nextAt, players: [for (final p in session.lobby!.players) p.id])
+        else if (session.isHost)
           PlateButton(
             label: 'Forge again',
             sublabel: 'New puzzle, same crew',

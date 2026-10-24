@@ -287,6 +287,9 @@ abstract class RoomSession extends ChangeNotifier {
   void setHeat(int? tier) => client.config(heat: tier ?? 'auto');
   void startRound() => client.startRound();
   void again() => client.again();
+
+  /// Ready for the next round, between rounds: everyone ready starts it sooner.
+  void readyForNext() => client.next();
   void emote(String id) => client.emote(id);
   Future<void> leave() => client.leave();
 

@@ -455,6 +455,22 @@ void main() {
     expect(room.received.single, {'op': 'AGAIN'});
   });
 
+  test('the wait after AGAIN reads when it ends, and I can say I\'m ready for it', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..send({'op': 'WELCOME', 'you': 'u1', 'serverNow': now})
+      ..send({..._lobby(), 'phase': 'results', 'nextAt': now + 20000});
+    await until(() => session.lobby != null);
+    expect(session.lobby!.nextAt, now + 20000);
+    session.readyForNext();
+    await until(() => room.received.isNotEmpty);
+    expect(room.received.single, {'op': 'NEXT'});
+    room.send({..._lobby(), 'phase': 'countdown'});
+    await until(() => session.lobby!.phase == 'countdown');
+    expect(session.lobby!.nextAt, isNull);
+  });
+
   test('results carry what the heat added to my XP', () {
     final end = RoundEnd.fromJson({
       'reason': 'complete',

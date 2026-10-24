@@ -13,11 +13,13 @@ import '../../ui/widgets/metal_button.dart';
 import '../coop/emotes.dart';
 import '../coop/room_chat.dart';
 import 'rival_molds.dart';
+import '../solo/forged_overlay.dart' show ScrapWords;
+import '../coop/next_round_bar.dart';
 import 'round_flash.dart';
 import 'team_widgets.dart';
 import 'vs_widgets.dart';
 
-/// The 10 seconds between Versus rounds: the round's card (who won and how),
+/// The time between Versus rounds (up to 30 s): the round's card (who won and how),
 /// everyone's molds, the series tally, and what comes next. After the round
 /// that decided the series, the same, then on to the podium.
 class VsStandingsView extends StatefulWidget {
@@ -100,7 +102,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
             textAlign: TextAlign.center,
             style: displayStyle(18, color: next.suddenDeath ? Palette.quenchRed : Palette.molten),
           ),
-          Text('Starts in $secs', textAlign: TextAlign.center, style: text.titleMedium),
+          if (end.standingsEndsAt != null)
+            NextRoundBar(session: s, endsAt: end.standingsEndsAt!, players: next.racers)
+          else
+            Text('Starts in $secs', textAlign: TextAlign.center, style: text.titleMedium),
           if (next.suddenDeath && !next.racers.contains(s.me))
             Text("You'll watch this one", textAlign: TextAlign.center, style: text.bodySmall),
         ],
@@ -117,6 +122,10 @@ class _VsStandingsViewState extends State<VsStandingsView> {
             ),
           ),
           Text('Glowing letters are the words you missed.', textAlign: TextAlign.center, style: text.bodySmall),
+        ],
+        if (s.scrapWords.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          ScrapWords(words: [...s.scrapWords]..sort()),
         ],
       ],
     );

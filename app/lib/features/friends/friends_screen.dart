@@ -13,7 +13,10 @@ import '../../ui/widgets/gold_field.dart';
 import '../safety/player_actions.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
-  const FriendsScreen({super.key});
+  const FriendsScreen({super.key, this.leaderboard = false});
+
+  /// Open on the Leaderboard tab.
+  final bool leaderboard;
 
   @override
   ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
@@ -75,6 +78,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.leaderboard ? 1 : 0,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Friends', style: displayStyle(22)),

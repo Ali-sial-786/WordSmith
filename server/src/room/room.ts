@@ -80,6 +80,7 @@ import {
   CHAT_HISTORY,
   CHAT_PER_SECOND,
   COLORS,
+  COOP_NEXT_MS,
   COUNTDOWN_MS,
   EMPTY_CLOSE_MS,
   freeColor,
@@ -230,6 +231,8 @@ interface Room {
   teams?: Record<string, TeamId>;
   /** Team Versus: how the next series' rounds are won (CONFIG); `"combined"` while absent. */
   rule?: TeamRule;
+  /** Co-op, after the host's AGAIN: when the next round's countdown starts, unless everyone is ready sooner. */
+  nextAt?: number;
 }
 
 /** Where a round's clock stands, whatever the mode. */
@@ -590,6 +593,8 @@ export class RoomDO extends DurableObject<Env> {
     this.write(ROOM, room);
     this.syncHeat(room, now, ws);
     this.broadcast(this.lobbyMessage(room, ws), ws);
+    // Everyone still here may be ready for the next round.
+    await this.startIfAllReady(room, now);
     await this.settle();
   }
 
@@ -662,8 +667,13 @@ export class RoomDO extends DurableObject<Env> {
         if (room.hostId !== player.id) return this.error(ws, "not_host");
         if (this.connectedPlayers(room).length < MIN_PLAYERS[room.mode]) return this.error(ws, "not_enough_players");
         if (room.mode === "team" && !this.teamsEven(room)) return this.error(ws, "uneven_teams");
-        return isVersus(room.mode) ? this.startSeries(ws, from) : this.startRound(ws, from);
+        if (isVersus(room.mode)) return this.startSeries(ws, from);
+        // Co-op's next round waits a little, so nobody is pulled away from the results.
+        return from === "results" ? this.waitForNext(room, player, now) : this.startRound(ws, from);
       }
+
+      case "NEXT":
+        return this.readyForNext(ws, room, player, now);
 
       case "TEAM":
         return this.moveToTeam(ws, room, player, message.team, message.id ?? player.id);
@@ -678,8 +688,9 @@ export class RoomDO extends DurableObject<Env> {
 
       case "LEAVE":
         this.removePlayer(room, player, now);
-        // Leaving may have decided a Versus series.
+        // Leaving may have decided a Versus series, or left only ready players waiting for the next round.
         await this.announceQueued();
+        await this.startIfAllReady(room, now);
         return;
 
       case "EMOTE":
@@ -707,6 +718,58 @@ export class RoomDO extends DurableObject<Env> {
     teams[target] = team;
     this.write(ROOM, room);
     this.broadcast(this.lobbyMessage(room));
+  }
+
+  /**
+   * Co-op AGAIN: the next round's countdown starts in COOP_NEXT_MS, or as
+   * soon as every connected player is ready; the host already is. Another
+   * AGAIN meanwhile changes nothing.
+   */
+  private async waitForNext(room: Room, host: Player, now: number): Promise<void> {
+    if (room.nextAt !== undefined) return;
+    room.nextAt = now + COOP_NEXT_MS;
+    for (const p of room.players) p.ready = p === host;
+    this.write(ROOM, room);
+    this.broadcast(this.lobbyMessage(room));
+    await this.startIfAllReady(room, now);
+  }
+
+  /**
+   * NEXT: ready for the next round, during the Versus standings or co-op's
+   * wait after AGAIN. Once everyone who'll play it is, it starts.
+   */
+  private async readyForNext(ws: WebSocket, room: Room, player: Player, now: number): Promise<void> {
+    const waiting = room.phase === "standings" || (room.phase === "results" && room.nextAt !== undefined);
+    if (!waiting) return this.error(ws, "wrong_phase");
+    if (!player.ready) {
+      player.ready = true;
+      this.write(ROOM, room);
+      this.broadcast(this.lobbyMessage(room));
+    }
+    await this.startIfAllReady(room, now);
+  }
+
+  /**
+   * Starts the next round now if everyone connected who'll play it is ready
+   * (NEXT): in Versus, the next round's racers; in co-op, everyone seated.
+   */
+  private async startIfAllReady(room: Room, now: number): Promise<void> {
+    if (this.starting) return;
+    let players: Player[];
+    if (room.phase === "standings") {
+      const series = this.series();
+      const decision = series === null ? null : seriesDecision(series);
+      if (series === null || decision === null || decision.over) return;
+      players = room.players.filter((p) => decision.next.players.includes(p.id));
+    } else if (room.phase === "results" && room.nextAt !== undefined) {
+      players = seated(room);
+    } else {
+      return;
+    }
+    const here = players.filter((p) => !p.left && this.socketsOf(p.id).length > 0);
+    if (here.length === 0 || !here.every((p) => p.ready)) return;
+    if (room.phase === "standings") await this.nextVsRound(now);
+    else await this.startRound(null, "results");
   }
 
   /** Team Versus: whether everyone seated is on a team, and both teams are the same size. */
@@ -763,7 +826,8 @@ export class RoomDO extends DurableObject<Env> {
   // -------------------------------------------------------------------------
 
   /** START from the lobby, or AGAIN from results: a new puzzle and a countdown. */
-  private async startRound(ws: WebSocket, from: RoomPhase): Promise<void> {
+  /** `ws` is the host's, for errors; `null` when co-op's wait after AGAIN is over. */
+  private async startRound(ws: WebSocket | null, from: RoomPhase): Promise<void> {
     if (this.starting) return; // the host double-tapped; the first one is on its way
     this.starting = true;
     try {
@@ -787,7 +851,16 @@ export class RoomDO extends DurableObject<Env> {
       const now = Date.now();
       const fresh = this.room();
       if (fresh === null || fresh.phase !== from) return;
-      if (puzzle === null) return this.error(ws, "no_puzzle");
+      if (puzzle === null) {
+        // The host can try again; the wait doesn't go round and round.
+        if (fresh.nextAt !== undefined) {
+          delete fresh.nextAt;
+          for (const p of fresh.players) p.ready = false;
+          this.write(ROOM, fresh);
+          this.broadcast(this.lobbyMessage(fresh));
+        }
+        return ws === null ? this.broadcast({ op: "ERROR", code: "no_puzzle" }) : this.error(ws, "no_puzzle");
+      }
       const players = fresh.players.filter((p) => !p.left);
       const round = newCoopRound({
         round: fresh.rounds + 1,
@@ -801,6 +874,7 @@ export class RoomDO extends DurableObject<Env> {
       });
       fresh.rounds = round.round;
       fresh.phase = "countdown";
+      delete fresh.nextAt;
       fresh.recent = rememberPuzzle(fresh.recent ?? [], puzzle.id);
       for (const p of fresh.players) p.ready = false;
       this.write(ROUND, round);
@@ -1083,6 +1157,8 @@ export class RoomDO extends DurableObject<Env> {
     series.standingsEndsAt = null;
     room.phase = "countdown";
     room.recent = rememberPuzzle(room.recent ?? [], puzzle.id);
+    // Ready (NEXT) was for this round.
+    for (const p of room.players) p.ready = false;
     this.write(ROUND, round);
     this.write(SERIES, series);
     this.write(ROOM, room);
@@ -1193,6 +1269,7 @@ export class RoomDO extends DurableObject<Env> {
     series.standingsEndsAt = null;
     room.phase = "results";
     room.players = room.players.filter((p) => !p.left);
+    for (const p of room.players) p.ready = false;
     if (room.teams !== undefined) {
       room.teams = Object.fromEntries(Object.entries(room.teams).filter(([id]) => room.players.some((p) => p.id === id)));
     }
@@ -1267,6 +1344,12 @@ export class RoomDO extends DurableObject<Env> {
         await this.nextVsRound(now);
         continue;
       }
+      // Co-op: the wait after AGAIN is over.
+      if (room.phase === "results" && room.nextAt !== undefined && now >= room.nextAt && !this.starting) {
+        await this.startRound(null, "results");
+        if (this.room()?.phase === "results") return; // no puzzle: the host can try again
+        continue;
+      }
       const expired = room.players.find(
         (p) => !p.left && p.graceUntil !== null && now >= p.graceUntil && this.socketsOf(p.id).length === 0,
       );
@@ -1323,6 +1406,7 @@ export class RoomDO extends DurableObject<Env> {
     // Not while the next round's puzzle is on its way: its caller reschedules afterwards.
     const standingsEnd = room.phase === "standings" && !this.starting ? this.series()?.standingsEndsAt : null;
     if (standingsEnd != null) deadlines.push(standingsEnd);
+    if (room.phase === "results" && room.nextAt !== undefined && !this.starting) deadlines.push(room.nextAt);
     // Not while a write is in flight: its own caller reschedules afterwards.
     const award = this.read<PendingAward>(AWARD);
     if (award !== null && this.awarding === null) deadlines.push(award.retryAt);
@@ -1636,6 +1720,7 @@ export class RoomDO extends DurableObject<Env> {
       ...(isVersus(room.mode) ? { series: room.series ?? DEFAULT_SERIES } : {}),
       ...(room.variant === "survival" && room.mode !== "team" ? { variant: room.variant } : {}),
       ...(room.mode === "team" ? { rule: this.ruleOf(room) } : {}),
+      ...(room.nextAt === undefined ? {} : { nextAt: room.nextAt }),
     };
   }
 

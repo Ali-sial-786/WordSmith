@@ -29,8 +29,10 @@ class VsSession extends RoomSession {
   VsRoundEnd? standings;
   SeriesEnd? seriesEnd;
 
-  /// Bonus words found this round (they go to the Scrap Bin).
-  int bonusWords = 0;
+  /// Bonus words I found this round, in the order found (they go to the Scrap Bin).
+  final List<String> scrapWords = [];
+
+  int get bonusWords => scrapWords.length;
 
   /// Rivals already announced as nearly done this round.
   final Set<String> _closeCalls = {};
@@ -135,7 +137,7 @@ class VsSession extends RoomSession {
     standings = null;
     seriesEnd = null;
     _endFinalRound();
-    bonusWords = 0;
+    scrapWords.clear();
     _closeCalls.clear();
     feed.clear();
     mold = RemoteMold(start, () => lobby!, initials: false);
@@ -172,8 +174,8 @@ class VsSession extends RoomSession {
         for (final (s, w) in auto) {
           _claim(s, w);
         }
-      case WordResult(:final result) when result == 'bonus':
-        bonusWords++;
+      case WordResult(:final result, :final word) when result == 'bonus':
+        scrapWords.add(word);
       case RacerProgress(:final id):
         progress[id] = e;
         if (id != me && e.fraction >= 0.75 && e.filled < e.total && _closeCalls.add(id)) {

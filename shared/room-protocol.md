@@ -19,9 +19,9 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 
 ## Phases
 
-`lobby → countdown (3 s) → round → results`
+`lobby → countdown (3 s) → round → results → (wait, up to 20 s) → countdown → …`
 
-- From results, the host's `AGAIN` goes straight to a new countdown with a new puzzle.
+- From results, the host's `AGAIN` starts a short wait before the next round (see "Between rounds"), then a new countdown with a new puzzle.
 - A room closes 30 minutes after its last activity, or 2 minutes after everyone has left.
 - **Close codes:** `4000` the room closed, `4001` the account was deleted, `4002` after the player's own `LEAVE`. Clients stop reconnecting on any code from 4000 to 4099.
 
@@ -30,7 +30,7 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | Op | Fields |
 |---|---|
 | `WELCOME` | `you` (user id), `protocol: 1`, `serverNow` |
-| `LOBBY` | `code`, `mode`, `phase`, `hostId`, `heat` (1–6: what the next round plays, or the round's own while one is on), `heatChoice` (the host's pick: 1–6, or `"auto"`, the default), `autoHeat` (1–6: what `"auto"` gives now, from the host's level), `players`: `[{id, username, avatar, level, color, ready, connected}]`. `color` is 0–3 (copper, gold, verdigris, cobalt) and stays the same while the player is in the room. Sent whenever any of this changes, a player changing their username (`POST /v1/me/username`) included. The app shows a friend under the nickname its player gave them, if any; nicknames never reach the room. |
+| `LOBBY` | `code`, `mode`, `phase`, `hostId`, `heat` (1–6: what the next round plays, or the round's own while one is on), `heatChoice` (the host's pick: 1–6, or `"auto"`, the default), `autoHeat` (1–6: what `"auto"` gives now, from the host's level), `players`: `[{id, username, avatar, level, color, ready, connected}]`. `color` is 0–3 (copper, gold, verdigris, cobalt) and stays the same while the player is in the room. Sent whenever any of this changes, a player changing their username (`POST /v1/me/username`) included. The app shows a friend under the nickname its player gave them, if any; nicknames never reach the room. `nextAt` (server ms) is there only during the wait after `AGAIN` (see "Between rounds"). |
 | `ROUND_START` | `round` (1, 2, …), `heat`, `startsAt`, `endsAt`, `serverNow`, `letters` (anvil letters, shuffled), `cols`, `rows`, `slots`: `[{slot, x, y, d: "a" \| "d", len}]` (**no words**), `pickups`: `[{x, y}]` (cells holding an ember) |
 | `WORD_RESULT` | Sent only to the player who submitted. `seq` (echoed), `word`, `result`: `claimed` · `bonus` · `already` · `invalid` · `rate_limited` · `too_late`. `already` adds `by` (user id, or `null` if the word filled in by itself). `claimed` and `bonus` add `points`. |
 | `CLAIMED` | Sent to everyone. `slot`, `word`, `by`, `points`, `scores` (`{userId: points}`). `auto`: `[{slot, word}]` lists crossing slots that this claim completed: they fill in and score nothing. `pickup`: `"hammer" \| "chisel" \| "sparks"` if `by` collected an ember. |
@@ -51,11 +51,22 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | `START` | — | Host only, from the lobby. Needs at least 1 player; solo co-op is allowed. Starting doesn't require everyone to be ready. |
 | `SUBMIT` | `word`, `seq` | `seq` goes up by one each time. About 4 per second per player; past that the server answers `rate_limited` and may lock the player out for 3 s. In the lobby or countdown it gets `ERROR wrong_phase` (no `WORD_RESULT`); after the round it gets `too_late`. Other messages are limited per socket (a burst of 10, then 2 a second) and extras are dropped silently. |
 | `HINT` | `kind`, plus `x`, `y` for a chisel | Spends one of the sender's **own** hints (checked and taken in D1 straight away). Revealed letters score for no one. |
-| `AGAIN` | — | Host only, from results |
+| `AGAIN` | — | Host only, from results. Starts the wait before the next round, with the host ready (see "Between rounds"); a second `AGAIN` during it changes nothing. |
+| `NEXT` | — | Ready for the next round: during the wait after `AGAIN`, or the Versus standings. `wrong_phase` at any other time. See "Between rounds". |
 | `LEAVE` | — | Leave the room (the host role moves on, see "Host") |
 | `EMOTE` | `emote`: `nice` · `close` · `fire` · `hammer` · `gg` | |
 | `CHAT` | `text` | Any phase, Versus rounds included. See "Chat". A `text` that's missing, not a string or empty once tidied is `bad_message`. |
 | `{"op":"PING"}` | — | Keep-alive; answered with `{"op":"PONG"}` |
+
+## Between rounds
+
+Between one round and the next there's time to look at the results, with a countdown anyone can cut short:
+
+- **Co-op:** the host's `AGAIN` sets `nextAt` = now + 20 s (`COOP_NEXT_MS`) in `LOBBY`, with the host ready. The countdown starts at `nextAt`, or as soon as every connected seated player has sent `NEXT`.
+- **Versus:** the standings last 30 s (`STANDINGS_MS`, until `standingsEndsAt`), or until every connected racer of the next round (`ROUND_END.next.players`) has sent `NEXT`. Players sitting out a sudden death don't count, and their `NEXT` is just ignored.
+- Readiness uses the players' `ready` flags in `LOBBY`, the same as the lobby's. They're cleared when the next round's countdown starts.
+- A player leaving or dropping out counts too: once everyone still there is ready, the round starts.
+- Apps from before this ignore `nextAt` and never send `NEXT`; for them the wait simply runs its course.
 
 ## Rules worth spelling out
 
@@ -117,9 +128,9 @@ Everything above applies unless this section says otherwise. Game rules are in
 
 ## Phases
 
-`lobby → countdown (3 s) → round → standings (10 s) → countdown → round → … → results`
+`lobby → countdown (3 s) → round → standings (up to 30 s) → countdown → round → … → results`
 
-- After a round that doesn't end the series, `standings` shows for 10 s, then the next countdown starts by itself.
+- After a round that doesn't end the series, `standings` shows for 30 s, then the next countdown starts by itself; sooner if every racer is ready (`NEXT`, see "Between rounds" above).
 - When the series is decided, the room goes straight to `results` (`ROUND_END` then `SERIES_END`).
 - From `results`, the host's `AGAIN` starts a new series with the same length and whoever is still seated.
 
@@ -131,7 +142,8 @@ Everything above applies unless this section says otherwise. Game rules are in
 | `START` | — | Host only. Needs at least **2** connected players (`not_enough_players`). |
 | `SUBMIT` | `word`, `seq` | Only players racing this round. Someone watching a sudden-death round gets `ERROR not_playing`. |
 | `HINT` | — | Not allowed in VS: `ERROR no_hints`. (Turn is local to the app.) |
-| `AGAIN` | — | Host only, from `results`: a new series. |
+| `AGAIN` | — | Host only, from `results`: a new series, straight away (no wait). |
+| `NEXT` | — | During `standings`: ready for the next round. |
 
 ## Server → client (changes)
 
