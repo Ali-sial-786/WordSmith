@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
@@ -47,7 +48,10 @@ class AnvilRingState extends State<AnvilRing> {
 
   /// Selected tile indices, in swipe order.
   final List<int> _selected = [];
-  Offset? _pointer;
+
+  /// Where the finger is. Only the trail follows it, so moving between
+  /// tiles repaints the trail without rebuilding the ring.
+  final _pointer = ValueNotifier<Offset?>(null);
   int? _activePointer;
   bool _moving = false;
 
@@ -96,9 +100,15 @@ class AnvilRingState extends State<AnvilRing> {
     }
   }
 
+  @override
+  void dispose() {
+    _pointer.dispose();
+    super.dispose();
+  }
+
   void _clear({bool notify = false}) {
     _selected.clear();
-    _pointer = null;
+    _pointer.value = null;
     _activePointer = null;
     if (notify) widget.onSelectionChanged?.call('');
   }
@@ -114,8 +124,8 @@ class AnvilRingState extends State<AnvilRing> {
       _selected
         ..clear()
         ..add(tile);
-      _pointer = e.localPosition;
     });
+    _pointer.value = e.localPosition;
     widget.onSelectionChanged?.call(_word);
   }
 
@@ -132,8 +142,11 @@ class AnvilRingState extends State<AnvilRing> {
         changed = true;
       }
     }
-    setState(() => _pointer = e.localPosition);
-    if (changed) widget.onSelectionChanged?.call(_word);
+    _pointer.value = e.localPosition;
+    if (changed) {
+      setState(() {});
+      widget.onSelectionChanged?.call(_word);
+    }
   }
 
   void _onUp(PointerEvent e) {
@@ -162,11 +175,13 @@ class AnvilRingState extends State<AnvilRing> {
             Positioned.fill(child: _AnvilFace(active: _selected.isNotEmpty)),
             Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _TrailPainter(
-                    points: [for (final t in _selected) _tileCenter(t)],
-                    pointer: _pointer,
-                    width: d * 0.26,
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _TrailPainter(
+                      points: [for (final t in _selected) _tileCenter(t)],
+                      pointer: _pointer,
+                      width: d * 0.26,
+                    ),
                   ),
                 ),
               ),
@@ -334,10 +349,12 @@ class _AnvilFace extends StatelessWidget {
 }
 
 class _TrailPainter extends CustomPainter {
-  _TrailPainter({required this.points, required this.pointer, required this.width});
+  _TrailPainter({required this.points, required this.pointer, required this.width}) : super(repaint: pointer);
 
   final List<Offset> points;
-  final Offset? pointer;
+
+  /// The trail's loose end, following the finger.
+  final ValueListenable<Offset?>? pointer;
   final double width;
 
   @override
@@ -347,7 +364,7 @@ class _TrailPainter extends CustomPainter {
     for (final p in points.skip(1)) {
       path.lineTo(p.dx, p.dy);
     }
-    if (pointer != null) path.lineTo(pointer!.dx, pointer!.dy);
+    if (pointer?.value case final p?) path.lineTo(p.dx, p.dy);
     Paint stroke(Color c, double w, [double blur = 0]) => Paint()
       ..color = c
       ..style = PaintingStyle.stroke
@@ -364,7 +381,7 @@ class _TrailPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TrailPainter old) =>
-      old.pointer != pointer || old.points.length != points.length || old.width != width;
+      old.pointer != pointer || !listEquals(old.points, points) || old.width != width;
 }
 
 /// A hand tracing a swipe through [points], over and over.

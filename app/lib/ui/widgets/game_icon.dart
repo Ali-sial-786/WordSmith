@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vector_graphics/vector_graphics_compat.dart' show RenderingStrategy;
 
 import '../theme/palette.dart';
 
 /// A single-colour SVG from assets/icons, tinted, with a Material fallback
 /// while the art is missing.
+///
+/// Drawn from a raster made once per icon and size: tinting the vector
+/// picture takes an offscreen layer on every frame, and the forge fire
+/// redraws the screen many times a second.
 class GameIcon extends StatelessWidget {
   const GameIcon(this.name, {super.key, this.size = 24, this.color});
 
@@ -51,6 +56,7 @@ class GameIcon extends StatelessWidget {
     width: size,
     height: size,
     colorFilter: ColorFilter.mode(_color, BlendMode.srcIn),
+    renderingStrategy: RenderingStrategy.raster,
     placeholderBuilder: (_) => Icon(_fallbacks[name] ?? Icons.circle_outlined, size: size, color: _color),
     errorBuilder: (_, _, _) => Icon(_fallbacks[name] ?? Icons.circle_outlined, size: size, color: _color),
   );

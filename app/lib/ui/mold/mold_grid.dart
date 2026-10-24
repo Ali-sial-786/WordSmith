@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vector_graphics/vector_graphics_compat.dart' show RenderingStrategy;
 
 import '../../engine/puzzle.dart';
 import '../effects/sparks.dart';
@@ -464,6 +465,8 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
             child: SvgPicture.asset(
               'assets/icons/ember.svg',
               colorFilter: ColorFilter.mode(Palette.molten, BlendMode.srcIn),
+              // A raster: a tinted picture would take a layer on every frame.
+              renderingStrategy: RenderingStrategy.raster,
               placeholderBuilder: (_) => Icon(Icons.local_fire_department, color: Palette.molten),
             ),
           ),

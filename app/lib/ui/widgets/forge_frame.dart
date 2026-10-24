@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -277,23 +278,41 @@ class _Glint extends ConsumerStatefulWidget {
 }
 
 class _GlintState extends ConsumerState<_Glint> with SingleTickerProviderStateMixin {
-  // Each frame starts at a different point, so a screen of them doesn't
-  // flash in step.
-  late final AnimationController _sweep = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 5200),
-    value: Random().nextDouble(),
-  );
+  static const _period = Duration(milliseconds: 5200);
+
+  /// It crosses in the first quarter of the period, then rests off-frame on
+  /// a timer: a running animation would redraw the screen all the while.
+  static const _crossing = Duration(milliseconds: 1300);
+
+  late final AnimationController _sweep = AnimationController(vsync: this, duration: _crossing);
+  Timer? _rest;
 
   @override
   void initState() {
     super.initState();
-    if (!ref.read(settingsProvider).reducedMotion) _sweep.repeat();
+    // Each frame starts at a different point, so a screen of them doesn't
+    // flash in step.
+    final start = Random().nextDouble();
+    _sweep.value = (start / 0.25).clamp(0.0, 1.0);
+    if (ref.read(settingsProvider).reducedMotion) return;
+    if (start < 0.25) {
+      _cross(from: _sweep.value);
+    } else {
+      _rest = Timer(_period * (1 - start), _cross);
+    }
+  }
+
+  void _cross({double from = 0}) {
+    _sweep.forward(from: from).whenCompleteOrCancel(() {
+      if (mounted) _rest = Timer(_period - _crossing, _cross);
+    });
   }
 
   @override
   void dispose() {
     _sweep.dispose();
+    // After the controller, whose cancelled crossing would set a new rest.
+    _rest?.cancel();
     super.dispose();
   }
 
@@ -302,8 +321,7 @@ class _GlintState extends ConsumerState<_Glint> with SingleTickerProviderStateMi
     child: AnimatedBuilder(
       animation: _sweep,
       builder: (context, _) {
-        // Crosses in the first quarter of the loop, then rests off-frame.
-        final t = (_sweep.value / 0.25).clamp(0.0, 1.0);
+        final t = _sweep.value;
         if (t >= 1) return const SizedBox.expand();
         final x = -1.6 + 3.2 * Curves.easeInOut.transform(t);
         return DecoratedBox(
