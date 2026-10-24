@@ -9,6 +9,8 @@ export interface CampaignRow {
 
 export const DEFAULT_CAMPAIGN_PATH: string;
 export const DEFAULT_OUT_PATH: string;
+export const DEFAULT_PREVIOUS_PATH: string;
 export function campaignRows(campaign: unknown): CampaignRow[];
 export function loadCampaignRows(path?: string): CampaignRow[];
-export function campaignSql(rows: readonly CampaignRow[]): string;
+export function loadPreviousCampaignRows(path?: string): CampaignRow[];
+export function campaignSql(rows: readonly CampaignRow[], previous?: readonly CampaignRow[]): string;

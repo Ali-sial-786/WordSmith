@@ -20,7 +20,9 @@ class SoloController extends SoloGame {
     : puzzle = campaign.puzzle(stage),
       _rng = rng ?? Random() {
     final saved = store.loadSavedPuzzle();
-    if (saved != null && saved.stage == stage && saved.puzzleId == puzzle.id) {
+    // A save from another campaign (the puzzle at this stage changed) is
+    // dropped: the fresh board below replaces it.
+    if (saved != null && saved.stage == stage && saved.fits(puzzle)) {
       board = saved.toBoard(puzzle);
       letters = saved.letters;
       _hintsUsed.addAll(saved.hintsUsed);

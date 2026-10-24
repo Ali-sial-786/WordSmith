@@ -26,6 +26,7 @@ class SavedPuzzle {
     required this.pickupSeed,
     this.gilded,
     this.gildedCollected = false,
+    this.fingerprint,
   });
 
   factory SavedPuzzle.fromBoard({
@@ -50,6 +51,7 @@ class SavedPuzzle {
     pickupSeed: pickupSeed,
     gilded: board.gilded,
     gildedCollected: board.gildedCollected,
+    fingerprint: board.puzzle.fingerprint,
   );
 
   factory SavedPuzzle.fromJson(Map<String, dynamic> json) => SavedPuzzle(
@@ -67,6 +69,7 @@ class SavedPuzzle {
     pickupSeed: json['pickupSeed'] as String? ?? '',
     gilded: json['gilded'] as int?,
     gildedCollected: json['gildedDone'] as bool? ?? false,
+    fingerprint: json['grid'] as String?,
   );
 
   final int stage;
@@ -89,6 +92,31 @@ class SavedPuzzle {
   /// The gilded cell, if any, and whether its piece was collected.
   final int? gilded;
   final bool gildedCollected;
+
+  /// [Puzzle.fingerprint] of the puzzle this was saved on; null in saves
+  /// made by older versions of the app.
+  final String? fingerprint;
+
+  /// Whether this save belongs to [puzzle] as it is now. A new campaign keeps
+  /// the stage numbers and ids but changes the puzzles, so a save from the
+  /// old one must not be restored (wrong anvil, slots that point at other
+  /// words or past the end). Saves without a fingerprint are checked for
+  /// fitting: same letters, and every slot, cell, bonus word and pickup
+  /// inside the puzzle.
+  bool fits(Puzzle puzzle) {
+    if (puzzleId != puzzle.id) return false;
+    if (fingerprint != null) return fingerprint == puzzle.fingerprint;
+    String sorted(String s) => (s.split('')..sort()).join();
+    final n = puzzle.slots.length;
+    final cells = puzzle.letterCount;
+    return sorted(letters) == sorted(puzzle.letters) &&
+        [...foundSlots, ...autoSlots].every((i) => i >= 0 && i < n) &&
+        revealed.every(puzzle.letterAt.containsKey) &&
+        bonusFound.every(puzzle.bonus.contains) &&
+        pickups.every((p) => p.cellIndex >= 0 && p.cellIndex < cells) &&
+        collected.every((i) => i >= 0 && i < pickups.length) &&
+        (gilded == null || (gilded! >= 0 && gilded! < cells));
+  }
 
   /// Pickups collected so far in this puzzle.
   List<Pickup> get collectedPickups => [for (final i in collected) pickups[i]];
@@ -122,6 +150,7 @@ class SavedPuzzle {
     'pickupSeed': pickupSeed,
     'gilded': ?gilded,
     'gildedDone': gildedCollected,
+    'grid': ?fingerprint,
   };
 }
 

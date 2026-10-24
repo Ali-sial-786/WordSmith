@@ -34,13 +34,103 @@ import 'shot_fonts.dart';
 ///     . . . . . C . I . .
 ///     . . . C H A I R . .
 ///     . . . . . R . . . .
-Future<Map<String, dynamic>> _chargingJson() async {
-  final all = jsonDecode(await rootBundle.loadString('assets/campaign/campaign.json')) as Map<String, dynamic>;
-  return (all['puzzles'] as List).cast<Map<String, dynamic>>().firstWhere((p) => p['id'] == 'c-0504');
-}
+///
+/// (Stage 504 of the campaign before the puzzles' words were picked by
+/// quality; kept here so the shots don't change with the campaign.)
+Map<String, dynamic> _chargingJson() => {
+  'id': 'c-0504',
+  'letters': 'AHIRGNGC',
+  'heat': 6,
+  'cols': 10,
+  'rows': 10,
+  'words': [
+    {'w': 'CHARGING', 'x': 0, 'y': 3, 'd': 'a'},
+    {'w': 'CHAR', 'x': 0, 'y': 3, 'd': 'd'},
+    {'w': 'ARCHING', 'x': 0, 'y': 5, 'd': 'a'},
+    {'w': 'RANCH', 'x': 2, 'y': 2, 'd': 'd'},
+    {'w': 'CHAGRIN', 'x': 4, 'y': 0, 'd': 'd'},
+    {'w': 'RACING', 'x': 2, 'y': 0, 'd': 'a'},
+    {'w': 'GANG', 'x': 7, 'y': 0, 'd': 'd'},
+    {'w': 'NIGH', 'x': 6, 'y': 3, 'd': 'd'},
+    {'w': 'HANG', 'x': 6, 'y': 6, 'd': 'a'},
+    {'w': 'CARING', 'x': 9, 'y': 1, 'd': 'd'},
+    {'w': 'ARC', 'x': 7, 'y': 1, 'd': 'a'},
+    {'w': 'AIR', 'x': 7, 'y': 6, 'd': 'd'},
+    {'w': 'CHAIR', 'x': 3, 'y': 8, 'd': 'a'},
+    {'w': 'CAR', 'x': 5, 'y': 7, 'd': 'd'},
+  ],
+  'bonus': [
+    'ACHING',
+    'ACING',
+    'AGIN',
+    'AGING',
+    'AIN',
+    'AIRN',
+    'ANI',
+    'ARCH',
+    'ARCING',
+    'CAGING',
+    'CAIRN',
+    'CAN',
+    'CARN',
+    'CHA',
+    'CHAIN',
+    'CHARING',
+    'CHI',
+    'CHIA',
+    'CHIN',
+    'CHINA',
+    'CHING',
+    'CIG',
+    'CIGAR',
+    'CRAG',
+    'GAG',
+    'GAIN',
+    'GAN',
+    'GAR',
+    'GARNI',
+    'GHI',
+    'GIG',
+    'GIGA',
+    'GIN',
+    'GIRN',
+    'GNAR',
+    'GRACING',
+    'GRAIN',
+    'GRAN',
+    'GRIG',
+    'GRIN',
+    'GRINCH',
+    'HAG',
+    'HAIR',
+    'HARING',
+    'HIC',
+    'HIN',
+    'ICH',
+    'INARCH',
+    'INCH',
+    'NAG',
+    'NAH',
+    'NARC',
+    'NARIC',
+    'RAG',
+    'RAGI',
+    'RAGING',
+    'RAH',
+    'RAIN',
+    'RAN',
+    'RANG',
+    'RANI',
+    'RIA',
+    'RICH',
+    'RIG',
+    'RIN',
+    'RING',
+  ],
+};
 
 Future<void> _pump(WidgetTester tester, String location, {String font = 'forge'}) async {
-  final json = (await tester.runAsync(_chargingJson))!;
+  final json = _chargingJson();
   final cells = Puzzle.fromJson(json).letterCount;
   // A player with no pickups or gilded cell in this puzzle, so every cell is plain.
   var user = 0;

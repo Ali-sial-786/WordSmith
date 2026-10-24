@@ -26,19 +26,17 @@ Campaign _campaign() {
   });
 }
 
-Future<ProviderContainer> _pumpApp(WidgetTester tester, String location) async {
+Future<ProviderContainer> _pumpApp(WidgetTester tester, String location, {Map<String, Object>? saved}) async {
   SharedPreferences.setMockInitialValues({
     // 'abc' has no pickups in c-0001 (shared/pickups.md), and reduced
     // motion turns off the endless ember drift so the UI can settle.
     'profile.v1': jsonEncode({'userId': 'abc'}),
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+    'saved_puzzle.v1': ?(saved == null ? null : jsonEncode(saved)),
   });
   final store = await Store.open();
   final container = ProviderContainer(
-    overrides: [
-      storeProvider.overrideWithValue(store),
-      campaignProvider.overrideWithValue(_campaign()),
-    ],
+    overrides: [storeProvider.overrideWithValue(store), campaignProvider.overrideWithValue(_campaign())],
   );
   addTearDown(container.dispose);
   final router = GoRouter(initialLocation: location, routes: appRouter.configuration.routes);
@@ -54,9 +52,8 @@ Future<ProviderContainer> _pumpApp(WidgetTester tester, String location) async {
 }
 
 Future<void> _swipe(WidgetTester tester, String word) async {
-  Offset centerOf(String letter) => tester.getCenter(
-    find.descendant(of: find.byType(AnvilRing), matching: find.text(letter)),
-  );
+  Offset centerOf(String letter) =>
+      tester.getCenter(find.descendant(of: find.byType(AnvilRing), matching: find.text(letter)));
   final gesture = await tester.startGesture(centerOf(word[0]));
   for (final letter in word.substring(1).split('')) {
     await gesture.moveTo(centerOf(letter));
@@ -66,8 +63,7 @@ Future<void> _swipe(WidgetTester tester, String word) async {
   await tester.pump(const Duration(milliseconds: 50));
 }
 
-Finder _moldLetter(String letter) =>
-    find.descendant(of: find.byType(MoldGrid), matching: find.text(letter));
+Finder _moldLetter(String letter) => find.descendant(of: find.byType(MoldGrid), matching: find.text(letter));
 
 void main() {
   testWidgets('swiping words fills the mold and forging grants XP', (tester) async {
@@ -109,6 +105,33 @@ void main() {
     final saved = container.read(storeProvider).loadSavedPuzzle()!;
     expect(saved.stage, 1);
     expect(saved.foundSlots, [1]);
+  });
+
+  testWidgets('a save from an older campaign at the same stage is dropped, not restored', (tester) async {
+    // What an update to a new campaign leaves behind: stage 1, id c-0001, but another grid.
+    final stale = {
+      'stage': 1,
+      'puzzleId': 'c-0001',
+      'letters': 'NOTE',
+      'found': [0, 5],
+      'auto': <int>[],
+      'revealed': [
+        [7, 7],
+      ],
+      'bonus': ['ONE'],
+      'pickups': <Object>[],
+      'collected': <int>[],
+      'hintsUsed': <String, int>{},
+      'elapsedMs': 1000,
+      'pickupSeed': 'abc',
+    };
+    final container = await _pumpApp(tester, '/play/1', saved: stale);
+    expect(_moldLetter('A'), findsNothing, reason: 'a fresh board');
+    final saved = container.read(storeProvider).loadSavedPuzzle()!;
+    expect(saved.letters, 'RTAE');
+    expect(saved.foundSlots, isEmpty);
+    expect(saved.bonusFound, isEmpty);
+    expect(saved.fits(container.read(campaignProvider).puzzle(1)), isTrue);
   });
 
   testWidgets('the Hammer Strike hint reveals a letter and is spent', (tester) async {

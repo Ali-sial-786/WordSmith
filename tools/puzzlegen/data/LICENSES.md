@@ -11,8 +11,9 @@ committed). Only 3-8 letter, lowercase a-z words are kept.
 |---|---|---|---|
 | ENABLE (`enable1.txt`) | https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt | Public domain | Accepted (bonus) words; grid answers must also be ENABLE words |
 | SCOWL | 2020.12.07, https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words: `final/english-words.*` and `final/american-words.*`, levels 10-70. Names: the English and American `proper-names.*` and `upper.*` lists (levels <= 60) against every spelling region's `*-words.*` (levels <= 60) |
+| wordfreq 3.1.1 | https://github.com/rspeer/wordfreq (Python package; `zipf_frequency(word, "en")`) | Data: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), by Robyn Speer and the wordfreq contributors; code: Apache 2.0 | Word frequencies for answer quality (`freq.tsv`) |
 | LDNOOBW English list | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (file `en`) | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), by the LDNOOBW contributors (Shutterstock) | Blocklist (single words only; phrases skipped) |
-| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list |
+| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt`, `not_inflections.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list; words that only look like inflections |
 
 Derived files:
 
@@ -27,6 +28,20 @@ Derived files:
   SCOWL words (10 = most common ... 70).
 - `scowl_only.txt`: accepted SCOWL words that are not in ENABLE (`gonna`,
   `email`, ...). They can be bonus words but never grid answers.
+- `freq.tsv`: `word<TAB>Zipf frequency` (log10 of uses per billion words,
+  2 decimals) from wordfreq 3.1.1 for the accepted words it knows (others
+  count as 0). It is an adaptation of wordfreq's data files, which wordfreq
+  distributes under CC BY-SA 4.0, so this file is under CC BY-SA 4.0 too.
+  Credits that wordfreq passes on for its English data: Google Books Ngram
+  Viewer (http://books.google.com/ngrams); SUBTLEX word lists by Marc
+  Brysbaert et al. (http://crr.ugent.be/programs-data/subtitle-frequencies;
+  SUBTLEX is freely available data); OPUS OpenSubtitles 2018, from the
+  OpenSubtitles project (http://www.opensubtitles.org/); Wikipedia; the Leeds
+  Internet Corpus; ParaCrawl; and statistics from the Twitter streaming API.
+  Only the choice of grid answers depends on this file: no frequency is
+  shipped in the puzzles or the app.
+- `name_senses.txt`: accepted words SCOWL also lists capitalised (level <=
+  60): `mike`, `harry`, `amazon`. Their frequency counts the name too.
 - `blocklist.txt`: a modified version of the LDNOOBW English list, under
   CC BY 4.0: its single words plus `blocklist_extra.txt`, with simple
   inflections (-s, -es, -ies, -d, -ed, -ing) added, plus every ENABLE/SCOWL

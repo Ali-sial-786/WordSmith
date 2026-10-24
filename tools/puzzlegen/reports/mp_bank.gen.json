@@ -6,8 +6,8 @@
   "heat 1 size 4": {
    "rejections": {},
    "difficulty": [
-    20.6,
-    38.05
+    30.49,
+    44.34
    ],
    "words": [
     7,
@@ -21,8 +21,8 @@
   "heat 1 size 3": {
    "rejections": {},
    "difficulty": [
-    20.45,
-    30.5
+    23.79,
+    38.67
    ],
    "words": [
     6,
@@ -36,12 +36,12 @@
   "heat 1 size 2": {
    "rejections": {},
    "difficulty": [
-    16.2,
-    26.0
+    20.22,
+    32.88
    ],
    "words": [
     5,
-    6
+    5
    ],
    "target": [
     5,
@@ -51,12 +51,12 @@
   "heat 1 size 1": {
    "rejections": {},
    "difficulty": [
-    8.7,
-    17.8
+    10.95,
+    18.37
    ],
    "words": [
     3,
-    5
+    4
    ],
    "target": [
     3,
@@ -65,11 +65,11 @@
   },
   "heat 2 size 4": {
    "rejections": {
-    "layout fit too few words": 39
+    "layout fit too few words": 1
    },
    "difficulty": [
-    45.19,
-    57.43
+    48.0,
+    61.3
    ],
    "words": [
     11,
@@ -81,12 +81,10 @@
    ]
   },
   "heat 2 size 3": {
-   "rejections": {
-    "layout fit too few words": 22
-   },
+   "rejections": {},
    "difficulty": [
-    38.59,
-    53.36
+    41.54,
+    54.07
    ],
    "words": [
     9,
@@ -99,11 +97,11 @@
   },
   "heat 2 size 2": {
    "rejections": {
-    "layout fit too few words": 8
+    "layout fit too few words": 1
    },
    "difficulty": [
-    32.3,
-    45.06
+    34.56,
+    50.78
    ],
    "words": [
     7,
@@ -116,11 +114,11 @@
   },
   "heat 2 size 1": {
    "rejections": {
-    "layout fit too few words": 1
+    "layout fit too few words": 3
    },
    "difficulty": [
-    25.4,
-    35.91
+    26.34,
+    39.95
    ],
    "words": [
     5,
@@ -132,12 +130,10 @@
    ]
   },
   "heat 3 size 4": {
-   "rejections": {
-    "layout fit too few words": 4
-   },
+   "rejections": {},
    "difficulty": [
-    62.84,
-    79.55
+    67.26,
+    81.25
    ],
    "words": [
     13,
@@ -149,12 +145,10 @@
    ]
   },
   "heat 3 size 3": {
-   "rejections": {
-    "layout fit too few words": 5
-   },
+   "rejections": {},
    "difficulty": [
-    56.2,
-    71.65
+    58.3,
+    74.59
    ],
    "words": [
     11,
@@ -166,12 +160,10 @@
    ]
   },
   "heat 3 size 2": {
-   "rejections": {
-    "layout fit too few words": 2
-   },
+   "rejections": {},
    "difficulty": [
-    51.78,
-    66.42
+    51.1,
+    70.93
    ],
    "words": [
     9,
@@ -187,8 +179,8 @@
     "layout fit too few words": 1
    },
    "difficulty": [
-    44.29,
-    59.15
+    45.93,
+    61.29
    ],
    "words": [
     7,
@@ -202,8 +194,8 @@
   "heat 4 size 4": {
    "rejections": {},
    "difficulty": [
-    69.22,
-    95.47
+    69.81,
+    97.89
    ],
    "words": [
     15,
@@ -217,8 +209,8 @@
   "heat 4 size 3": {
    "rejections": {},
    "difficulty": [
-    62.49,
-    89.65
+    67.8,
+    90.84
    ],
    "words": [
     13,
@@ -232,8 +224,8 @@
   "heat 4 size 2": {
    "rejections": {},
    "difficulty": [
-    57.65,
-    83.17
+    62.05,
+    88.3
    ],
    "words": [
     11,
@@ -246,11 +238,11 @@
   },
   "heat 4 size 1": {
    "rejections": {
-    "layout fit too few words": 1
+    "layout fit too few words": 2
    },
    "difficulty": [
-    47.4,
-    83.78
+    49.77,
+    79.48
    ],
    "words": [
     9,
@@ -262,16 +254,14 @@
    ]
   },
   "heat 5 size 4": {
-   "rejections": {
-    "layout fit too few words": 1
-   },
+   "rejections": {},
    "difficulty": [
-    86.73,
-    102.1
+    85.92,
+    105.93
    ],
    "words": [
     17,
-    20
+    21
    ],
    "target": [
     17,
@@ -281,8 +271,8 @@
   "heat 5 size 3": {
    "rejections": {},
    "difficulty": [
-    82.63,
-    97.68
+    82.64,
+    100.27
    ],
    "words": [
     15,
@@ -296,8 +286,8 @@
   "heat 5 size 2": {
    "rejections": {},
    "difficulty": [
-    74.39,
-    93.51
+    78.57,
+    97.55
    ],
    "words": [
     13,
@@ -311,8 +301,8 @@
   "heat 5 size 1": {
    "rejections": {},
    "difficulty": [
-    66.59,
-    89.85
+    69.98,
+    90.56
    ],
    "words": [
     11,
@@ -325,15 +315,15 @@
   },
   "heat 6 size 4": {
    "rejections": {
-    "layout fit too few words": 83
+    "layout fit too few words": 45
    },
    "difficulty": [
-    97.0,
-    114.26
+    96.72,
+    117.29
    ],
    "words": [
     20,
-    22
+    23
    ],
    "target": [
     20,
@@ -342,11 +332,11 @@
   },
   "heat 6 size 3": {
    "rejections": {
-    "layout fit too few words": 8
+    "layout fit too few words": 2
    },
    "difficulty": [
-    92.31,
-    109.4
+    92.89,
+    115.84
    ],
    "words": [
     18,
@@ -358,12 +348,10 @@
    ]
   },
   "heat 6 size 2": {
-   "rejections": {
-    "layout fit too few words": 1
-   },
+   "rejections": {},
    "difficulty": [
-    88.1,
-    112.63
+    87.4,
+    113.07
    ],
    "words": [
     16,
@@ -377,12 +365,12 @@
   "heat 6 size 1": {
    "rejections": {},
    "difficulty": [
-    77.77,
-    106.36
+    81.27,
+    110.2
    ],
    "words": [
     14,
-    19
+    20
    ],
    "target": [
     14,

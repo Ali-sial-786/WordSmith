@@ -74,3 +74,8 @@ lien
 bigoted suicide suicides lunatic lunatics bombing bombings drunk drunken
 drunks death deaths bung opuses impends terming costed evened keying trouser
 whoops mucks mucking nuder deader
+
+# Clipped or informal forms and other dull answers that word frequency
+# (data/freq.tsv) ranks high
+toms anon mono pro pros prep preps reps rev revs info demo demos sub subs gal
+gals mid noel nay abed nigh gimme wack legit copter dilly thyself sans orcs eking

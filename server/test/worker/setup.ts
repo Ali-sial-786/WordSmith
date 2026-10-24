@@ -12,6 +12,13 @@ if ((loaded?.n ?? 0) < env.TEST_CAMPAIGN.length) {
     await env.DB.batch(env.TEST_CAMPAIGN.slice(i, i + 100).map((r) => insert.bind(r.stage, r.puzzleId, r.data)));
   }
 }
+const previous = await env.DB.prepare("SELECT COUNT(*) AS n FROM campaign_previous").first<{ n: number }>();
+if ((previous?.n ?? 0) < env.TEST_CAMPAIGN_PREVIOUS.length) {
+  const insert = env.DB.prepare("INSERT OR REPLACE INTO campaign_previous (stage, puzzle_id, data) VALUES (?1, ?2, ?3)");
+  for (let i = 0; i < env.TEST_CAMPAIGN_PREVIOUS.length; i += 100) {
+    await env.DB.batch(env.TEST_CAMPAIGN_PREVIOUS.slice(i, i + 100).map((r) => insert.bind(r.stage, r.puzzleId, r.data)));
+  }
+}
 const banked = await env.DB.prepare("SELECT COUNT(*) AS n FROM puzzles WHERE pool = 'mp'").first<{ n: number }>();
 if ((banked?.n ?? 0) < env.TEST_BANK.length) {
   const insert = env.DB.prepare("INSERT OR REPLACE INTO puzzles (id, pool, heat, size, letters, data) VALUES (?1, 'mp', ?2, ?3, ?4, ?5)");
