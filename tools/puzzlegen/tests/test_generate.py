@@ -6,7 +6,7 @@ import unittest
 
 from puzzlegen import campaign, generate, layout, words
 from puzzlegen.rules import check_layout, check_puzzle
-from puzzlegen.tiers import TIERS, Chapter
+from puzzlegen.tiers import TIERS, TUTORIAL_Q, Chapter
 from puzzlegen.validate import _tier_checks
 
 
@@ -53,7 +53,8 @@ class TierBatchTests(unittest.TestCase):
                 self.assertEqual(_tier_checks(p, heat, t.min_words, t.max_words, ""), [])
                 # Answers come from the tier's answer pool.
                 for pw in p["words"]:
-                    self.assertTrue(lex.is_answer(pw["w"].lower(), t.answer_level), pw["w"])
+                    self.assertTrue(lex.is_answer(pw["w"].lower(), t.answer_level, t.answer_q),
+                                    pw["w"])
                 # No blocked word anywhere.
                 for w in [pw["w"] for pw in p["words"]] + p["bonus"]:
                     self.assertNotIn(w.lower(), lex.blocked)
@@ -67,7 +68,7 @@ class TierBatchTests(unittest.TestCase):
         self.assertEqual(len(p["letters"]), 4)
         self.assertEqual(len(p["words"]), 3)
         for pw in p["words"]:
-            self.assertLessEqual(lex.level(pw["w"].lower()), 10)
+            self.assertGreaterEqual(lex.quality(pw["w"].lower()), TUTORIAL_Q)
 
     def test_shuffle_never_spells_a_full_word(self):
         rng = random.Random(1)

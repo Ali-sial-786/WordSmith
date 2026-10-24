@@ -53,6 +53,11 @@ class AnagramTests(unittest.TestCase):
         self.assertFalse(lex.is_answer("eta", 99))  # excluded as an answer
         self.assertFalse(lex.is_answer("tes", 99))  # SCOWL-only (not in ENABLE)
         self.assertFalse(lex.is_answer("att", 70))  # unranked by SCOWL
+        # A quality floor (quality.py): with no frequencies, quality comes from the
+        # SCOWL level and the length alone.
+        self.assertTrue(lex.is_answer("seat", 35, 0.5))
+        self.assertGreater(lex.quality("seat"), lex.quality("teat"))
+        self.assertFalse(lex.is_answer("teat", 35, lex.quality("seat")))
         self.assertNotIn("tess", lex.accepted)
 
     def test_subwords_match_brute_force_on_real_lexicon(self):

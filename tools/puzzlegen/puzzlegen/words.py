@@ -6,11 +6,16 @@ Words are lowercase internally and uppercased when written to puzzles.
 
 from __future__ import annotations
 
+import glob
+import gzip
 import itertools
+import json
+import os
 from collections import Counter
 from functools import lru_cache
 
 from . import paths
+from .quality import Scorer
 
 MIN_WORD = 3
 MAX_WORD = 8
@@ -54,9 +59,11 @@ def _read_tokens(path: str) -> set[str]:
 
 
 class Lexicon:
-    """Accepted words, SCOWL levels, blocklist, names and answer eligibility."""
+    """Accepted words, SCOWL levels, frequencies, blocklist, names, answer eligibility
+    and word quality (quality.py)."""
 
-    def __init__(self, accepted, levels, blocked, scowl_only=(), answer_exclude=(), names=()):
+    def __init__(self, accepted, levels, blocked, scowl_only=(), answer_exclude=(), names=(),
+                 freq=None, name_senses=(), defined=None, not_inflections=()):
         self.blocked = frozenset(blocked)
         self.names = frozenset(names)  # data/names_exclude.txt: names, not words
         self.accepted = frozenset(w for w in accepted
@@ -64,6 +71,12 @@ class Lexicon:
         self.levels = {w: lv for w, lv in levels.items() if w in self.accepted}
         self.scowl_only = frozenset(scowl_only)
         self.answer_exclude = frozenset(answer_exclude)
+        self.freq = {w: z for w, z in (freq or {}).items() if w in self.accepted}
+        self.name_senses = frozenset(name_senses)
+        # Words the app's dictionary has a meaning for (None: not known, all count).
+        self.defined = None if defined is None else frozenset(defined)
+        self.not_inflections = frozenset(not_inflections)
+        self.scorer = Scorer(self)
         index: dict[str, list[str]] = {}
         for w in sorted(self.accepted):
             index.setdefault(signature(w), []).append(w)
@@ -74,14 +87,24 @@ class Lexicon:
     def level(self, word: str) -> int:
         return self.levels.get(word, UNRANKED)
 
-    def is_answer(self, word: str, max_level: int) -> bool:
-        """Can `word` be a grid answer in a pool capped at SCOWL `max_level`?"""
+    def is_answer(self, word: str, max_level: int, min_q: float | None = None) -> bool:
+        """Can `word` be a grid answer in a pool capped at SCOWL `max_level` and,
+        if `min_q` is given, with at least that quality?"""
         return (
             word in self.accepted
             and word not in self.scowl_only  # must also be an ENABLE word
             and word not in self.answer_exclude
             and self.level(word) <= max_level
+            and (min_q is None or self.quality(word) >= min_q)
         )
+
+    def quality(self, word: str) -> float:
+        """Word quality on the Zipf scale (quality.py): higher is a better answer."""
+        return self.scorer.quality(word)
+
+    def inflection(self, word: str):
+        """(kind, base) if `word` is a plain inflection of a shorter word, else None."""
+        return self.scorer.inflection(word)
 
     def anagrams(self, sig: str) -> list[str]:
         return self._index.get(sig, [])
@@ -109,4 +132,25 @@ def load() -> Lexicon:
     scowl_only = _read_lines(paths.SCOWL_ONLY)
     exclude = _read_tokens(paths.ANSWER_EXCLUDE)
     names = _read_lines(paths.NAMES_EXCLUDE)
-    return Lexicon(accepted, levels, blocked, scowl_only, exclude, names)
+    freq = {}
+    for line in _read_lines(paths.FREQ):
+        w, z = line.split("\t")
+        freq[w] = float(z)
+    return Lexicon(accepted, levels, blocked, scowl_only, exclude, names, freq=freq,
+                   name_senses=_read_lines(paths.NAME_SENSES), defined=read_defined(),
+                   not_inflections=_read_tokens(paths.NOT_INFLECTIONS))
+
+
+def read_defined(dict_dir: str = paths.DICT_DIR) -> set[str] | None:
+    """Words the app's dictionary (app/assets/dict, built by tools/dictgen) can show a
+    meaning for, or None if it isn't there."""
+    files = sorted(glob.glob(os.path.join(dict_dir, "?.json.gz")))
+    if not files:
+        return None
+    out: set[str] = set()
+    for f in files:
+        with gzip.open(f, "rt", encoding="utf-8") as fh:
+            data = json.load(fh)
+        out.update(data["entries"])
+        out.update(data["forms"])
+    return out

@@ -41,6 +41,11 @@ SOURCES = {
     ),
 }
 
+# Word frequencies (data/freq.tsv) come from the wordfreq package, installed
+# for `fetch` only (`pip install --user wordfreq==3.1.1`); generation reads
+# the committed file. Its data is CC BY-SA 4.0 (see LICENSES.md).
+WORDFREQ_VERSION = "3.1.1"
+
 WORD_RE = re.compile(r"^[a-z]{3,8}$")
 SCOWL_MEMBER_RE = re.compile(
     rf"^scowl-{re.escape(SCOWL_VERSION)}/final/(english|american)-words\.(\d+)$"
@@ -280,6 +285,27 @@ def _bases(word: str) -> set[str]:
     return {b for b in cands if b and word in word_forms(b)}
 
 
+def build_freq(words, log=print) -> dict[str, float] | None:
+    """{word: Zipf frequency} from wordfreq ("en", its default "best" list) for the
+    words it has (> 0). None if wordfreq isn't installed."""
+    try:
+        import wordfreq
+    except ImportError:
+        return None
+    version = getattr(wordfreq, "__version__", None)
+    if version is None:
+        from importlib.metadata import version as dist_version
+        version = dist_version("wordfreq")
+    if version != WORDFREQ_VERSION:
+        log(f"WARNING: wordfreq {version} installed, freq.tsv was made with {WORDFREQ_VERSION}")
+    out = {}
+    for w in sorted(words):
+        z = wordfreq.zipf_frequency(w, "en")
+        if z > 0:
+            out[w] = z
+    return out
+
+
 def write_lines(path: str, lines) -> None:
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         for line in lines:
@@ -318,6 +344,19 @@ def build(log=print) -> dict:
     write_lines(paths.ACCEPTED, sorted(accepted))
     write_lines(paths.SCOWL_LEVELS, (f"{w}\t{levels[w]}" for w in sorted(levels)))
     write_lines(paths.SCOWL_ONLY, scowl_only)
+    # Accepted words SCOWL also lists capitalised: their frequency counts the
+    # name too (quality.py caps it).
+    name_senses = sorted(w for w in accepted if w in scowl_names)
+    write_lines(paths.NAME_SENSES, name_senses)
+    freq = build_freq(accepted, log)
+    if freq is not None:
+        write_lines(paths.FREQ, (f"{w}\t{freq[w]:.2f}" for w in sorted(freq)))
+    elif os.path.exists(paths.FREQ):
+        log(f"wordfreq is not installed: kept data/freq.tsv as it is "
+            f"(pip install --user wordfreq=={WORDFREQ_VERSION} to rebuild it)")
+    else:
+        raise RuntimeError(f"data/freq.tsv is missing and wordfreq is not installed "
+                           f"(pip install --user wordfreq=={WORDFREQ_VERSION})")
     write_licenses(scowl_copyright)
 
     summary = {
@@ -332,6 +371,8 @@ def build(log=print) -> dict:
         "accepted": len(accepted),
         "scowl_levels": len(levels),
         "scowl_only": len(scowl_only),
+        "name_senses": len(name_senses),
+        "frequencies": len(freq) if freq is not None else "kept",
     }
     for k, v in summary.items():
         log(f"{k:>22}: {v}")
@@ -352,8 +393,9 @@ committed). Only 3-8 letter, lowercase a-z words are kept.
 |---|---|---|---|
 | ENABLE (`enable1.txt`) | https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt | Public domain | Accepted (bonus) words; grid answers must also be ENABLE words |
 | SCOWL | {scowl_version}, https://downloads.sourceforge.net/wordlist/scowl-{scowl_version}.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words: `final/english-words.*` and `final/american-words.*`, levels 10-{scowl_max}. Names: the English and American `proper-names.*` and `upper.*` lists (levels <= {name_level}) against every spelling region's `*-words.*` (levels <= {common_level}) |
+| wordfreq {wordfreq_version} | https://github.com/rspeer/wordfreq (Python package; `zipf_frequency(word, "en")`) | Data: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), by Robyn Speer and the wordfreq contributors; code: Apache 2.0 | Word frequencies for answer quality (`freq.tsv`) |
 | LDNOOBW English list | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (file `en`) | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), by the LDNOOBW contributors (Shutterstock) | Blocklist (single words only; phrases skipped) |
-| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list |
+| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt`, `not_inflections.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list; words that only look like inflections |
 
 Derived files:
 
@@ -368,6 +410,20 @@ Derived files:
   SCOWL words (10 = most common ... {scowl_max}).
 - `scowl_only.txt`: accepted SCOWL words that are not in ENABLE (`gonna`,
   `email`, ...). They can be bonus words but never grid answers.
+- `freq.tsv`: `word<TAB>Zipf frequency` (log10 of uses per billion words,
+  2 decimals) from wordfreq {wordfreq_version} for the accepted words it knows (others
+  count as 0). It is an adaptation of wordfreq's data files, which wordfreq
+  distributes under CC BY-SA 4.0, so this file is under CC BY-SA 4.0 too.
+  Credits that wordfreq passes on for its English data: Google Books Ngram
+  Viewer (http://books.google.com/ngrams); SUBTLEX word lists by Marc
+  Brysbaert et al. (http://crr.ugent.be/programs-data/subtitle-frequencies;
+  SUBTLEX is freely available data); OPUS OpenSubtitles 2018, from the
+  OpenSubtitles project (http://www.opensubtitles.org/); Wikipedia; the Leeds
+  Internet Corpus; ParaCrawl; and statistics from the Twitter streaming API.
+  Only the choice of grid answers depends on this file: no frequency is
+  shipped in the puzzles or the app.
+- `name_senses.txt`: accepted words SCOWL also lists capitalised (level <=
+  {name_level}): `mike`, `harry`, `amazon`. Their frequency counts the name too.
 - `blocklist.txt`: a modified version of the LDNOOBW English list, under
   CC BY 4.0: its single words plus `blocklist_extra.txt`, with simple
   inflections (-s, -es, -ies, -d, -ed, -ing) added, plus every ENABLE/SCOWL
@@ -389,7 +445,8 @@ LICENSES_FOOTER = """\
 
 def write_licenses(scowl_copyright: str) -> None:
     text = LICENSES_HEADER.format(scowl_version=SCOWL_VERSION, scowl_max=SCOWL_MAX_LEVEL,
-                                  name_level=NAME_LEVEL, common_level=COMMON_LEVEL)
+                                  name_level=NAME_LEVEL, common_level=COMMON_LEVEL,
+                                  wordfreq_version=WORDFREQ_VERSION)
     text += scowl_copyright.rstrip("\n") + "\n" + LICENSES_FOOTER
     with open(paths.LICENSES, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)

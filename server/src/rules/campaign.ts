@@ -28,6 +28,28 @@ export interface CampaignPuzzle {
   readonly cellCount: number;
   /** For each grid word, the indexes of the cells it covers, into the cells sorted by row, then column. */
   readonly wordCells: ReadonlyMap<string, readonly number[]>;
+  /**
+   * The previous campaign's puzzle at this stage (the `campaign_previous`
+   * table), when it differs: results played on it still count, see {@link editionFor}.
+   */
+  readonly previous?: CampaignPuzzle;
+}
+
+/**
+ * The edition of a stage's puzzle that a result was played on: the current
+ * one, unless some found or bonus word isn't in it and the previous
+ * campaign's puzzle has them all. Phones with the old campaign built in
+ * (and results queued before an update) send the same stage and id, so
+ * the words tell which grid it was. Pickups, gilded cells and the
+ * `incomplete` check then use that edition's cells.
+ */
+export function editionFor(puzzle: CampaignPuzzle, found: Iterable<string>, bonus: Iterable<string> = []): CampaignPuzzle {
+  const prev = puzzle.previous;
+  if (prev === undefined) return puzzle;
+  const f = [...found];
+  const b = [...bonus];
+  const fits = (p: CampaignPuzzle) => f.every((w) => p.gridWords.has(w)) && b.every((w) => p.bonus.has(w));
+  return !fits(puzzle) && fits(prev) ? prev : puzzle;
 }
 
 /** `c-` + the 1-based stage number padded to 4 digits (shared/puzzle-format.md). */
@@ -66,10 +88,11 @@ function isWord(value: unknown): value is PuzzleWordJson {
 }
 
 /**
- * Builds the checking model for one stage from its puzzle JSON.
- * Throws if the JSON isn't a usable puzzle.
+ * Builds the checking model for one stage from its puzzle JSON, with the
+ * previous campaign's puzzle at that stage if given (kept only when it
+ * differs and has the same id). Throws if the JSON isn't a usable puzzle.
  */
-export function campaignPuzzle(stage: number, data: unknown): CampaignPuzzle {
+export function campaignPuzzle(stage: number, data: unknown, previous?: unknown): CampaignPuzzle {
   if (typeof data !== "object" || data === null) throw new TypeError(`stage ${stage}: puzzle is not an object`);
   const p = data as Record<string, unknown>;
   if (typeof p.id !== "string") throw new TypeError(`stage ${stage}: puzzle has no id`);
@@ -103,7 +126,7 @@ export function campaignPuzzle(stage: number, data: unknown): CampaignPuzzle {
     wordCells.set(w.w, indexes);
   }
 
-  return {
+  const puzzle: CampaignPuzzle = {
     stage,
     id: p.id,
     gridWords: new Set(words.map((w) => w.w)),
@@ -111,4 +134,7 @@ export function campaignPuzzle(stage: number, data: unknown): CampaignPuzzle {
     cellCount: sorted.length,
     wordCells,
   };
+  if (previous === undefined || JSON.stringify(previous) === JSON.stringify(data)) return puzzle;
+  const prev = campaignPuzzle(stage, previous);
+  return prev.id === puzzle.id ? { ...puzzle, previous: prev } : puzzle;
 }

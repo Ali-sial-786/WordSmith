@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { campaignRows, campaignSql } from "../../scripts/build-campaign-sql.mjs";
+import { campaignRows, campaignSql, loadPreviousCampaignRows } from "../../scripts/build-campaign-sql.mjs";
 
 const puzzle = (stage: number, extra: Record<string, unknown> = {}) => ({
   id: `c-${String(stage).padStart(4, "0")}`,
@@ -43,6 +43,7 @@ describe("build-campaign-sql", () => {
   it("loading it again writes nothing unless a stage changed (deploys run it every time)", () => {
     const db = new DatabaseSync(":memory:");
     db.exec("CREATE TABLE campaign (stage INTEGER PRIMARY KEY, puzzle_id TEXT NOT NULL, data TEXT NOT NULL);");
+    db.exec("CREATE TABLE campaign_previous (stage INTEGER PRIMARY KEY, puzzle_id TEXT NOT NULL, data TEXT NOT NULL);");
     const load = (sql: string) =>
       sql
         .split("\n")
@@ -51,5 +52,25 @@ describe("build-campaign-sql", () => {
     expect(load(campaignSql(campaignRows({ puzzles: [puzzle(1), puzzle(2)] })))).toBe(2);
     expect(load(campaignSql(campaignRows({ puzzles: [puzzle(1), puzzle(2)] })))).toBe(0);
     expect(load(campaignSql(campaignRows({ puzzles: [puzzle(1), puzzle(2, { bonus: ["TAR"] })] })))).toBe(1);
+  });
+
+  it("loads the previous campaign into its own table, and empties it when there is none", () => {
+    const db = new DatabaseSync(":memory:");
+    for (const t of ["campaign", "campaign_previous"]) db.exec(`CREATE TABLE ${t} (stage INTEGER PRIMARY KEY, puzzle_id TEXT NOT NULL, data TEXT NOT NULL);`);
+    const load = (sql: string) => sql.split("\n").filter((l) => l !== "" && !l.startsWith("--")).forEach((l) => db.prepare(l).run());
+    const rows = campaignRows({ puzzles: [puzzle(1), puzzle(2)] });
+    const old = campaignRows({ puzzles: [puzzle(1, { bonus: ["RAT"] }), puzzle(2, { bonus: ["TAR"] })] });
+    load(campaignSql(rows, old));
+    const count = (t: string) => Number((db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).all()[0] as { n: number }).n);
+    expect([count("campaign"), count("campaign_previous")]).toEqual([2, 2]);
+    expect(JSON.parse((db.prepare("SELECT data FROM campaign_previous WHERE stage = 2").all()[0] as { data: string }).data).bonus).toEqual(["TAR"]);
+    load(campaignSql(rows));
+    expect([count("campaign"), count("campaign_previous")]).toEqual([2, 0]);
+  });
+
+  it("reads the committed previous campaign (the one before the quality-scored words)", () => {
+    const previous = loadPreviousCampaignRows();
+    expect(previous).toHaveLength(600);
+    expect(loadPreviousCampaignRows("/no/such/file.json")).toEqual([]);
   });
 });

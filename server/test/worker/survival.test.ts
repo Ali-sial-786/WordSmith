@@ -175,29 +175,30 @@ describe("survival co-op", () => {
   });
 
   it("moves the heat on when crossings or hints complete the heated word", async () => {
-    // m-00078 (heat 1, for 2):  HAS fills in from MASH, ASH and HAMS; HAM and SHAM are left.
-    //   M . H A M
-    //   A . A . .
-    //   S . M . .
-    //   H A S . .
-    //   . S . . .
-    //   S H A M .
+    // m-00112 (heat 1, for 3):  TAG fills in from GNAT, ANT and TANG; NAG and TAN are left.
+    //   G N A T . .
+    //   . . . A N T
+    //   T A N G . .
+    //   A . A . . .
+    //   N . G . . .
     const a = await setUpClient();
     const b = await setUpClient();
+    const c = await setUpClient();
     await env.DB.prepare("UPDATE profiles SET xp = ?2, level = 5 WHERE user_id = ?1").bind(a.uid, totalXpForLevel(5)).run();
     await env.DB.prepare("UPDATE inventory SET count = 5 WHERE user_id = ?1 AND item = 'chisel'").bind(a.uid).run();
-    await forcePuzzle(a.uid, "m-00078");
+    await forcePuzzle(a.uid, "m-00112");
     const code = await createRoom(a, "coop");
     const sa = await join(a, code);
     const sb = await join(b, code);
-    await survival(sa, [sb]);
-    await start(sa, code, [sa, sb]);
+    const sc = await join(c, code);
+    await survival(sa, [sb, sc]);
+    await start(sa, code, [sa, sb, sc]);
     const round = await roundOf(code);
-    expect(round.puzzle.id).toBe("m-00078");
+    expect(round.puzzle.id).toBe("m-00112");
     const slot = (word: string) => round.puzzle.slots.find((s) => s.word === word)!;
-    const order = ["HAS", "HAM", "SHAM", "MASH", "HAMS", "ASH"].map((w) => slot(w).slot);
+    const order = ["TAG", "NAG", "TAN", "GNAT", "ANT", "TANG"].map((w) => slot(w).slot);
     const clock: HeatClock = {
-      slot: slot("HAS").slot,
+      slot: slot("TAG").slot,
       startsAt: round.startsAt,
       deadline: round.startsAt + survivalHeatMs(3, 1, 0),
       durationMs: survivalHeatMs(3, 1, 0),
@@ -206,33 +207,33 @@ describe("survival co-op", () => {
     };
     await patchRound<CoopRound>(code, (r) => ({ ...r, embers: [], survival: { order, clock, melted: null } }));
 
-    // HAS's crossing words: the last one fills it in, which saves it.
-    await forge(sa, "MASH", 1);
-    await forge(sb, "ASH", 1);
+    // TAG's crossing words: the last one fills it in, which saves it.
+    await forge(sa, "GNAT", 1);
+    await forge(sb, "ANT", 1);
     expect((await sb.drain()).filter((m) => m.op === "HEATED")).toEqual([]);
-    await forge(sa, "HAMS", 2);
+    await forge(sa, "TANG", 2);
     for (const s of [sa, sb]) {
-      expect(await s.next({ op: "CLAIMED", word: "HAMS" })).toMatchObject({ auto: [{ slot: slot("HAS").slot, word: "HAS" }] });
-      expect(await s.next({ op: "HEATED" })).toMatchObject({ slot: slot("HAM").slot, saved: 1, durationMs: survivalHeatMs(3, 1, 1) });
+      expect(await s.next({ op: "CLAIMED", word: "TANG" })).toMatchObject({ auto: [{ slot: slot("TAG").slot, word: "TAG" }] });
+      expect(await s.next({ op: "HEATED" })).toMatchObject({ slot: slot("NAG").slot, saved: 1, durationMs: survivalHeatMs(3, 1, 1) });
     }
 
-    // HAM's last two letters by Chisel: the hints save it too.
-    sa.send({ op: "HINT", kind: "chisel", x: 3, y: 0 });
-    expect(await sb.next({ op: "REVEAL" })).toMatchObject({ cells: [{ x: 3, y: 0, letter: "A" }], auto: [] });
-    sa.send({ op: "HINT", kind: "chisel", x: 4, y: 0 });
-    expect(await sb.next({ op: "REVEAL" })).toMatchObject({ auto: [{ slot: slot("HAM").slot, word: "HAM" }] });
+    // NAG's last two letters by Chisel: the hints save it too.
+    sa.send({ op: "HINT", kind: "chisel", x: 2, y: 3 });
+    expect(await sb.next({ op: "REVEAL" })).toMatchObject({ cells: [{ x: 2, y: 3, letter: "A" }], auto: [] });
+    sa.send({ op: "HINT", kind: "chisel", x: 2, y: 4 });
+    expect(await sb.next({ op: "REVEAL" })).toMatchObject({ auto: [{ slot: slot("NAG").slot, word: "NAG" }] });
     const heated = await sb.next({ op: "HEATED" });
-    expect(heated).toMatchObject({ slot: slot("SHAM").slot, saved: 2, durationMs: survivalHeatMs(4, 1, 2) });
+    expect(heated).toMatchObject({ slot: slot("TAN").slot, saved: 2, durationMs: survivalHeatMs(3, 1, 2) });
     expect(sb.seen.findIndex((m) => m.op === "REVEAL" && m.auto.length > 0)).toBeLessThan(indexOf(sb, { op: "HEATED", saved: 2 }));
 
     // The last word: no HEATED, and the round is complete with 3 saved (+6 XP each).
-    await forge(sb, "SHAM", 2);
+    await forge(sb, "TAN", 2);
     const end = await sa.next({ op: "ROUND_END" });
     expect(end).toMatchObject({ reason: "complete", variant: "survival", saved: 3, melted: null });
     expect(sa.seen.filter((m) => m.op === "HEATED")).toHaveLength(2);
     const pointsB = (end.players as Message[]).find((p) => p.id === b.uid)!.points as number;
     expect(end.xp[b.uid].xp).toBe(20 + pointsB / 10 + 20 + (end.mvp === b.uid ? 10 : 0) + 6);
-    await closeAll(sa, sb);
+    await closeAll(sa, sb, sc);
   });
 
   it("pauses the team's countdown only while nobody is connected, and resumes it on rejoin", async () => {

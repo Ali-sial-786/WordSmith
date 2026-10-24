@@ -11,12 +11,11 @@ from collections import Counter
 
 from . import paths
 from .render import report_path
-from .generate import Result, SeedPool, Spec, generate_slot, spec_for
+from .generate import Result, SeedPool, Spec, answer_candidates, generate_slot, spec_for
 from .layout import LayoutOptions
-from .tiers import (CHAPTERS, MP_ANSWER_LEVEL, MP_GROW_ANSWER_LEVEL, MP_GROW_PER,
-                    MP_GROW_SEED_LEVEL, MP_SEED_LEVEL, MP_SIZE_MIN, MP_SIZES, TIERS,
-                    TUTORIAL_LEVEL, TUTORIAL_STAGES, TUTORIAL_WORDS, Chapter,
-                    chapter_heats, mp_target)
+from .tiers import (CHAPTERS, MP_ANSWER_Q, MP_GROW_ANSWER_Q, MP_GROW_PER, MP_GROW_SEED_Q,
+                    MP_SEED_Q, MP_SIZE_MIN, MP_SIZES, TIERS, TUTORIAL_Q, TUTORIAL_STAGES,
+                    TUTORIAL_WORDS, Chapter, chapter_heats, mp_target)
 from .words import Lexicon, load, signature
 
 PUZZLE_KEYS = ("id", "letters", "heat", "size", "cols", "rows", "words", "bonus")
@@ -31,8 +30,9 @@ def rng_for(seed: int, *parts) -> random.Random:
 def tutorial_spec() -> Spec:
     t = TIERS[1]
     return Spec(heat=1, length=4, target=TUTORIAL_WORDS, min_words=TUTORIAL_WORDS,
-                answer_level=TUTORIAL_LEVEL, common_level=t.common_level, max_rare=0,
-                seed_level=TUTORIAL_LEVEL, exact=True, max_answer_len=4, progress=0.0)
+                answer_q=TUTORIAL_Q, answer_level=t.answer_level, common_q=TUTORIAL_Q,
+                max_rare=0, seed_q=TUTORIAL_Q, max_inflections=0, exact=True,
+                max_answer_len=4, progress=0.0)
 
 
 def arrange(results: list[Result], rng: random.Random) -> list[Result]:
@@ -105,6 +105,7 @@ def build_campaign(seed: int, lex: Lexicon | None = None,
     per_chapter: list[dict[int, list[Result]]] = [dict() for _ in chapters]
     tutorials: list[Result] = []
     rejections = [Counter() for _ in chapters]
+    usage: Counter = Counter()
     for idx, (ci, h) in enumerate(slots):
         rng = rng_for(seed, "campaign", idx)
         if idx < TUTORIAL_STAGES:
@@ -115,7 +116,7 @@ def build_campaign(seed: int, lex: Lexicon | None = None,
             progress = k / max(1, tier_total[h] - 1)
             spec = spec_for(h, progress, rng)
         stats: dict = {}
-        res = generate_slot(lex, pool, spec, used, rng, stats, opts=opts)
+        res = generate_slot(lex, pool, spec, used, rng, stats, opts=opts, usage=usage)
         rejections[ci].update(stats)
         if idx < TUTORIAL_STAGES:
             tutorials.append(res)
@@ -164,7 +165,7 @@ def campaign_signatures(path: str) -> set[str]:
 def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
              heats=tuple(sorted(TIERS)), sizes=MP_SIZES,
              opts: LayoutOptions | None = None, log=None, first_id: int = 1,
-             answer_levels=MP_ANSWER_LEVEL, seed_levels=MP_SEED_LEVEL):
+             answer_qs=MP_ANSWER_Q, seed_qs=MP_SEED_Q):
     """Return (bank dict, report dict). `exclude` = letter signatures already used.
 
     `per` is the number of puzzles for every heat and size, or a dict
@@ -177,8 +178,10 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
     groups: dict[tuple[int, int], list[Result]] = {}
     report_groups = {}
     notes = []
+    usage: Counter = Counter()
     # Biggest sizes first, so they get the seeds with the most words.
     for heat in heats:
+        richness = anvil_richness(lex, pool, heat, sizes, answer_qs, used)
         for size in sorted(sizes, reverse=True):
             if count.get((heat, size), 0) == 0:
                 continue
@@ -194,10 +197,12 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
                 progress = rng.random()
                 target = rng.randint(lo, hi)
                 spec = spec_for(heat, progress, rng, target=target, extra_words=2 * (size - 1),
-                                min_words=need, answer_level=answer_levels.get((heat, size)))
-                spec.seed_level = seed_levels.get((heat, size), TIERS[heat].seed_level)
+                                min_words=need, answer_q=answer_qs.get((heat, size)),
+                                widened=(heat, size) in answer_qs)
+                spec.seed_q = seed_qs.get((heat, size), TIERS[heat].seed_q)
                 res = generate_slot(lex, pool, spec, used, rng, stats, opts=opts,
-                                    rich_first=need < lo)
+                                    rich_first=need < lo, usage=usage,
+                                    avoid=reserved_for_bigger(richness, heat, size, sizes))
                 res.puzzle["size"] = size
                 out.append(res)
             out.sort(key=lambda r: (r.difficulty, r.seed))
@@ -222,6 +227,38 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
     report = {"seed": seed, "kind": "mp", "per": per if isinstance(per, int) else per_table(count),
               "groups": report_groups, "notes": notes}
     return bank, report
+
+
+def anvil_richness(lex: Lexicon, pool: SeedPool, heat: int, sizes, answer_qs: dict,
+                   used: set[str]) -> dict[str, int]:
+    """For a heat with scarce sizes (guaranteeing fewer words than they want, README:
+    Ember), the answer count of each unused anvil in the widest pool; {} otherwise."""
+    scarce = [s for s in sizes if MP_SIZE_MIN[(heat, s)] < mp_target(heat, s)[0]]
+    if not scarce:
+        return {}
+    widest = max(scarce)
+    need = MP_SIZE_MIN[(heat, widest)]
+    spec = spec_for(heat, 0.5, random.Random(0), target=need, min_words=need,
+                    answer_q=answer_qs.get((heat, widest)),
+                    widened=(heat, widest) in answer_qs)
+    out = {}
+    for length in TIERS[heat].lengths:
+        for s in pool.seeds(length, spec.answer_level, None, True):
+            sig = signature(s)
+            if sig not in used:
+                out[sig] = len(answer_candidates(lex, s, spec))
+    return out
+
+
+def reserved_for_bigger(richness: dict[str, int], heat: int, size: int, sizes) -> frozenset[str]:
+    """Anvils a bigger size of `heat` could use: `size` takes them only when nothing
+    else is left, so that later parts still find some (Ember has about 120 anvils
+    that make 6+ interlocking words, and about 200 that make 5+)."""
+    bigger = [MP_SIZE_MIN[(heat, s)] for s in sizes if s > size]
+    if not richness or not bigger:
+        return frozenset()
+    need = min(bigger)
+    return frozenset(sig for sig, n in richness.items() if n >= need)
 
 
 def per_table(count: dict) -> list[list[int]]:
@@ -328,8 +365,8 @@ def main_grow(args) -> int:
     used = campaign_signatures(args.campaign) | {signature(p["letters"].lower()) for p in puzzles}
     first = len(puzzles) + 1
     part, report = build_mp(args.seed, dict(MP_GROW_PER), used, lex=lex, log=print,
-                            first_id=first, answer_levels=MP_GROW_ANSWER_LEVEL,
-                            seed_levels=MP_GROW_SEED_LEVEL)
+                            first_id=first, answer_qs=MP_GROW_ANSWER_Q,
+                            seed_qs=MP_GROW_SEED_Q)
     parts.append({"first": first, "count": len(part["puzzles"]), "seed": args.seed,
                   "per": per_table(MP_GROW_PER)})
     puzzles += part["puzzles"]

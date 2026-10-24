@@ -22,7 +22,7 @@
  * Functions named `apply…`, `pause…` and `resume…` change what they're given in place.
  */
 
-import type { CampaignPuzzle } from "./campaign";
+import { editionFor, type CampaignPuzzle } from "./campaign";
 import type { HeatTier } from "./heat";
 import type { Rand } from "./mold";
 import type { PlayFacts } from "./orders";
@@ -299,7 +299,8 @@ function foundSet(p: RunPuzzle): Set<string> | null {
  * highest stage in `solo_results` (0 for none).
  *
  * - every stage is in the campaign, with its own `puzzleId`, and no further than {@link runStageLimit};
- * - every found word is a grid word of its puzzle;
+ * - every found word is a grid word of its puzzle (or of the previous
+ *   campaign's puzzle at that stage, campaign.ts `editionFor`);
  * - a `cleared` puzzle's found words and hints could fill the mold (sync's `incomplete` check);
  * - `startedAt` ≤ `endedAt`, neither more than 24 h old or more than 10 minutes ahead;
  * - at least 1 s per found word over the whole run;
@@ -311,11 +312,13 @@ export function checkSurvivalRun(run: SurvivalRun, puzzles: ReadonlyMap<number, 
   let slots = 0;
   for (const [i, p] of run.puzzles.entries()) {
     const where = `puzzles[${i}]`;
-    const puzzle = puzzles.get(p.stage);
-    if (puzzle === undefined) return `${where}: stage ${p.stage} isn't in the campaign`;
-    if (p.puzzleId !== puzzle.id) return `${where}: puzzleId isn't stage ${p.stage}'s`;
+    const stagePuzzle = puzzles.get(p.stage);
+    if (stagePuzzle === undefined) return `${where}: stage ${p.stage} isn't in the campaign`;
+    if (p.puzzleId !== stagePuzzle.id) return `${where}: puzzleId isn't stage ${p.stage}'s`;
     if (p.stage > limit) return `${where}: stage ${p.stage} is beyond ${limit}`;
     const found = foundSet(p);
+    // A run played on the previous campaign is checked against its puzzles.
+    const puzzle = editionFor(stagePuzzle, found ?? []);
     if (found === null || [...found].some((w) => !puzzle.gridWords.has(w))) return `${where}: a found word isn't a grid word`;
     if (p.cleared && !couldBeFilled(puzzle, found, p.hintsUsed)) return `${where}: incomplete`;
     words += found.size;

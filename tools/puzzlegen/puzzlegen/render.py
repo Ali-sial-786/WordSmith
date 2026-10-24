@@ -90,6 +90,26 @@ def report_path(path: str) -> str:
     return os.path.splitext(os.path.abspath(path))[0] + ".gen.json"
 
 
+def print_quality(puzzles: list[dict], data: dict) -> None:
+    """Answer-quality metrics (metrics.py) for the whole file, per chapter and per heat."""
+    from . import metrics
+    from .words import load
+    lex = load()
+    rows = [metrics.summary_row("all", puzzles, lex)]
+    if "chapters" in data:
+        for ch in data["chapters"]:
+            rows.append(metrics.summary_row(
+                ch["name"], puzzles[ch["first"] - 1: ch["first"] - 1 + ch["count"]], lex))
+    by_heat = defaultdict(list)
+    for p in puzzles:
+        by_heat[p["heat"]].append(p)
+    rows += [metrics.summary_row(f"heat {h} {HEAT_NAMES[h]}", by_heat[h], lex)
+             for h in sorted(by_heat)]
+    print("\nanswer quality (metrics.py: inv = bonus words clearly better than the worst grid "
+          "word, missed = very common words left out, infl = inflected grid words):")
+    _print_table(metrics.SUMMARY_HEADER, rows)
+
+
 def stats(path: str) -> int:
     data = load_file(path)
     puzzles = data["puzzles"]
@@ -115,6 +135,7 @@ def stats(path: str) -> int:
             by_hs[(p["heat"], p.get("size", 1))].append(p)
         groups = [(f"heat {h} size {s}", by_hs[(h, s)]) for (h, s) in sorted(by_hs)]
         _print_table(header, _summary_rows(groups))
+    print_quality(puzzles, data)
     rep = report_path(path)
     if os.path.exists(rep):
         gen = load_file(rep)

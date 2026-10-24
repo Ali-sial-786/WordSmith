@@ -18,6 +18,18 @@ function puzzle(stage: number): PuzzleJson {
   return JSON.parse(env.TEST_CAMPAIGN[stage - 1]!.data) as PuzzleJson;
 }
 
+/** The previous campaign's puzzle at `stage` (data/campaign_previous.json). */
+function previousPuzzle(stage: number): PuzzleJson {
+  return JSON.parse(env.TEST_CAMPAIGN_PREVIOUS[stage - 1]!.data) as PuzzleJson;
+}
+
+/** The first campaign stage whose puzzle passes `test`. */
+function stageWhere(test: (p: PuzzleJson, stage: number) => boolean): number {
+  const i = env.TEST_CAMPAIGN.findIndex((_, i) => test(puzzle(i + 1), i + 1));
+  expect(i).toBeGreaterThanOrEqual(0);
+  return i + 1;
+}
+
 const T0 = Date.now() - 24 * 3600 * 1000;
 
 /** A queue entry for `stage` that the server should accept: every grid word typed, no hints. */
@@ -86,10 +98,10 @@ describe("POST /v1/solo/sync: accepting", () => {
 
   it("caps bonus XP at +5 and smelts every 10 bonus words into a Hammer Strike", async () => {
     const c = await client();
-    const p = puzzle(33); // 14 bonus words
-    const out = await sync(c, [entry(33, { bonusWords: p.bonus.slice(0, 12) })]);
+    const s = stageWhere((p) => p.bonus.length >= 12);
+    const out = await sync(c, [entry(s, { bonusWords: puzzle(s).bonus.slice(0, 12) })]);
     expect(out.results[0]).toMatchObject({ accepted: true, xp: 15, scrapHammers: 1 });
-    expect(out.profile).toMatchObject({ totalXp: 15, scrapBin: 2, hints: { hammer: 4 }, campaignCompleted: 33, nextStage: 34 });
+    expect(out.profile).toMatchObject({ totalXp: 15, scrapBin: 2, hints: { hammer: 4 }, campaignCompleted: s, nextStage: s + 1 });
   });
 
   it("accepts words lower-case and repeated, counting each once", async () => {
@@ -116,13 +128,20 @@ describe("POST /v1/solo/sync: accepting", () => {
 
   it("takes off hints used, and accepts words the hints completed", async () => {
     const c = await client();
-    // Stage 2 is MAIN, MAN, AIM; leaving out MAN leaves one cell only a hint could show.
-    const p = puzzle(2);
-    expect(p.words.map((w) => w.w)).toContain("MAN");
-    const out = await sync(c, [entry(2, { foundWords: ["MAIN", "AIM"], hintsUsed: { hammer: 1 } })]);
+    // A stage where leaving out one word leaves one cell only a hint could show.
+    const uncovered = (s: number, left: string) => {
+      const model = campaignPuzzle(s, puzzle(s));
+      const covered = new Set([...model.wordCells].filter(([w]) => w !== left).flatMap(([, cells]) => cells));
+      return model.cellCount - covered.size;
+    };
+    const s = stageWhere((p, s) => p.words.length >= 3 && p.words.some((w) => uncovered(s, w.w) === 1));
+    const left = puzzle(s).words.find((w) => uncovered(s, w.w) === 1)!.w;
+    const found = puzzle(s).words.map((w) => w.w).filter((w) => w !== left);
+    expect(found).toHaveLength(puzzle(s).words.length - 1);
+    const out = await sync(c, [entry(s, { foundWords: found, hintsUsed: { hammer: 1 } })]);
     expect(out.results[0]).toMatchObject({ accepted: true, xp: 10 });
     expect(out.results[0]).not.toHaveProperty("hintsClamped");
-    expect(out.profile).toMatchObject({ hints: { hammer: 2 }, stats: { wordsForged: 2 } });
+    expect(out.profile).toMatchObject({ hints: { hammer: 2 }, stats: { wordsForged: found.length } });
   });
 
   it("never lets hint stock go below zero, and says by how much it clamped", async () => {
@@ -204,10 +223,13 @@ describe("POST /v1/solo/sync: rejecting", () => {
 describe("POST /v1/solo/sync: pickups", () => {
   it("grants a pickup from the shared vectors (user-123, c-0012, 9 cells → cell 0, hammer)", async () => {
     // shared/pickups.md lists this at level 50; a Hammer Strike is a Hammer Strike at any level.
-    expect(campaignPuzzle(12, puzzle(12)).cellCount).toBe(9);
+    // The previous campaign's c-0012 has the vector's 9 cells (the current one has 8), and a
+    // result played on it still counts (its words tell the server which grid it was).
+    expect(campaignPuzzle(12, previousPuzzle(12)).cellCount).toBe(9);
     const c = await client("user-123");
     await c.del("/v1/me"); // in case another run left this fixed uid behind
-    const out = await sync(c, [entry(12, { pickups: [{ cell: 0, kind: "hammer" }] })]);
+    const old = previousPuzzle(12).words.map((w) => w.w);
+    const out = await sync(c, [entry(12, { foundWords: old, pickups: [{ cell: 0, kind: "hammer" }] })]);
     expect(out.results[0]).toMatchObject({ accepted: true, pickups: [{ cell: 0, kind: "hammer" }], pickupsRejected: 0 });
     expect(out.profile.hints).toMatchObject({ hammer: 4 });
     await c.del("/v1/me");
@@ -280,6 +302,39 @@ describe("writeSync", () => {
 
     // With the current version it goes through.
     expect(await writeSync(env.DB, after, outcome, now)).toBe(true);
+  });
+});
+
+describe("POST /v1/solo/sync: results played on the previous campaign", () => {
+  // Apps with the old campaign built in send the same stages and ids with that grid's words.
+  const changed = (s: number) => puzzle(s).words.map((w) => w.w).join() !== previousPuzzle(s).words.map((w) => w.w).join();
+  const oldEntry = (s: number, extra: Record<string, unknown> = {}) =>
+    entry(s, { foundWords: previousPuzzle(s).words.map((w) => w.w), ...extra });
+
+  it("counts them, with the old grid's bonus words and cells", async () => {
+    const c = await client();
+    const s = stageWhere((p, s) => changed(s) && previousPuzzle(s).bonus.some((b) => !p.bonus.includes(b)));
+    const bonus = previousPuzzle(s).bonus.filter((b) => !puzzle(s).bonus.includes(b)).slice(0, 1);
+    const out = await sync(c, [oldEntry(s, { bonusWords: bonus }), entry(s + 1)]);
+    expect(out.results.map((r) => [r.stage, r.accepted])).toEqual([
+      [s, true],
+      [s + 1, true],
+    ]);
+    expect(out.profile).toMatchObject({ scrapBin: 1, campaignCompleted: s + 1 });
+    const puzzles = await loadCampaignPuzzles(env.DB, [s]);
+    expect(puzzles.get(s)!.previous!.gridWords).toEqual(new Set(previousPuzzle(s).words.map((w) => w.w)));
+  });
+
+  it("still rejects words from neither grid, or from both mixed", async () => {
+    const c = await client();
+    const s = stageWhere((p, s) => changed(s) && previousPuzzle(s).words.some((w) => !p.words.some((x) => x.w === w.w)));
+    const oldOnly = previousPuzzle(s).words.map((w) => w.w).find((w) => !puzzle(s).words.some((x) => x.w === w))!;
+    const mixed = entry(s, { foundWords: [...puzzle(s).words.map((w) => w.w), oldOnly] });
+    const out = await sync(c, [mixed, oldEntry(s + 1, { foundWords: ["ZZZ"] })]);
+    expect(out.results.map((r) => [r.accepted, r.reason])).toEqual([
+      [false, "unknown_word"],
+      [false, "unknown_word"],
+    ]);
   });
 });
 

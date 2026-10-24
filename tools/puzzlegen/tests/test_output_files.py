@@ -6,7 +6,7 @@ import os
 import unittest
 from collections import Counter
 
-from puzzlegen import campaign, paths, words
+from puzzlegen import campaign, metrics, paths, words
 from puzzlegen.validate import validate_campaign, validate_mp
 
 
@@ -61,6 +61,14 @@ class CampaignFileTests(unittest.TestCase):
         self.assertIn("contiguous", errs)
         self.assertIn("expected 600 puzzles", errs)
 
+    def test_answer_quality(self):
+        # Regression guard for the word choice (README "Answer quality"): the
+        # campaign had 13.8 inversions a puzzle and 15% plurals with SCOWL levels alone.
+        s = metrics.summary(self.data["puzzles"], self.lex)
+        self.assertLess(s["inversions/puzzle"], 4)
+        self.assertLess(s["plural share"], 0.06)
+        self.assertGreater(s["mean min quality"], 3.0)
+
     def test_tutorial_and_ramp(self):
         ps = self.data["puzzles"]
         for p in ps[:3]:
@@ -79,6 +87,11 @@ class MpFileTests(unittest.TestCase):
     def test_bank_validates(self):
         camp = load(paths.CAMPAIGN_JSON) if os.path.exists(paths.CAMPAIGN_JSON) else None
         self.assertEqual(validate_mp(self.data, self.lex, camp), [])
+
+    def test_answer_quality(self):
+        s = metrics.summary(self.data["puzzles"], self.lex)
+        self.assertLess(s["inversions/puzzle"], 4.5)
+        self.assertLess(s["plural share"], 0.06)
 
     def test_no_names(self):
         for p in self.data["puzzles"]:

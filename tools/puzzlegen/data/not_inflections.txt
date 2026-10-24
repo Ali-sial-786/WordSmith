@@ -1,0 +1,4 @@
+# Words that look like a plain inflection of a shorter word but are words of
+# their own (SEED is not SEE + D). quality.py doesn't penalize them as
+# inflections. One or more lowercase words per line; '#' starts a comment.
+seed reed

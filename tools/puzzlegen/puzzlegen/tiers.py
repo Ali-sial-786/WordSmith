@@ -12,25 +12,38 @@ class Tier:
     lengths: tuple[int, ...]  # anvil letter counts
     min_words: int  # grid answers
     max_words: int
-    answer_level: int  # answers come from SCOWL <= this level
-    common_level: int  # words above this level count as "rare" ...
+    answer_q: float  # answers have at least this quality (quality.py) ...
+    answer_level: int  # ... and SCOWL level <= this
+    common_q: float  # answers below this quality count as "rare" ...
     max_rare: int  # ... and at most this many rare words go in a grid
-    seed_level: int  # the all-letter seed word comes from SCOWL <= this level
+    seed_q: float  # the all-letter seed word has at least this quality
 
 
-# SCOWL size levels: 10/20 "very common", 35 "common", 40 "less common",
-# 50 "uncommon". (55/60 were tried for the top tiers but were mostly unfair:
-# GITS, LIDO, OPES, DACE...) Answers must also be ENABLE words and not in
-# data/answer_exclude.txt (see words.Lexicon.is_answer). Words above
-# `common_level` are "rare": at most `max_rare` of them per grid.
+# Quality is on the Zipf scale (quality.py): about 4.2+ is what SCOWL calls
+# "very common" (level 10), 3.4 is like level 20 and 2.0 like level 35.
+# Answers must also be ENABLE words, not in data/answer_exclude.txt, and at
+# most SCOWL 50 (55/60 were tried for the top tiers but were mostly unfair:
+# GITS, LIDO, OPES, DACE). See words.Lexicon.is_answer. Answers below
+# `common_q` are "rare": at most `max_rare` of them per grid.
 TIERS = {
-    1: Tier(1, "Ember", (4,), 3, 5, answer_level=20, common_level=20, max_rare=0, seed_level=20),
-    2: Tier(2, "Dull Red", (5,), 5, 7, answer_level=35, common_level=20, max_rare=3, seed_level=20),
-    3: Tier(3, "Cherry Red", (6,), 7, 10, answer_level=35, common_level=20, max_rare=5, seed_level=20),
-    4: Tier(4, "Orange", (6, 7), 9, 12, answer_level=40, common_level=35, max_rare=2, seed_level=20),
-    5: Tier(5, "Yellow", (7,), 11, 15, answer_level=50, common_level=35, max_rare=3, seed_level=20),
-    6: Tier(6, "White Heat", (7, 8), 14, 20, answer_level=50, common_level=35, max_rare=4, seed_level=20),
+    1: Tier(1, "Ember", (4,), 3, 5, answer_q=3.4, answer_level=35, common_q=3.4, max_rare=0,
+            seed_q=3.8),
+    2: Tier(2, "Dull Red", (5,), 5, 7, answer_q=2.6, answer_level=35, common_q=3.4, max_rare=3,
+            seed_q=3.6),
+    3: Tier(3, "Cherry Red", (6,), 7, 10, answer_q=2.6, answer_level=35, common_q=3.2,
+            max_rare=4, seed_q=3.4),
+    4: Tier(4, "Orange", (6, 7), 9, 12, answer_q=2.3, answer_level=40, common_q=2.9, max_rare=3,
+            seed_q=3.3),
+    5: Tier(5, "Yellow", (7,), 11, 15, answer_q=2.0, answer_level=50, common_q=2.8, max_rare=4,
+            seed_q=3.2),
+    6: Tier(6, "White Heat", (7, 8), 14, 20, answer_q=1.9, answer_level=50, common_q=2.6,
+            max_rare=5, seed_q=3.1),
 }
+
+# Plain inflections (plurals, -ed, -ing, -est of a shorter word: LASTS,
+# SALTS) allowed per grid, as a share of its target word count (at least 1).
+# The seed word is never a plural.
+INFLECTION_SHARE = 0.3
 
 HEAT_NAMES = {t.heat: t.name for t in TIERS.values()}
 
@@ -59,10 +72,10 @@ CHAPTERS = (
 CAMPAIGN_TOTAL = sum(c.count for c in CHAPTERS)
 
 # The first stages teach the game: 4 letters and exactly 3 short, very
-# common words.
+# common words (quality like SCOWL level 10).
 TUTORIAL_STAGES = 3
 TUTORIAL_WORDS = 3
-TUTORIAL_LEVEL = 10
+TUTORIAL_Q = 4.2
 
 
 def chapter_heats(ch: Chapter) -> list[int]:
@@ -95,18 +108,22 @@ MP_SIZE_MIN[(1, 3)] = 6
 MP_SIZE_MIN[(1, 4)] = 6
 
 # Answer and seed pools may be widened for bigger multiplayer sizes so that
-# enough words exist (Ember only: very common -> common).
-MP_ANSWER_LEVEL = {(1, 2): 35, (1, 3): 35, (1, 4): 35}
-MP_SEED_LEVEL = {(1, 2): 35, (1, 3): 35, (1, 4): 35}
+# enough words exist (Ember only). The 4-letter anvils that make 6+ words
+# that interlock are scarce (about 120 not in the campaign), so co-op Ember
+# takes any answer SCOWL calls common (<= 35) whatever its quality, as the
+# old SCOWL-only pools did, and plural seeds too (generate.spec_for
+# `widened`). The layout still prefers the best words.
+MP_ANSWER_Q = {(1, 2): None, (1, 3): None, (1, 4): None}
+MP_SEED_Q = {(1, 2): 2.0, (1, 3): 2.0, (1, 4): 2.0}
 
 # A part added to the bank by `grow` (README "Growing the bank"). Versus
 # (size 1) needs the most variety: 210 more per heat makes 250 with the
 # first part's 40. Co-op sizes get 60 more (100 in all), except Ember: about
 # 90 unused 4-letter anvils make 5+ common words and only 30 make 6+, so
 # its sizes 2-4 get 40, 12 and 12. Ember size 1 also draws from common
-# words (SCOWL <= 35): the first part and the campaign used most of the
+# words (as Dull Red): the first part and the campaign used most of the
 # very common 4-letter anvils.
 MP_GROW_PER = {(h, s): 210 if s == 1 else 60 for h in TIERS for s in MP_SIZES}
 MP_GROW_PER.update({(1, 2): 40, (1, 3): 12, (1, 4): 12})
-MP_GROW_ANSWER_LEVEL = {**MP_ANSWER_LEVEL, (1, 1): 35}
-MP_GROW_SEED_LEVEL = {**MP_SEED_LEVEL, (1, 1): 35}
+MP_GROW_ANSWER_Q = {**MP_ANSWER_Q, (1, 1): 2.6}
+MP_GROW_SEED_Q = {**MP_SEED_Q, (1, 1): 3.0}

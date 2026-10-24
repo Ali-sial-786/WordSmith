@@ -6,7 +6,9 @@
  *
  * Entries are applied in `completedAt` order, so each one's level-up rewards
  * and pickup types use the level the player had when that puzzle started.
- * An entry is rejected (and changes nothing) if:
+ * An entry played on the previous campaign's puzzle at its stage (an app
+ * with the old campaign built in) is checked against that puzzle
+ * (campaign.ts `editionFor`). An entry is rejected (and changes nothing) if:
  *
  * | reason | when |
  * |---|---|
@@ -30,7 +32,7 @@
  * towards the player's Work Orders (orders.ts).
  */
 
-import type { CampaignPuzzle } from "./campaign";
+import { editionFor, type CampaignPuzzle } from "./campaign";
 import { gildedCell, MASTERWORK_REWARD, masterworksFinishedBetween } from "./masterworks";
 import type { PlayFacts } from "./orders";
 import { pickupsFor } from "./pickups";
@@ -501,7 +503,9 @@ export function evaluateSync(input: SyncInput): SyncOutcome {
   let bonusWords = 0;
 
   for (const { index, entry } of valid) {
-    const puzzle = puzzles.get(entry.stage);
+    const stagePuzzle = puzzles.get(entry.stage);
+    const puzzle =
+      stagePuzzle && editionFor(stagePuzzle, normalizedSet(entry.foundWords) ?? [], normalizedSet(entry.bonusWords) ?? []);
     const reason = checkEntry(entry, puzzle, completed, now);
     if (reason !== null || puzzle === undefined) {
       results[index] = rejected(entry.stage, reason ?? "unknown_stage");
