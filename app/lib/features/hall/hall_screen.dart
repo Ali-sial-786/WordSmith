@@ -504,6 +504,7 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final label = DefaultTextStyle.of(context).style.merge(text.labelLarge);
     return GestureDetector(
       onTap: onTap,
       child: ForgePanel(
@@ -560,18 +561,23 @@ class _ProfileCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 for (final e in hints.entries)
-                  Opacity(
-                    opacity: e.key.unlockedAt(level) ? 1 : 0.4,
-                    child: Row(
-                      children: [
-                        GameIcon(e.key.unlockedAt(level) ? e.key.name : 'lock', size: 20, color: Palette.molten),
-                        const SizedBox(width: 6),
-                        Text(
-                          e.key.unlockedAt(level) ? '${e.value}' : 'Lv ${e.key.unlockLevel}',
-                          style: text.labelLarge,
-                        ),
-                      ],
-                    ),
+                  // A locked hint is faded by its colours, not an Opacity,
+                  // which would take a layer on every frame.
+                  Row(
+                    children: [
+                      GameIcon(
+                        e.key.unlockedAt(level) ? e.key.name : 'lock',
+                        size: 20,
+                        color: Palette.molten.withValues(alpha: e.key.unlockedAt(level) ? 1 : 0.4),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        e.key.unlockedAt(level) ? '${e.value}' : 'Lv ${e.key.unlockLevel}',
+                        style: e.key.unlockedAt(level)
+                            ? label
+                            : label.copyWith(color: label.color?.withValues(alpha: 0.4)),
+                      ),
+                    ],
                   ),
               ],
             ),

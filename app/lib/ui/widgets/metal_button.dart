@@ -63,9 +63,11 @@ class RoundMetalButton extends StatelessWidget {
               ),
             ),
             Center(
-              child: Opacity(
-                opacity: enabled ? 1 : 0.45,
-                child: GameIcon(icon, size: size * 0.5, color: active ? Palette.onAccent : Palette.whiteHeat),
+              // Faded by its colour: an Opacity would take a layer on every frame.
+              child: GameIcon(
+                icon,
+                size: size * 0.5,
+                color: (active ? Palette.onAccent : Palette.whiteHeat).withValues(alpha: enabled ? 1 : 0.45),
               ),
             ),
             if (locked)

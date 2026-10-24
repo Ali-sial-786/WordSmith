@@ -55,7 +55,10 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
   final _toast = GlobalKey<ToastLineState>();
   final _moldKey = GlobalKey();
   final _scrapKey = GlobalKey();
-  String _word = '';
+
+  /// The word being swiped. Only the preview under the mold shows it, so a
+  /// new letter doesn't rebuild the whole screen.
+  final _word = ValueNotifier('');
   bool _chisel = false;
   bool _finishing = false;
 
@@ -159,6 +162,7 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
       ..pause()
       ..removeListener(_onGameChanged)
       ..dispose();
+    _word.dispose();
     super.dispose();
   }
 
@@ -169,11 +173,11 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
   }
 
   void _onSelection(String word) {
-    if (word.length > _word.length) {
+    if (word.length > _word.value.length) {
       _sfx.tink(word.length);
       _haptic(HapticFeedback.selectionClick);
     }
-    setState(() => _word = word);
+    _word.value = word;
   }
 
   void _onSubmit(String word) {
@@ -526,20 +530,23 @@ class _PuzzleScreenState extends ConsumerState<PuzzleScreen> with WidgetsBinding
                       ),
                     ),
                     ToastLine(key: _toast),
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if ((widget.stage ?? 99) <= 2 && _game.board.foundSlots.isEmpty)
-                          AnimatedOpacity(
-                            opacity: _word.isEmpty ? 1 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Text(
-                              'Swipe across the letters to forge a word',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Palette.molten),
+                    ValueListenableBuilder(
+                      valueListenable: _word,
+                      builder: (context, word, _) => Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if ((widget.stage ?? 99) <= 2 && _game.board.foundSlots.isEmpty)
+                            AnimatedOpacity(
+                              opacity: word.isEmpty ? 1 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Text(
+                                'Swipe across the letters to forge a word',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Palette.molten),
+                              ),
                             ),
-                          ),
-                        WordPreview(key: _preview, word: _word),
-                      ],
+                          WordPreview(key: _preview, word: word),
+                        ],
+                      ),
                     ),
                     SizedBox(
                       height: ring + 8,

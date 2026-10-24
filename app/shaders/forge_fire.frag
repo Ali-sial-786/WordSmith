@@ -39,27 +39,36 @@ void main() {
   float aspect = uSize.x / uSize.y;
   vec2 p = vec2(uv.x * aspect * 3.2, y * 3.2);
 
-  // A bed of glowing coals along the bottom edge.
+  // A bed of glowing coals along the bottom edge. Higher up they can't
+  // show (c is at most 1), so the noise is skipped there.
   float coalTop = 0.09;
-  float c = noise(vec2(uv.x * aspect * 26.0, y * 22.0)) * 0.65 +
-            noise(vec2(uv.x * aspect * 60.0, y * 50.0)) * 0.35;
-  float pulse = 0.75 + 0.25 * sin(uTime * 1.7 + c * 12.0);
-  float hot = smoothstep(0.45, 0.8, c) * pulse;
-  vec3 coal = mix(vec3(0.07, 0.02, 0.01), vec3(1.0, 0.33, 0.04), hot);
-  coal = mix(coal, vec3(1.0, 0.7, 0.3), smoothstep(0.75, 1.0, hot) * 0.6);
-  float coalMask = 1.0 - smoothstep(coalTop * 0.6, coalTop, y + (c - 0.5) * 0.03);
-
-  // Flames rise from the coals: two noise layers scrolling upward at
-  // different speeds give licking tongues of fire.
-  float fy = max(y - coalTop * 0.5, 0.0);
-  float n1 = fbm(p * vec2(1.6, 0.9) - vec2(0.0, uTime * 1.5));
-  float n2 = fbm(p * vec2(3.0, 1.7) + vec2(uTime * 0.25, -uTime * 2.4));
-  float flame = n1 * 0.6 + n2 * 0.4;
+  float coalMask = 0.0;
+  vec3 coal = vec3(0.0);
+  if (y < coalTop + 0.015) {
+    float c = noise(vec2(uv.x * aspect * 26.0, y * 22.0)) * 0.65 +
+              noise(vec2(uv.x * aspect * 60.0, y * 50.0)) * 0.35;
+    float pulse = 0.75 + 0.25 * sin(uTime * 1.7 + c * 12.0);
+    float hot = smoothstep(0.45, 0.8, c) * pulse;
+    coal = mix(vec3(0.07, 0.02, 0.01), vec3(1.0, 0.33, 0.04), hot);
+    coal = mix(coal, vec3(1.0, 0.7, 0.3), smoothstep(0.75, 1.0, hot) * 0.6);
+    coalMask = 1.0 - smoothstep(coalTop * 0.6, coalTop, y + (c - 0.5) * 0.03);
+  }
 
   // Flames are tallest in the middle and shrink toward the sides.
+  float fy = max(y - coalTop * 0.5, 0.0);
   float centre = 1.0 - pow(abs(uv.x - 0.5) * 2.0, 2.0) * 0.45;
   float height = fy / (0.9 * max(uIntensity, 0.05) * centre);
-  float v = smoothstep(0.08, 0.62, flame - height * 0.7 + 0.12);
+
+  // Flames rise from the coals: two noise layers scrolling upward at
+  // different speeds give licking tongues of fire. fbm is below 0.9375, so
+  // above this height there is no flame and the noise is skipped.
+  float v = 0.0;
+  if (height * 0.7 < 0.98) {
+    float n1 = fbm(p * vec2(1.6, 0.9) - vec2(0.0, uTime * 1.5));
+    float n2 = fbm(p * vec2(3.0, 1.7) + vec2(uTime * 0.25, -uTime * 2.4));
+    float flame = n1 * 0.6 + n2 * 0.4;
+    v = smoothstep(0.08, 0.62, flame - height * 0.7 + 0.12);
+  }
 
   vec3 col = mix(vec3(0.24, 0.02, 0.0), vec3(0.86, 0.19, 0.02), smoothstep(0.0, 0.4, v));
   col = mix(col, vec3(1.0, 0.5, 0.08), smoothstep(0.35, 0.75, v));
