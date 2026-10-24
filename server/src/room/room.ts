@@ -104,7 +104,7 @@ import {
 } from "../rules/room";
 import { heatedFields, pauseClock, resumeClock, type HeatClock, type Variant } from "../rules/survival";
 import { DEFAULT_TEAM_RULE, MAX_TEAM_SIZE, teamForNewcomer, teamSizes, teamsEven, type TeamId, type TeamRule } from "../rules/teams";
-import type { SeriesLength } from "../rules/vs";
+import { DEFAULT_SCORING, type Scoring, type SeriesLength } from "../rules/vs";
 import {
   activeRacers,
   applyVsHeat,
@@ -231,6 +231,8 @@ interface Room {
   teams?: Record<string, TeamId>;
   /** Team Versus: how the next series' rounds are won (CONFIG); `"combined"` while absent. */
   rule?: TeamRule;
+  /** Versus: how the next series is won (CONFIG); on round wins while absent. */
+  scoring?: Scoring;
   /** Co-op, after the host's AGAIN: when the next round's countdown starts, unless everyone is ready sooner. */
   nextAt?: number;
 }
@@ -626,9 +628,10 @@ export class RoomDO extends DurableObject<Env> {
         return;
 
       case "CONFIG": {
-        // Co-op has no series to configure, only Team Versus has a rule, and teams play classic rounds.
+        // Co-op has no series to configure, only Team Versus has a rule (and only Versus a scoring), and teams play classic rounds.
         if (message.series !== undefined && !isVersus(room.mode)) return this.error(ws, "bad_message");
         if (message.rule !== undefined && room.mode !== "team") return this.error(ws, "bad_message");
+        if (message.scoring !== undefined && room.mode !== "vs") return this.error(ws, "bad_message");
         if (message.variant === "survival" && room.mode === "team") return this.error(ws, "bad_message");
         // The series is chosen in the lobby; the variant and heat in the lobby or results, for the next START or AGAIN.
         if (message.series !== undefined ? room.phase !== "lobby" : !isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
@@ -649,6 +652,10 @@ export class RoomDO extends DurableObject<Env> {
         }
         if (message.rule !== undefined && (room.rule ?? DEFAULT_TEAM_RULE) !== message.rule) {
           room.rule = message.rule;
+          changed = true;
+        }
+        if (message.scoring !== undefined && (room.scoring ?? DEFAULT_SCORING) !== message.scoring) {
+          room.scoring = message.scoring;
           changed = true;
         }
         if (changed) {
@@ -1074,7 +1081,7 @@ export class RoomDO extends DurableObject<Env> {
         startedAt: now + COUNTDOWN_MS,
         ...(fresh.mode === "team"
           ? { teams: { rule: fresh.rule ?? DEFAULT_TEAM_RULE, of: { ...fresh.teams } } }
-          : { variant: fresh.variant }),
+          : { variant: fresh.variant, scoring: fresh.scoring }),
       });
       for (const p of fresh.players) p.ready = false;
       this.write(STANDINGS, null);
@@ -1287,6 +1294,7 @@ export class RoomDO extends DurableObject<Env> {
         forged: series.forged ?? {},
         ...(series.variant === undefined ? {} : { variant: series.variant }),
         ...(series.teams === undefined ? {} : { rule: series.teams.rule }),
+        ...(series.scoring === undefined ? {} : { scoring: series.scoring }),
       },
       usernames,
       history: series.history ?? [],
@@ -1720,6 +1728,7 @@ export class RoomDO extends DurableObject<Env> {
       ...(isVersus(room.mode) ? { series: room.series ?? DEFAULT_SERIES } : {}),
       ...(room.variant === "survival" && room.mode !== "team" ? { variant: room.variant } : {}),
       ...(room.mode === "team" ? { rule: this.ruleOf(room) } : {}),
+      ...(room.mode === "vs" ? { scoring: this.scoringOf(room) } : {}),
       ...(room.nextAt === undefined ? {} : { nextAt: room.nextAt }),
     };
   }
@@ -1729,6 +1738,13 @@ export class RoomDO extends DurableObject<Env> {
     const series = this.series();
     if (series?.teams !== undefined && isPlayingPhase(room.phase)) return series.teams.rule;
     return room.rule ?? DEFAULT_TEAM_RULE;
+  }
+
+  /** Versus: the series' scoring while one is on, else what the next one plays. */
+  private scoringOf(room: Room): Scoring {
+    const series = this.series();
+    if (series !== null && isPlayingPhase(room.phase)) return series.scoring ?? "rounds";
+    return room.scoring ?? DEFAULT_SCORING;
   }
 
   private lobbyMessage(room: Room, except?: WebSocket): ServerMessage {
@@ -1794,7 +1810,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private seriesEndFields(award: VsPendingAward, xp: Readonly<Record<string, VsXpBody>>): SeriesEndFields {
-    const { winner, early, forfeit, rounds, players, team, teamTally } = award.record.results;
+    const { winner, early, forfeit, rounds, players, team, teamTally, scoring } = award.record.results;
     return {
       winner,
       early,
@@ -1806,10 +1822,12 @@ export class RoomDO extends DurableObject<Env> {
         wins: p.wins,
         place: p.place,
         ...(p.team === undefined ? {} : { team: p.team }),
+        ...(scoring === undefined ? {} : { score: p.score ?? 0, bonus: p.bonus }),
       })),
       history: award.history ?? [],
       xp,
       ...(team === undefined ? {} : { team, rule: award.record.rule ?? DEFAULT_TEAM_RULE, teamTally: teamTally ?? [0, 0] }),
+      ...(scoring === undefined ? {} : { scoring }),
     };
   }
 

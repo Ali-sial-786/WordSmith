@@ -6,6 +6,12 @@
  * and count them in `roundsPlayed`. A tie after the last round then becomes a
  * unique leader once a sudden-death round has a winner, and a sudden-death
  * round with no winner simply leads to another one between the same players.
+ *
+ * A **total score** series (`scoring: "total"`) plays every regular round
+ * whatever the tally, each still ending when the first racer fills their
+ * mold, and is won on the letters each racer filled over the whole series.
+ * A tie goes to the most bonus words found (Scrap Bin); one still tied is
+ * a draw, and they share first place.
  */
 
 export const SERIES_LENGTHS = [3, 5, 7, 10] as const;
@@ -13,6 +19,16 @@ export type SeriesLength = (typeof SERIES_LENGTHS)[number];
 
 export function isSeriesLength(value: unknown): value is SeriesLength {
   return (SERIES_LENGTHS as readonly unknown[]).includes(value);
+}
+
+/** How a series is won: on round wins (the default), or on the letters filled over all its rounds. */
+export const SCORINGS = ["rounds", "total"] as const;
+export type Scoring = (typeof SCORINGS)[number];
+/** What a new Versus room plays until the host picks (CONFIG `scoring`). */
+export const DEFAULT_SCORING: Scoring = "rounds";
+
+export function isScoring(value: unknown): value is Scoring {
+  return (SCORINGS as readonly unknown[]).includes(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -140,4 +156,34 @@ export function podium(standings: readonly SeriesEntry[]): PodiumPlace[] {
     wins: s.wins,
     place: 1 + sorted.filter((o) => o.wins > s.wins).length,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Total score
+// ---------------------------------------------------------------------------
+
+export interface TotalEntry {
+  readonly playerId: string;
+  /** Letters filled over the series, on every round raced. */
+  readonly score: number;
+  /** Bonus words found over the series (Scrap Bin): the tie-break. */
+  readonly bonus: number;
+}
+
+/** Whether `a` ranks above `b`: the higher score, then more bonus words. */
+function ahead(a: TotalEntry, b: TotalEntry): boolean {
+  return a.score > b.score || (a.score === b.score && a.bonus > b.bonus);
+}
+
+/** Everyone on the best score and bonus words, in input order. More than one is a draw. */
+export function totalLeaders(entries: readonly TotalEntry[]): string[] {
+  return entries.filter((e) => !entries.some((o) => ahead(o, e))).map((e) => e.playerId);
+}
+
+/** Final podium of a total-score series: by score, then bonus words; equal on both keep their input order and share a place. */
+export function totalPodium(entries: readonly TotalEntry[]): (TotalEntry & { readonly place: number })[] {
+  const sorted = entries
+    .map((e, order) => ({ ...e, order }))
+    .sort((a, b) => b.score - a.score || b.bonus - a.bonus || a.order - b.order);
+  return sorted.map((e) => ({ playerId: e.playerId, score: e.score, bonus: e.bonus, place: 1 + sorted.filter((o) => ahead(o, e)).length }));
 }

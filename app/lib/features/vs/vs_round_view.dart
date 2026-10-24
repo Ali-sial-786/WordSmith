@@ -361,7 +361,7 @@ class _VsTopStrip extends StatelessWidget {
                           style: displayStyle(16, color: Palette.whiteHeat).copyWith(height: 1.1),
                         ),
                         Text(
-                          'of up to ${session.series}',
+                          '${session.totalScore ? 'of' : 'of up to'} ${session.series}',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Palette.steel, height: 1.1),
                         ),
                       ],
@@ -393,7 +393,7 @@ class _VsTopStrip extends StatelessWidget {
   }
 }
 
-/// My letters, wins and bonus words, beside the anvil.
+/// My letters, wins (or total score) and bonus words, beside the anvil.
 class _MyStatus extends StatelessWidget {
   const _MyStatus({required this.session});
 
@@ -409,7 +409,15 @@ class _MyStatus extends StatelessWidget {
         Text('${session.myFilled}/${session.total}', style: displayStyle(20, color: color)),
         Text('letters', style: text.labelSmall),
         const SizedBox(height: 8),
-        WinPips(wins: session.tally[session.me] ?? 0, color: color),
+        if (session.totalScore) ...[
+          Text(
+            '${session.scoreOf(session.me)}',
+            key: const ValueKey('my-score'),
+            style: displayStyle(16, color: color),
+          ),
+          Text('total', style: text.labelSmall),
+        ] else
+          WinPips(wins: session.tally[session.me] ?? 0, color: color),
         if (session.bonusWords > 0) ...[
           const SizedBox(height: 8),
           Text('+${session.bonusWords} bonus', style: text.labelSmall?.copyWith(color: Palette.verdigris)),

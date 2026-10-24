@@ -298,6 +298,85 @@ void main() {
     expect(session.standings!.winner, 'u2');
   });
 
+  test('total score: the host picks it, scores add up live, and the standings and podium go by them', () async {
+    await until(() => room.sockets.isNotEmpty);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room.send(_lobby('lobby'));
+    await until(() => session.lobby != null);
+    expect(session.totalScore, isFalse);
+    session.setScoring('total');
+    await until(() => room.received.isNotEmpty);
+    expect(room.received.last, {'op': 'CONFIG', 'scoring': 'total'});
+    room.send({..._lobby('lobby'), 'scoring': 'total'});
+    await until(() => session.lobby!.totalScore);
+    expect(session.totalScore, isTrue);
+
+    // Round 2: u2 has 12 letters so far, u1 10 and a bonus word.
+    room
+      ..send(_lobby('round'))
+      ..send({
+        ..._roundStart(now),
+        'round': 2,
+        'scoring': 'total',
+        'scores': {'u1': 10, 'u2': 12, 'u3': 4},
+        'bonusTally': {'u1': 1, 'u2': 0, 'u3': 0},
+      });
+    await until(() => session.round?.round == 2);
+    expect([session.scoreOf('u1'), session.scoreOf('u2')], [10, 12]);
+    room.send({'op': 'PROGRESS', 'id': 'u1', 'filled': 5, 'total': 7});
+    await until(() => session.progress['u1']?.filled == 5);
+    expect(session.scoreOf('u1'), 15, reason: "this round's letters count as they're filled");
+    expect(session.standingsOrder.take(2), ['u1', 'u2']);
+
+    // The round ends with u1 and u2 level on 17: u1's bonus word puts them first.
+    room.send({
+      'op': 'ROUND_END',
+      'round': 2,
+      'reason': 'finished',
+      'winner': 'u2',
+      'how': 'finished',
+      'progress': [
+        {'id': 'u1', 'filled': 7, 'total': 7},
+        {'id': 'u2', 'filled': 5, 'total': 7},
+        {'id': 'u3', 'filled': 0, 'total': 7},
+      ],
+      'tally': {'u1': 0, 'u2': 2, 'u3': 0},
+      'answers': [],
+      'next': {
+        'round': 3,
+        'suddenDeath': false,
+        'players': ['u1', 'u2', 'u3'],
+      },
+      'standingsEndsAt': now + 30000,
+      'scoring': 'total',
+      'scores': {'u1': 17, 'u2': 17, 'u3': 4},
+      'bonusTally': {'u1': 1, 'u2': 0, 'u3': 0},
+    });
+    await until(() => session.standings != null);
+    expect(session.standings!.totalScore, isTrue);
+    expect(session.scoreOf('u1'), 17, reason: 'once the round is over, the scores already hold it');
+    expect(session.standingsOrder, ['u1', 'u2', 'u3']);
+
+    room.send({
+      'op': 'SERIES_END',
+      'winner': 'u1',
+      'scoring': 'total',
+      'early': false,
+      'forfeit': false,
+      'rounds': 3,
+      'podium': [
+        {'id': 'u1', 'username': 'Ada', 'wins': 0, 'place': 1, 'score': 24, 'bonus': 1},
+        {'id': 'u2', 'username': 'sam', 'wins': 3, 'place': 2, 'score': 20, 'bonus': 0},
+        {'id': 'u3', 'username': 'Kit', 'wins': 0, 'place': 3, 'score': 4, 'bonus': 0},
+      ],
+      'xp': {},
+    });
+    await until(() => session.seriesEnd != null);
+    final end = session.seriesEnd!;
+    expect(end.totalScore, isTrue);
+    expect([for (final p in end.podium) (p.place, p.score, p.bonus)], [(1, 24, 1), (2, 20, 0), (3, 4, 0)]);
+  });
+
   test('sudden death leaves the others watching, and the series ends on a podium', () async {
     await until(() => room.sockets.isNotEmpty);
     final now = DateTime.now().millisecondsSinceEpoch;

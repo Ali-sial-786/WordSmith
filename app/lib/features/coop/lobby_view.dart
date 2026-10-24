@@ -15,6 +15,7 @@ import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 import '../safety/player_actions.dart';
 import '../vs/team_widgets.dart';
+import '../vs/vs_widgets.dart';
 import 'room_chat.dart';
 import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
@@ -89,7 +90,12 @@ class LobbyView extends ConsumerWidget {
           _VariantPicker(session: session, survival: lobby.survival, vs: vs),
         if (vs && session is VsSession) ...[
           const SizedBox(height: 12),
-          _SeriesPicker(session: session as VsSession, series: lobby.series),
+          _SeriesPicker(session: session as VsSession, series: lobby.series, total: lobby.totalScore),
+          // Teams are won on round wins.
+          if (!team) ...[
+            const SizedBox(height: 12),
+            _ScoringPicker(session: session as VsSession, total: lobby.totalScore),
+          ],
         ],
         const SizedBox(height: 18),
         Text('Smiths ${lobby.players.length}/$max', style: text.titleMedium),
@@ -390,12 +396,14 @@ class _VariantPicker extends StatelessWidget {
   }
 }
 
-/// Versus: best of 3, 5, 7 or 10. The host picks; everyone sees it.
+/// Versus: best of 3, 5, 7 or 10 (a total score series plays them all).
+/// The host picks; everyone sees it.
 class _SeriesPicker extends StatelessWidget {
-  const _SeriesPicker({required this.session, required this.series});
+  const _SeriesPicker({required this.session, required this.series, required this.total});
 
   final VsSession session;
   final int series;
+  final bool total;
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +411,13 @@ class _SeriesPicker extends StatelessWidget {
     return Column(
       children: [
         Text(
-          session.isHost ? 'Best of how many rounds?' : 'Best of $series · the host picks',
+          session.isHost
+              ? total
+                    ? 'How many rounds?'
+                    : 'Best of how many rounds?'
+              : total
+              ? '$series rounds · the host picks'
+              : 'Best of $series · the host picks',
           style: text.labelLarge?.copyWith(color: Palette.steel),
         ),
         const SizedBox(height: 6),
@@ -423,6 +437,51 @@ class _SeriesPicker extends StatelessWidget {
                 onSelected: session.isHost ? (_) => session.config(n) : null,
               ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Versus: how the series is won, on round wins or on the total score. The
+/// host picks; everyone sees it, with what it means.
+class _ScoringPicker extends StatelessWidget {
+  const _ScoringPicker({required this.session, required this.total});
+
+  final VsSession session;
+  final bool total;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        Text(
+          session.isHost ? 'How is the series won?' : 'How the series is won · the host picks',
+          style: text.labelLarge?.copyWith(color: Palette.steel),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          children: [
+            for (final (id, label) in const [('rounds', 'Round wins'), ('total', 'Total score')])
+              ChoiceChip(
+                key: ValueKey('scoring-$id'),
+                label: Text(label),
+                selected: total == (id == 'total'),
+                selectedColor: Palette.ember.withValues(alpha: 0.35),
+                labelStyle: TextStyle(color: Palette.whiteHeat),
+                checkmarkColor: Palette.whiteHeat,
+                side: BorderSide(color: total == (id == 'total') ? Palette.molten : Palette.ash),
+                onSelected: session.isHost ? (_) => session.setScoring(id) : null,
+              ),
+          ],
+        ),
+        Text(
+          scoringBlurb(total),
+          textAlign: TextAlign.center,
+          style: text.bodySmall?.copyWith(color: Palette.molten),
         ),
       ],
     );

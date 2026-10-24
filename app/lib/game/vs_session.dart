@@ -25,6 +25,12 @@ class VsSession extends RoomSession {
   /// Team Versus: the teams' round wins so far, as `[copper, cobalt]`.
   List<int> teamTally = const [0, 0];
 
+  /// A total score series: letters filled in the rounds before this one (all
+  /// of them once it's over), and bonus words found, by user id. Null in a
+  /// series won on round wins.
+  Map<String, int>? scores;
+  Map<String, int> bonusTally = const {};
+
   /// The last round's result, shown between rounds.
   VsRoundEnd? standings;
   SeriesEnd? seriesEnd;
@@ -61,8 +67,15 @@ class VsSession extends RoomSession {
     return left.isNegative ? Duration.zero : left;
   }
 
-  /// Best of this many rounds.
+  /// Best of this many rounds (a total score series plays them all).
   int get series => round?.series ?? lobby?.series ?? 3;
+
+  /// The series is won on the total score: during one, its own; else what the
+  /// lobby's next series plays.
+  bool get totalScore => round != null || standings != null ? scores != null : lobby?.totalScore ?? false;
+
+  /// [id]'s total score so far, this round's letters included while it's on.
+  int scoreOf(String id) => (scores?[id] ?? 0) + (standings == null && round != null ? progress[id]?.filled ?? 0 : 0);
 
   /// Racing this round (in sudden death, the rest watch).
   bool get racing => round?.racers.contains(me) ?? false;
@@ -117,10 +130,18 @@ class VsSession extends RoomSession {
   int get myFilled => mold?.cells.where((c) => mold!.fillOf(c) == CellFill.filled).length ?? 0;
   int get total => mold?.cells.length ?? 0;
 
-  /// Racers in tally order (most wins first), then the rest of the room.
+  /// Racers in tally order (most wins first; a total score series, the
+  /// highest score, then most bonus words), then the rest of the room.
   List<String> get standingsOrder {
     final ids = <String>{...tally.keys, ...?lobby?.players.map((p) => p.id)}.toList();
-    ids.sort((a, b) => (tally[b] ?? 0).compareTo(tally[a] ?? 0));
+    if (scores != null) {
+      ids.sort((a, b) {
+        final byScore = scoreOf(b).compareTo(scoreOf(a));
+        return byScore != 0 ? byScore : (bonusTally[b] ?? 0).compareTo(bonusTally[a] ?? 0);
+      });
+    } else {
+      ids.sort((a, b) => (tally[b] ?? 0).compareTo(tally[a] ?? 0));
+    }
     return ids;
   }
 
@@ -146,10 +167,17 @@ class VsSession extends RoomSession {
     progress = {for (final id in start.racers) id: RacerProgress(id, 0, total, slots: racing ? null : const [])};
     tally = {...start.tally};
     teamTally = start.teamTally ?? const [0, 0];
+    scores = start.scores == null ? null : {...start.scores!};
+    bonusTally = {...start.bonusTally};
     syncClock(start.serverNow);
   }
 
   void _claim(int slot, String word) => mold?.claim(slot, word, me);
+
+  void _totals(VsRoundEnd end) {
+    scores = end.scores == null ? null : {...end.scores!};
+    bonusTally = {...end.bonusTally};
+  }
 
   /// The series was decided by this round: keep it up, after any melt still
   /// playing, before the podium.
@@ -185,6 +213,7 @@ class VsSession extends RoomSession {
         standings = e;
         tally = {...e.tally};
         teamTally = e.teamTally ?? teamTally;
+        _totals(e);
         for (final p in e.progress) {
           progress[p.id] = p;
         }
@@ -223,6 +252,7 @@ class VsSession extends RoomSession {
       standings = end;
       tally = {...end.tally};
       teamTally = end.teamTally ?? teamTally;
+      _totals(end);
       // Back during the standings: show that round's answers on my mold, or
       // drop a mold left over from an earlier round.
       if (end.round != null && round?.round != end.round) {
@@ -242,6 +272,10 @@ class VsSession extends RoomSession {
   /// Team Versus, host only, in the lobby or results: how the next series'
   /// rounds are won (`combined` or `first`).
   void setRule(String rule) => client.config(rule: rule);
+
+  /// Versus, host only, in the lobby or results: how the next series is won
+  /// (`rounds` or `total`).
+  void setScoring(String scoring) => client.config(scoring: scoring);
 
   /// Team Versus, in the lobby or results: joins [team].
   void joinTeam(int team) => client.team(team);

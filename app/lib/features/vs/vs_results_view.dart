@@ -55,7 +55,9 @@ class VsResultsView extends StatelessWidget {
                           ? 'YOUR TEAM WINS THE SERIES!'
                           : '${teamName(r.team!)} wins the series!'
                     : r.winner == null
-                    ? 'Series over'
+                    ? r.totalScore && !r.forfeit
+                          ? "It's a draw!"
+                          : 'Series over'
                     : iWon
                     ? 'YOU WIN THE SERIES!'
                     : '${session.nameOf(r.winner)} wins the series!',
@@ -71,6 +73,7 @@ class VsResultsView extends StatelessWidget {
                   '${r.rounds} ${r.rounds == 1 ? 'round' : 'rounds'}',
                   if (r.early) 'clinched early',
                   if (r.forfeit) team ? 'the other team left' : 'everyone else left',
+                  if (r.totalScore && !r.forfeit) _totalLine(r),
                 ].join(' · '),
                 textAlign: TextAlign.center,
                 style: text.bodyMedium?.copyWith(color: Palette.steel),
@@ -94,7 +97,9 @@ class VsResultsView extends StatelessWidget {
                     dense: true,
                     leading: Text('${p.place}', style: displayStyle(18)),
                     title: Text(session.nameOf(p.id)),
-                    trailing: Text('${p.wins} ${p.wins == 1 ? 'win' : 'wins'}'),
+                    trailing: Text(
+                      p.score != null ? '${p.score} letters' : '${p.wins} ${p.wins == 1 ? 'win' : 'wins'}',
+                    ),
                   ),
               if (mine != null) ...[
                 const SizedBox(height: 14),
@@ -147,6 +152,15 @@ class VsResultsView extends StatelessWidget {
         _Actions(session: session, onLeave: onLeave),
       ],
     );
+  }
+
+  /// A total score series: how it was decided, on letters or (tied on those)
+  /// on bonus words.
+  static String _totalLine(SeriesEnd r) {
+    final top = r.podium.take(2).toList();
+    if (top.length < 2 || top[0].score != top[1].score) return 'won on total score';
+    if (r.winner == null) return 'tied on ${top[0].score} letters and ${top[0].bonus} bonus words';
+    return 'tied on ${top[0].score} letters, won on bonus words';
   }
 
   static List<String> _extras(XpAward a) => [
@@ -213,7 +227,9 @@ class _Actions extends StatelessWidget {
               child: session.isHost
                   ? PlateButton(
                       label: 'Rematch',
-                      sublabel: 'A new best of ${session.series}',
+                      sublabel: session.totalScore
+                          ? 'A new ${session.series}-round series'
+                          : 'A new best of ${session.series}',
                       icon: 'trophy',
                       primary: true,
                       onPressed: session.again,
@@ -293,7 +309,18 @@ class _Step extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleSmall,
           ),
-          WinPips(wins: place.wins, color: color, size: 12),
+          if (place.score != null)
+            // In the pips' room, which the podium is sized for.
+            SizedBox(
+              height: 12,
+              child: Text(
+                '${place.score} letters',
+                key: ValueKey('podium-score-${place.id}'),
+                style: TextStyle(fontSize: 11, height: 1.1, color: color, fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            WinPips(wins: place.wins, color: color, size: 12),
           const SizedBox(height: 4),
           Container(
             height: height,

@@ -92,12 +92,16 @@ class _VsStandingsViewState extends State<VsStandingsView> {
             wins: end.tally[id] ?? 0,
             filled: lastFilled[id],
             wonThis: end.isTeam ? end.team != null && s.teamOf(id) == end.team : id == winner,
+            score: end.scores?[id],
+            bonus: end.bonusTally[id] ?? 0,
           ),
         const SizedBox(height: 18),
         if (next != null) ...[
           Text(
             next.suddenDeath
                 ? 'Sudden death: ${end.isTeam ? 'Copper vs Cobalt' : next.racers.map(s.nameOf).join(' vs ')}'
+                : end.totalScore
+                ? 'Round ${next.round} of ${s.series}'
                 : 'Round ${next.round} of up to ${s.series}',
             textAlign: TextAlign.center,
             style: displayStyle(18, color: next.suddenDeath ? Palette.quenchRed : Palette.molten),
@@ -229,6 +233,8 @@ class _TallyRow extends StatelessWidget {
     required this.wins,
     required this.filled,
     required this.wonThis,
+    this.score,
+    this.bonus = 0,
   });
 
   final VsSession session;
@@ -236,6 +242,11 @@ class _TallyRow extends StatelessWidget {
   final int wins;
   final RacerProgress? filled;
   final bool wonThis;
+
+  /// A total score series: letters over the series so far, and bonus words
+  /// (the tie-break). Null in a series won on round wins.
+  final int? score;
+  final int bonus;
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +284,20 @@ class _TallyRow extends StatelessWidget {
           ),
           WinPips(wins: wins, color: color, size: 14),
           const SizedBox(width: 8),
-          Text('$wins', style: displayStyle(20, color: color)),
+          if (score == null)
+            Text('$wins', style: displayStyle(20, color: color))
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$score',
+                  key: ValueKey('score-$id'),
+                  style: displayStyle(20, color: color),
+                ),
+                Text('$bonus bonus', style: text.labelSmall?.copyWith(color: Palette.verdigris)),
+              ],
+            ),
         ],
       ),
     );

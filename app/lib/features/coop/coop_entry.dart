@@ -104,7 +104,8 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
                 ? 'Two teams of 1 to 3 smiths, each on their own mold. Win rounds on letters added up, or by '
                       'being first to finish; best of 3, 5, 7 or 10.'
                 : _vs
-                ? 'Up to 5 smiths race the same puzzle. First to fill their mold wins the round; best of 3, 5, 7 or 10.'
+                ? 'Up to 5 smiths race the same puzzle. First to fill their mold wins the round; best of 3, 5, 7 or '
+                      '10, or play on the total score.'
                 : 'Up to 4 smiths, one mold, one timer. First to forge a word scores it.',
             textAlign: TextAlign.center,
             style: text.bodyMedium?.copyWith(color: Palette.steel),

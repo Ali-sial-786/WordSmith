@@ -24,6 +24,10 @@
  *   is on a team ({@link VsTeams}), and a round is won by a team, under the
  *   room's rule (teams.ts). Wins are counted per team; each racer's own
  *   `wins` are the rounds their team won while they raced.
+ * - **Total score** (`scoring: "total"`, Versus only): rounds are won and
+ *   counted as usual, but the series plays every regular round and is won
+ *   on each racer's letters filled over all of them, then bonus words
+ *   (vs.ts {@link totalLeaders}).
  *
  * Functions named `apply…`, `record…` and `mark…` change what they're given in place.
  */
@@ -57,7 +61,18 @@ import {
   type Variant,
 } from "./survival";
 import { resolveTeamRound, teamRoundDone, TEAMS, type TeamId, type TeamRacerProgress, type TeamRule } from "./teams";
-import { podium, resolveVsRound, seriesStatus, type SeriesLength, type VsRoundHow, type VsRoundResult } from "./vs";
+import {
+  podium,
+  resolveVsRound,
+  seriesStatus,
+  totalLeaders,
+  totalPodium,
+  type Scoring,
+  type SeriesLength,
+  type TotalEntry,
+  type VsRoundHow,
+  type VsRoundResult,
+} from "./vs";
 
 /** Series length until the host picks one (CONFIG). */
 export const DEFAULT_SERIES: SeriesLength = 3;
@@ -406,6 +421,8 @@ export interface VsRacer {
   longest: string;
   /** Bonus words found (Scrap Bin). */
   bonus: number;
+  /** Letters filled on their molds, every round raced: the total score. Absent in series stored before it. */
+  score?: number;
   /** Embers collected, by the hint they became. */
   pickups: HintCounts;
   /** Left, or ran out of rejoin time: keeps their wins but can't win any more rounds. */
@@ -450,6 +467,8 @@ export interface VsSeries {
   readonly variant?: "survival";
   /** Team Versus only (fixed at the start, like the racers' teams). */
   readonly teams?: VsTeams;
+  /** Won on the total score (fixed at the start). Absent: on round wins. */
+  readonly scoring?: "total";
 }
 
 export interface NewVsSeriesInput {
@@ -462,6 +481,8 @@ export interface NewVsSeriesInput {
   readonly variant?: Variant;
   /** Team Versus: the rule, and every racer's team. */
   readonly teams?: { readonly rule: TeamRule; readonly of: Readonly<Record<string, TeamId>> };
+  /** Round wins unless given. Ignored in Team Versus. */
+  readonly scoring?: Scoring;
 }
 
 export function newVsSeries(input: NewVsSeriesInput): VsSeries {
@@ -478,6 +499,7 @@ export function newVsSeries(input: NewVsSeriesInput): VsSeries {
       words: 0,
       longest: "",
       bonus: 0,
+      score: 0,
       pickups: noHints(),
       out: false,
       ...(teams?.of[id] === undefined ? {} : { team: teams.of[id] }),
@@ -486,6 +508,7 @@ export function newVsSeries(input: NewVsSeriesInput): VsSeries {
     standingsEndsAt: null,
     ...(input.variant === "survival" ? { variant: "survival" as const } : {}),
     ...(teams === undefined ? {} : { teams: { rule: teams.rule, wins: [0, 0] as [number, number] } }),
+    ...(input.scoring === "total" && teams === undefined ? { scoring: "total" as const } : {}),
   };
 }
 
@@ -502,6 +525,20 @@ function activeTeams(s: VsSeries): TeamId[] {
 /** Wins so far for everyone in the series, out or not. */
 export function tallyOf(s: VsSeries): Record<string, number> {
   return Object.fromEntries(s.racers.map((r) => [r.id, r.wins]));
+}
+
+/** Total score: letters filled so far, for everyone in the series, out or not. */
+export function scoresOf(s: VsSeries): Record<string, number> {
+  return Object.fromEntries(s.racers.map((r) => [r.id, r.score ?? 0]));
+}
+
+/** Total score: bonus words found so far, the tie-break, for everyone in the series. */
+export function bonusTallyOf(s: VsSeries): Record<string, number> {
+  return Object.fromEntries(s.racers.map((r) => [r.id, r.bonus]));
+}
+
+function totalEntry(r: VsRacer): TotalEntry {
+  return { playerId: r.id, score: r.score ?? 0, bonus: r.bonus };
 }
 
 /** Racers still in the series, in join order. */
@@ -539,6 +576,7 @@ export function recordRound(s: VsSeries, r: VsRound, result: VsRoundOutcome): vo
     (forged[id] ??= []).push(...mold.claims.map((c) => c.word));
     for (const c of mold.claims) if (c.word.length > racer.longest.length) racer.longest = c.word;
     racer.bonus += mold.bonus.length;
+    racer.score = (racer.score ?? 0) + mold.filled;
     for (const p of mold.pickups) racer.pickups[p.kind] += 1;
   }
   if (s.teams !== undefined) {
@@ -587,12 +625,24 @@ export function seriesDecision(s: VsSeries): VsSeriesDecision {
   if (s.teams !== undefined) return teamSeriesDecision(s, s.teams);
   const active = activeRacers(s);
   if (active.length <= 1) return { over: true, winner: active[0] ?? null, early: false, forfeit: true };
+  if (s.scoring === "total") return totalSeriesDecision(s, active);
   const standings = s.racers.filter((r) => !r.out).map((r) => ({ playerId: r.id, wins: r.wins }));
   const status = seriesStatus(standings, s.length, s.played);
   if (status.state === "won") return { over: true, winner: status.winner, early: status.early, forfeit: false };
   const round = s.played + 1;
   if (status.state === "playing") return { over: false, next: { round, suddenDeath: false, players: active } };
   return { over: false, next: { round, suddenDeath: true, players: [...status.players] } };
+}
+
+/**
+ * Total score: every regular round is played, then the best score among the
+ * racers still in the series wins, more bonus words breaking a tie. Still
+ * tied, it's a draw (`winner: null`). No sudden death.
+ */
+function totalSeriesDecision(s: VsSeries, active: readonly string[]): VsSeriesDecision {
+  if (s.played < s.length) return { over: false, next: { round: s.played + 1, suddenDeath: false, players: [...active] } };
+  const top = totalLeaders(s.racers.filter((r) => !r.out).map(totalEntry));
+  return { over: true, winner: top.length === 1 ? top[0]! : null, early: false, forfeit: false };
 }
 
 /**
@@ -627,7 +677,7 @@ export function stopSeries(s: VsSeries): VsSeriesOutcome {
 // ---------------------------------------------------------------------------
 
 /** `ROUND_START` in Versus: the co-op fields plus the series. */
-export interface VsRoundStartFields extends RoundStartFields, VsTeamFields {
+export interface VsRoundStartFields extends RoundStartFields, VsTeamFields, VsTotalFields {
   readonly series: SeriesLength;
   readonly regular: number | null;
   readonly suddenDeath: boolean;
@@ -645,7 +695,24 @@ export function vsRoundStartFields(r: VsRound, s: VsSeries, serverNow: number): 
     players: [...r.playerIds],
     tally: tallyOf(s),
     ...teamFields(s),
+    ...totalFields(s),
   };
+}
+
+/**
+ * Total score: `"total"`, and everyone's letters filled and bonus words
+ * found over the series so far (before the round in `ROUND_START`, after it
+ * in `ROUND_END`).
+ */
+export interface VsTotalFields {
+  readonly scoring?: "total";
+  readonly scores?: Readonly<Record<string, number>>;
+  readonly bonusTally?: Readonly<Record<string, number>>;
+}
+
+function totalFields(s: VsSeries): VsTotalFields {
+  if (s.scoring !== "total") return {};
+  return { scoring: "total", scores: scoresOf(s), bonusTally: bonusTallyOf(s) };
 }
 
 /** Team Versus: the rule, everyone's team, and the teams' round wins as `[copper, cobalt]`. */
@@ -713,7 +780,7 @@ export type VsRoundEndReason = "finished" | "timeout" | "melted";
 export type VsRoundEndHow = VsRoundHow | "survived";
 
 /** `ROUND_END` in Versus. */
-export interface VsRoundEndFields extends VsTeamFields {
+export interface VsRoundEndFields extends VsTeamFields, VsTotalFields {
   /** Not in the contract: the round that ended. */
   readonly round: number;
   readonly reason: VsRoundEndReason;
@@ -841,6 +908,7 @@ export function endVsRound(s: VsSeries, r: VsRound, reason: VsRoundEndReason, no
             melted: r.survival.melted === null ? null : { ...r.survival.melted },
           }),
       ...(s.teams === undefined ? {} : { ...teamFields(s), team: result.team ?? null, teamScores: result.teamScores ?? [0, 0] }),
+      ...totalFields(s),
     },
     outcome,
   };
@@ -864,6 +932,8 @@ export interface VsPlayerResult {
   readonly pickups: HintCounts;
   /** Team Versus only. */
   readonly team?: TeamId;
+  /** Total score only: letters filled over the series. */
+  readonly score?: number;
 }
 
 export interface VsSeriesResults extends VsSeriesOutcome {
@@ -873,6 +943,8 @@ export interface VsSeriesResults extends VsSeriesOutcome {
   readonly teamTally?: readonly [number, number];
   /** Everyone in the series, out or not, in podium order. */
   readonly players: readonly VsPlayerResult[];
+  /** Total score only. */
+  readonly scoring?: "total";
 }
 
 /**
@@ -890,7 +962,18 @@ export function vsSeriesResults(s: VsSeries, outcome: VsSeriesOutcome): VsSeries
     bonus: r.bonus,
     pickups: { ...r.pickups },
     ...(r.team === undefined ? {} : { team: r.team }),
+    ...(s.scoring === "total" ? { score: r.score ?? 0 } : {}),
   });
+  if (s.scoring === "total") {
+    // By score then bonus words, the winner first among equals.
+    const ordered = [...s.racers].sort((a, b) => Number(b.id === outcome.winner) - Number(a.id === outcome.winner));
+    return {
+      ...outcome,
+      scoring: "total",
+      rounds: s.played,
+      players: totalPodium(ordered.map(totalEntry)).map((p) => result(s.racers.find((x) => x.id === p.playerId)!, p.place)),
+    };
+  }
   if (s.teams !== undefined) {
     // Places are the teams': the winners first (or the team with more round wins), then the rest.
     const wins = s.teams.wins;

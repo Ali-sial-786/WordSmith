@@ -263,9 +263,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
     }
     if (won) {
-      final tally = e.teamTally ?? [for (final p in e.podium.take(2)) p.wins];
+      // On the total score: the letters, or the bonus words if those tied.
+      final top = e.podium.take(2).toList();
+      final tally = e.totalScore
+          ? [for (final p in top) top.length == 2 && top[0].score == top[1].score ? p.bonus ?? 0 : p.score ?? 0]
+          : e.teamTally ?? [for (final p in top) p.wins];
       final score = tally.length == 2 && tally[0] != tally[1]
           ? 'Won the series ${max(tally[0], tally[1])}–${min(tally[0], tally[1])}'
+                '${e.totalScore
+                    ? top[0].score == top[1].score
+                          ? ' on bonus words'
+                          : ' on letters'
+                    : ''}'
           : 'Won the series';
       // After this frame: this can run while the session is notifying.
       WidgetsBinding.instance.addPostFrameCallback((_) {

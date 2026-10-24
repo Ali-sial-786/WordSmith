@@ -23,7 +23,7 @@ import type { HintCounts, HintKind } from "../rules/progression";
 import { MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isTeamId, isTeamRule, type TeamId, type TeamRule } from "../rules/teams";
-import { isSeriesLength, type SeriesLength } from "../rules/vs";
+import { isScoring, isSeriesLength, type Scoring, type SeriesLength } from "../rules/vs";
 import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields, VsRoundSummary } from "../rules/vs-round";
 
 export { PING, PONG } from "../hub/protocol";
@@ -42,10 +42,17 @@ export type ClientMessage =
   | { readonly op: "READY"; readonly ready: boolean }
   /**
    * The host's choices: the variant and the heat (lobby or results), the
-   * Versus series length (lobby) and the Team Versus rule (lobby or
-   * results). At least one.
+   * Versus series length (lobby), and the Team Versus rule and the
+   * Versus scoring (lobby or results). At least one.
    */
-  | { readonly op: "CONFIG"; readonly variant?: Variant; readonly series?: SeriesLength; readonly heat?: HeatChoice; readonly rule?: TeamRule }
+  | {
+      readonly op: "CONFIG";
+      readonly variant?: Variant;
+      readonly series?: SeriesLength;
+      readonly heat?: HeatChoice;
+      readonly rule?: TeamRule;
+      readonly scoring?: Scoring;
+    }
   /** Team Versus, in the lobby or results: moves the sender, or (host only) the player `id`, to `team`. */
   | { readonly op: "TEAM"; readonly team: TeamId; readonly id?: string }
   | { readonly op: "START" }
@@ -123,17 +130,19 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
     case "CONFIG": {
-      if (m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined) return BAD;
+      if (m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined && m.scoring === undefined) return BAD;
       if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
       if (m.series !== undefined && !isSeriesLength(m.series)) return BAD;
       if (m.heat !== undefined && !isHeatChoice(m.heat)) return BAD;
       if (m.rule !== undefined && !isTeamRule(m.rule)) return BAD;
+      if (m.scoring !== undefined && !isScoring(m.scoring)) return BAD;
       const message: ClientMessage = {
         op: "CONFIG",
         ...(m.variant === undefined ? {} : { variant: m.variant }),
         ...(m.series === undefined ? {} : { series: m.series }),
         ...(m.heat === undefined ? {} : { heat: m.heat }),
         ...(m.rule === undefined ? {} : { rule: m.rule }),
+        ...(m.scoring === undefined ? {} : { scoring: m.scoring }),
       };
       return { ok: true, message };
     }
@@ -206,6 +215,8 @@ export interface LobbyFields {
   readonly variant?: Variant;
   /** Team Versus only: how rounds are won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
   readonly rule?: TeamRule;
+  /** Versus only: how the series is won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
+  readonly scoring?: Scoring;
   /**
    * Co-op, after the host's AGAIN: when the next round's countdown starts
    * (server ms), unless everyone is ready (NEXT) sooner. Players' `ready`
@@ -262,6 +273,9 @@ export interface PodiumEntry {
   readonly place: number;
   /** Team Versus only. */
   readonly team?: TeamId;
+  /** Total score only: letters filled over the series, and bonus words found (the tie-break). `place` ranks on these. */
+  readonly score?: number;
+  readonly bonus?: number;
 }
 
 /** `SERIES_END` (Versus). */
@@ -272,6 +286,8 @@ export interface SeriesEndFields {
   readonly team?: TeamId | null;
   readonly rule?: TeamRule;
   readonly teamTally?: readonly [number, number];
+  /** Total score only: `"total"`. */
+  readonly scoring?: "total";
   readonly early: boolean;
   readonly forfeit: boolean;
   readonly rounds: number;

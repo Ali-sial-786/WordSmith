@@ -130,7 +130,14 @@ class RoundResult {
           theirs: ' wins the series',
           none: 'Series over',
         )
-      : _title(seriesWinner, style, mine: 'YOU WIN THE SERIES!', theirs: ' wins the series', none: 'Series over');
+      : _title(
+          seriesWinner,
+          style,
+          mine: 'YOU WIN THE SERIES!',
+          theirs: ' wins the series',
+          // On the total score, only a tie on letters and bonus words has no winner.
+          none: session.seriesEnd?.totalScore ?? false ? "It's a draw!" : 'Series over',
+        );
 
   /// Team Versus: my team's line, or the team's name in its colour.
   InlineSpan _teamTitle(int? t, TextStyle style, {required String mine, required String theirs, required String none}) {
@@ -811,7 +818,12 @@ class _CardFace extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text('SERIES · BEST OF ${r.session.series}', style: text.labelSmall?.copyWith(letterSpacing: 2)),
+                Text(
+                  r.end.totalScore
+                      ? 'TOTAL SCORE · ${r.session.series} ROUNDS'
+                      : 'SERIES · BEST OF ${r.session.series}',
+                  style: text.labelSmall?.copyWith(letterSpacing: 2),
+                ),
                 const SizedBox(height: 8),
                 _Score(r: r, pop: pop, chipKey: chipKey),
               ],
@@ -830,7 +842,8 @@ class _CardFace extends StatelessWidget {
   }
 }
 
-/// Everyone's round wins, as flames; the winner's newest flares as it lands.
+/// Everyone's round wins, as flames (a total score series: their scores);
+/// the winner's newest flares as it lands.
 class _Score extends StatelessWidget {
   const _Score({required this.r, required this.pop, required this.chipKey});
 
@@ -892,6 +905,7 @@ class _Score extends StatelessWidget {
           Builder(
             builder: (context) {
               final wins = r.end.tally[id] ?? 0;
+              final score = r.end.scores?[id];
               final flare = id == r.winner ? sin(pop * pi) : 0.0;
               return Transform.scale(
                 key: id == r.winner ? chipKey : null,
@@ -920,7 +934,9 @@ class _Score extends StatelessWidget {
                       const SizedBox(height: 3),
                       SizedBox(
                         height: 16,
-                        child: wins == 0
+                        child: score != null
+                            ? Text('$score', style: text.labelLarge?.copyWith(color: s.colorOf(id), height: 1))
+                            : wins == 0
                             ? Text('–', style: text.labelMedium?.copyWith(color: Palette.iron, height: 1))
                             : WinPips(wins: wins, color: s.colorOf(id), size: 15),
                       ),

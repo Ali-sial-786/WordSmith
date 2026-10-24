@@ -161,6 +161,7 @@ describe("Versus rooms", () => {
         autoHeat: 1,
         players: [{ id: host.uid, username: host.username, avatar: "avatar_01", level: 1, color: 0, ready: false, connected: true }],
         series: 3,
+        scoring: "rounds",
       },
     });
     const sf = await join(friend, code);

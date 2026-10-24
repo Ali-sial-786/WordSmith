@@ -130,6 +130,7 @@ class RoomLobby extends RoomEvent {
     this.chosenHeat,
     int? autoHeat,
     this.rule = 'combined',
+    this.scoring = 'rounds',
     this.nextAt,
   }) : autoHeat = autoHeat ?? heat;
 
@@ -148,6 +149,7 @@ class RoomLobby extends RoomEvent {
     chosenHeat: j['heatChoice'] is int ? j['heatChoice'] as int : null,
     autoHeat: j['autoHeat'] as int?,
     rule: j['rule'] as String? ?? 'combined',
+    scoring: j['scoring'] as String? ?? 'rounds',
     nextAt: (j['nextAt'] as num?)?.toInt(),
   );
 
@@ -175,6 +177,10 @@ class RoomLobby extends RoomEvent {
   /// Team Versus: how rounds are won, `combined` or `first`.
   final String rule;
 
+  /// Versus: how the series is won, `rounds` (round wins) or `total` (letters
+  /// filled over every round, then bonus words).
+  final String scoring;
+
   /// Co-op, after the host's AGAIN: when the next round starts (server ms),
   /// unless everyone is ready sooner.
   final int? nextAt;
@@ -183,6 +189,7 @@ class RoomLobby extends RoomEvent {
   bool get isVs => mode == 'vs' || mode == 'team';
   bool get isTeam => mode == 'team';
   bool get survival => variant == 'survival';
+  bool get totalScore => mode == 'vs' && scoring == 'total';
   bool get autoHeatOn => chosenHeat == null;
   int get maxPlayers => switch (mode) {
     'team' => 6,
@@ -256,6 +263,8 @@ class RoundStart extends RoomEvent implements MoldShape {
     this.teams = const {},
     this.teamTally,
     this.rule,
+    this.scores,
+    this.bonusTally = const {},
   });
 
   factory RoundStart.fromJson(Map<String, dynamic> j) => RoundStart(
@@ -282,6 +291,8 @@ class RoundStart extends RoomEvent implements MoldShape {
     teams: _scores(j['teams']),
     teamTally: _teamPair(j['teamTally']),
     rule: j['rule'] as String?,
+    scores: j['scoring'] == 'total' ? _scores(j['scores']) : null,
+    bonusTally: _scores(j['bonusTally']),
   );
 
   final int round;
@@ -316,7 +327,13 @@ class RoundStart extends RoomEvent implements MoldShape {
   final List<int>? teamTally;
   final String? rule;
 
+  /// A total score series: everyone's letters filled and bonus words found
+  /// before this round. Null in a series won on round wins.
+  final Map<String, int>? scores;
+  final Map<String, int> bonusTally;
+
   bool get survival => variant == 'survival';
+  bool get totalScore => scores != null;
 }
 
 /// Survival: the slot now heated (the team's in co-op, mine in Versus) and
@@ -445,6 +462,8 @@ class VsRoundEnd extends RoomEvent {
     this.teamScores,
     this.teamTally,
     this.teams = const {},
+    this.scores,
+    this.bonusTally = const {},
   });
 
   factory VsRoundEnd.fromJson(Map<String, dynamic> j) {
@@ -469,6 +488,8 @@ class VsRoundEnd extends RoomEvent {
       teamScores: _teamPair(j['teamScores']),
       teamTally: _teamPair(j['teamTally']),
       teams: _scores(j['teams']),
+      scores: j['scoring'] == 'total' ? _scores(j['scores']) : null,
+      bonusTally: _scores(j['bonusTally']),
     );
   }
 
@@ -502,11 +523,17 @@ class VsRoundEnd extends RoomEvent {
   final List<int>? teamTally;
   final Map<String, int> teams;
 
+  /// A total score series: everyone's letters filled and bonus words found
+  /// after this round. Null in a series won on round wins.
+  final Map<String, int>? scores;
+  final Map<String, int> bonusTally;
+
   bool get isTeam => teamTally != null;
+  bool get totalScore => scores != null;
 }
 
 class PodiumPlace {
-  const PodiumPlace(this.id, this.username, this.wins, this.place, [this.team]);
+  const PodiumPlace(this.id, this.username, this.wins, this.place, [this.team, this.score, this.bonus]);
 
   final String id;
   final String username;
@@ -515,6 +542,10 @@ class PodiumPlace {
 
   /// Team Versus only.
   final int? team;
+
+  /// A total score series only: letters filled over it, and bonus words found.
+  final int? score;
+  final int? bonus;
 }
 
 Map<String, List<String>> _bins(Object? j) => {
@@ -618,6 +649,7 @@ class SeriesEnd extends RoomEvent {
     this.team,
     this.teamTally,
     this.rule,
+    this.totalScore = false,
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -633,6 +665,8 @@ class SeriesEnd extends RoomEvent {
           (p['wins'] as num?)?.toInt() ?? 0,
           (p['place'] as num?)?.toInt() ?? 0,
           (p['team'] as num?)?.toInt(),
+          (p['score'] as num?)?.toInt(),
+          (p['bonus'] as num?)?.toInt(),
         ),
     ],
     xp: _xpAwards(j['xp']),
@@ -643,6 +677,7 @@ class SeriesEnd extends RoomEvent {
     team: (j['team'] as num?)?.toInt(),
     teamTally: _teamPair(j['teamTally']),
     rule: j['rule'] as String?,
+    totalScore: j['scoring'] == 'total',
   );
 
   final String? winner;
@@ -663,6 +698,10 @@ class SeriesEnd extends RoomEvent {
   final int? team;
   final List<int>? teamTally;
   final String? rule;
+
+  /// Won on the total score: [PodiumPlace.score], then bonus words. A tie on
+  /// both is a draw ([winner] null, first place shared).
+  final bool totalScore;
 
   bool get isTeam => teamTally != null;
 
@@ -1018,8 +1057,14 @@ class RoomClient {
 
   /// Host only: best of [series] rounds (Versus), the variant (`classic` or
   /// `survival`), and the [heat]: a tier 1–6, or `'auto'`.
-  void config({int? series, String? variant, Object? heat, String? rule}) =>
-      _send({'op': 'CONFIG', 'series': ?series, 'variant': ?variant, 'heat': ?heat, 'rule': ?rule});
+  void config({int? series, String? variant, Object? heat, String? rule, String? scoring}) => _send({
+    'op': 'CONFIG',
+    'series': ?series,
+    'variant': ?variant,
+    'heat': ?heat,
+    'rule': ?rule,
+    'scoring': ?scoring,
+  });
 
   /// Team Versus, in the lobby or results: joins [team], or (host only) moves [id] there.
   void team(int team, {String? id}) => _send({'op': 'TEAM', 'team': team, 'id': ?id});

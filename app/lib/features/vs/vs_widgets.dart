@@ -8,6 +8,12 @@ import '../../ui/theme/theme.dart';
 import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 
+/// One line on how a Versus series is won: on round wins, or on the [total]
+/// score.
+String scoringBlurb(bool total) => total
+    ? 'Every round is played. Most letters filled over the series wins; a tie goes to the most bonus words'
+    : 'Win the most rounds. A round goes to the first smith to fill their mold';
+
 /// Round wins as little flames (a number past five).
 class WinPips extends StatelessWidget {
   const WinPips({super.key, required this.wins, this.color, this.size = 12});
@@ -135,8 +141,20 @@ class _RivalTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 2),
-          WinPips(wins: session.tally[id] ?? 0, color: color, size: 10),
+          // A total score series: their letters over the series so far, in the flames' room.
+          if (session.totalScore)
+            SizedBox(
+              height: 12,
+              child: Text(
+                '${session.scoreOf(id)}',
+                key: ValueKey('rival-score-$id'),
+                style: TextStyle(fontSize: 11, height: 1.1, color: color, fontWeight: FontWeight.bold),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 2),
+            WinPips(wins: session.tally[id] ?? 0, color: color, size: 10),
+          ],
         ],
       ),
     );
@@ -179,12 +197,12 @@ class _MyTile extends StatelessWidget {
   }
 }
 
-/// "Round 2 of up to 5", or sudden death.
+/// "Round 2 of up to 5" ("of 5" on the total score, which plays them all), or sudden death.
 String roundLabel(VsSession s) {
   final r = s.round;
   if (r == null) return '';
   if (r.suddenDeath) return 'Sudden death!';
-  return 'Round ${r.regular ?? r.round} of up to ${s.series}';
+  return 'Round ${r.regular ?? r.round} of ${s.totalScore ? '' : 'up to '}${s.series}';
 }
 
 /// The headline for a finished round.

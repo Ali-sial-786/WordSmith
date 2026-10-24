@@ -369,6 +369,8 @@ export interface VsSeriesRecord {
   readonly variant?: "survival";
   /** Team Versus only: the rule its rounds were won by. */
   readonly rule?: TeamRule;
+  /** Total score series only. */
+  readonly scoring?: "total";
 }
 
 /**
@@ -390,7 +392,9 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     winner: results.winner,
     early: results.early,
     forfeit: results.forfeit,
-    players: results.players.map(({ id, wins, place, rounds, words, longest }) => ({ id, wins, place, rounds, words, longest })),
+    players: results.players.map(({ id, wins, place, rounds, words, longest, score }) => ({ id, wins, place, rounds, words, longest, ...(score === undefined ? {} : { score }) })),
+    // Total score series only: won on letters filled, then bonus words.
+    ...(record.scoring === undefined ? {} : { scoring: record.scoring }),
     // Survival series only (shared/survival.md "Records").
     ...(record.variant === undefined ? {} : { variant: record.variant }),
     // Team Versus only: the rule, the winning team, and everyone's team.
@@ -422,7 +426,8 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
         scrapBin: award.scrap.bin,
         gained: award.gained,
         placement: player.place,
-        points: 0,
+        // A total score series keeps each racer's letters filled.
+        points: player.score ?? 0,
         roundsWon: player.wins,
         statsSet: `vs_series = vs_series + 1, vs_series_won = vs_series_won + ?3, vs_rounds_won = vs_rounds_won + ?4,
                    words_forged = words_forged + ?5, ${longestWordSet(6)}`,

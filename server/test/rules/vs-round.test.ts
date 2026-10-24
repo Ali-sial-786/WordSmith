@@ -248,9 +248,9 @@ describe("the series", () => {
     recordRound(s, r, resolveRound(r, activeRacers(s)));
     expect(s.played).toBe(1);
     expect(s.racers).toEqual([
-      { id: "a", wins: 1, rounds: 1, words: 2, longest: "RATE", bonus: 0, pickups: { hammer: 0, chisel: 0, sparks: 1 }, out: false },
-      { id: "b", wins: 0, rounds: 1, words: 0, longest: "", bonus: 1, pickups: { hammer: 0, chisel: 0, sparks: 0 }, out: false },
-      { id: "c", wins: 0, rounds: 0, words: 0, longest: "", bonus: 0, pickups: { hammer: 0, chisel: 0, sparks: 0 }, out: false },
+      { id: "a", wins: 1, rounds: 1, words: 2, longest: "RATE", bonus: 0, score: 7, pickups: { hammer: 0, chisel: 0, sparks: 1 }, out: false },
+      { id: "b", wins: 0, rounds: 1, words: 0, longest: "", bonus: 1, score: 0, pickups: { hammer: 0, chisel: 0, sparks: 0 }, out: false },
+      { id: "c", wins: 0, rounds: 0, words: 0, longest: "", bonus: 0, score: 0, pickups: { hammer: 0, chisel: 0, sparks: 0 }, out: false },
     ]);
     expect(tallyOf(s)).toEqual({ a: 1, b: 0, c: 0 });
     // The words each racer forged, for their Work Orders; bonus words aren't.
