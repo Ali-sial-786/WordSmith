@@ -151,6 +151,17 @@ Future<void> _settle(WidgetTester tester) async {
 
 PlateButton _readyButton(WidgetTester tester) => tester.widget<PlateButton>(find.byKey(const ValueKey('ready-next')));
 
+/// The bar counts down on the real clock, which a slow machine moves on
+/// whatever the test pumps: it shows the seconds left until [endsAt].
+Future<void> _expectCountdown(WidgetTester tester, RoomSession s, int endsAt, {required int from}) async {
+  await tester.pump(const Duration(milliseconds: 300));
+  final shown = tester.widget<Text>(find.textContaining(RegExp(r'^Next round in \d+$'))).data!;
+  final secs = int.parse(shown.split(' ').last);
+  final left = ((endsAt - s.serverNow) / 1000).ceil();
+  expect(secs, inInclusiveRange(left, left + 1));
+  expect(secs, inInclusiveRange(1, from));
+}
+
 void main() {
   testWidgets('the Versus standings count down 30 s, and I can say I\'m ready to go sooner', (tester) async {
     final s = _standings(ready: {'u2'});
@@ -159,7 +170,7 @@ void main() {
     expect(tester.takeException(), isNull);
     final bar = find.byType(NextRoundBar);
     await tester.scrollUntilVisible(bar, 200, scrollable: find.byType(Scrollable).first);
-    expect(find.textContaining(RegExp(r'^Next round in 2[0-9]$')), findsOneWidget);
+    await _expectCountdown(tester, s, s.standings!.standingsEndsAt!, from: 30);
     expect(find.text('1 of 3 ready'), findsOneWidget);
     expect(_readyButton(tester).label, "I'm ready");
     expect(_readyButton(tester).sublabel, 'Starts as soon as everyone is ready');
@@ -232,11 +243,12 @@ void main() {
     expect(find.byType(NextRoundBar), findsNothing);
 
     // The host forged again: the server gives the wait, with the host ready.
-    s.lobby = _lobby('coop', 'results', ready: {'u1'}, nextAt: _now + 20000);
+    final nextAt = _now + 20000;
+    s.lobby = _lobby('coop', 'results', ready: {'u1'}, nextAt: nextAt);
     await _pump(tester, ResultsView(session: s, cues: MoldCues(), onLeave: () {}));
     await tester.scrollUntilVisible(find.byType(NextRoundBar), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('Forge again'), findsNothing);
-    expect(find.textContaining(RegExp(r'^Next round in (19|20)$')), findsOneWidget);
+    await _expectCountdown(tester, s, nextAt, from: 20);
     expect(find.text('1 of 3 ready'), findsOneWidget);
     expect(_readyButton(tester).sublabel, 'Waiting for 2 more');
 
