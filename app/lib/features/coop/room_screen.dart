@@ -268,7 +268,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       final tally = e.totalScore
           ? [for (final p in top) top.length == 2 && top[0].score == top[1].score ? p.bonus ?? 0 : p.score ?? 0]
           : e.teamTally ?? [for (final p in top) p.wins];
-      final score = tally.length == 2 && tally[0] != tally[1]
+      final score = e.tiebreak
+          ? 'Won the series in a tiebreaker round'
+          : tally.length == 2 && tally[0] != tally[1]
           ? 'Won the series ${max(tally[0], tally[1])}–${min(tally[0], tally[1])}'
                 '${e.totalScore
                     ? top[0].score == top[1].score

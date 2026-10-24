@@ -49,7 +49,7 @@ class RoundResult {
   }
 
   String get overline {
-    if (suddenDeath) return 'Sudden death';
+    if (suddenDeath) return session.totalScore ? 'Tiebreaker round' : 'Sudden death';
     final n = end.round ?? session.round?.round;
     return n == null ? 'Round over' : 'Round $n';
   }
@@ -130,14 +130,7 @@ class RoundResult {
           theirs: ' wins the series',
           none: 'Series over',
         )
-      : _title(
-          seriesWinner,
-          style,
-          mine: 'YOU WIN THE SERIES!',
-          theirs: ' wins the series',
-          // On the total score, only a tie on letters and bonus words has no winner.
-          none: session.seriesEnd?.totalScore ?? false ? "It's a draw!" : 'Series over',
-        );
+      : _title(seriesWinner, style, mine: 'YOU WIN THE SERIES!', theirs: ' wins the series', none: 'Series over');
 
   /// Team Versus: my team's line, or the team's name in its colour.
   InlineSpan _teamTitle(int? t, TextStyle style, {required String mine, required String theirs, required String none}) {

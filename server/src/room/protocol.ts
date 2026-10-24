@@ -288,6 +288,8 @@ export interface SeriesEndFields {
   readonly teamTally?: readonly [number, number];
   /** Total score only: `"total"`. */
   readonly scoring?: "total";
+  /** Total score only: the leaders were tied on score and bonus words, and the winner won the tiebreaker round. */
+  readonly tiebreak?: true;
   readonly early: boolean;
   readonly forfeit: boolean;
   readonly rounds: number;

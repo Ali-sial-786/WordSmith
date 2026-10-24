@@ -50,7 +50,7 @@ final _slots = [
 ];
 const _words = ['STONE', 'SEAT', 'EATEN', 'TON', 'ONE'];
 
-RoundStart _start() => RoundStart.fromJson({
+Map<String, dynamic> _startJson() => {
   'round': 3,
   'heat': 2,
   'startsAt': 0,
@@ -69,7 +69,9 @@ RoundStart _start() => RoundStart.fromJson({
   'scoring': 'total',
   'scores': {'u1': 27, 'u2': 32, 'u3': 18},
   'bonusTally': {'u1': 4, 'u2': 1, 'u3': 2},
-});
+};
+
+RoundStart _start() => RoundStart.fromJson(_startJson());
 
 VsRoundEnd _end() => VsRoundEnd.fromJson({
   'round': 3,
@@ -219,20 +221,40 @@ void main() {
     expect(find.text('71 letters'), findsNWidgets(2));
   });
 
-  testWidgets('a tie on letters and bonus words is a draw', (tester) async {
-    final draw = SeriesEnd.fromJson({
+  testWidgets('a tie on letters and bonus words goes to a tiebreaker round, and the podium says so', (tester) async {
+    final tied = SeriesEnd.fromJson({
       ..._seriesEnd().json,
-      'winner': null,
+      'winner': 'u1',
+      'rounds': 6,
+      'tiebreak': true,
       'podium': [
-        {'id': 'u1', 'username': 'Ada', 'wins': 1, 'place': 1, 'score': 50, 'bonus': 2},
-        {'id': 'u2', 'username': 'sam', 'wins': 2, 'place': 1, 'score': 50, 'bonus': 2},
+        {'id': 'u1', 'username': 'Ada', 'wins': 2, 'place': 1, 'score': 58, 'bonus': 2},
+        {'id': 'u2', 'username': 'sam', 'wins': 2, 'place': 2, 'score': 53, 'bonus': 3},
         {'id': 'u3', 'username': 'Kit', 'wins': 0, 'place': 3, 'score': 30, 'bonus': 0},
       ],
     });
-    final s = _session(_lobby('results'))..seriesEnd = draw;
+    expect(tied.tiebreak, isTrue);
+    final s = _session(_lobby('results'))..seriesEnd = tied;
     await _pump(tester, VsResultsView(session: s, onLeave: () {}));
     expect(tester.takeException(), isNull);
-    expect(find.text("It's a draw!"), findsOneWidget);
-    expect(find.text('5 rounds · tied on 50 letters and 2 bonus words'), findsOneWidget);
+    expect(find.text('YOU WIN THE SERIES!'), findsOneWidget);
+    expect(find.text('6 rounds · tied on letters and bonus words, won in a tiebreaker round'), findsOneWidget);
+  });
+
+  testWidgets('the tiebreaker round is called that', (tester) async {
+    final start = RoundStart.fromJson({
+      ..._startJson(),
+      'round': 6,
+      'regular': null,
+      'suddenDeath': true,
+      'players': ['u1', 'u2'],
+    });
+    final s = _session(_lobby('round'))
+      ..round = start
+      ..scores = start.scores
+      ..bonusTally = start.bonusTally;
+    expect(roundLabel(s), 'Tiebreaker round!');
+    s.scores = null;
+    expect(roundLabel(s), 'Sudden death!', reason: 'on round wins it stays sudden death');
   });
 }

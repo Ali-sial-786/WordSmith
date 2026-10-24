@@ -199,7 +199,8 @@ List<_Section> _sections() => [
             'best of 3, 5, 7 or 10. No hints in a clash, but Turn is fine.\n\n'
             '**Total score:** the host can pick it in the lobby instead of round wins. Every round is played, '
             'each still ending when the first smith fills their mold, and the most letters filled over the '
-            'whole series wins. A tie goes to whoever found the most bonus words (Scrap Bin).\n\n'
+            'whole series wins. A tie goes to whoever found the most bonus words (Scrap Bin), and a tie on both '
+            'to a tiebreaker round between the leaders.\n\n'
             '**Survival clash:** the host can pick it in the lobby. Each smith gets their own hot word with a '
             'countdown. The first word to melt ends the round for everyone, and the smith who let it melt '
             "can't win that round.\n\n"

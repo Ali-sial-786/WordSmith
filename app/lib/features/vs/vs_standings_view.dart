@@ -99,7 +99,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
         if (next != null) ...[
           Text(
             next.suddenDeath
-                ? 'Sudden death: ${end.isTeam ? 'Copper vs Cobalt' : next.racers.map(s.nameOf).join(' vs ')}'
+                ? '${end.totalScore ? 'Tiebreaker' : 'Sudden death'}: ${end.isTeam ? 'Copper vs Cobalt' : next.racers.map(s.nameOf).join(' vs ')}'
                 : end.totalScore
                 ? 'Round ${next.round} of ${s.series}'
                 : 'Round ${next.round} of up to ${s.series}',

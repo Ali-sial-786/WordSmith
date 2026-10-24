@@ -395,6 +395,7 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     players: results.players.map(({ id, wins, place, rounds, words, longest, score }) => ({ id, wins, place, rounds, words, longest, ...(score === undefined ? {} : { score }) })),
     // Total score series only: won on letters filled, then bonus words.
     ...(record.scoring === undefined ? {} : { scoring: record.scoring }),
+    ...(results.tiebreak === undefined ? {} : { tiebreak: true }),
     // Survival series only (shared/survival.md "Records").
     ...(record.variant === undefined ? {} : { variant: record.variant }),
     // Team Versus only: the rule, the winning team, and everyone's team.

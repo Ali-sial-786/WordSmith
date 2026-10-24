@@ -650,6 +650,7 @@ class SeriesEnd extends RoomEvent {
     this.teamTally,
     this.rule,
     this.totalScore = false,
+    this.tiebreak = false,
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -678,6 +679,7 @@ class SeriesEnd extends RoomEvent {
     teamTally: _teamPair(j['teamTally']),
     rule: j['rule'] as String?,
     totalScore: j['scoring'] == 'total',
+    tiebreak: j['tiebreak'] == true,
   );
 
   final String? winner;
@@ -700,8 +702,12 @@ class SeriesEnd extends RoomEvent {
   final String? rule;
 
   /// Won on the total score: [PodiumPlace.score], then bonus words. A tie on
-  /// both is a draw ([winner] null, first place shared).
+  /// both goes to a tiebreaker round.
   final bool totalScore;
+
+  /// On the total score: the leaders tied on both, and [winner] won the
+  /// tiebreaker round.
+  final bool tiebreak;
 
   bool get isTeam => teamTally != null;
 

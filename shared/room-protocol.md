@@ -190,12 +190,12 @@ A Versus series is won on **round wins** (`"rounds"`, the default, everything ab
 
 - **Picking it:** the host sends `CONFIG {scoring: "rounds" | "total"}` in the lobby or at results, for the next series. `scoring` in a co-op or Team Versus room, or a bad value, is `bad_message`. `LOBBY` in a Versus room always carries `scoring` (while a series is on, the series' own).
 - **Rounds:** each round still ends, and is still won, exactly as above, and round wins still count up in `tally`. A racer's **score** for a round is the letters they filled on their mold (bonus words don't count).
-- **Every regular round is played:** no clinch and no sudden death.
-- **Winner:** the most letters over the series among racers still in it; tied → the most bonus words over the series; still tied → a **draw**: `SERIES_END.winner` is `null` with `forfeit: false`, and the tied racers share first place. Forfeit works as above.
+- **Every regular round is played:** no clinch.
+- **Winner:** the most letters over the series among racers still in it; tied → the most bonus words over the series; still tied → a **tiebreaker round**: sudden death between those leaders (`next.suddenDeath: true`), whose winner takes the series. A tiebreaker with no winner is played again by the same leaders (still in the series), whatever it added to anyone's totals; if only one of them is left, they win. Letters and bonus words from tiebreakers still count in `scores`, `bonusTally` and the podium. Forfeit works as above.
 - **`ROUND_START` and `ROUND_END`** add `scoring: "total"`, `scores` (letters so far, per racer in the series, after the round in `ROUND_END`) and `bonusTally` (bonus words so far, likewise). A round-wins series sends none of the three.
-- **`SERIES_END`** adds `scoring`, and each podium entry adds `score` and `bonus`. The podium ranks by score, then bonus words, sharing a place only when both are equal, with the winner first among equals. Racers who left keep their score on the podium.
-- **XP** is as in a round-wins series (`vsSeriesXp`); a draw has no series winner's bonus.
-- **D1:** the match summary adds `scoring` and each player's `score`, and `match_players.points` is the score. Series stored before this have no `score` (read as 0).
+- **`SERIES_END`** adds `scoring`, `tiebreak: true` when the series went to a tiebreaker, and each podium entry adds `score` and `bonus`. The winner is first; everyone else ranks by score, then bonus words, sharing a place only when both are equal. Racers who left keep their score on the podium.
+- **XP** is as in a round-wins series (`vsSeriesXp`), tiebreakers counting as rounds played.
+- **D1:** the match summary adds `scoring`, `tiebreak` and each player's `score`, and `match_players.points` is the score. Series stored before this have no `score` (read as 0).
 
 ---
 

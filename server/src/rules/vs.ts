@@ -10,8 +10,9 @@
  * A **total score** series (`scoring: "total"`) plays every regular round
  * whatever the tally, each still ending when the first racer fills their
  * mold, and is won on the letters each racer filled over the whole series.
- * A tie goes to the most bonus words found (Scrap Bin); one still tied is
- * a draw, and they share first place.
+ * A tie goes to the most bonus words found (Scrap Bin); one still tied goes
+ * to a tiebreaker round between the leaders (sudden death), whose winner
+ * takes the series.
  */
 
 export const SERIES_LENGTHS = [3, 5, 7, 10] as const;
@@ -175,7 +176,7 @@ function ahead(a: TotalEntry, b: TotalEntry): boolean {
   return a.score > b.score || (a.score === b.score && a.bonus > b.bonus);
 }
 
-/** Everyone on the best score and bonus words, in input order. More than one is a draw. */
+/** Everyone on the best score and bonus words, in input order. More than one plays a tiebreaker. */
 export function totalLeaders(entries: readonly TotalEntry[]): string[] {
   return entries.filter((e) => !entries.some((o) => ahead(o, e))).map((e) => e.playerId);
 }

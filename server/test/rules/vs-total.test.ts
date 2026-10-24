@@ -30,14 +30,16 @@ function totalSeries(players: string[], length: 3 | 5 = 3): VsSeries {
   });
 }
 
-/** Plays the next round: each racer forges `words[id]`, in order, then it ends (finished if someone filled their mold). */
+/** Plays the next round the series calls for: each racer forges `words[id]`, in order, then it ends (finished if someone filled their mold). */
 function play(s: VsSeries, words: Record<string, string[]>): { r: VsRound; end: ReturnType<typeof endVsRound> } {
+  const d = seriesDecision(s);
+  const next = d.over ? { suddenDeath: false, players: activeRacers(s) } : d.next;
   const r = newVsRound({
     round: s.played + 1,
-    suddenDeath: false,
+    suddenDeath: next.suddenDeath,
     heat: 1,
     puzzle: example,
-    playerIds: activeRacers(s),
+    playerIds: [...next.players],
     startsAt: T0,
     rand: playback(0.5),
   });
@@ -117,13 +119,41 @@ describe("a total score series", () => {
     ]);
   });
 
-  it("is a draw when the score and the bonus words are both tied: no winner, and first place shared", () => {
-    const s = totalSeries(["a", "b"]);
+  it("goes to a tiebreaker round between the leaders when the score and the bonus words are both tied", () => {
+    const s = totalSeries(["a", "b", "c"]);
     play(s, { a: ["TEAR"], b: ["TEAR"] });
     play(s, {});
     const { end } = play(s, { a: ["EAT"], b: ["EAT"] });
-    expect(end.outcome).toEqual({ winner: null, early: false, forfeit: false });
-    expect(vsSeriesResults(s, end.outcome!).players.map((p) => p.place)).toEqual([1, 1]);
+    // a and b are level on 7 letters and no bonus words; c, behind, watches.
+    expect(end.outcome).toBeNull();
+    expect(end.fields).toMatchObject({ next: { round: 4, suddenDeath: true, players: ["a", "b"] } });
+
+    // A tiebreaker with no winner is played again by the same two, even though b found a bonus word in it.
+    const again = play(s, { b: ["TEA"] });
+    expect(again.r.playerIds).toEqual(["a", "b"]);
+    expect(again.end.outcome).toBeNull();
+    expect(again.end.fields).toMatchObject({ next: { round: 5, suddenDeath: true, players: ["a", "b"] } });
+
+    // a wins the next one at the timer, and with it the series, ahead of b's extra bonus word.
+    const last = play(s, { a: ["TEAR"] });
+    expect(last.end.outcome).toEqual({ winner: "a", early: false, forfeit: false });
+    const results = vsSeriesResults(s, last.end.outcome!);
+    expect(results.tiebreak).toBe(true);
+    expect(results.players.map((p) => [p.id, p.place, p.score])).toEqual([
+      ["a", 1, 11],
+      ["b", 2, 7],
+      ["c", 3, 0],
+    ]);
+  });
+
+  it("goes to the one tied leader left if the other leaves before the tiebreaker", () => {
+    const s = totalSeries(["a", "b", "c"]);
+    play(s, { a: ["TEAR"], b: ["TEAR"] });
+    play(s, {});
+    play(s, {});
+    markOut(s, "b");
+    expect(seriesDecision(s)).toEqual({ over: true, winner: "a", early: false, forfeit: false });
+    expect(vsSeriesResults(s, { winner: "a", early: false, forfeit: false }).tiebreak).toBeUndefined();
   });
 
   it("is decided among the racers still in it, and by forfeit once only one is left", () => {

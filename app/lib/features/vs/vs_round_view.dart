@@ -444,7 +444,10 @@ class _Watching extends StatelessWidget {
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Sudden death', style: displayStyle(26, color: Palette.quenchRed)),
+        Text(
+          session.totalScore ? 'Tiebreaker round' : 'Sudden death',
+          style: displayStyle(26, color: Palette.quenchRed),
+        ),
         const SizedBox(height: 6),
         Text(racers.map(session.nameOf).join('  vs  '), textAlign: TextAlign.center, style: text.titleMedium),
         const SizedBox(height: 18),

@@ -11,7 +11,7 @@ import '../../video/video_call.dart';
 /// One line on how a Versus series is won: on round wins, or on the [total]
 /// score.
 String scoringBlurb(bool total) => total
-    ? 'Every round is played. Most letters filled over the series wins; a tie goes to the most bonus words'
+    ? 'Every round is played. Most letters filled over the series wins; a tie goes to the most bonus words, then a tiebreaker round'
     : 'Win the most rounds. A round goes to the first smith to fill their mold';
 
 /// Round wins as little flames (a number past five).
@@ -197,11 +197,11 @@ class _MyTile extends StatelessWidget {
   }
 }
 
-/// "Round 2 of up to 5" ("of 5" on the total score, which plays them all), or sudden death.
+/// "Round 2 of up to 5" ("of 5" on the total score, which plays them all), or sudden death (its tiebreaker).
 String roundLabel(VsSession s) {
   final r = s.round;
   if (r == null) return '';
-  if (r.suddenDeath) return 'Sudden death!';
+  if (r.suddenDeath) return s.totalScore ? 'Tiebreaker round!' : 'Sudden death!';
   return 'Round ${r.regular ?? r.round} of ${s.totalScore ? '' : 'up to '}${s.series}';
 }
 

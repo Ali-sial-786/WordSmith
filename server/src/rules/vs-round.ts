@@ -27,7 +27,8 @@
  * - **Total score** (`scoring: "total"`, Versus only): rounds are won and
  *   counted as usual, but the series plays every regular round and is won
  *   on each racer's letters filled over all of them, then bonus words
- *   (vs.ts {@link totalLeaders}).
+ *   (vs.ts {@link totalLeaders}). Still tied, the leaders play a tiebreaker
+ *   round (sudden death), whose winner takes the series.
  *
  * Functions named `apply…`, `record…` and `mark…` change what they're given in place.
  */
@@ -469,6 +470,10 @@ export interface VsSeries {
   readonly teams?: VsTeams;
   /** Won on the total score (fixed at the start). Absent: on round wins. */
   readonly scoring?: "total";
+  /** Total score: the leaders still tied on score and bonus words after the last regular round, who play the tiebreaker. */
+  tiebreak?: string[];
+  /** Total score: who won the tiebreaker, and so the series. */
+  tiebreakWinner?: string;
 }
 
 export interface NewVsSeriesInput {
@@ -589,6 +594,13 @@ export function recordRound(s: VsSeries, r: VsRound, result: VsRoundOutcome): vo
   }
   const winner = s.racers.find((x) => x.id === result.winner);
   if (winner !== undefined) winner.wins += 1;
+  if (s.scoring !== "total") return;
+  if (r.regular === null && winner !== undefined) s.tiebreakWinner = winner.id;
+  // After the last regular round, the leaders still tied on both are who play the tiebreaker, whatever it adds.
+  if (s.played === s.length) {
+    const top = totalLeaders(s.racers.filter((x) => !x.out).map(totalEntry));
+    if (top.length > 1) s.tiebreak = top;
+  }
 }
 
 /** The round after the standings. */
@@ -637,12 +649,17 @@ export function seriesDecision(s: VsSeries): VsSeriesDecision {
 /**
  * Total score: every regular round is played, then the best score among the
  * racers still in the series wins, more bonus words breaking a tie. Still
- * tied, it's a draw (`winner: null`). No sudden death.
+ * tied, those leaders play a tiebreaker round (sudden death), again with the
+ * same players until one has a winner, who takes the series.
  */
 function totalSeriesDecision(s: VsSeries, active: readonly string[]): VsSeriesDecision {
-  if (s.played < s.length) return { over: false, next: { round: s.played + 1, suddenDeath: false, players: [...active] } };
-  const top = totalLeaders(s.racers.filter((r) => !r.out).map(totalEntry));
-  return { over: true, winner: top.length === 1 ? top[0]! : null, early: false, forfeit: false };
+  const round = s.played + 1;
+  if (s.played < s.length) return { over: false, next: { round, suddenDeath: false, players: [...active] } };
+  if (s.tiebreakWinner !== undefined && active.includes(s.tiebreakWinner)) return { over: true, winner: s.tiebreakWinner, early: false, forfeit: false };
+  const tied = (s.tiebreak ?? []).filter((id) => active.includes(id));
+  const top = tied.length > 0 ? tied : totalLeaders(s.racers.filter((r) => !r.out).map(totalEntry));
+  if (top.length === 1) return { over: true, winner: top[0]!, early: false, forfeit: false };
+  return { over: false, next: { round, suddenDeath: true, players: top } };
 }
 
 /**
@@ -945,6 +962,8 @@ export interface VsSeriesResults extends VsSeriesOutcome {
   readonly players: readonly VsPlayerResult[];
   /** Total score only. */
   readonly scoring?: "total";
+  /** Total score only: won in a tiebreaker round. */
+  readonly tiebreak?: true;
 }
 
 /**
@@ -965,13 +984,16 @@ export function vsSeriesResults(s: VsSeries, outcome: VsSeriesOutcome): VsSeries
     ...(s.scoring === "total" ? { score: r.score ?? 0 } : {}),
   });
   if (s.scoring === "total") {
-    // By score then bonus words, the winner first among equals.
-    const ordered = [...s.racers].sort((a, b) => Number(b.id === outcome.winner) - Number(a.id === outcome.winner));
+    // The winner first (they may have won a tiebreaker on equal totals), then by score and bonus words.
+    const byId = (id: string) => s.racers.find((x) => x.id === id)!;
+    const top = s.racers.find((r) => r.id === outcome.winner);
+    const rest = totalPodium(s.racers.filter((r) => r !== top).map(totalEntry));
     return {
       ...outcome,
       scoring: "total",
       rounds: s.played,
-      players: totalPodium(ordered.map(totalEntry)).map((p) => result(s.racers.find((x) => x.id === p.playerId)!, p.place)),
+      ...(top !== undefined && s.tiebreakWinner === top.id ? { tiebreak: true as const } : {}),
+      players: [...(top === undefined ? [] : [result(top, 1)]), ...rest.map((p) => result(byId(p.playerId), p.place + (top === undefined ? 0 : 1)))],
     };
   }
   if (s.teams !== undefined) {

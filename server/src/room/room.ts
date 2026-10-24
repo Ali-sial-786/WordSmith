@@ -1810,7 +1810,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private seriesEndFields(award: VsPendingAward, xp: Readonly<Record<string, VsXpBody>>): SeriesEndFields {
-    const { winner, early, forfeit, rounds, players, team, teamTally, scoring } = award.record.results;
+    const { winner, early, forfeit, rounds, players, team, teamTally, scoring, tiebreak } = award.record.results;
     return {
       winner,
       early,
@@ -1828,6 +1828,7 @@ export class RoomDO extends DurableObject<Env> {
       xp,
       ...(team === undefined ? {} : { team, rule: award.record.rule ?? DEFAULT_TEAM_RULE, teamTally: teamTally ?? [0, 0] }),
       ...(scoring === undefined ? {} : { scoring }),
+      ...(tiebreak === undefined ? {} : { tiebreak }),
     };
   }
 

@@ -55,9 +55,7 @@ class VsResultsView extends StatelessWidget {
                           ? 'YOUR TEAM WINS THE SERIES!'
                           : '${teamName(r.team!)} wins the series!'
                     : r.winner == null
-                    ? r.totalScore && !r.forfeit
-                          ? "It's a draw!"
-                          : 'Series over'
+                    ? 'Series over'
                     : iWon
                     ? 'YOU WIN THE SERIES!'
                     : '${session.nameOf(r.winner)} wins the series!',
@@ -154,12 +152,13 @@ class VsResultsView extends StatelessWidget {
     );
   }
 
-  /// A total score series: how it was decided, on letters or (tied on those)
-  /// on bonus words.
+  /// A total score series: how it was decided, on letters, (tied on those)
+  /// on bonus words, or (tied on both) in a tiebreaker round.
   static String _totalLine(SeriesEnd r) {
+    if (r.tiebreak) return 'tied on letters and bonus words, won in a tiebreaker round';
+    if (r.winner == null) return 'no winner';
     final top = r.podium.take(2).toList();
     if (top.length < 2 || top[0].score != top[1].score) return 'won on total score';
-    if (r.winner == null) return 'tied on ${top[0].score} letters and ${top[0].bonus} bonus words';
     return 'tied on ${top[0].score} letters, won on bonus words';
   }
 

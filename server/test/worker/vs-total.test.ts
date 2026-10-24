@@ -145,4 +145,41 @@ describe("Versus on the total score", () => {
     expect(JSON.parse(row!.summary)).toMatchObject({ scoring: "total", winner: b.uid });
     await closeAll(sa, sb);
   });
+
+  it("goes to a tiebreaker round when the leaders are level on letters and bonus words", async () => {
+    const [a, b] = (await Promise.all([0, 1].map(() => setUpClient()))) as [Smith, Smith];
+    const code = await room(a, "vs");
+    const sa = await join(a, code);
+    const sb = await join(b, code);
+    sa.send({ op: "CONFIG", scoring: "total" });
+    await sb.next({ op: "LOBBY", scoring: "total" });
+    await start(sa, code, [sa, sb]);
+
+    // Round 1: both forge the same short word; rounds 2 and 3: nothing. Level on letters, no bonus words.
+    let seq = 1;
+    const word = await shortest(code);
+    await forge(sa, word, seq++);
+    await forge(sb, word, seq++);
+    for (let round = 1; round <= 3; round++) {
+      if (round > 1) await nextRound(code, [sa, sb]);
+      expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+      const end = await sb.next({ op: "ROUND_END" });
+      expect(end.scores).toEqual({ [a.uid]: word.length, [b.uid]: word.length });
+      if (round === 3) expect(end.next).toMatchObject({ round: 4, suddenDeath: true, players: [a.uid, b.uid] });
+    }
+
+    // The tiebreaker: b forges a word, and takes the series at the timer.
+    const tiebreaker = await nextRound(code, [sa, sb]);
+    expect(tiebreaker).toMatchObject({ round: 4, suddenDeath: true, scoring: "total" });
+    await forge(sb, await shortest(code), seq++);
+    expect(await runDurableObjectAlarm(stub(code))).toBe(true);
+    expect(await sa.next({ op: "ROUND_END" })).toMatchObject({ winner: b.uid, next: null });
+    const end = await sa.next({ op: "SERIES_END" });
+    expect(end).toMatchObject({ winner: b.uid, scoring: "total", tiebreak: true, rounds: 4 });
+    expect(end.podium.map((p: Message) => [p.id, p.place])).toEqual([
+      [b.uid, 1],
+      [a.uid, 2],
+    ]);
+    await closeAll(sa, sb);
+  });
 });
