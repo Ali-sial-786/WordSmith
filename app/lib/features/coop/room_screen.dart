@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/coop_session.dart';
-import '../../game/history_records.dart';
+import '../../game/party.dart';
 import '../../game/vs_session.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
@@ -17,13 +17,13 @@ import '../../ui/effects/sparks.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/widgets/forge_background.dart';
-import '../../video/video_call.dart';
 import '../vs/vs_results_view.dart';
 import '../vs/vs_round_view.dart';
 import '../vs/victory_popup.dart';
 import '../vs/vs_standings_view.dart';
 import 'emotes.dart';
 import 'lobby_view.dart';
+import 'party_bar.dart';
 import 'results_view.dart';
 import 'room_chat.dart';
 import 'room_video.dart';
@@ -43,39 +43,36 @@ class RoomScreen extends ConsumerStatefulWidget {
 }
 
 class _RoomScreenState extends ConsumerState<RoomScreen> {
-  RoomSession? _session;
+  late final Party _party;
   final _cues = MoldCues();
   late final AccountController _account;
   late final Sfx _sfx;
-  late final SettingsNotifier _settings;
-  late final HistoryNotifier _history;
   StreamSubscription<RoomEvent>? _sub;
   StreamSubscription<String>? _hubErrors;
   bool _left = false;
-
-  /// The room's video chat, while it's on.
-  VideoCall? _video;
-  bool _videoStarting = false;
-
-  /// Video starts by itself once per room (when the setting is on).
-  bool _videoAutoTried = false;
 
   /// The newest chat line from someone else, shown over the room for a
   /// moment while the chat is closed.
   ChatLine? _chatToast;
   Timer? _chatToastTimer;
 
+  /// This room's session, once joined: the party's, which outlives this
+  /// screen (going home keeps the room).
+  RoomSession? get _session => _party.code == widget.code ? _party.session : null;
+
   @override
   void initState() {
     super.initState();
+    _party = ref.read(partyProvider)..addListener(_changed);
+    _sub = _party.effects.listen(_onEffect);
     _account = ref.read(accountProvider.notifier);
     _sfx = ref.read(sfxProvider);
-    _settings = ref.read(settingsProvider.notifier);
-    _history = ref.read(historyProvider.notifier);
     _hubErrors = _account.hubErrors.listen((code) {
       if (code == 'friend_offline') _toast("That friend is offline and can't get a notification right now.");
     });
-    _prepare();
+    // Back in a room we never left: nothing to check.
+    if (_session == null || !_party.active) _prepare();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _changed());
   }
 
   /// No room client in this build (no online play).
@@ -86,23 +83,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 
   /// Checks the room before joining, whichever way the player got here
   /// (code, friend, invite banner or notification): missing, full and
-  /// mid-round rooms explain themselves instead of spinning, and the wrong
-  /// mode reopens as the right one.
+  /// mid-round rooms explain themselves instead of spinning. The room's
+  /// mode, from the server, decides the session (the link's may be old).
   Future<void> _prepare() async {
-    final factory = ref.read(roomClientFactoryProvider);
-    if (factory == null) return;
+    if (_offlineBuild) return;
     if (!await _accountReady()) {
       if (mounted) setState(() => _problem = 'Sign in to join rooms with friends.');
       return;
     }
+    var mode = widget.mode;
     try {
-      final mode = await _account.checkRoom(widget.code);
+      mode = await _account.checkRoom(widget.code);
       if (!mounted) return;
-      if (mode != widget.mode) {
-        _reopening = true;
-        context.pushReplacement('/room/${widget.code}?mode=$mode');
-        return;
-      }
     } on ApiException catch (e) {
       if (!mounted) return;
       // Offline: join anyway; the socket keeps trying while the seat is held.
@@ -111,18 +103,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         return;
       }
     }
-    final me = ref.read(accountProvider).user?.uid ?? '';
-    final client = factory(widget.code);
-    setState(() {
-      _session = (widget.mode == 'coop' ? CoopSession(client: client, me: me) : VsSession(client: client, me: me))
-        ..nicknameOf = _account.nicknameOf
-        ..chatEnabled = ref.read(settingsProvider).textChat
-        ..isBlocked = _account.isBlocked
-        ..addListener(_changed);
-    });
-    _sub = _session!.effects.listen(_onEffect);
-    _session!.start();
-    _account.setStatus('in_room:${widget.code}');
+    _party.join(widget.code, mode);
   }
 
   /// Waits (briefly) for the account, e.g. when a notification opened the
@@ -144,105 +125,26 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     return state.isReady;
   }
 
-  bool _reopening = false;
-
   void _changed() {
-    if (!mounted) return;
-    // Opened with the wrong mode (an old link)? Reopen as what the room is.
-    final mode = _session?.lobby?.mode;
-    if (mode != null && mode != widget.mode && !_reopening) {
-      _reopening = true;
-      _left = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.pushReplacement('/room/${widget.code}?mode=$mode');
-      });
-      return;
-    }
+    if (!mounted || _session == null) return;
     // No music in rooms: friends talk over voice chat, and the forge's
     // ambience and sounds carry the game. The hall music is back on leaving.
-    ref.read(sfxProvider).music(null);
+    _sfx.music(null);
     _podiumSounds();
-    // Voice chat joins once the room has seated us.
-    if (!_videoAutoTried && _session?.lobby != null && ref.read(settingsProvider).videoChat) {
-      _videoAutoTried = true;
-      _startVideo();
-    }
     setState(() {});
   }
-
-  // ---- Video chat ----
-
-  bool get _videoAvailable => ref.read(videoCallFactoryProvider) != null && ref.read(apiClientProvider) != null;
 
   void _toast(String message) {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _startVideo() async {
-    if (_video != null || _videoStarting || _left || !_videoAvailable) return;
-    _videoStarting = true;
-    try {
-      final grant = await ref.read(apiClientProvider)!.roomVideo(widget.code);
-      if (!mounted || _left) return;
-      final call = ref.read(videoCallFactoryProvider)!(_session!.me)..addListener(_videoChanged);
-      setState(() => _video = call);
-      final s = ref.read(settingsProvider);
-      // The camera starts off: video is each player's own choice, in the room.
-      // Players under 18 also start muted, every room (shared/age.md).
-      final minor = ref.read(accountProvider).server?.minor ?? false;
-      await call.join(url: grant.url, token: grant.token, camera: false, mic: s.videoMic && !minor);
-    } on ApiException catch (e) {
-      // Turn the setting back off so we don't ask again on every update.
-      if (e.code == 'video_unavailable') _settings.update((s) => s.copyWith(videoChat: false));
-      _toast(e.friendly);
-    } finally {
-      _videoStarting = false;
-    }
-  }
-
-  void _videoChanged() {
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _stopVideo() async {
-    final call = _video;
-    if (call == null) return;
-    setState(() => _video = null);
-    call.removeListener(_videoChanged);
-    await call.leave();
-    call.dispose();
-  }
-
-  void _enableVideo() {
-    _settings.update((s) => s.copyWith(videoChat: true));
-    _startVideo();
-  }
-
-  void _disableVideo() {
-    _settings.update((s) => s.copyWith(videoChat: false));
-    _stopVideo();
-  }
-
-  Future<void> _toggleCamera() async {
-    final call = _video;
-    if (call == null) return;
-    await call.setCamera(!call.cameraOn);
-  }
-
-  Future<void> _toggleMic() async {
-    final call = _video;
-    if (call == null) return;
-    await call.setMic(!call.micOn);
-    _settings.update((s) => s.copyWith(videoMic: call.micOn));
-  }
-
   RoomVideo get _roomVideo => RoomVideo(
-    available: _videoAvailable,
-    call: _video,
-    onEnable: _enableVideo,
-    onDisable: _disableVideo,
-    onCamera: _toggleCamera,
-    onMic: _toggleMic,
+    available: _party.videoAvailable,
+    call: _party.video,
+    onEnable: _party.enableVideo,
+    onDisable: _party.disableVideo,
+    onCamera: _party.toggleCamera,
+    onMic: _party.toggleMic,
   );
 
   /// Versus: a series that's over, its sounds waiting for the podium.
@@ -255,7 +157,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final s = _session;
     if (e == null || (s is VsSession && s.showingFinalRound)) return;
     _podium = null;
-    final sfx = ref.read(sfxProvider);
+    final sfx = _sfx;
     // Team Versus: my team won it.
     final won = e.isTeam ? e.team != null && s is VsSession && e.team == s.myTeam : e.winner == s?.me;
     won ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
@@ -292,7 +194,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   }
 
   void _onEffect(RoomEvent e) {
-    final sfx = ref.read(sfxProvider);
+    if (!mounted || _session == null) return;
+    final sfx = _sfx;
     switch (e) {
       case RoundStart():
         _cues.clear();
@@ -306,13 +209,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
         }
-        // XP, level and hints changed on the server: refresh the profile.
-        _account.sync();
-        final s = _session;
-        if (s is CoopSession) {
-          final record = coopRecord(s, e, at: DateTime.now().millisecondsSinceEpoch);
-          if (record != null) _history.add(record);
-        }
       case VsRoundEnd(:final winner, :final melted):
         final s = _session;
         // Team Versus: my team won it.
@@ -324,12 +220,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       case SeriesEnd():
         _podium = e;
         _podiumSounds();
-        _account.sync();
-        final s = _session;
-        if (s is VsSession) {
-          final record = vsRecord(s, e, at: DateTime.now().millisecondsSinceEpoch);
-          if (record != null) _history.add(record);
-        }
       case RoomError(:final code):
         final message = switch (code) {
           'no_puzzle' => 'The forge has no puzzles ready. Try again in a minute.',
@@ -337,13 +227,12 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           'not_enough_players' => 'Waiting for a smith to connect.',
           'uneven_teams' => 'Teams need the same number of smiths.',
           'team_full' => 'That team is full: three smiths at most.',
+          'too_many_players' => 'Too many smiths in the room for that mode.',
           _ => null,
         };
-        if (message != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-        }
+        if (message != null) _toast(message);
       case BecameHost():
-        _toast("You're the host now: you pick the heat and start the next round.");
+        _toast("You're the host now: you pick the mode and heat, and start the next round.");
       case RoomChat(:final line):
         final s = _session;
         if (s == null || line.from == s.me || s.hides(line.from) || !s.chatEnabled || s.chatOpen) break;
@@ -354,7 +243,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         });
         setState(() => _chatToast = line);
       case RoomEmote(:final from, :final emote):
-        if (mounted && !(_session?.hides(from) ?? false)) {
+        if (!(_session?.hides(from) ?? false)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               duration: const Duration(seconds: 2),
@@ -367,52 +256,34 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     }
   }
 
-  Future<void> _leave() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave the forge?'),
-        content: Text(
-          _session is VsSession && const {'countdown', 'round', 'standings'}.contains(_session?.phase)
-              ? "You're mid-series. If you're not back within 30 seconds, you can't win any more rounds."
-              : 'You can rejoin with the code while the room is open.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave')),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    setState(() => _left = true);
-    // Leave the room first: tearing down video can take a few seconds.
-    await _session?.leave();
-    await _stopVideo();
-    if (mounted) context.canPop() ? context.pop() : context.go('/');
+  /// Mid-round or mid-series: going away is leaving, as far as the game goes.
+  bool get _midGame {
+    final s = _session;
+    if (s == null) return false;
+    if (s is VsSession && (s.showingFinalRound || s.seriesEnd != null)) return false;
+    return const {'countdown', 'round', 'standings'}.contains(s.phase);
   }
+
+  Future<void> _leave() async {
+    final ok = await showLeaveRoomDialog(context, midSeries: _session is VsSession && _midGame);
+    if (!ok || !mounted) return;
+    setState(() => _left = true);
+    await _party.leave();
+    if (mounted) _home();
+  }
+
+  /// Back to wherever the player came from, still in the room.
+  void _home() => context.canPop() ? context.pop() : context.go('/');
 
   @override
   void dispose() {
+    _party.removeListener(_changed);
     _hubErrors?.cancel();
     _chatToastTimer?.cancel();
-    final video = _video;
-    if (video != null) {
-      video.removeListener(_videoChanged);
-      video.leave().whenComplete(video.dispose);
-    }
     _sub?.cancel();
-    final session = _session;
-    if (session != null) {
-      if (!_left) session.leave();
-      session
-        ..removeListener(_changed)
-        ..dispose();
-    }
-    // Reopening as the other mode: the new screen has already set these.
-    if (!_reopening) {
-      if (session != null) _account.setStatus('online');
-      _sfx.music('music_hall');
-    }
+    // A room that closed is done with.
+    if (_party.code == widget.code && !_party.active) _party.clear();
+    _sfx.music('music_hall');
     super.dispose();
   }
 
@@ -422,10 +293,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
     session?.chatEnabled = ref.watch(settingsProvider.select((s) => s.textChat));
     return PopScope(
-      // Nothing joined yet (checking, or a problem): back just goes back.
-      canPop: session == null,
+      // Back goes home, still in the room; mid-game it asks first.
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _leave();
+        if (didPop) return;
+        _midGame ? _leave() : _home();
       },
       child: Scaffold(
         body: ForgeBackground(
@@ -495,6 +367,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     return Stack(
       children: [
         Positioned.fill(child: view),
+        // Home, still in the room: the bar at the top leads back.
+        if (!_midGame)
+          Positioned(
+            top: 0,
+            left: 4,
+            child: IconButton(
+              key: const ValueKey('room-home'),
+              tooltip: 'Home (stay in the room)',
+              icon: Icon(Icons.home_outlined, color: Palette.steel),
+              onPressed: _home,
+            ),
+          ),
         Positioned(
           top: 56,
           left: 16,
@@ -542,7 +426,13 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
           if (action != null) ...[
             const SizedBox(height: 16),
-            TextButton(onPressed: () => context.go('/'), child: Text(action)),
+            TextButton(
+              onPressed: () {
+                if (_party.code == widget.code && !_party.active) _party.clear();
+                context.go('/');
+              },
+              child: Text(action),
+            ),
           ],
         ],
       ),

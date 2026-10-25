@@ -628,15 +628,26 @@ export class RoomDO extends DurableObject<Env> {
         return;
 
       case "CONFIG": {
+        // The other fields are judged by the mode the room is switching to, if it is.
+        const mode = message.mode ?? room.mode;
+        const switching = mode !== room.mode;
         // Co-op has no series to configure, only Team Versus has a rule (and only Versus a scoring), and teams play classic rounds.
-        if (message.series !== undefined && !isVersus(room.mode)) return this.error(ws, "bad_message");
-        if (message.rule !== undefined && room.mode !== "team") return this.error(ws, "bad_message");
-        if (message.scoring !== undefined && room.mode !== "vs") return this.error(ws, "bad_message");
-        if (message.variant === "survival" && room.mode === "team") return this.error(ws, "bad_message");
-        // The series is chosen in the lobby; the variant and heat in the lobby or results, for the next START or AGAIN.
-        if (message.series !== undefined ? room.phase !== "lobby" : !isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
+        if (message.series !== undefined && !isVersus(mode)) return this.error(ws, "bad_message");
+        if (message.rule !== undefined && mode !== "team") return this.error(ws, "bad_message");
+        if (message.scoring !== undefined && mode !== "vs") return this.error(ws, "bad_message");
+        if (message.variant === "survival" && mode === "team") return this.error(ws, "bad_message");
+        // The series is chosen in the lobby (switching mode goes back to it); the rest in the lobby or results, for the next START or AGAIN.
+        if (!isJoinablePhase(room.phase) || (message.series !== undefined && room.phase !== "lobby" && !switching)) return this.error(ws, "wrong_phase");
+        // A new mode waits until everyone has the results.
+        const award = this.read<PendingAward>(AWARD);
+        if (switching && room.phase === "results" && award !== null && !award.announced) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
+        if (switching && seated(room).length > MAX_PLAYERS[mode]) return this.error(ws, "too_many_players");
         let changed = false;
+        if (switching) {
+          this.switchMode(room, mode);
+          changed = true;
+        }
         if (message.series !== undefined && room.series !== message.series) {
           room.series = message.series;
           changed = true;
@@ -661,6 +672,10 @@ export class RoomDO extends DurableObject<Env> {
         if (changed) {
           this.write(ROOM, room);
           this.broadcast(this.lobbyMessage(room));
+        }
+        if (switching) {
+          await this.schedule();
+          this.ctx.waitUntil(this.syncListing());
         }
         return;
       }
@@ -706,6 +721,32 @@ export class RoomDO extends DurableObject<Env> {
 
       case "CHAT":
         return this.chat(ws, player, message.text, now);
+    }
+  }
+
+  /**
+   * CONFIG `mode`: the room plays `mode` from now on, back in the lobby,
+   * nobody ready. Players keep their colour where the new mode has it and
+   * nobody before them does; Team Versus deals players onto the two teams
+   * in join order; Versus gets the default series length unless it had one.
+   */
+  private switchMode(room: Room, mode: RoomMode): void {
+    room.mode = mode;
+    room.phase = "lobby";
+    delete room.nextAt;
+    const players = seated(room);
+    const taken: number[] = [];
+    for (const p of players) {
+      p.ready = false;
+      if (p.color >= COLORS[mode] || taken.includes(p.color)) p.color = freeColor(taken, COLORS[mode]) ?? 0;
+      taken.push(p.color);
+    }
+    if (isVersus(mode)) room.series ??= DEFAULT_SERIES;
+    if (mode === "team") {
+      room.teams = Object.fromEntries(players.map((p, i) => [p.id, (i % 2) as TeamId]));
+      if (room.variant === "survival") delete room.variant;
+    } else {
+      delete room.teams;
     }
   }
 

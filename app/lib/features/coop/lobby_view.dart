@@ -16,6 +16,7 @@ import '../../video/video_call.dart';
 import '../safety/player_actions.dart';
 import '../vs/team_widgets.dart';
 import '../vs/vs_widgets.dart';
+import 'coop_entry.dart';
 import 'room_chat.dart';
 import 'room_video.dart';
 import '../../ui/widgets/forge_frame.dart';
@@ -161,6 +162,17 @@ class LobbyView extends ConsumerWidget {
             ),
           ],
         ),
+        // The room stays; the host can take it to another mode.
+        if (session.isHost) ...[
+          const SizedBox(height: 18),
+          Text(
+            'Play another mode, everyone staying',
+            textAlign: TextAlign.center,
+            style: text.labelMedium?.copyWith(color: Palette.steel),
+          ),
+          const SizedBox(height: 6),
+          _ModePicker(session: session, mode: lobby.mode),
+        ],
       ],
     );
   }
@@ -353,6 +365,33 @@ class _HeatTile extends StatelessWidget {
 }
 
 /// Classic or Survival (shared/survival.md). The host picks; everyone sees it.
+/// The host's pick of the room's mode: everyone stays, back in the lobby.
+class _ModePicker extends StatelessWidget {
+  const _ModePicker({required this.session, required this.mode});
+
+  final RoomSession session;
+  final String mode;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 8,
+    children: [
+      for (final id in const ['coop', 'vs', 'team'])
+        ChoiceChip(
+          key: ValueKey('mode-$id'),
+          label: Text(modeName(id)),
+          selected: mode == id,
+          selectedColor: Palette.ember.withValues(alpha: 0.35),
+          labelStyle: TextStyle(color: Palette.whiteHeat),
+          checkmarkColor: Palette.whiteHeat,
+          side: BorderSide(color: mode == id ? Palette.molten : Palette.ash),
+          onSelected: mode == id ? null : (_) => session.setMode(id),
+        ),
+    ],
+  );
+}
+
 class _VariantPicker extends StatelessWidget {
   const _VariantPicker({required this.session, required this.survival, required this.vs});
 

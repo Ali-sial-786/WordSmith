@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../game/account.dart';
 import '../../game/names.dart';
+import '../../game/party.dart';
 import '../../net/api_client.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/theme/theme.dart';
@@ -23,13 +24,35 @@ String modeName(String mode) => switch (mode) {
   _ => 'Co-op',
 };
 
-/// Start or join a room: `coop`, `vs` or `team`.
-Future<void> showRoomEntry(BuildContext context, String mode) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Palette.soot,
-  builder: (_) => _RoomEntrySheet(mode: mode),
-);
+/// Start or join a room: `coop`, `vs` or `team`. Already in one: back to
+/// it, the host switching it to [mode] (shared/room-protocol.md).
+Future<void> showRoomEntry(BuildContext context, String mode) async {
+  final party = ProviderScope.containerOf(context, listen: false).read(partyProvider);
+  if (party.active && party.session?.lobby != null) return _backToRoom(context, party, mode);
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Palette.soot,
+    builder: (_) => _RoomEntrySheet(mode: mode),
+  );
+}
+
+void _backToRoom(BuildContext context, Party party, String mode) {
+  final s = party.session!;
+  if (s.lobby!.mode != mode) {
+    final message = !s.isHost
+        ? 'Only the host picks the mode: back to your room.'
+        : const {'lobby', 'results'}.contains(s.phase)
+        ? null
+        : 'Finish this game first: back to your room.';
+    if (message == null) {
+      s.setMode(mode);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+  GoRouter.of(context).push(party.location);
+}
 
 class _RoomEntrySheet extends ConsumerStatefulWidget {
   const _RoomEntrySheet({required this.mode});

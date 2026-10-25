@@ -11,6 +11,7 @@ import 'features/account/delete_account_screen.dart';
 import 'features/account/setup_screen.dart';
 import 'features/account/sign_in_screen.dart';
 import 'features/campaign/chapters_screen.dart';
+import 'features/coop/party_bar.dart';
 import 'features/coop/room_screen.dart';
 import 'features/credits/credits_screen.dart';
 import 'features/daily/calendar_screen.dart';
@@ -123,7 +124,8 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
 
   void _openInvite(Map<String, dynamic>? data) {
     if (!mounted) return;
-    final path = _router.routerDelegate.currentConfiguration.uri.path;
+    // The top screen's (a pushed one's too).
+    final path = _router.routerDelegate.currentConfiguration.isEmpty ? '' : _router.state.uri.path;
     // A gift or the daily reminder: open the board or the commission,
     // unless mid-room or mid-puzzle.
     final screen = switch (data?['type']) {
@@ -200,7 +202,11 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
         // own). Two fingers zoom anywhere.
         child: AnnotatedRegion(
           value: systemBarStyle(),
-          child: PinchZoom(child: child!),
+          // In a room but elsewhere: the room's bar on top.
+          child: PartyHost(
+            router: _router,
+            child: PinchZoom(child: child!),
+          ),
         ),
       ),
     );

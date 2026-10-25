@@ -1062,9 +1062,11 @@ class RoomClient {
   void ready(bool ready) => _send({'op': 'READY', 'ready': ready});
 
   /// Host only: best of [series] rounds (Versus), the variant (`classic` or
-  /// `survival`), and the [heat]: a tier 1–6, or `'auto'`.
-  void config({int? series, String? variant, Object? heat, String? rule, String? scoring}) => _send({
+  /// `survival`), the [heat]: a tier 1–6, or `'auto'`, and the room's [mode]
+  /// (`coop`, `vs` or `team`: everyone goes back to the lobby).
+  void config({int? series, String? variant, Object? heat, String? rule, String? scoring, String? mode}) => _send({
     'op': 'CONFIG',
+    'mode': ?mode,
     'series': ?series,
     'variant': ?variant,
     'heat': ?heat,

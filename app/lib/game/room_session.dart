@@ -192,6 +192,44 @@ abstract class RoomSession extends ChangeNotifier {
   }
 
   Future<void> start() async {
+    _listen();
+    await client.start();
+  }
+
+  /// Takes over [old]'s live room after the host changed its mode: the same
+  /// connection, lobby, clock, chat and mutes. [old] lets go of the
+  /// connection (see [detach]); this mode's own state starts fresh.
+  void adopt(RoomSession old) {
+    me = old.me;
+    connection = old.connection;
+    closeCode = old.closeCode;
+    lobby = old.lobby;
+    clockOffsetMs = old.clockOffsetMs;
+    chat.addAll(old.chat);
+    chatEnabled = old.chatEnabled;
+    _chatOpen = old._chatOpen;
+    _readUpTo = old._readUpTo;
+    _chatJoined = old._chatJoined;
+    muted.addAll(old.muted);
+    isBlocked = old.isBlocked;
+    nicknameOf = old.nicknameOf;
+    old.detach();
+    _listen();
+  }
+
+  /// Stops following the room without closing the connection: another
+  /// session [adopt]s it. Disposing this one afterwards leaves the client be.
+  void detach() {
+    _detached = true;
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _subs.clear();
+  }
+
+  bool _detached = false;
+
+  void _listen() {
     _subs
       ..add(client.events.listen(_onEvent))
       ..add(
@@ -202,13 +240,12 @@ abstract class RoomSession extends ChangeNotifier {
       );
     unawaited(
       client.closed.then((code) {
-        if (_disposed) return;
+        if (_disposed || _detached) return;
         connection = RoomConnection.closed;
         closeCode = code;
         notifyListeners();
       }),
     );
-    await client.start();
   }
 
   @protected
@@ -285,6 +322,10 @@ abstract class RoomSession extends ChangeNotifier {
 
   /// Host only, in the lobby or results: a heat tier 1–6, or null for Auto.
   void setHeat(int? tier) => client.config(heat: tier ?? 'auto');
+
+  /// Host only, in the lobby or results: `coop`, `vs` or `team`. Everyone
+  /// goes back to the lobby in that mode, the room and its chat kept.
+  void setMode(String mode) => client.config(mode: mode);
   void startRound() => client.startRound();
   void again() => client.again();
 
@@ -301,7 +342,7 @@ abstract class RoomSession extends ChangeNotifier {
       s.cancel();
     }
     _effects.close();
-    client.dispose();
+    if (!_detached) client.dispose();
     super.dispose();
   }
 }

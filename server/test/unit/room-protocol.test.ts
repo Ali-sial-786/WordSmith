@@ -62,6 +62,7 @@ describe("room parseClientMessage: Team Versus", () => {
     ['{"op":"CONFIG","rule":"combined","series":5}', { op: "CONFIG", rule: "combined", series: 5 }],
     ['{"op":"CONFIG","scoring":"total"}', { op: "CONFIG", scoring: "total" }],
     ['{"op":"CONFIG","scoring":"rounds","series":7}', { op: "CONFIG", scoring: "rounds", series: 7 }],
+    ['{"op":"CONFIG","mode":"team","rule":"first"}', { op: "CONFIG", mode: "team", rule: "first" }],
   ])("reads %s", (raw, message) => {
     expect(parseClientMessage(raw)).toEqual({ ok: true, message });
   });
@@ -75,6 +76,7 @@ describe("room parseClientMessage: Team Versus", () => {
     '{"op":"CONFIG","rule":"fastest"}',
     '{"op":"CONFIG","rule":null}',
     '{"op":"CONFIG","scoring":"points"}',
+    '{"op":"CONFIG","mode":"solo"}',
   ])("refuses %j", (raw) => {
     expect(parseClientMessage(raw)).toEqual({ ok: false });
   });

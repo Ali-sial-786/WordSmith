@@ -20,7 +20,7 @@
 import type { CoopResults, RevealedCell, RoundSnapshot, RoundStartFields, SlotWord } from "../rules/coop-round";
 import { isHeatChoice, type HeatChoice, type HeatTier } from "../rules/heat";
 import type { HintCounts, HintKind } from "../rules/progression";
-import { MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../rules/room";
+import { isRoomMode, MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../rules/room";
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isTeamId, isTeamRule, type TeamId, type TeamRule } from "../rules/teams";
 import { isScoring, isSeriesLength, type Scoring, type SeriesLength } from "../rules/vs";
@@ -43,10 +43,12 @@ export type ClientMessage =
   /**
    * The host's choices: the variant and the heat (lobby or results), the
    * Versus series length (lobby), and the Team Versus rule and the
-   * Versus scoring (lobby or results). At least one.
+   * Versus scoring (lobby or results), and the room's mode (lobby or
+   * results; it goes back to the lobby). At least one.
    */
   | {
       readonly op: "CONFIG";
+      readonly mode?: RoomMode;
       readonly variant?: Variant;
       readonly series?: SeriesLength;
       readonly heat?: HeatChoice;
@@ -87,7 +89,9 @@ export type RoomErrorCode =
   /** Team Versus: TEAM to a team that already has three. */
   | "team_full"
   /** TEAM for someone who isn't in the room. */
-  | "not_in_room";
+  | "not_in_room"
+  /** CONFIG `mode`: more players in the room than that mode seats. */
+  | "too_many_players";
 
 export type ParseResult = { readonly ok: true; readonly message: ClientMessage } | { readonly ok: false };
 
@@ -130,7 +134,9 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
     case "CONFIG": {
-      if (m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined && m.scoring === undefined) return BAD;
+      if (m.mode === undefined && m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined && m.scoring === undefined)
+        return BAD;
+      if (m.mode !== undefined && !isRoomMode(m.mode)) return BAD;
       if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
       if (m.series !== undefined && !isSeriesLength(m.series)) return BAD;
       if (m.heat !== undefined && !isHeatChoice(m.heat)) return BAD;
@@ -138,6 +144,7 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
       if (m.scoring !== undefined && !isScoring(m.scoring)) return BAD;
       const message: ClientMessage = {
         op: "CONFIG",
+        ...(m.mode === undefined ? {} : { mode: m.mode }),
         ...(m.variant === undefined ? {} : { variant: m.variant }),
         ...(m.series === undefined ? {} : { series: m.series }),
         ...(m.heat === undefined ? {} : { heat: m.heat }),

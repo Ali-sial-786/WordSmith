@@ -47,7 +47,7 @@ and point and XP values in `server/src/rules/`. All messages are JSON
 | Op | Fields | Notes |
 |---|---|---|
 | `READY` | `ready: bool` | In the lobby |
-| `CONFIG` | `heat`: 1–6 or `"auto"` | Host only, in the lobby or results. Applies from the next `START` or `AGAIN` and is kept through `AGAIN`. Survival adds `variant` (shared/survival.md) and Versus `series`. |
+| `CONFIG` | `heat`: 1–6 or `"auto"` | Host only, in the lobby or results. Applies from the next `START` or `AGAIN` and is kept through `AGAIN`. Survival adds `variant` (shared/survival.md), Versus `series`, and any room `mode` ("Switching mode"). |
 | `START` | — | Host only, from the lobby. Needs at least 1 player; solo co-op is allowed. Starting doesn't require everyone to be ready. |
 | `SUBMIT` | `word`, `seq` | `seq` goes up by one each time. About 4 per second per player; past that the server answers `rate_limited` and may lock the player out for 3 s. In the lobby or countdown it gets `ERROR wrong_phase` (no `WORD_RESULT`); after the round it gets `too_late`. Other messages are limited per socket (a burst of 10, then 2 a second) and extras are dropped silently. |
 | `HINT` | `kind`, plus `x`, `y` for a chisel | Spends one of the sender's **own** hints (checked and taken in D1 straight away). Revealed letters score for no one. |
@@ -84,6 +84,17 @@ Between one round and the next there's time to look at the results, with a count
 - **Embers:** go to whoever claims the first word through the cell. An ember on a hinted cell stays until a word through it is forged; one on a slot that fills in by itself is lost.
 - **Open rooms (hub):** friends see `OPEN_ROOMS` entries `{code, mode, hostId, hostUsername, players, max}` for rooms in the lobby or results that aren't full.
 - **XP:** written by the server at `ROUND_END` (DESIGN §4.2) together with the match records, stats and level-up rewards, in one D1 batch.
+
+## Switching mode
+
+One room can play every mode in turn: the code, the players, the chat and the video call stay.
+
+- **CONFIG `mode`:** `"coop"` · `"vs"` · `"team"`. Host only, in the lobby, or at results once everyone has them (`wrong_phase` before that). The room goes back to the **lobby** with nobody ready, and plays the new mode from the next `START`.
+- **The new mode is set up:** players keep their colour where the new mode has it and nobody who joined earlier does; otherwise they get the first free one. Versus and Team Versus get the default series length unless the room had one. Team Versus deals the players onto Copper and Cobalt in join order (anyone can switch teams afterwards); leaving Team Versus forgets the teams. Survival is dropped going to Team Versus.
+- **Other fields in the same `CONFIG`** are judged by the new mode (`{mode: "team", rule: "first"}` works).
+- **More players than the new mode seats** (co-op 4, Versus 5, Team Versus 6): `too_many_players`, and nothing changes.
+- The open-rooms listing and `GET /v1/rooms/:code` show the new mode at once.
+- **The app** keeps players in the room when they go back to the Forge Hall (a bar at the top takes them back, with the mic, camera and Leave), and picking a mode there while in a room switches the room (the host) or goes back to it (anyone else). A round starting brings everyone in the room back to it.
 
 ## Chat
 
