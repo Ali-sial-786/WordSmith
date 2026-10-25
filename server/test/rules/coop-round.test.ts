@@ -35,7 +35,7 @@ describe("newCoopRound", () => {
   it("starts the clock, shuffles the anvil and maybe places embers", () => {
     for (let seed = 0; seed < 50; seed++) {
       const r = newCoopRound({ round: 2, heat: 3, matchId: "m", puzzle, playerIds: ["a"], startsAt: T0, rand: mulberry32(seed) });
-      expect(r.endsAt - r.startsAt).toBe(210_000); // Cherry Red: 3:30
+      expect(r.endsAt - r.startsAt).toBe(270_000); // Cherry Red: 4:30
       expect([...r.letters].sort().join("")).toBe("AERT");
       expect(["TEAR", "RATE"]).not.toContain(r.letters);
       expect(r.embers.length).toBeLessThanOrEqual(2);

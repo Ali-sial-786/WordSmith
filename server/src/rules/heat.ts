@@ -37,11 +37,11 @@ const MINUTE = 60 * SECOND;
 /** The DESIGN.md §5 table, from coolest to hottest. */
 export const HEAT_TIERS: readonly HeatTierInfo[] = [
   { tier: 1, name: "Ember", minLevel: 1, maxLevel: 5, coopTimerMs: 3 * MINUTE, vsRoundTimerMs: 2 * MINUTE },
-  { tier: 2, name: "Dull Red", minLevel: 6, maxLevel: 15, coopTimerMs: 3 * MINUTE, vsRoundTimerMs: 2 * MINUTE },
-  { tier: 3, name: "Cherry Red", minLevel: 16, maxLevel: 30, coopTimerMs: 3 * MINUTE + 30 * SECOND, vsRoundTimerMs: 2 * MINUTE + 30 * SECOND },
-  { tier: 4, name: "Orange", minLevel: 31, maxLevel: 50, coopTimerMs: 3 * MINUTE + 30 * SECOND, vsRoundTimerMs: 2 * MINUTE + 30 * SECOND },
-  { tier: 5, name: "Yellow", minLevel: 51, maxLevel: 80, coopTimerMs: 4 * MINUTE, vsRoundTimerMs: 3 * MINUTE },
-  { tier: 6, name: "White Heat", minLevel: 81, maxLevel: null, coopTimerMs: 4 * MINUTE, vsRoundTimerMs: 3 * MINUTE },
+  { tier: 2, name: "Dull Red", minLevel: 6, maxLevel: 15, coopTimerMs: 3 * MINUTE + 30 * SECOND, vsRoundTimerMs: 2 * MINUTE + 30 * SECOND },
+  { tier: 3, name: "Cherry Red", minLevel: 16, maxLevel: 30, coopTimerMs: 4 * MINUTE + 30 * SECOND, vsRoundTimerMs: 3 * MINUTE + 30 * SECOND },
+  { tier: 4, name: "Orange", minLevel: 31, maxLevel: 50, coopTimerMs: 4 * MINUTE + 30 * SECOND, vsRoundTimerMs: 3 * MINUTE + 30 * SECOND },
+  { tier: 5, name: "Yellow", minLevel: 51, maxLevel: 80, coopTimerMs: 5 * MINUTE, vsRoundTimerMs: 4 * MINUTE },
+  { tier: 6, name: "White Heat", minLevel: 81, maxLevel: null, coopTimerMs: 5 * MINUTE, vsRoundTimerMs: 4 * MINUTE },
 ];
 
 /** Details for a tier. */

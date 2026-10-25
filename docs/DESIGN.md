@@ -217,11 +217,11 @@ in hot metal.
 | Heat | Smith Level | Anvil letters | Grid words | Word pool | Co-op timer | VS round timer |
 |---|---|---|---|---|---|---|
 | Ember | 1–5 | 4 | 3–6 | very common | 3:00 | 2:00 |
-| Dull Red | 6–15 | 5 | 5–9 | common | 3:00 | 2:00 |
-| Cherry Red | 16–30 | 6 | 9–14 | common | 3:30 | 2:30 |
-| Orange | 31–50 | 6–7 | 11–16 | + less common | 3:30 | 2:30 |
-| Yellow | 51–80 | 7 | 13–19 | + uncommon | 4:00 | 3:00 |
-| White Heat | 81+ | 7–8 | 15–22 | uncommon, longer words | 4:00 | 3:00 |
+| Dull Red | 6–15 | 5 | 5–9 | common | 3:30 | 2:30 |
+| Cherry Red | 16–30 | 6 | 9–14 | common | 4:30 | 3:30 |
+| Orange | 31–50 | 6–7 | 11–16 | + less common | 4:30 | 3:30 |
+| Yellow | 51–80 | 7 | 13–19 | + uncommon | 5:00 | 4:00 |
+| White Heat | 81+ | 7–8 | 15–22 | uncommon, longer words | 5:00 | 4:00 |
 
 The anvil's letters are chosen so that its good words fit the grid: hardly
 any common word that could have been a grid answer ends up only in the

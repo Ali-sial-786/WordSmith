@@ -217,7 +217,7 @@ describe("Versus rooms", () => {
 
     const first = await start(sa, code, [sa, sb2, sc]);
     expect(first).toMatchObject({ round: 1, heat: 3, series: 7, regular: 1, suddenDeath: false, players: [a.uid, b.uid, c.uid] });
-    expect(first.endsAt - first.startsAt).toBe(150_000);
+    expect(first.endsAt - first.startsAt).toBe(210_000);
     expect(first.tally).toEqual({ [a.uid]: 0, [b.uid]: 0, [c.uid]: 0 });
     // Past the per-socket limit for messages other than SUBMIT (a burst of 10, then 2 a second).
     await sleep(1600);

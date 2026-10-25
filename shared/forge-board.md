@@ -113,7 +113,7 @@ An order:
 |---|---|---|
 | `solo_puzzles` | 3 (weekly: 15) | campaign puzzles accepted by solo sync |
 | `bonus_words` | 10 | valid bonus words from solo sync, the Daily Commission, co-op and Versus |
-| `words` | 30 | grid words the player forged: typed words in solo sync and the daily (`foundWords`), words the player claimed in co-op, and words claimed in their own Versus molds |
+| `words` | 40 | grid words the player forged: typed words in solo sync and the daily (`foundWords`), words the player claimed in co-op, and words claimed in their own Versus molds |
 | `long_words` | 3 | the same words, counting only those of 6+ letters |
 | `daily` | 1 | a Daily Commission completion that isn't a repeat (catch-up days count too) |
 | `no_hints` | 1 | a campaign puzzle accepted by solo sync with no hints used |

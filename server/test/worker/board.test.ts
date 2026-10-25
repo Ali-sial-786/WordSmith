@@ -172,7 +172,7 @@ describe("GET /v1/me/board", () => {
     expect(b.orders.daily).toEqual([
       { slot: "d0", kind: "daily", target: 1, progress: 0, letter: null, friends: false, reward: { xp: 20, hints: hammer(1) }, claimed: false },
       { slot: "d1", kind: "coop_rounds", target: 1, progress: 0, letter: null, friends: true, reward: { xp: 20, hints: hammer(1) }, claimed: false },
-      { slot: "d2", kind: "words", target: 30, progress: 0, letter: null, friends: false, reward: { xp: 20, hints: hammer(1) }, claimed: false },
+      { slot: "d2", kind: "words", target: 40, progress: 0, letter: null, friends: false, reward: { xp: 20, hints: hammer(1) }, claimed: false },
     ]);
     expect(b.orders.weekly.map((o: Message) => [o.slot, o.kind, o.target, o.letter])).toEqual([
       ["w0", "letter_hunt", 40, "T"],
@@ -255,8 +255,8 @@ describe("Work Orders", () => {
     expect(dailyKinds("2026-10-19")).toEqual(["solo_puzzles", "bonus_words", "words"]);
     expect(await post(a, "/v1/me/orders/claim", { slot: "d0" })).toMatchObject({ status: 409, body: { error: "not_done" } });
 
-    // Stages 1–10: 30 grid words, and 12 bonus words from the first three.
-    const entries = Array.from({ length: 10 }, (_, i) => entry(i + 1, i < 3 ? { bonusWords: stage(i + 1).bonus } : {}));
+    // Stages 1–14: at least 40 grid words, and 10+ bonus words from the first three.
+    const entries = Array.from({ length: 14 }, (_, i) => entry(i + 1, i < 3 ? { bonusWords: stage(i + 1).bonus } : {}));
     expect(entries.flatMap((e) => e.bonusWords as string[]).length).toBeGreaterThanOrEqual(10);
     const out = await sync(a, entries);
     expect(out.results.every((r: Message) => r.accepted)).toBe(true);
@@ -266,10 +266,10 @@ describe("Work Orders", () => {
     expect(b.orders.daily.map((o: Message) => [o.kind, o.progress, o.target])).toEqual([
       ["solo_puzzles", 3, 3],
       ["bonus_words", 10, 10],
-      ["words", 30, 30],
+      ["words", 40, 40],
     ]);
     expect(order(b, "w0")).toMatchObject({ kind: "letter_hunt", letter, progress: forged.filter((w) => w.includes(letter)).length });
-    expect(order(b, "w1")).toMatchObject({ kind: "solo_puzzles", progress: 10, target: 15 });
+    expect(order(b, "w1")).toMatchObject({ kind: "solo_puzzles", progress: 14, target: 15 });
 
     const xpBefore = out.profile.totalXp as number;
     const d0 = await post(a, "/v1/me/orders/claim", { slot: "d0" });
@@ -302,9 +302,9 @@ describe("Work Orders", () => {
       [0, false],
     ]);
     expect(b.orders.chest).toEqual({ reward: { xp: 30, hints: { ...ZERO, chisel: 1 } }, ready: false, claimed: false });
-    expect(order(b, "w1")).toMatchObject({ progress: 10 });
-    // Five more campaign puzzles finish the weekly one.
-    await sync(a, [11, 12, 13, 14, 15].map((n) => entry(n)));
+    expect(order(b, "w1")).toMatchObject({ progress: 14 });
+    // One more campaign puzzle finishes the weekly one.
+    await sync(a, [15].map((n) => entry(n)));
     const w1 = await post(a, "/v1/me/orders/claim", { slot: "w1" });
     expect(w1.body).toMatchObject({ reward: { xp: 60 } });
     expect(order(w1.body.board, "w1")).toMatchObject({ progress: 15, claimed: true });

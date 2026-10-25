@@ -63,13 +63,13 @@ describe("tier details (DESIGN.md §5)", () => {
 
   it("sets the co-op timer", () => {
     expect(([1, 2, 3, 4, 5, 6] as HeatTier[]).map(coopTimerMs)).toEqual([
-      180_000, 180_000, 210_000, 210_000, 240_000, 240_000,
+      180_000, 210_000, 270_000, 270_000, 300_000, 300_000,
     ]);
   });
 
   it("sets the versus round timer", () => {
     expect(([1, 2, 3, 4, 5, 6] as HeatTier[]).map(vsRoundTimerMs)).toEqual([
-      120_000, 120_000, 150_000, 150_000, 180_000, 180_000,
+      120_000, 150_000, 210_000, 210_000, 240_000, 240_000,
     ]);
   });
 

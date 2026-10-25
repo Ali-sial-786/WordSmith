@@ -64,10 +64,10 @@ describe("choosing the orders", () => {
     expect(dailyOrders("2026-10-17")).toEqual([
       { slot: "d0", kind: "daily", target: 1, letter: null },
       { slot: "d1", kind: "coop_rounds", target: 1, letter: null },
-      { slot: "d2", kind: "words", target: 30, letter: null },
+      { slot: "d2", kind: "words", target: 40, letter: null },
     ]);
     expect(["solo_puzzles", "bonus_words", "words", "long_words", "daily", "no_hints"].map((k) => dailyOrder("d0", k as OrderKind).target)).toEqual([
-      3, 10, 30, 3, 1, 1,
+      3, 10, 40, 3, 1, 1,
     ]);
   });
 
@@ -145,8 +145,8 @@ describe("orderCounts", () => {
   });
 
   it("stops progress at the target", () => {
-    expect(advance({ kind: "words", target: 30 }, 25, { words: 4 })).toBe(29);
-    expect(advance({ kind: "words", target: 30 }, 25, { words: 9 })).toBe(30);
+    expect(advance({ kind: "words", target: 40 }, 35, { words: 4 })).toBe(39);
+    expect(advance({ kind: "words", target: 40 }, 35, { words: 9 })).toBe(40);
     expect(advance({ kind: "daily", target: 1 }, 0, { words: 9 })).toBe(0);
   });
 });

@@ -65,7 +65,7 @@ describe("newVsRound", () => {
   it("gives everyone the same anvil and embers, an empty mold each, and the VS clock", () => {
     for (let seed = 0; seed < 50; seed++) {
       const r = newVsRound({ round: 2, suddenDeath: false, heat: 3, puzzle: example, playerIds: ["a", "b"], startsAt: T0, rand: mulberry32(seed) });
-      expect(r.endsAt - r.startsAt).toBe(150_000); // Cherry Red: 2:30
+      expect(r.endsAt - r.startsAt).toBe(210_000); // Cherry Red: 3:30
       expect([...r.letters].sort().join("")).toBe("AERT");
       expect(["TEAR", "RATE"]).not.toContain(r.letters);
       expect(r.embers.length).toBeLessThanOrEqual(2);

@@ -40,7 +40,7 @@ export const FRIENDS_KINDS: ReadonlySet<OrderKind> = new Set<OrderKind>(["coop_r
 export const DAILY_TARGETS: Readonly<Record<Exclude<OrderKind, "letter_hunt">, number>> = {
   solo_puzzles: 3,
   bonus_words: 10,
-  words: 30,
+  words: 40,
   long_words: 3,
   daily: 1,
   no_hints: 1,

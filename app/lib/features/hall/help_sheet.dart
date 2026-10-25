@@ -243,7 +243,7 @@ List<_Section> _sections() => [
       _Entry(
         'scroll',
         'Work Orders',
-        'Three small jobs each day, like forging 30 words. Each pays XP and a Hammer Strike, and filling '
+        'Three small jobs each day, like forging 40 words. Each pays XP and a Hammer Strike, and filling '
             "all three opens the **Smith's Ledger** chest. Don't fancy one? Swap it, once a day. Two weekly "
             'orders, one of them a **Letter Hunt**, pay even more.',
       ),
