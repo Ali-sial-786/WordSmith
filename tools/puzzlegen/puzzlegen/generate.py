@@ -9,8 +9,10 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from . import layout as layout_mod
+from .metrics import leftover_words, leftovers
 from .rules import check_puzzle
-from .tiers import INFLECTION_SHARE, TIERS, Tier
+from .tiers import (FAIR_Q, GRID_MAX_WORDS, GREAT_Q, INFLECTION_SHARE, LEFTOVER_MAX, NICE_Q, TIERS,
+                    Tier)
 from .words import Lexicon, signature
 
 
@@ -22,6 +24,7 @@ class Spec:
     length: int  # anvil letters
     target: int  # grid words wanted
     min_words: int  # fewer than this => reject the seed
+    max_words: int  # past `target`, good words (NICE_Q+) join up to this many
     answer_q: float | None  # answers have at least this quality (None: any) ...
     answer_level: int  # ... and SCOWL level <= this
     common_q: float  # answers below this quality are "rare" ...
@@ -45,7 +48,7 @@ def spec_for(heat: int, progress: float, rng: random.Random, length: int | None 
     the seed may be a plural and inflections aren't capped.
     """
     t: Tier = TIERS[heat]
-    lo, hi = t.min_words + extra_words, t.max_words + extra_words
+    lo, hi = t.min_words + extra_words, min(GRID_MAX_WORDS, t.max_words + extra_words)
     if length is None:
         if len(t.lengths) == 1:
             length = t.lengths[0]
@@ -71,7 +74,7 @@ def spec_for(heat: int, progress: float, rng: random.Random, length: int | None 
         max_inflections = target
     return Spec(
         heat=heat, length=length, target=target,
-        min_words=lo if min_words is None else min_words,
+        min_words=lo if min_words is None else min_words, max_words=max(hi, target),
         answer_q=answer_q if widened else t.answer_q,
         answer_level=t.answer_level,
         common_q=common_q, max_rare=max_rare, seed_q=seed_q,
@@ -97,6 +100,36 @@ POOL_EXTRA_MIN = 2
 TARGET_SLACK = {1: 0, 2: 0, 3: 1, 4: 1, 5: 1, 6: 2}
 # Priority lost per doubling of a word's uses so far (see priority_of).
 REPEAT_WEIGHT = 0.3
+# What a layout gains for each placed word of at least this quality, on top
+# of 100 a word up to its target (layout.score_layout): leaving a good word
+# in the Scrap Bin costs more than a grid one filler word smaller.
+WORD_VALUE = ((GREAT_Q, 160.0), (NICE_Q, 110.0), (FAIR_Q, 15.0))
+# A first layout gets 1/QUICK_SHARE of the restarts; if it leaves more than
+# the leftover limits plus QUICK_MARGIN out, or is far short of the minimum
+# word count, the seed goes no further.
+QUICK_SHARE = 4
+QUICK_MARGIN = (1, 3, 2)  # very common, common words left out; words short of the minimum
+# Choosing among seeds (generate_slot): a puzzle leaving no very common word
+# and at most GOOD_LEFT3 common ones out, with enough words of which at most
+# a GOOD_FILL share are fillers (below NICE_Q), is taken at once; otherwise
+# the best of PICK by slot_score: LEFT_WEIGHT per word left over (very
+# common, common, fair; a word counts at each level it reaches),
+# SHORT_WEIGHT per word short of the target and FILL_WEIGHT per filler. So
+# anvils whose good words just fill the grid win: neither good words left
+# over nor a grid padded with rarer ones.
+GOOD_LEFT3 = {1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2}
+GOOD_FILL = 0.2
+PICK = 12
+LEFT_WEIGHT = (3.0, 1.0, 0.2)
+SHORT_WEIGHT = 1.5
+FILL_WEIGHT = 0.8
+# Seed order (seed_estimate): about this share of a seed's answers fit a
+# crossword, and up to SEED_NOISE is added to each estimate so that equally
+# promising seeds come in a random order.
+FIT_SHARE = 0.85
+SEED_NOISE = 2.0
+# generate_slot's last resort, when no seed gets within the leftover limits.
+NO_LIMIT = (1000, 1000)
 
 
 def rarity(lex: Lexicon, w: str) -> float:
@@ -201,24 +234,41 @@ def difficulty(lex: Lexicon, letters: str, words: list[str], cols: int, rows: in
     )
 
 
-def quality_layout(seed_word: str, ranked: list[str], priority: dict[str, float], spec: Spec,
-                   rng: random.Random, opts: layout_mod.LayoutOptions):
-    """The layout with the best words that still makes a big enough grid.
+def word_value(q: float) -> float:
+    """What placing a word of quality `q` adds to a layout's score (WORD_VALUE)."""
+    for floor, v in WORD_VALUE:
+        if q >= floor:
+            return v
+    return 0.0
 
-    The layout first gets only the top of the ranked pool, a few more words
-    than the target. When that can't reach the target (less the tier's
-    slack), more words join, best first, until it can or the pool is used
-    up. So a worse word only goes in when no layout of better ones exists
-    (as far as the randomized search finds).
+
+def quality_layout(lex: Lexicon, seed_word: str, ranked: list[str], priority: dict[str, float],
+                   spec: Spec, rng: random.Random, opts: layout_mod.LayoutOptions,
+                   restarts: int | None = None, staged: bool = True):
+    """The layout with the most good words that still makes a big enough grid.
+
+    The layout first gets the top of the ranked pool, a few more words than
+    the target, plus every good word (NICE_Q+): those may take the grid past
+    its target, up to spec.max_words, rather than be left in the Scrap Bin.
+    When that can't reach the target (less the tier's slack), more words
+    join, best first, until it can or the pool is used up. So a worse word
+    only goes in when no layout of better ones exists (as far as the
+    randomized search finds). Not `staged`: the whole pool at once (cheaper, for
+    a first look).
     """
     need = spec.target if spec.exact else max(spec.min_words,
                                               spec.target - TARGET_SLACK[spec.heat])
     extra = max(POOL_EXTRA_MIN, round(POOL_EXTRA * spec.target))
-    k = min(len(ranked), spec.target - 1 + extra)
+    k = min(len(ranked), spec.target - 1 + extra) if staged else len(ranked)
+    nice = frozenset() if spec.exact else frozenset(
+        w for w in ranked if lex.quality(w) >= NICE_Q)
+    value = {w: word_value(lex.quality(w)) for w in ranked}
     best = None
     while True:
-        lay = layout_mod.build(seed_word, ranked[:k], priority, spec.target, rng, opts)
-        if lay is not None and (best is None or len(lay.words) > len(best.words)):
+        pool = ranked[:k] + [w for w in ranked[k:] if w in nice]
+        lay = layout_mod.build(seed_word, pool, priority, spec.target, rng, opts,
+                               cap=spec.max_words, nice=nice, value=value, restarts=restarts)
+        if lay is not None and (best is None or lay.score > best.score):
             best = lay
         if (best is not None and len(best.words) >= need) or k >= len(ranked):
             return best
@@ -227,28 +277,67 @@ def quality_layout(seed_word: str, ranked: list[str], priority: dict[str, float]
 
 def make_puzzle(lex: Lexicon, seed_word: str, spec: Spec, rng: random.Random,
                 opts: layout_mod.LayoutOptions | None = None,
-                usage: Counter | None = None) -> Result:
-    """Try to build a puzzle around `seed_word`. puzzle is None on rejection."""
+                usage: Counter | None = None,
+                limit: tuple[int, int] | None = None) -> Result:
+    """Try to build a puzzle around `seed_word`. puzzle is None on rejection.
+
+    info["left"] is (left4, left3, left25), the good words left in the bonus
+    list (metrics.leftovers). Letters whose good words can't all go in (more
+    than `limit` = (left4, left3), default tiers.LEFTOVER_MAX, would be left
+    over for sure) are rejected before any layout. A first, quick layout (the
+    whole pool at once) that leaves far more than `limit` out, or far too few
+    words in, stops there. A puzzle over `limit` comes back with info["over"]
+    set.
+    """
     letters = seed_word
     answers = answer_candidates(lex, letters, spec)
     if seed_word not in answers:
         return Result(None, "seed is not an answer word", seed=seed_word)
     if len(answers) < spec.min_words:
         return Result(None, "too few answer words", seed=seed_word)
+    lim4, lim3 = limit or (LEFTOVER_MAX[GREAT_Q], LEFTOVER_MAX[NICE_Q])
 
     priority = {w: priority_of(lex, w, usage) for w in answers}
     pool = answer_pool(lex, seed_word, answers, spec, priority, rng)
     if spec.exact:
         # Tutorial: short, very common words only.
         pool = [w for w in pool if len(w) <= 4]
+    subs = lex.subwords(letters)
+    # Good words that can't go in: outside the pool (the tier's quality
+    # floor, the inflection cap), or more than the grid can take.
+    in_grid = set(pool) | {seed_word}
+    sure = [w for w in leftover_words(lex, spec.heat, subs) if w not in in_grid]
+    room = spec.max_words - 1
+    for floor, lim in ((GREAT_Q, lim4), (NICE_Q, lim3)):
+        good_in = sum(1 for w in pool if lex.quality(w) >= floor)
+        if sum(1 for w in sure if lex.quality(w) >= floor) + max(0, good_in - room) > lim:
+            return Result(None, "good words can't all fit", seed=seed_word)
+
     opts = opts or layout_mod.LayoutOptions(restarts=RESTARTS[spec.heat])
-    lay = quality_layout(seed_word, pool, priority, spec, rng, opts)
+
+    def left_of(lay) -> tuple[int, int, int]:
+        placed = set(lay.words) if lay else {seed_word}
+        return leftovers(lex, spec.heat, [w for w in subs if w not in placed])
+
+    quick = max(3, opts.restarts // QUICK_SHARE)
+    lay = quality_layout(lex, seed_word, pool, priority, spec, rng, opts, restarts=quick,
+                         staged=False)
+    left = left_of(lay)
+    hopeless = (left[0] > lim4 + QUICK_MARGIN[0] or left[1] > lim3 + QUICK_MARGIN[1]
+                or len(lay.words if lay else ()) < spec.min_words - QUICK_MARGIN[2])
+    if not hopeless and opts.restarts > quick:
+        more = quality_layout(lex, seed_word, pool, priority, spec, rng, opts,
+                              restarts=opts.restarts - quick)
+        if more is not None and (lay is None or more.score > lay.score):
+            lay = more
+            left = left_of(lay)
     placed = lay.words if lay else [seed_word]
     if len(placed) < spec.min_words:
         return Result(None, "layout fit too few words", seed=seed_word,
-                      info={"placed": len(placed)})
+                      info={"placed": len(placed), "laid_out": True})
     if spec.exact and len(placed) != spec.target:
-        return Result(None, "tutorial needs an exact word count", seed=seed_word)
+        return Result(None, "tutorial needs an exact word count", seed=seed_word,
+                      info={"laid_out": True})
 
     grid = lay.grid
     words = [
@@ -256,7 +345,6 @@ def make_puzzle(lex: Lexicon, seed_word: str, spec: Spec, rng: random.Random,
         for (w, x, y, d) in grid.cropped()
     ]
     grid_set = {w for w in placed}
-    subs = lex.subwords(letters)
     bonus = sorted(w.upper() for w in subs if w not in grid_set)
     full = {w for w in subs if len(w) == len(letters)}
     shuffled = shuffle_letters(letters, full, rng).upper()
@@ -274,11 +362,14 @@ def make_puzzle(lex: Lexicon, seed_word: str, spec: Spec, rng: random.Random,
     # the layout code, so the seed is rejected (and counted) rather than kept.
     errors = check_puzzle(dict(puzzle, id="c-0000"), lex)
     if errors:
-        return Result(None, "failed rule check", seed=seed_word, info={"errors": errors})
+        return Result(None, "failed rule check", seed=seed_word,
+                      info={"errors": errors, "laid_out": True})
     diff = difficulty(lex, letters, placed, cols, rows)
     return Result(puzzle, "", diff, seed_word, info={
         "placed": len(placed), "target": spec.target, "candidates": len(answers),
-        "crossings": grid.crossings(),
+        "crossings": grid.crossings(), "left": left, "laid_out": True,
+        "fill": sum(1 for w in placed if lex.quality(w) < NICE_Q),
+        "over": left[0] > lim4 or left[1] > lim3,
     })
 
 
@@ -287,7 +378,8 @@ class SeedPool:
 
     def __init__(self, lex: Lexicon):
         self.lex = lex
-        self._cache: dict[tuple[int, int], list[str]] = {}
+        self._cache: dict[tuple, list[str]] = {}
+        self._facts: dict[tuple, tuple[int, float, float, int]] = {}
         self._by_len: dict[int, list[str]] = {}
         for w in sorted(lex.accepted):
             self._by_len.setdefault(len(w), []).append(w)
@@ -310,47 +402,140 @@ class SeedPool:
             self._cache[key] = sorted(best.values())
         return self._cache[key]
 
+    def facts(self, seed: str, spec: Spec) -> tuple[int, float, float, int]:
+        """(answers, good words that can't go in, good words that can, how many can) for
+        `seed` under `spec`'s answer pool. Good words (NICE_Q+, metrics.leftover_words)
+        count at their level in the middle two: a very common word (GREAT_Q+) counts
+        LEFT_WEIGHT[0] times."""
+        key = (seed, spec.heat, spec.answer_level, spec.answer_q, spec.max_answer_len)
+        got = self._facts.get(key)
+        if got is None:
+            lex = self.lex
+            answers = set(answer_candidates(lex, seed, spec))
+            out = inside = 0.0
+            n_in = 0
+            for w in leftover_words(lex, spec.heat, lex.subwords(seed)):
+                q = lex.quality(w)
+                if q < NICE_Q:
+                    break
+                weight = LEFT_WEIGHT[0] if q >= GREAT_Q else LEFT_WEIGHT[1]
+                if w in answers:
+                    inside += weight
+                    n_in += 1
+                else:
+                    out += weight
+            got = self._facts[key] = (len(answers), out, inside, n_in)
+        return got
+
+
+def seed_estimate(pool: SeedPool, seed: str, spec: Spec, need: int) -> float:
+    """A guess at slot_score before any layout, from the word counts alone: good words
+    that can't go in, more good words than the grid takes, too few answers (only
+    about FIT_SHARE of a pool fits a crossword) and the filler words it will need."""
+    n, out, inside, n_in = pool.facts(seed, spec)
+    fits = min(spec.max_words, FIT_SHARE * n)
+    return (out + max(0.0, inside - (fits - 1))
+            + SHORT_WEIGHT * max(0.0, need - fits)
+            + FILL_WEIGHT * max(0.0, min(fits, spec.target) - n_in))
+
+
+def slot_score(res: Result, spec: Spec) -> float:
+    """Lower is better: good words left over, words short of the target, and filler
+    words (grid words below NICE_Q)."""
+    l4, l3, l25 = res.info["left"]
+    need = max(spec.min_words, spec.target - TARGET_SLACK[spec.heat])
+    return (LEFT_WEIGHT[0] * l4 + LEFT_WEIGHT[1] * l3 + LEFT_WEIGHT[2] * l25
+            + SHORT_WEIGHT * max(0, need - res.info["placed"])
+            + FILL_WEIGHT * res.info["fill"])
+
 
 def generate_slot(lex: Lexicon, pool: SeedPool, spec: Spec, used: set[str],
-                  rng: random.Random, stats: dict, max_tries: int = 400,
+                  rng: random.Random, stats: dict, max_tries: int = 80,
                   opts: layout_mod.LayoutOptions | None = None,
                   rich_first: bool = False, usage: Counter | None = None,
                   avoid: frozenset[str] = frozenset()) -> Result:
-    """Pick an unused seed for `spec` and build a puzzle, retrying on rejection.
+    """Pick an unused seed for `spec` and build a puzzle, comparing a few seeds.
+
+    Each seed whose good words could fit is laid out, and the leftovers
+    counted (make_puzzle). A puzzle that leaves no very common word and at
+    most GOOD_LEFT3[heat] common ones (NICE_Q+) out, with enough words, is
+    taken at once; otherwise the best (slot_score) of the first PICK
+    puzzles within tiers.LEFTOVER_MAX is. Only when no seed gets within the
+    limits in `max_tries` layouts does the best of the others go in, or, if
+    every seed was rejected before its layout, the best puzzle any seed makes
+    with no leftover limit (counted in `stats` as "over the leftover limits").
 
     `usage` counts the grid answers of the puzzles made so far (updated here),
     see priority_of.
 
-    Seeds are tried in random order, or with `rich_first` those with the most
-    answer words first (for slots that need more words than most anvils have).
-    Seeds whose signature is in `avoid` are tried last.
+    Seeds are tried best guess first (seed_estimate, plus up to SEED_NOISE of
+    noise for variety), or with `rich_first` those with the most answer words
+    first (for slots that need more words than most anvils have). Seeds whose
+    signature is in `avoid` are tried last. Each seed gets its own random
+    stream, so its puzzle doesn't depend on the seeds tried before it.
     """
     seeds = [s for s in pool.seeds(spec.length, spec.answer_level, spec.seed_q,
                                    spec.plural_seed)
              if signature(s) not in used]
+    need = spec.target if spec.exact else max(spec.min_words,
+                                              spec.target - TARGET_SLACK[spec.heat])
     rng.shuffle(seeds)
     if rich_first:
-        seeds.sort(key=lambda s: -len(answer_candidates(lex, s, spec)))
+        seeds.sort(key=lambda s: -pool.facts(s, spec)[0])
+    else:
+        noise = {s: rng.random() * SEED_NOISE for s in seeds}
+        seeds.sort(key=lambda s: seed_estimate(pool, s, spec, need) + noise[s])
     if avoid:
         seeds.sort(key=lambda s: signature(s) in avoid)
+    base = rng.getrandbits(64)
+    best = None  # (score, seed, Result) within the limits
+    fallback = None  # the same, over them
     tries = 0
-    for s in seeds:
-        answers = answer_candidates(lex, s, spec)
-        # Cheap pre-filter, not counted as a rejection. Big grids need spare
-        # words: only some of the candidates ever fit.
-        margin = spec.min_words // 3 if spec.min_words >= 12 else 0
-        if len(answers) < spec.min_words + margin:
-            continue
-        tries += 1
-        res = make_puzzle(lex, s, spec, rng, opts, usage)
-        if res.puzzle is not None:
-            used.add(signature(s))
-            if usage is not None:
-                usage.update(w["w"].lower() for w in res.puzzle["words"])
-            return res
-        stats[res.reason] = stats.get(res.reason, 0) + 1
-        if tries >= max_tries:
+    # A second pass, only when no seed gets within the limits or even close:
+    # no leftover pre-filter, the best of what can be built.
+    for limit in (None, NO_LIMIT):
+        good = 0
+        for s in seeds:
+            # Cheap pre-filter, not counted as a rejection. Big grids need spare
+            # words: only some of the candidates ever fit.
+            margin = spec.min_words // 3 if spec.min_words >= 15 else 0
+            if pool.facts(s, spec)[0] < spec.min_words + margin:
+                continue
+            res = make_puzzle(lex, s, spec, random.Random(f"{base}:{s}"), opts, usage, limit)
+            if res.info.get("laid_out"):
+                tries += 1
+            if res.puzzle is None:
+                stats[res.reason] = stats.get(res.reason, 0) + 1
+            else:
+                key = (slot_score(res, spec), s, res)
+                if res.info["over"]:
+                    if fallback is None or key[:2] < fallback[:2]:
+                        fallback = key
+                else:
+                    good += 1
+                    if best is None or key[:2] < best[:2]:
+                        best = key
+                    l4, l3, _ = res.info["left"]
+                    if good >= PICK or (l4 == 0 and l3 <= GOOD_LEFT3[spec.heat]
+                                        and res.info["placed"] >= need
+                                        and res.info["fill"] <= GOOD_FILL * res.info["placed"]):
+                        break
+            if tries >= max_tries:
+                break
+        if best is not None or fallback is not None:
             break
-    raise RuntimeError(
-        f"no seed found for heat {spec.heat}, {spec.length} letters, "
-        f"{spec.min_words}+ words (tried {tries})")
+        tries = 0
+    if limit is NO_LIMIT and best is not None:
+        fallback, best = best, None
+    if best is None and fallback is not None:
+        stats["over the leftover limits"] = stats.get("over the leftover limits", 0) + 1
+        best = fallback
+    if best is None:
+        raise RuntimeError(
+            f"no seed found for heat {spec.heat}, {spec.length} letters, "
+            f"{spec.min_words}+ words (tried {tries})")
+    res = best[2]
+    used.add(signature(res.seed))
+    if usage is not None:
+        usage.update(w["w"].lower() for w in res.puzzle["words"])
+    return res

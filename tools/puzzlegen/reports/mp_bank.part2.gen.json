@@ -43,8 +43,8 @@
   "heat 1 size 4": {
    "rejections": {},
    "difficulty": [
-    25.07,
-    37.39
+    28.84,
+    34.42
    ],
    "words": [
     6,
@@ -52,43 +52,85 @@
    ],
    "target": [
     9,
-    11
-   ]
+    12
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.0,
+     0
+    ]
+   }
   },
   "heat 1 size 3": {
    "rejections": {},
    "difficulty": [
-    24.22,
-    32.57
+    28.64,
+    38.48
    ],
    "words": [
     6,
-    6
+    7
    ],
    "target": [
     7,
-    9
-   ]
+    10
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.0,
+     0
+    ]
+   }
   },
   "heat 1 size 2": {
    "rejections": {},
    "difficulty": [
-    21.44,
-    33.88
+    24.57,
+    35.49
    ],
    "words": [
     5,
-    5
+    7
    ],
    "target": [
     5,
-    7
-   ]
+    8
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.0,
+     0
+    ]
+   }
   },
   "heat 1 size 1": {
    "rejections": {},
    "difficulty": [
-    13.29,
+    14.56,
     25.38
    ],
    "words": [
@@ -97,31 +139,57 @@
    ],
    "target": [
     3,
-    5
-   ]
+    6
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.06,
+     1
+    ]
+   }
   },
   "heat 2 size 4": {
-   "rejections": {
-    "layout fit too few words": 1
-   },
+   "rejections": {},
    "difficulty": [
-    51.04,
-    62.49
+    51.82,
+    67.03
    ],
    "words": [
     11,
-    13
+    15
    ],
    "target": [
     11,
-    13
-   ]
+    15
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.27,
+     4
+    ],
+    "2.5": [
+     1.08,
+     11
+    ]
+   }
   },
   "heat 2 size 3": {
    "rejections": {},
    "difficulty": [
-    42.68,
-    53.67
+    43.88,
+    54.23
    ],
    "words": [
     9,
@@ -129,14 +197,30 @@
    ],
    "target": [
     9,
-    11
-   ]
+    13
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.4,
+     3
+    ]
+   }
   },
   "heat 2 size 2": {
-   "rejections": {},
+   "rejections": {
+    "layout fit too few words": 29
+   },
    "difficulty": [
-    35.76,
-    49.76
+    38.44,
+    49.88
    ],
    "words": [
     7,
@@ -144,282 +228,556 @@
    ],
    "target": [
     7,
-    9
-   ]
+    11
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.0,
+     0
+    ],
+    "2.5": [
+     0.32,
+     2
+    ]
+   }
   },
   "heat 2 size 1": {
    "rejections": {
-    "layout fit too few words": 46
+    "layout fit too few words": 1253
    },
    "difficulty": [
-    27.22,
-    42.98
+    29.66,
+    47.6
    ],
    "words": [
     5,
-    7
+    9
    ],
    "target": [
     5,
-    7
-   ]
+    9
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.01,
+     1
+    ],
+    "2.5": [
+     0.3,
+     3
+    ]
+   }
   },
   "heat 3 size 4": {
    "rejections": {},
    "difficulty": [
-    63.85,
-    80.69
+    76.75,
+    94.32
    ],
    "words": [
-    13,
-    16
+    15,
+    20
    ],
    "target": [
-    13,
-    16
-   ]
+    15,
+    20
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.92,
+     4
+    ],
+    "2.5": [
+     4.98,
+     12
+    ]
+   }
   },
   "heat 3 size 3": {
-   "rejections": {},
-   "difficulty": [
-    60.25,
-    76.7
-   ],
-   "words": [
-    11,
-    14
-   ],
-   "target": [
-    11,
-    14
-   ]
-  },
-  "heat 3 size 2": {
-   "rejections": {},
-   "difficulty": [
-    52.47,
-    69.39
-   ],
-   "words": [
-    9,
-    12
-   ],
-   "target": [
-    9,
-    12
-   ]
-  },
-  "heat 3 size 1": {
-   "rejections": {
-    "layout fit too few words": 9
-   },
-   "difficulty": [
-    44.5,
-    62.78
-   ],
-   "words": [
-    7,
-    10
-   ],
-   "target": [
-    7,
-    10
-   ]
-  },
-  "heat 4 size 4": {
-   "rejections": {},
-   "difficulty": [
-    71.99,
-    97.53
-   ],
-   "words": [
-    15,
-    18
-   ],
-   "target": [
-    15,
-    18
-   ]
-  },
-  "heat 4 size 3": {
-   "rejections": {},
-   "difficulty": [
-    68.05,
-    93.16
-   ],
-   "words": [
-    13,
-    16
-   ],
-   "target": [
-    13,
-    16
-   ]
-  },
-  "heat 4 size 2": {
-   "rejections": {},
-   "difficulty": [
-    60.31,
-    86.97
-   ],
-   "words": [
-    11,
-    14
-   ],
-   "target": [
-    11,
-    14
-   ]
-  },
-  "heat 4 size 1": {
    "rejections": {
     "layout fit too few words": 7
    },
    "difficulty": [
-    52.12,
-    82.31
+    70.89,
+    86.23
+   ],
+   "words": [
+    13,
+    18
+   ],
+   "target": [
+    13,
+    18
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.13,
+     2
+    ],
+    "2.5": [
+     1.33,
+     6
+    ]
+   }
+  },
+  "heat 3 size 2": {
+   "rejections": {
+    "layout fit too few words": 100
+   },
+   "difficulty": [
+    63.2,
+    82.01
+   ],
+   "words": [
+    11,
+    16
+   ],
+   "target": [
+    11,
+    16
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.03,
+     1
+    ],
+    "2.5": [
+     1.02,
+     8
+    ]
+   }
+  },
+  "heat 3 size 1": {
+   "rejections": {
+    "good words can't all fit": 11,
+    "layout fit too few words": 1534
+   },
+   "difficulty": [
+    54.77,
+    78.33
    ],
    "words": [
     9,
-    12
+    14
    ],
    "target": [
     9,
-    12
-   ]
+    14
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.01,
+     1
+    ],
+    "2.5": [
+     0.86,
+     6
+    ]
+   }
+  },
+  "heat 4 size 4": {
+   "rejections": {
+    "layout fit too few words": 109
+   },
+   "difficulty": [
+    84.02,
+    102.92
+   ],
+   "words": [
+    17,
+    22
+   ],
+   "target": [
+    17,
+    22
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     1.9,
+     5
+    ],
+    "2.5": [
+     6.1,
+     13
+    ]
+   }
+  },
+  "heat 4 size 3": {
+   "rejections": {
+    "layout fit too few words": 4
+   },
+   "difficulty": [
+    78.09,
+    103.76
+   ],
+   "words": [
+    15,
+    20
+   ],
+   "target": [
+    15,
+    20
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.68,
+     2
+    ],
+    "2.5": [
+     3.42,
+     10
+    ]
+   }
+  },
+  "heat 4 size 2": {
+   "rejections": {
+    "layout fit too few words": 281
+   },
+   "difficulty": [
+    70.62,
+    99.21
+   ],
+   "words": [
+    13,
+    18
+   ],
+   "target": [
+    13,
+    18
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.17,
+     5
+    ],
+    "2.5": [
+     0.9,
+     5
+    ]
+   }
+  },
+  "heat 4 size 1": {
+   "rejections": {
+    "layout fit too few words": 4296
+   },
+   "difficulty": [
+    62.15,
+    91.82
+   ],
+   "words": [
+    11,
+    16
+   ],
+   "target": [
+    11,
+    16
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.06,
+     3
+    ],
+    "2.5": [
+     0.8,
+     5
+    ]
+   }
   },
   "heat 5 size 4": {
    "rejections": {
-    "layout fit too few words": 3
+    "layout fit too few words": 1267
    },
    "difficulty": [
-    90.74,
-    105.07
+    95.23,
+    109.49
    ],
    "words": [
-    17,
-    21
-   ],
-   "target": [
-    17,
-    21
-   ]
-  },
-  "heat 5 size 3": {
-   "rejections": {},
-   "difficulty": [
-    83.08,
-    101.53
-   ],
-   "words": [
-    15,
-    19
-   ],
-   "target": [
-    15,
-    19
-   ]
-  },
-  "heat 5 size 2": {
-   "rejections": {},
-   "difficulty": [
-    77.35,
-    98.08
-   ],
-   "words": [
-    13,
-    17
-   ],
-   "target": [
-    13,
-    17
-   ]
-  },
-  "heat 5 size 1": {
-   "rejections": {
-    "layout fit too few words": 3
-   },
-   "difficulty": [
-    67.92,
-    91.67
-   ],
-   "words": [
-    11,
-    15
-   ],
-   "target": [
-    11,
-    15
-   ]
-  },
-  "heat 6 size 4": {
-   "rejections": {
-    "layout fit too few words": 75
-   },
-   "difficulty": [
-    98.3,
-    117.74
-   ],
-   "words": [
-    20,
+    19,
     23
    ],
    "target": [
+    19,
+    24
+   ],
+   "left": {
+    "4.0": [
+     0.02,
+     1
+    ],
+    "3.0": [
+     2.4,
+     6
+    ],
+    "2.5": [
+     7.52,
+     12
+    ]
+   }
+  },
+  "heat 5 size 3": {
+   "rejections": {
+    "layout fit too few words": 239
+   },
+   "difficulty": [
+    90.93,
+    105.3
+   ],
+   "words": [
+    17,
+    21
+   ],
+   "target": [
+    17,
+    23
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     1.75,
+     5
+    ],
+    "2.5": [
+     5.77,
+     18
+    ]
+   }
+  },
+  "heat 5 size 2": {
+   "rejections": {
+    "layout fit too few words": 52
+   },
+   "difficulty": [
+    88.27,
+    102.74
+   ],
+   "words": [
+    15,
+    20
+   ],
+   "target": [
+    15,
+    21
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.63,
+     3
+    ],
+    "2.5": [
+     2.9,
+     12
+    ]
+   }
+  },
+  "heat 5 size 1": {
+   "rejections": {
+    "good words can't all fit": 3,
+    "layout fit too few words": 4267
+   },
+   "difficulty": [
+    78.8,
+    101.89
+   ],
+   "words": [
+    13,
+    19
+   ],
+   "target": [
+    13,
+    19
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     0.27,
+     6
+    ],
+    "2.5": [
+     1.5,
+     11
+    ]
+   }
+  },
+  "heat 6 size 4": {
+   "rejections": {
+    "layout fit too few words": 3409
+   },
+   "difficulty": [
+    99.71,
+    119.75
+   ],
+   "words": [
     20,
-    26
-   ]
+    22
+   ],
+   "target": [
+    21,
+    24
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     2.4,
+     5
+    ],
+    "2.5": [
+     6.7,
+     16
+    ]
+   }
   },
   "heat 6 size 3": {
    "rejections": {
-    "layout fit too few words": 6
+    "layout fit too few words": 1880
    },
    "difficulty": [
-    93.84,
-    116.03
+    96.77,
+    116.95
    ],
    "words": [
-    18,
-    22
+    19,
+    21
    ],
    "target": [
-    18,
+    19,
     24
-   ]
+   ],
+   "left": {
+    "4.0": [
+     0.02,
+     1
+    ],
+    "3.0": [
+     2.28,
+     6
+    ],
+    "2.5": [
+     7.32,
+     16
+    ]
+   }
   },
   "heat 6 size 2": {
-   "rejections": {},
+   "rejections": {
+    "layout fit too few words": 268
+   },
    "difficulty": [
-    86.55,
-    113.25
+    91.57,
+    119.91
    ],
    "words": [
-    16,
-    20
+    17,
+    22
    ],
    "target": [
-    16,
-    22
-   ]
+    17,
+    24
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     0
+    ],
+    "3.0": [
+     1.83,
+     6
+    ],
+    "2.5": [
+     6.15,
+     14
+    ]
+   }
   },
   "heat 6 size 1": {
-   "rejections": {},
+   "rejections": {
+    "good words can't all fit": 2,
+    "layout fit too few words": 74
+   },
    "difficulty": [
-    78.86,
-    114.35
+    85.38,
+    115.36
    ],
    "words": [
-    14,
-    20
+    15,
+    21
    ],
    "target": [
-    14,
-    20
-   ]
+    15,
+    22
+   ],
+   "left": {
+    "4.0": [
+     0.0,
+     1
+    ],
+    "3.0": [
+     1.28,
+     6
+    ],
+    "2.5": [
+     4.98,
+     20
+    ]
+   }
   }
  },
  "notes": [
-  "heat 1 size 4: wants 9-11 words, guarantees 6+ (anvil too small)",
-  "heat 1 size 3: wants 7-9 words, guarantees 6+ (anvil too small)"
+  "heat 1 size 4: wants 9-12 words, guarantees 6+ (anvil too small)",
+  "heat 1 size 3: wants 7-10 words, guarantees 6+ (anvil too small)",
+  "heat 6 size 4: wants 21-24 words, guarantees 20+ (anvil too small)"
  ],
  "first": 961
 }

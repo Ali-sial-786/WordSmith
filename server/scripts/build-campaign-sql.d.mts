@@ -9,8 +9,21 @@ export interface CampaignRow {
 
 export const DEFAULT_CAMPAIGN_PATH: string;
 export const DEFAULT_OUT_PATH: string;
-export const DEFAULT_PREVIOUS_PATH: string;
+/** A stage of an earlier campaign edition (the `campaign_previous` table). */
+export interface EarlierCampaignRow extends CampaignRow {
+  /** 1 for the oldest edition kept. */
+  readonly edition: number;
+}
+
+export interface EarlierEdition {
+  readonly edition: number;
+  /** The app version that has it built in. */
+  readonly app: string;
+  readonly path: string;
+}
+
+export const EARLIER_EDITIONS: readonly EarlierEdition[];
 export function campaignRows(campaign: unknown): CampaignRow[];
 export function loadCampaignRows(path?: string): CampaignRow[];
-export function loadPreviousCampaignRows(path?: string): CampaignRow[];
-export function campaignSql(rows: readonly CampaignRow[], previous?: readonly CampaignRow[]): string;
+export function loadEarlierCampaignRows(editions?: readonly EarlierEdition[]): EarlierCampaignRow[];
+export function campaignSql(rows: readonly CampaignRow[], earlier?: readonly EarlierCampaignRow[]): string;

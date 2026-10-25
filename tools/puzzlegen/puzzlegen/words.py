@@ -81,6 +81,7 @@ class Lexicon:
         for w in sorted(self.accepted):
             index.setdefault(signature(w), []).append(w)
         self._index = index
+        self._subs: dict[str, tuple[str, ...]] = {}
 
     # ------------------------------------------------------------ queries
 
@@ -110,11 +111,15 @@ class Lexicon:
         return self._index.get(sig, [])
 
     def subwords(self, letters: str) -> list[str]:
-        """All accepted words (3+ letters) formable from `letters`, sorted."""
-        out = []
-        for sig in sub_signatures(letters.lower()):
-            out.extend(self._index.get(sig, ()))
-        return sorted(out)
+        """All accepted words (3+ letters) formable from `letters`, sorted (a new list)."""
+        key = signature(letters.lower())
+        got = self._subs.get(key)
+        if got is None:
+            out = []
+            for sig in sub_signatures(key):
+                out.extend(self._index.get(sig, ()))
+            got = self._subs[key] = tuple(sorted(out))
+        return list(got)
 
     def full_words(self, letters: str) -> list[str]:
         """Accepted words that use every one of `letters`."""

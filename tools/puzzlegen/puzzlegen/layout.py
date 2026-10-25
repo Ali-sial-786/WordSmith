@@ -196,8 +196,10 @@ def _touches(x: int, y: int, d: int, n: int, px1: int, py1: int, px2: int, py2: 
 
 
 def _grow(grid: Grid, pool: list[str], priority: dict[str, float], target: int,
-          rng: random.Random, opts: LayoutOptions) -> None:
-    """Greedily add words from `pool` (best first) until `target` are placed.
+          rng: random.Random, opts: LayoutOptions, cap: int | None = None,
+          nice: frozenset[str] = frozenset()) -> None:
+    """Greedily add words from `pool` (best first) until `target` are placed, then
+    words in `nice` only, up to `cap` words in all (default `target`).
 
     Each word's valid positions are tracked incrementally and lazily: every
     placement is logged as an event, and a word catches up on the events it
@@ -255,7 +257,12 @@ def _grow(grid: Grid, pool: list[str], priority: dict[str, float], target: int,
     sx, sy = (1, 0) if md == ACROSS else (0, 1)
     log_event(mw, mx, my, md, [(mx + k * sx, my + k * sy, ch, md) for k, ch in enumerate(mw)])
 
-    while len(grid.words) < target and remaining:
+    cap = target if cap is None else max(cap, target)
+    while len(grid.words) < cap and remaining:
+        if len(grid.words) >= target:
+            remaining = [w for w in remaining if w in nice]
+            if not remaining:
+                return
         best = None
         considered = 0
         area = grid.width * grid.height
@@ -308,7 +315,10 @@ def _grow(grid: Grid, pool: list[str], priority: dict[str, float], target: int,
 
 
 def score_layout(grid: Grid, main: str, priority: dict[str, float], target: int,
-                 opts: LayoutOptions) -> float:
+                 opts: LayoutOptions, value: dict[str, float] | None = None) -> float:
+    """Higher is better: words placed (up to `target`) dominate, plus `value` for each
+    placed word (the good words players would miss most), then crossings, density,
+    shape, word priority and a central main word."""
     n = len(grid.words)
     w, h = grid.width, grid.height
     cells = len(grid.cells)
@@ -316,6 +326,8 @@ def score_layout(grid: Grid, main: str, priority: dict[str, float], target: int,
     density = cells / (w * h)
     s = 0.0
     s += 100.0 * min(n, target)
+    if value:
+        s += sum(value.get(x, 0.0) for (x, _, _, _) in grid.words)
     s += opts.f_cross * cross
     s += opts.f_density * density
     s -= opts.f_aspect * aspect_penalty(w, h)
@@ -336,19 +348,27 @@ def score_layout(grid: Grid, main: str, priority: dict[str, float], target: int,
 
 
 def build(main: str, others: list[str], priority: dict[str, float], target: int,
-          rng: random.Random, opts: LayoutOptions | None = None) -> Layout | None:
-    """Best layout over `opts.restarts` randomized greedy runs."""
+          rng: random.Random, opts: LayoutOptions | None = None, cap: int | None = None,
+          nice: frozenset[str] = frozenset(), value: dict[str, float] | None = None,
+          restarts: int | None = None) -> Layout | None:
+    """Best layout over `restarts` (default `opts.restarts`) randomized greedy runs.
+
+    Words go in best first until `target` are placed; after that only words in
+    `nice` join, up to `cap` in all, so a grid grows past its target to take
+    good words that would otherwise be left over. `value` adds to a layout's
+    score for each placed word (score_layout).
+    """
     opts = opts or LayoutOptions()
     best: Layout | None = None
     pool = [w for w in others if w != main]
-    for _ in range(opts.restarts):
+    for _ in range(opts.restarts if restarts is None else restarts):
         grid = Grid()
         d = ACROSS if rng.random() < opts.across_first else DOWN
         if len(main) > (opts.max_w if d == ACROSS else opts.max_h):
             d = DOWN if d == ACROSS else ACROSS
         grid.place(main, 0, 0, d)
-        _grow(grid, pool, priority, target, rng, opts)
-        s = score_layout(grid, main, priority, target, opts)
+        _grow(grid, pool, priority, target, rng, opts, cap, nice)
+        s = score_layout(grid, main, priority, target, opts, value)
         if best is None or s > best.score:
             best = Layout(grid, s)
     return best

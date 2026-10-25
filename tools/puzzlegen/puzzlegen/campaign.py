@@ -30,6 +30,7 @@ def rng_for(seed: int, *parts) -> random.Random:
 def tutorial_spec() -> Spec:
     t = TIERS[1]
     return Spec(heat=1, length=4, target=TUTORIAL_WORDS, min_words=TUTORIAL_WORDS,
+                max_words=TUTORIAL_WORDS,
                 answer_q=TUTORIAL_Q, answer_level=t.answer_level, common_q=TUTORIAL_Q,
                 max_rare=0, seed_q=TUTORIAL_Q, max_inflections=0, exact=True,
                 max_answer_len=4, progress=0.0)
@@ -143,6 +144,7 @@ def build_campaign(seed: int, lex: Lexicon | None = None,
         diffs = [r.difficulty for r in ordered]
         report_groups[ch.name] = {
             "rejections": dict(sorted(rejections[ci].items())),
+            "left": left_summary(ordered),
             "difficulty": [min(diffs), max(diffs)],
             "difficulty_by_stage": diffs,
             "seeds": [r.seed for r in ordered],
@@ -154,6 +156,14 @@ def build_campaign(seed: int, lex: Lexicon | None = None,
 
 
 # ----------------------------------------------------------------- multiplayer
+
+
+def left_summary(results: list[Result]) -> dict:
+    """Good words left over (generate.make_puzzle info["left"]): mean and max per puzzle
+    at each level (very common, common, fair)."""
+    lefts = [r.info["left"] for r in results]
+    return {name: [round(sum(x[i] for x in lefts) / len(lefts), 2), max(x[i] for x in lefts)]
+            for i, name in enumerate(("4.0", "3.0", "2.5"))}
 
 
 def campaign_signatures(path: str) -> set[str]:
@@ -190,8 +200,12 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
             if need < lo:
                 notes.append(f"heat {heat} size {size}: wants {lo}-{hi} words, "
                              f"guarantees {need}+ (anvil too small)")
+            # Pools widened to any quality (co-op Ember): anvils with enough words
+            # are scarce, so the richest go first.
+            scarce = (heat, size) in answer_qs and answer_qs[(heat, size)] is None
             stats: dict = {}
             out = []
+            t0 = time.time()
             for i in range(count[(heat, size)]):
                 rng = rng_for(seed, "mp", heat, size, i)
                 progress = rng.random()
@@ -201,7 +215,7 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
                                 widened=(heat, size) in answer_qs)
                 spec.seed_q = seed_qs.get((heat, size), TIERS[heat].seed_q)
                 res = generate_slot(lex, pool, spec, used, rng, stats, opts=opts,
-                                    rich_first=need < lo, usage=usage,
+                                    rich_first=scarce, usage=usage,
                                     avoid=reserved_for_bigger(richness, heat, size, sizes))
                 res.puzzle["size"] = size
                 out.append(res)
@@ -213,10 +227,11 @@ def build_mp(seed: int, per, exclude: set[str], lex: Lexicon | None = None,
                 "difficulty": [out[0].difficulty, out[-1].difficulty],
                 "words": [min(nw), max(nw)],
                 "target": [lo, hi],
+                "left": left_summary(out),
             }
             if log:
                 log(f"  heat {heat} size {size}: {len(out)} puzzles, words {min(nw)}-{max(nw)} "
-                    f"(target {lo}-{hi})")
+                    f"(target {lo}-{hi}), {time.time() - t0:.0f}s")
     puzzles = []
     for heat in heats:
         for size in sorted(sizes):

@@ -510,7 +510,7 @@ describe("the series' history", () => {
     const players = ["racer-a", "racer-b", "racer-c", "racer-d", "racer-e"].map((id) => `${id}-0123456789abcdef`);
     const r = round(players, { puzzle: biggest });
     for (const id of players) for (const w of [...biggest.bonus, ...biggest.slots.map((x) => x.word)]) applyVsSubmit(r, id, w);
-    expect(r.molds[players[0]!]!.bonus.length).toBeGreaterThan(200);
+    expect(r.molds[players[0]!]!.bonus.length).toBeGreaterThan(50);
     // Every round of the longest history goes like that.
     const s = series(players, 10);
     for (let n = 0; n < MAX_HISTORY; n++) endVsRound(s, r, "finished", T0);

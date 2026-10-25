@@ -6,8 +6,8 @@
  *
  * Entries are applied in `completedAt` order, so each one's level-up rewards
  * and pickup types use the level the player had when that puzzle started.
- * An entry played on the previous campaign's puzzle at its stage (an app
- * with the old campaign built in) is checked against that puzzle
+ * An entry played on an earlier campaign's puzzle at its stage (an app
+ * with an older campaign built in) is checked against that puzzle
  * (campaign.ts `editionFor`). An entry is rejected (and changes nothing) if:
  *
  * | reason | when |

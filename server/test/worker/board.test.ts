@@ -255,8 +255,9 @@ describe("Work Orders", () => {
     expect(dailyKinds("2026-10-19")).toEqual(["solo_puzzles", "bonus_words", "words"]);
     expect(await post(a, "/v1/me/orders/claim", { slot: "d0" })).toMatchObject({ status: 409, body: { error: "not_done" } });
 
-    // Stages 1–10: 30 grid words, and 14 bonus words from the first two.
-    const entries = Array.from({ length: 10 }, (_, i) => entry(i + 1, i < 2 ? { bonusWords: stage(i + 1).bonus } : {}));
+    // Stages 1–10: 30 grid words, and 12 bonus words from the first three.
+    const entries = Array.from({ length: 10 }, (_, i) => entry(i + 1, i < 3 ? { bonusWords: stage(i + 1).bonus } : {}));
+    expect(entries.flatMap((e) => e.bonusWords as string[]).length).toBeGreaterThanOrEqual(10);
     const out = await sync(a, entries);
     expect(out.results.every((r: Message) => r.accepted)).toBe(true);
     const forged = entries.flatMap((e) => e.foundWords as string[]);
@@ -331,7 +332,8 @@ describe("Work Orders", () => {
     // Sunday 2026-10-18: bonus_words, no_hints, long_words.
     a = await at("2026-10-18T09:00:00Z", a);
     expect(dailyKinds("2026-10-18")).toEqual(["bonus_words", "no_hints", "long_words"]);
-    await sync(a, [entry(1, { hintsUsed: { hammer: 1 } }), entry(2, { bonusWords: stage(2).bonus.slice(0, 3) })]);
+    const withBonus = [2, 3, 4, 5].find((s) => stage(s).bonus.length >= 3)!;
+    await sync(a, [entry(1, { hintsUsed: { hammer: 1 } }), entry(withBonus, { bonusWords: stage(withBonus).bonus.slice(0, 3) })]);
     const b = await board(a);
     expect(order(b, "d0")).toMatchObject({ kind: "bonus_words", progress: 3 });
     expect(order(b, "d1")).toMatchObject({ kind: "no_hints", progress: 1 });

@@ -299,7 +299,7 @@ function foundSet(p: RunPuzzle): Set<string> | null {
  * highest stage in `solo_results` (0 for none).
  *
  * - every stage is in the campaign, with its own `puzzleId`, and no further than {@link runStageLimit};
- * - every found word is a grid word of its puzzle (or of the previous
+ * - every found word is a grid word of its puzzle (or of an earlier
  *   campaign's puzzle at that stage, campaign.ts `editionFor`);
  * - a `cleared` puzzle's found words and hints could fill the mold (sync's `incomplete` check);
  * - `startedAt` ≤ `endedAt`, neither more than 24 h old or more than 10 minutes ahead;
@@ -317,7 +317,7 @@ export function checkSurvivalRun(run: SurvivalRun, puzzles: ReadonlyMap<number, 
     if (p.puzzleId !== stagePuzzle.id) return `${where}: puzzleId isn't stage ${p.stage}'s`;
     if (p.stage > limit) return `${where}: stage ${p.stage} is beyond ${limit}`;
     const found = foundSet(p);
-    // A run played on the previous campaign is checked against its puzzles.
+    // A run played on an earlier campaign is checked against its puzzles.
     const puzzle = editionFor(stagePuzzle, found ?? []);
     if (found === null || [...found].some((w) => !puzzle.gridWords.has(w))) return `${where}: a found word isn't a grid word`;
     if (p.cleared && !couldBeFilled(puzzle, found, p.hintsUsed)) return `${where}: incomplete`;

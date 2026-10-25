@@ -26,19 +26,33 @@ class Tier:
 # GITS, LIDO, OPES, DACE). See words.Lexicon.is_answer. Answers below
 # `common_q` are "rare": at most `max_rare` of them per grid.
 TIERS = {
-    1: Tier(1, "Ember", (4,), 3, 5, answer_q=3.4, answer_level=35, common_q=3.4, max_rare=0,
+    1: Tier(1, "Ember", (4,), 3, 6, answer_q=3.4, answer_level=35, common_q=3.4, max_rare=0,
             seed_q=3.8),
-    2: Tier(2, "Dull Red", (5,), 5, 7, answer_q=2.6, answer_level=35, common_q=3.4, max_rare=3,
+    2: Tier(2, "Dull Red", (5,), 5, 9, answer_q=2.6, answer_level=35, common_q=3.0, max_rare=3,
             seed_q=3.6),
-    3: Tier(3, "Cherry Red", (6,), 7, 10, answer_q=2.6, answer_level=35, common_q=3.2,
+    3: Tier(3, "Cherry Red", (6,), 9, 14, answer_q=2.6, answer_level=35, common_q=3.0,
             max_rare=4, seed_q=3.4),
-    4: Tier(4, "Orange", (6, 7), 9, 12, answer_q=2.3, answer_level=40, common_q=2.9, max_rare=3,
+    4: Tier(4, "Orange", (6, 7), 11, 16, answer_q=2.3, answer_level=40, common_q=2.9, max_rare=3,
             seed_q=3.3),
-    5: Tier(5, "Yellow", (7,), 11, 15, answer_q=2.0, answer_level=50, common_q=2.8, max_rare=4,
+    5: Tier(5, "Yellow", (7,), 13, 19, answer_q=2.0, answer_level=50, common_q=2.8, max_rare=4,
             seed_q=3.2),
-    6: Tier(6, "White Heat", (7, 8), 14, 20, answer_q=1.9, answer_level=50, common_q=2.6,
+    6: Tier(6, "White Heat", (7, 8), 15, 22, answer_q=1.9, answer_level=50, common_q=2.6,
             max_rare=5, seed_q=3.1),
 }
+
+# Leftovers: good words left in the Scrap Bin (bonus list) that could have
+# been grid answers (lex.is_answer at the tier's SCOWL cap, whatever the
+# tier's quality floor). Players notice these: ARE, FAR, RED, DARE left
+# out of a FRAMED grid. Per puzzle, counted at three quality levels
+# (metrics.leftovers): GREAT_Q (very common), NICE_Q (common) and FAIR_Q.
+# Anvils are chosen so that, per heat, at most LEFTOVER_MAX[q] are left in
+# any puzzle and LEFTOVER_AVG[q][heat] on average (FAIR_Q is only reported).
+GREAT_Q = 4.0
+NICE_Q = 3.0
+FAIR_Q = 2.5
+LEFTOVER_MAX = {GREAT_Q: 1, NICE_Q: 6}
+LEFTOVER_AVG = {GREAT_Q: {h: 0.3 for h in range(1, 7)},
+                NICE_Q: {1: 2.5, 2: 2.5, 3: 2.5, 4: 3.5, 5: 3.5, 6: 3.5}}
 
 # Plain inflections (plurals, -ed, -ing, -est of a shorter word: LASTS,
 # SALTS) allowed per grid, as a share of its target word count (at least 1).
@@ -93,14 +107,21 @@ def chapter_heats(ch: Chapter) -> list[int]:
 MP_SIZES = (1, 2, 3, 4)
 
 
+# A 10x10 grid holds about 22-24 words at most (fewer with 7-8 letter words),
+# so no puzzle wants more than GRID_MAX_WORDS, and the bank guarantees at most
+# MP_MIN_CAP.
+GRID_MAX_WORDS = 24
+MP_MIN_CAP = 20
+
+
 def mp_target(heat: int, size: int) -> tuple[int, int]:
     t = TIERS[heat]
     extra = 2 * (size - 1)
-    return t.min_words + extra, t.max_words + extra
+    return t.min_words + extra, min(GRID_MAX_WORDS, t.max_words + extra)
 
 
 MP_SIZE_MIN = {
-    (h, s): mp_target(h, s)[0] for h in TIERS for s in MP_SIZES
+    (h, s): min(MP_MIN_CAP, mp_target(h, s)[0]) for h in TIERS for s in MP_SIZES
 }
 # Ember: 4-letter anvils. Only a few dozen 4-letter words make 7+ common
 # words that also fit a crossword, so sizes 3 and 4 are capped lower.

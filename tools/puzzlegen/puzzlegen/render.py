@@ -105,8 +105,16 @@ def print_quality(puzzles: list[dict], data: dict) -> None:
         by_heat[p["heat"]].append(p)
     rows += [metrics.summary_row(f"heat {h} {HEAT_NAMES[h]}", by_heat[h], lex)
              for h in sorted(by_heat)]
-    print("\nanswer quality (metrics.py: inv = bonus words clearly better than the worst grid "
-          "word, missed = very common words left out, infl = inflected grid words):")
+    by_size = defaultdict(list)
+    for p in puzzles:
+        if "size" in p:
+            by_size[(p["heat"], p["size"])].append(p)
+    rows += [metrics.summary_row(f"heat {h} size {s}", by_size[(h, s)], lex)
+             for (h, s) in sorted(by_size)]
+    print("\nanswer quality (metrics.py: left4 / left3 / left2.5 = good words (quality 4.0+, "
+          "3.0+, 2.5+) that could be grid answers left in the bonus list, per puzzle, max4 / "
+          "max3 the most in one; inv = bonus words clearly better than the worst grid word, "
+          "missed = very common words left out, infl = inflected grid words):")
     _print_table(metrics.SUMMARY_HEADER, rows)
 
 

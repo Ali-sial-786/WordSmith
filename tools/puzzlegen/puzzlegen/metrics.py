@@ -11,13 +11,34 @@ Per puzzle, with q = word quality (quality.py) and the grid's worst answer w:
 - inflections: grid answers that are plain plurals / -ed / -ing / -est forms
   of a shorter word (LASTS, SALTS).
 - zipf: word frequency of the grid answers (data/freq.tsv), mean and min.
+- leftovers (left4 / left3 / left25): bonus words that could be grid answers
+  at the puzzle's tier (lex.is_answer at its SCOWL cap) with quality >= 4.0,
+  3.0 and 2.5: good words left in the Scrap Bin. The generator picks anvils
+  to keep these within tiers.LEFTOVER_MAX / LEFTOVER_AVG.
 """
 
 from __future__ import annotations
 
+from .tiers import FAIR_Q, GREAT_Q, NICE_Q, TIERS
+
 INVERSION_MARGIN = 0.5
 COMMON_Q = 3.8
 ANSWER_LEVEL = 50  # the widest SCOWL cap any tier uses
+
+
+def leftover_words(lex, heat: int, bonus) -> list[str]:
+    """Bonus words (any case) that could be grid answers at `heat`'s SCOWL cap with
+    quality >= FAIR_Q, lowercase, best first."""
+    cap = TIERS[heat].answer_level
+    out = [w.lower() for w in bonus]
+    out = [w for w in out if lex.is_answer(w, cap) and lex.quality(w) >= FAIR_Q]
+    return sorted(out, key=lambda w: (-lex.quality(w), w))
+
+
+def leftovers(lex, heat: int, bonus) -> tuple[int, int, int]:
+    """(left4, left3, left25): leftover_words with quality >= GREAT_Q, NICE_Q, FAIR_Q."""
+    qs = [lex.quality(w) for w in leftover_words(lex, heat, bonus)]
+    return (sum(q >= GREAT_Q for q in qs), sum(q >= NICE_Q for q in qs), len(qs))
 
 
 def puzzle_metrics(p: dict, lex) -> dict:
@@ -27,8 +48,13 @@ def puzzle_metrics(p: dict, lex) -> dict:
     worst = min(qs)
     eligible = [w for w in bonus if lex.is_answer(w, ANSWER_LEVEL)]
     zipfs = [lex.freq.get(w, 0.0) for w in grid]
+    left4, left3, left25 = leftovers(lex, p["heat"], bonus)
     return {
         "words": len(grid),
+        "left4": left4,
+        "left3": left3,
+        "left25": left25,
+        "area": p.get("cols", 0) * p.get("rows", 0),
         "inversions": sum(1 for w in eligible if lex.quality(w) >= worst + INVERSION_MARGIN),
         "missed_common": sum(1 for w in eligible if lex.quality(w) >= COMMON_Q),
         "inflections": sum(1 for w in grid if lex.inflection(w)),
@@ -48,6 +74,12 @@ def summary(puzzles: list[dict], lex) -> dict:
     words = sum(m["words"] for m in ms)
     return {
         "puzzles": n,
+        "words/puzzle": words / n,
+        "left4/puzzle": sum(m["left4"] for m in ms) / n,
+        "max left4": max(m["left4"] for m in ms),
+        "left3/puzzle": sum(m["left3"] for m in ms) / n,
+        "max left3": max(m["left3"] for m in ms),
+        "left2.5/puzzle": sum(m["left25"] for m in ms) / n,
         "inversions/puzzle": sum(m["inversions"] for m in ms) / n,
         "puzzles with inversions": sum(1 for m in ms if m["inversions"]) / n,
         "missed common/puzzle": sum(m["missed_common"] for m in ms) / n,
@@ -62,6 +94,12 @@ def summary(puzzles: list[dict], lex) -> dict:
 
 
 SUMMARY_COLUMNS = (
+    ("words", "words/puzzle", "{:.1f}"),
+    ("left4", "left4/puzzle", "{:.2f}"),
+    ("max4", "max left4", "{}"),
+    ("left3", "left3/puzzle", "{:.2f}"),
+    ("max3", "max left3", "{}"),
+    ("left2.5", "left2.5/puzzle", "{:.2f}"),
     ("inv/pz", "inversions/puzzle", "{:.2f}"),
     ("pz inv", "puzzles with inversions", "{:.0%}"),
     ("missed", "missed common/puzzle", "{:.2f}"),

@@ -3,8 +3,8 @@
 import random
 import unittest
 
-from puzzlegen import generate, metrics, quality, words
-from puzzlegen.tiers import TIERS
+from puzzlegen import generate, layout, metrics, quality, words
+from puzzlegen.tiers import GREAT_Q, LEFTOVER_MAX, NICE_Q, TIERS
 from puzzlegen.words import Lexicon
 
 
@@ -97,7 +97,9 @@ class PoolTests(unittest.TestCase):
         spec = generate.spec_for(4, 0.5, random.Random(2), length=6, target=10)
         res = generate.make_puzzle(lex, "dating", spec, random.Random(3))
         grid = {w["w"] for w in res.puzzle["words"]}
-        self.assertEqual(len(grid), 10)
+        # 10 words, and past that only good ones (quality 3.0+) that would otherwise be left over.
+        self.assertGreaterEqual(len(grid), 10)
+        self.assertLessEqual(len(grid), spec.max_words)
         self.assertTrue({"DIG", "GIN", "GAIN", "GIANT"} <= grid, grid)
         self.assertFalse({"DIN", "NIT"} & grid, grid)
         self.assertGreater(min(lex.quality(w.lower()) for w in grid), lex.quality("din"))
@@ -114,11 +116,61 @@ class PoolTests(unittest.TestCase):
         self.assertTrue({"lasts", "salts", "slats"} & set(pool.seeds(5, 35, None, plural_ok=True)))
 
 
+class LeftoverTests(unittest.TestCase):
+    """Good words left in the Scrap Bin (metrics.leftovers) decide which anvils are used."""
+
+    def test_letter_sets_whose_good_words_cant_fit_are_rejected(self):
+        # The players' examples (bank m-01642 and m-01677, Cherry Red): 25 and 28 words of
+        # quality 3.0+, far more than a 14-word grid takes.
+        lex = words.load()
+        for seed in ("entail", "framed"):
+            spec = generate.spec_for(3, 0.5, random.Random(1), target=12)
+            res = generate.make_puzzle(lex, seed, spec, random.Random(2))
+            self.assertIsNone(res.puzzle, seed)
+            self.assertEqual(res.reason, "good words can't all fit")
+            self.assertFalse(res.info.get("laid_out"))
+
+    def test_good_words_go_in_past_the_target(self):
+        lex = words.load()
+        spec = generate.spec_for(3, 0.5, random.Random(1), target=9)
+        res = generate.make_puzzle(lex, "pocket", spec, random.Random(2))
+        grid = {w["w"].lower() for w in res.puzzle["words"]}
+        extra = len(grid) - spec.target
+        self.assertGreater(extra, 0)
+        self.assertLessEqual(len(grid), spec.max_words)
+        self.assertEqual(res.info["left"], metrics.leftovers(lex, 3, res.puzzle["bonus"]))
+
+    def test_slot_picks_letters_within_the_limits(self):
+        lex = words.load()
+        pool = generate.SeedPool(lex)
+        for heat in (3, 5):
+            rng = random.Random(f"left-{heat}")
+            spec = generate.spec_for(heat, 0.5, rng)
+            res = generate.generate_slot(lex, pool, spec, set(), rng, {},
+                                         opts=layout.LayoutOptions(restarts=8))
+            l4, l3, _ = metrics.leftovers(lex, heat, res.puzzle["bonus"])
+            self.assertLessEqual(l4, LEFTOVER_MAX[GREAT_Q])
+            self.assertLessEqual(l3, LEFTOVER_MAX[NICE_Q])
+            self.assertGreaterEqual(len(res.puzzle["words"]), spec.min_words)
+
+    def test_leftovers_count_at_the_tiers_scowl_cap(self):
+        lex = words.load()
+        # ARE, FAR, RED: very common. FAME: common. Not eligible: a name, a
+        # SCOWL-only word, an excluded one.
+        bonus = ["ARE", "FAR", "RED", "FAME", "ARM"]
+        qs = [lex.quality(w.lower()) for w in bonus]
+        want = (sum(q >= 4.0 for q in qs), sum(q >= 3.0 for q in qs), sum(q >= 2.5 for q in qs))
+        self.assertEqual(metrics.leftovers(lex, 3, bonus), want)
+        self.assertEqual(metrics.leftover_words(lex, 3, bonus),
+                         sorted((w.lower() for w in bonus), key=lambda w: (-lex.quality(w), w)))
+        self.assertEqual(metrics.leftovers(lex, 3, ["GONNA", "INFO"]), (0, 0, 0))
+
+
 class MetricsTests(unittest.TestCase):
     def test_puzzle_metrics(self):
         lex = words.load()
-        p = {"letters": "DNGTIA", "words": [{"w": w} for w in ("AID", "AND", "DIN", "NIT",
-                                                            "GIANT", "DATING")],
+        p = {"letters": "DNGTIA", "heat": 4, "cols": 6, "rows": 5,
+             "words": [{"w": w} for w in ("AID", "AND", "DIN", "NIT", "GIANT", "DATING")],
              "bonus": ["DIG", "TAG", "GNAT", "ADIT"]}
         m = metrics.puzzle_metrics(p, lex)
         # DIG and TAG are clearly better than the worst grid word; GNAT and ADIT aren't.
@@ -126,6 +178,8 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(m["inflections"], 1)  # DATING
         self.assertEqual(m["words"], 6)
         self.assertEqual(m["min_q"], min(lex.quality(w) for w in ("din", "nit", "and")))
+        # DIG and TAG are good words left over (GNAT and ADIT are below 2.5).
+        self.assertEqual((m["left3"], m["left25"]), (2, 2))
         s = metrics.summary([p, p], lex)
         self.assertEqual(s["inversions/puzzle"], 2)
         self.assertAlmostEqual(s["inflection share"], 1 / 6)

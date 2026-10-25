@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadCampaignRows, loadPreviousCampaignRows } from "../../scripts/build-campaign-sql.mjs";
+import { loadCampaignRows, loadEarlierCampaignRows } from "../../scripts/build-campaign-sql.mjs";
 import { campaignPuzzle, campaignPuzzleId, editionFor, MASTER_FORGE_LAPS, puzzleStageFor } from "../../src/rules/campaign";
 
 describe("campaignPuzzleId", () => {
@@ -52,7 +52,7 @@ describe("campaignPuzzle", () => {
   });
 });
 
-describe("editionFor: results played on the previous campaign", () => {
+describe("editionFor: results played on an earlier campaign", () => {
   const current = {
     id: "c-0001",
     letters: "RTAE",
@@ -62,28 +62,37 @@ describe("editionFor: results played on the previous campaign", () => {
     ],
     bonus: ["ARE", "ART"],
   };
-  const previous = { id: "c-0001", letters: "NOTE", words: [{ w: "NOTE", x: 0, y: 0, d: "a" }, { w: "TON", x: 2, y: 0, d: "d" }], bonus: ["ONE"] };
+  // Two earlier editions of the stage, newest first: the last one (0.9.0) and the one before (0.8.0).
+  const last = { id: "c-0001", letters: "NOTE", words: [{ w: "NOTE", x: 0, y: 0, d: "a" }, { w: "TON", x: 2, y: 0, d: "d" }], bonus: ["ONE"] };
+  const older = { id: "c-0001", letters: "NOTE", words: [{ w: "TONE", x: 0, y: 0, d: "a" }, { w: "ONE", x: 1, y: 0, d: "d" }], bonus: ["NOTE", "TON"] };
 
-  it("keeps the previous puzzle only when it differs and has the same id", () => {
-    expect(campaignPuzzle(1, current).previous).toBeUndefined();
-    expect(campaignPuzzle(1, current, current).previous).toBeUndefined();
-    expect(campaignPuzzle(1, current, { ...previous, id: "c-0002" }).previous).toBeUndefined();
-    expect(campaignPuzzle(1, current, previous).previous?.gridWords).toEqual(new Set(["NOTE", "TON"]));
+  it("keeps an earlier puzzle only when it differs from the current one and the newer ones, and has the same id", () => {
+    expect(campaignPuzzle(1, current).earlier).toBeUndefined();
+    expect(campaignPuzzle(1, current, [current]).earlier).toBeUndefined();
+    expect(campaignPuzzle(1, current, [{ ...last, id: "c-0002" }]).earlier).toBeUndefined();
+    expect(campaignPuzzle(1, current, [last]).earlier?.map((p) => p.gridWords)).toEqual([new Set(["NOTE", "TON"])]);
+    expect(campaignPuzzle(1, current, [last, current, last, older]).earlier?.map((p) => p.gridWords)).toEqual([new Set(["NOTE", "TON"]), new Set(["TONE", "ONE"])]);
   });
 
-  it("picks the grid whose words the result has, the current one when both or neither fit", () => {
-    const p = campaignPuzzle(1, current, previous);
+  it("picks the current grid if the result fits it, else the newest earlier one it fits, else the current one", () => {
+    const p = campaignPuzzle(1, current, [last, older]);
+    const [lastP, olderP] = p.earlier!;
     expect(editionFor(p, ["TEAR", "EAT"], ["ART"])).toBe(p);
-    expect(editionFor(p, ["NOTE", "TON"], ["ONE"])).toBe(p.previous);
-    expect(editionFor(p, ["NOTE"], ["ART"])).toBe(p); // a mix: neither, so the current one rejects it
+    expect(editionFor(p, ["NOTE", "TON"], ["ONE"])).toBe(lastP);
+    expect(editionFor(p, ["TONE", "ONE"], ["NOTE"])).toBe(olderP);
+    // ONE is a grid word of the older edition and a bonus word of the last one: the last one wins when both fit.
+    expect(editionFor(p, ["NOTE"], ["ONE"])).toBe(lastP);
+    expect(editionFor(p, ["ONE"], [])).toBe(olderP);
+    expect(editionFor(p, ["NOTE"], ["ART"])).toBe(p); // a mix: none fits, so the current one rejects it
     expect(editionFor(p, ["ZZZ"])).toBe(p);
     expect(editionFor(p, [])).toBe(p);
     expect(editionFor(campaignPuzzle(1, current), ["NOTE"])).toEqual(campaignPuzzle(1, current));
   });
 
-  it("parses the real previous campaign, stage for stage with the same ids", () => {
-    const rows = loadPreviousCampaignRows();
-    expect(rows).toHaveLength(loadCampaignRows().length);
+  it("parses the real earlier campaigns (0.8.0 and 0.9.0), stage for stage with the same ids", () => {
+    const rows = loadEarlierCampaignRows();
+    const n = loadCampaignRows().length;
+    expect(rows).toHaveLength(2 * n);
     for (const row of rows) expect(campaignPuzzle(row.stage, JSON.parse(row.data)).id).toBe(campaignPuzzleId(row.stage));
   });
 });

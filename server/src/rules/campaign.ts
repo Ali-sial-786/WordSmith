@@ -29,27 +29,30 @@ export interface CampaignPuzzle {
   /** For each grid word, the indexes of the cells it covers, into the cells sorted by row, then column. */
   readonly wordCells: ReadonlyMap<string, readonly number[]>;
   /**
-   * The previous campaign's puzzle at this stage (the `campaign_previous`
-   * table), when it differs: results played on it still count, see {@link editionFor}.
+   * Earlier campaigns' puzzles at this stage (the `campaign_previous` table,
+   * one row per edition), newest first, each only where it differs from the
+   * current one and the newer ones: results played on them still count, see
+   * {@link editionFor}.
    */
-  readonly previous?: CampaignPuzzle;
+  readonly earlier?: readonly CampaignPuzzle[];
 }
 
 /**
  * The edition of a stage's puzzle that a result was played on: the current
- * one, unless some found or bonus word isn't in it and the previous
- * campaign's puzzle has them all. Phones with the old campaign built in
- * (and results queued before an update) send the same stage and id, so
- * the words tell which grid it was. Pickups, gilded cells and the
- * `incomplete` check then use that edition's cells.
+ * one, unless some found or bonus word isn't in it; then the newest earlier
+ * campaign's puzzle that has them all (or the current one if none does).
+ * Phones with an old campaign built in (and results queued before an
+ * update) send the same stage and id, so the words tell which grid it was.
+ * Pickups, gilded cells and the `incomplete` check then use that edition's cells.
  */
 export function editionFor(puzzle: CampaignPuzzle, found: Iterable<string>, bonus: Iterable<string> = []): CampaignPuzzle {
-  const prev = puzzle.previous;
-  if (prev === undefined) return puzzle;
+  const earlier = puzzle.earlier;
+  if (earlier === undefined || earlier.length === 0) return puzzle;
   const f = [...found];
   const b = [...bonus];
   const fits = (p: CampaignPuzzle) => f.every((w) => p.gridWords.has(w)) && b.every((w) => p.bonus.has(w));
-  return !fits(puzzle) && fits(prev) ? prev : puzzle;
+  if (fits(puzzle)) return puzzle;
+  return earlier.find(fits) ?? puzzle;
 }
 
 /** `c-` + the 1-based stage number padded to 4 digits (shared/puzzle-format.md). */
@@ -88,11 +91,12 @@ function isWord(value: unknown): value is PuzzleWordJson {
 }
 
 /**
- * Builds the checking model for one stage from its puzzle JSON, with the
- * previous campaign's puzzle at that stage if given (kept only when it
- * differs and has the same id). Throws if the JSON isn't a usable puzzle.
+ * Builds the checking model for one stage from its puzzle JSON, with
+ * earlier campaigns' puzzles at that stage, newest first, if given (each
+ * kept only when it has the same id and differs from the current puzzle
+ * and the newer ones). Throws if the JSON isn't a usable puzzle.
  */
-export function campaignPuzzle(stage: number, data: unknown, previous?: unknown): CampaignPuzzle {
+export function campaignPuzzle(stage: number, data: unknown, earlier: readonly unknown[] = []): CampaignPuzzle {
   if (typeof data !== "object" || data === null) throw new TypeError(`stage ${stage}: puzzle is not an object`);
   const p = data as Record<string, unknown>;
   if (typeof p.id !== "string") throw new TypeError(`stage ${stage}: puzzle has no id`);
@@ -134,7 +138,14 @@ export function campaignPuzzle(stage: number, data: unknown, previous?: unknown)
     cellCount: sorted.length,
     wordCells,
   };
-  if (previous === undefined || JSON.stringify(previous) === JSON.stringify(data)) return puzzle;
-  const prev = campaignPuzzle(stage, previous);
-  return prev.id === puzzle.id ? { ...puzzle, previous: prev } : puzzle;
+  const seen = new Set([JSON.stringify(data)]);
+  const kept: CampaignPuzzle[] = [];
+  for (const old of earlier) {
+    const text = JSON.stringify(old);
+    if (seen.has(text)) continue;
+    seen.add(text);
+    const p = campaignPuzzle(stage, old);
+    if (p.id === puzzle.id) kept.push(p);
+  }
+  return kept.length === 0 ? puzzle : { ...puzzle, earlier: kept };
 }

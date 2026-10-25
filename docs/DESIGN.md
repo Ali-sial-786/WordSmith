@@ -216,18 +216,22 @@ in hot metal.
 
 | Heat | Smith Level | Anvil letters | Grid words | Word pool | Co-op timer | VS round timer |
 |---|---|---|---|---|---|---|
-| Ember | 1–5 | 4 | 3–5 | very common | 3:00 | 2:00 |
-| Dull Red | 6–15 | 5 | 5–7 | common | 3:00 | 2:00 |
-| Cherry Red | 16–30 | 6 | 7–10 | common | 3:30 | 2:30 |
-| Orange | 31–50 | 6–7 | 9–12 | + less common | 3:30 | 2:30 |
-| Yellow | 51–80 | 7 | 11–15 | + uncommon | 4:00 | 3:00 |
-| White Heat | 81+ | 7–8 | 14–20 | uncommon, longer words | 4:00 | 3:00 |
+| Ember | 1–5 | 4 | 3–6 | very common | 3:00 | 2:00 |
+| Dull Red | 6–15 | 5 | 5–9 | common | 3:00 | 2:00 |
+| Cherry Red | 16–30 | 6 | 9–14 | common | 3:30 | 2:30 |
+| Orange | 31–50 | 6–7 | 11–16 | + less common | 3:30 | 2:30 |
+| Yellow | 51–80 | 7 | 13–19 | + uncommon | 4:00 | 3:00 |
+| White Heat | 81+ | 7–8 | 15–22 | uncommon, longer words | 4:00 | 3:00 |
+
+The anvil's letters are chosen so that its good words fit the grid: hardly
+any common word that could have been a grid answer ends up only in the
+Scrap Bin (tools/puzzlegen README, "Leftovers").
 
 **Co-op scales with team size.** It uses a puzzle from the room's heat tier
 with about **2 more grid words for each player after the first**, so four
 people don't finish it in seconds. Two practical limits apply:
 - A 4-letter Ember anvil can't support that many common words, so Ember rooms of 3–4 get puzzles of 6–11 words.
-- A 10×10 grid tops out at about 22 words, which caps White Heat for 4 players.
+- A 10×10 grid tops out at about 22–24 words, so no puzzle has more than 24, and White Heat for 4 players gets 20–23.
 
 ---
 
