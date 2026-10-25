@@ -17,6 +17,7 @@ class CrashReport {
     required this.trace,
     this.pssKb = 0,
     this.rssKb = 0,
+    this.updatedAt,
   });
 
   factory CrashReport.fromJson(Map<String, dynamic> json) => CrashReport(
@@ -27,6 +28,10 @@ class CrashReport {
     trace: json['trace'] as String? ?? '',
     pssKb: json['pssKb'] as int? ?? 0,
     rssKb: json['rssKb'] as int? ?? 0,
+    updatedAt: switch (json['updatedAt']) {
+      final int t when t > 0 => DateTime.fromMillisecondsSinceEpoch(t, isUtc: true),
+      _ => null,
+    },
   );
 
   /// `native_crash`, `crash`, `anr`, `low_memory` or `init_failure`.
@@ -39,6 +44,10 @@ class CrashReport {
   final String trace;
   final int pssKb;
   final int rssKb;
+
+  /// When the version now installed was installed; a crash before then was
+  /// in the version before (say, while updating).
+  final DateTime? updatedAt;
 
   String get title => switch (kind) {
     'native_crash' => 'Crashed (native code)',
@@ -54,6 +63,11 @@ class CrashReport {
       ..writeln('Wordsmith $appVersion crash report')
       ..writeln('Device: $device')
       ..writeln('When: ${at.toIso8601String()}')
+      ..writeln(switch (updatedAt) {
+        final u? when at.isBefore(u) => 'Installed: ${u.toIso8601String()} (the crash was in the version before)',
+        final u? => 'Installed: ${u.toIso8601String()}',
+        null => 'Installed: unknown',
+      })
       ..writeln('What: $kind ($title), graphics: $backend')
       ..writeln('Memory: pss ${pssKb ~/ 1024} MB, rss ${rssKb ~/ 1024} MB');
     if (description.isNotEmpty) b.writeln('Description: $description');

@@ -31,6 +31,7 @@ class MainActivity : FlutterActivity() {
     private enum class VoiceChat { NONE, LISTENING, TALKING }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        catchJvmCrashes()
         openActivities++
         super.onCreate(savedInstanceState)
         AppUpdater.cleanUp(this)
@@ -192,6 +193,33 @@ class MainActivity : FlutterActivity() {
         edit.apply()
     }
 
+    /**
+     * Keeps the stack trace of an uncaught Java/Kotlin exception (Android
+     * records none for those), for the next launch's crash report, then
+     * lets the app crash as it would have.
+     */
+    private fun catchJvmCrashes() {
+        if (catchingJvmCrashes) return
+        catchingJvmCrashes = true
+        val store = prefs
+        val version = try {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        } catch (e: Exception) {
+            null
+        }
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+            try {
+                store.edit()
+                    .putLong(JVM_CRASH_AT, System.currentTimeMillis())
+                    .putString(JVM_CRASH, "Wordsmith $version, thread ${thread.name}\n${Log.getStackTraceString(e)}".take(MAX_TRACE))
+                    .commit()
+            } catch (_: Throwable) {
+            }
+            previous?.uncaughtException(thread, e)
+        }
+    }
+
     private fun kindOf(info: ApplicationExitInfo): String? = when (info.reason) {
         ApplicationExitInfo.REASON_CRASH -> "crash"
         ApplicationExitInfo.REASON_CRASH_NATIVE -> "native_crash"
@@ -216,6 +244,20 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             null
         }
+        // A Java/Kotlin crash: the stack trace catchJvmCrashes kept, if it's this one.
+        val jvm = if (info.reason == ApplicationExitInfo.REASON_CRASH &&
+            Math.abs(prefs.getLong(JVM_CRASH_AT, 0) - info.timestamp) < 30_000
+        ) {
+            prefs.getString(JVM_CRASH, null)
+        } else {
+            null
+        }
+        // When this version was installed: a crash before it was in the version before.
+        val updatedAt = try {
+            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+        } catch (e: Exception) {
+            0L
+        }
         return JSONObject()
             .put("kind", kindOf(info))
             .put("at", info.timestamp)
@@ -224,7 +266,8 @@ class MainActivity : FlutterActivity() {
             .put("pssKb", info.pss)
             .put("rssKb", info.rss)
             .put("backend", lastBackend ?: "vulkan")
-            .put("trace", trace ?: "")
+            .put("trace", jvm ?: trace ?: "")
+            .put("updatedAt", updatedAt)
     }
 
     /** The runs of 6 or more printable characters in [bytes], one per line. */
@@ -249,11 +292,16 @@ class MainActivity : FlutterActivity() {
         /** MainActivity instances alive in this process. */
         var openActivities = 0
 
+        /** The uncaught exception handler is in place (once per process). */
+        var catchingJvmCrashes = false
+
         const val COMPAT = "compatGraphics"
         const val COMPAT_AUTO = "compatGraphicsAuto"
         const val BACKEND = "backend"
         const val SEEN_EXIT_AT = "seenExitAt"
         const val LAST_CRASH = "lastCrash"
+        const val JVM_CRASH = "jvmCrash"
+        const val JVM_CRASH_AT = "jvmCrashAt"
         const val MAX_TRACE = 12_000
     }
 }

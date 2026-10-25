@@ -130,7 +130,8 @@ class AnvilRingState extends State<AnvilRing> {
   }
 
   void _onMove(PointerMoveEvent e) {
-    if (e.pointer != _activePointer) return;
+    // A finger still moving as the puzzle closes.
+    if (!mounted || e.pointer != _activePointer) return;
     final tile = _tileAt(e.localPosition, 0.8);
     var changed = false;
     if (tile != null) {
@@ -150,7 +151,7 @@ class AnvilRingState extends State<AnvilRing> {
   }
 
   void _onUp(PointerEvent e) {
-    if (e.pointer != _activePointer) return;
+    if (!mounted || e.pointer != _activePointer) return;
     final word = _word;
     setState(_clear);
     widget.onSelectionChanged?.call('');

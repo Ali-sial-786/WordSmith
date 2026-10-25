@@ -67,6 +67,10 @@ class AppUpdater(private val activity: Activity, private val channel: MethodChan
             } catch (e: IOException) {
                 Log.w(TAG, "download: $e")
                 main.post { result.error("network", e.toString(), null) }
+            } catch (e: Exception) {
+                // Anything else on this thread would crash the whole game.
+                Log.w(TAG, "download: $e")
+                main.post { result.error("failed", e.toString(), null) }
             }
         }
     }
