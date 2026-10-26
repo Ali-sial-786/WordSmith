@@ -222,6 +222,12 @@ class ResultsView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: text.bodyMedium?.copyWith(color: Palette.steel),
           ),
+        if (session.isHost)
+          TextButton(
+            key: const ValueKey('to-lobby'),
+            onPressed: () => session.setMode(session.lobby?.mode ?? 'coop'),
+            child: const Text('Change the mode or settings'),
+          ),
         const SizedBox(height: 10),
         OutlinedButton(onPressed: onLeave, child: const Text('Leave the forge')),
       ],

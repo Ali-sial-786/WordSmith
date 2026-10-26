@@ -90,11 +90,12 @@ Between one round and the next there's time to look at the results, with a count
 One room can play every mode in turn: the code, the players, the chat and the video call stay.
 
 - **CONFIG `mode`:** `"coop"` · `"vs"` · `"team"`. Host only, in the lobby, or at results once everyone has them (`wrong_phase` before that). The room goes back to the **lobby** with nobody ready, and plays the new mode from the next `START`.
+- **The same mode again, at results** (`{mode: "vs"}` in a Versus room) is how the host goes back to the lobby to set up the next game: the series length, scoring, rule and heat can then be changed before `START`. The teams stay as they were. `AGAIN` still replays straight away with the same settings.
 - **The new mode is set up:** players keep their colour where the new mode has it and nobody who joined earlier does; otherwise they get the first free one. Versus and Team Versus get the default series length unless the room had one. Team Versus deals the players onto Copper and Cobalt in join order (anyone can switch teams afterwards); leaving Team Versus forgets the teams. Survival is dropped going to Team Versus.
 - **Other fields in the same `CONFIG`** are judged by the new mode (`{mode: "team", rule: "first"}` works).
 - **More players than the new mode seats** (co-op 4, Versus 5, Team Versus 6): `too_many_players`, and nothing changes.
 - The open-rooms listing and `GET /v1/rooms/:code` show the new mode at once.
-- **The app** keeps players in the room when they go back to the Forge Hall (a bar at the top takes them back, with the mic, camera and Leave), and picking a mode there while in a room switches the room (the host) or goes back to it (anyone else). A round starting brings everyone in the room back to it.
+- **The app** keeps players in the room when they go back to the Forge Hall (a bar at the top takes them back, with the mic, camera and Leave), and picking a mode there while in a room switches the room (the host) or goes back to it (anyone else). The host picking the room's own mode after a game goes back to its lobby; the results screens also have a button for it. A round starting brings everyone in the room back to it.
 
 ## Chat
 

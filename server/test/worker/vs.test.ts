@@ -737,6 +737,12 @@ describe("Versus rooms", () => {
       expect(again.results).toMatchObject({ forfeit: true, winner: a.uid });
       expect(again.results.history).toEqual(series.history);
       expect(again.standings).toMatchObject({ round: 1, winner: a.uid });
+
+      // The series length waits for the lobby; the host naming Versus again takes everyone back there to set it.
+      sa.send({ op: "CONFIG", series: 5 });
+      expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "wrong_phase" });
+      sa.send({ op: "CONFIG", mode: "vs", series: 5, scoring: "total" });
+      expect(await sc2.next({ op: "LOBBY", phase: "lobby" })).toMatchObject({ mode: "vs", series: 5, scoring: "total" });
       await closeAll(sa, sc2);
     },
     30_000,

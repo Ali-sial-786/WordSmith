@@ -36,6 +36,9 @@ class Party extends ChangeNotifier {
   /// The mode [session] was made for.
   String? _mode;
 
+  /// The room's phase when last heard.
+  String? _phase;
+
   /// Every session's events, across mode changes.
   Stream<RoomEvent> get effects => _effects.stream;
   final _effects = StreamController<RoomEvent>.broadcast();
@@ -96,8 +99,12 @@ class Party extends ChangeNotifier {
     if (s == null) return;
     // The host picked another mode: a fresh session of that kind on the
     // same connection (an old link opened as the wrong one switches too).
+    // Back in the lobby after a game (the host's set-up for the next one): fresh too, the podium put away.
     final mode = s.lobby?.mode;
-    if (mode != null && mode != _mode) {
+    final phase = s.lobby?.phase;
+    final back = phase == 'lobby' && _phase == 'results';
+    _phase = phase;
+    if (mode != null && (mode != _mode || back)) {
       final old = s;
       _detachSession();
       _attach(s = _make(mode, old.client, old.me)..adopt(old));
@@ -161,6 +168,7 @@ class Party extends ChangeNotifier {
     if (!_closed) _account.setStatus('online');
     code = null;
     _mode = null;
+    _phase = null;
     _closed = false;
     _videoAutoTried = false;
     notifyListeners();

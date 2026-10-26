@@ -13,10 +13,10 @@ describe("routes", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^application\/json/);
     expect(await res.json()).toEqual({
-      latest: "0.9.2",
+      latest: "0.9.3",
       minSupported: "0.8.0",
       protocol: 1,
-      apk: `${BASE}/v1/apk/0.9.2`,
+      apk: `${BASE}/v1/apk/0.9.3`,
       quebec: false,
     });
   });

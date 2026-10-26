@@ -241,6 +241,14 @@ class _Actions extends StatelessWidget {
                       style: text.bodyMedium?.copyWith(color: Palette.steel),
                     ),
             ),
+            // Back to the lobby to set up the next game: series length, scoring, mode.
+            if (session.isHost)
+              IconButton(
+                key: const ValueKey('to-lobby'),
+                tooltip: 'Change the series, scoring or mode',
+                icon: Icon(Icons.tune, color: Palette.molten),
+                onPressed: () => session.setMode(session.lobby?.mode ?? 'vs'),
+              ),
             if (session.chatEnabled) ...[const SizedBox(width: 4), ChatButton(session: session)],
           ],
         ),

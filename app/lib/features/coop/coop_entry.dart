@@ -39,7 +39,10 @@ Future<void> showRoomEntry(BuildContext context, String mode) async {
 
 void _backToRoom(BuildContext context, Party party, String mode) {
   final s = party.session!;
-  if (s.lobby!.mode != mode) {
+  final other = s.lobby!.mode != mode;
+  // The host picking a mode after a game, even this one, sets up the next
+  // game in the lobby (series length, scoring and all).
+  if (other || (s.isHost && s.phase == 'results')) {
     final message = !s.isHost
         ? 'Only the host picks the mode: back to your room.'
         : const {'lobby', 'results'}.contains(s.phase)

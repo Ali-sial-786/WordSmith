@@ -226,4 +226,34 @@ void main() {
     expect(_bar, findsNothing);
     expect(find.byKey(const ValueKey('room-home')), findsNothing);
   });
+
+  testWidgets('after a Versus series, the host picking Versus again sets up the next one in the lobby', (tester) async {
+    final room = FakeSocketChannel();
+    final (router, container) = await _pumpApp(tester, room);
+    room
+      ..receive({'op': 'WELCOME', 'you': 'uid-ali', 'protocol': 1, 'serverNow': DateTime.now().millisecondsSinceEpoch})
+      ..receive({
+        'op': 'SNAPSHOT',
+        'lobby': {..._lobby(mode: 'vs'), 'phase': 'results', 'series': 3},
+        'chat': <Object>[],
+      });
+    await _pumpRoom(tester);
+    await tester.tap(find.byKey(const ValueKey('room-home')));
+    await _pumpRoom(tester);
+    final before = container.read(partyProvider).session;
+
+    // The same mode, from the hall: back to the lobby, not the podium.
+    showRoomEntry(tester.element(find.byType(HallScreen)), 'vs');
+    await _pumpRoom(tester);
+    expect(room.sent, contains(jsonEncode({'op': 'CONFIG', 'mode': 'vs'})));
+    room.receive({'op': 'LOBBY', ..._lobby(mode: 'vs'), 'series': 3});
+    await _pumpRoom(tester);
+    final after = container.read(partyProvider).session;
+    expect(after, isA<VsSession>());
+    expect(after, isNot(same(before)));
+    expect(router.state.uri.path, '/room/K7Q2AB');
+    expect(find.text('Anvil Clash'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Start the series'), 200);
+    expect(find.text('Start the series'), findsOneWidget);
+  });
 }

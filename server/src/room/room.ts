@@ -630,7 +630,8 @@ export class RoomDO extends DurableObject<Env> {
       case "CONFIG": {
         // The other fields are judged by the mode the room is switching to, if it is.
         const mode = message.mode ?? room.mode;
-        const switching = mode !== room.mode;
+        // A mode named in the results, even the room's own, takes everyone back to the lobby to set up the next game.
+        const switching = mode !== room.mode || (message.mode !== undefined && room.phase === "results");
         // Co-op has no series to configure, only Team Versus has a rule (and only Versus a scoring), and teams play classic rounds.
         if (message.series !== undefined && !isVersus(mode)) return this.error(ws, "bad_message");
         if (message.rule !== undefined && mode !== "team") return this.error(ws, "bad_message");
@@ -731,6 +732,8 @@ export class RoomDO extends DurableObject<Env> {
    * in join order; Versus gets the default series length unless it had one.
    */
   private switchMode(room: Room, mode: RoomMode): void {
+    // The same mode again (back from the results): the teams stay as they were.
+    const same = room.mode === mode && room.teams !== undefined;
     room.mode = mode;
     room.phase = "lobby";
     delete room.nextAt;
@@ -743,7 +746,7 @@ export class RoomDO extends DurableObject<Env> {
     }
     if (isVersus(mode)) room.series ??= DEFAULT_SERIES;
     if (mode === "team") {
-      room.teams = Object.fromEntries(players.map((p, i) => [p.id, (i % 2) as TeamId]));
+      if (!same) room.teams = Object.fromEntries(players.map((p, i) => [p.id, (i % 2) as TeamId]));
       if (room.variant === "survival") delete room.variant;
     } else {
       delete room.teams;
