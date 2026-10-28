@@ -36,6 +36,16 @@ Future<(GoRouter, ProviderContainer)> _pumpApp(
   final store = await Store.open();
   final auth = FakeAuth(signedIn: _me);
   final server = FakeServer()..username = 'Ali';
+  // More friends than fit on a phone.
+  for (var i = 1; i <= 14; i++) {
+    server.friends.add({
+      'id': 'uid-f$i',
+      'username': 'friend$i',
+      'avatar': 'avatar_05',
+      'level': 3,
+      'rank': 'Apprentice',
+    });
+  }
   server.rooms['K7Q2AB'] = {
     'code': 'K7Q2AB',
     'mode': 'coop',
@@ -255,5 +265,28 @@ void main() {
     expect(find.text('Anvil Clash'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Start the series'), 200);
     expect(find.text('Start the series'), findsOneWidget);
+  });
+
+  testWidgets('a long friend list scrolls in the invite sheet, down to the last friend', (tester) async {
+    final room = FakeSocketChannel();
+    await _pumpApp(tester, room);
+    _join(room);
+    await _pumpRoom(tester);
+    await tester.scrollUntilVisible(find.text('Invite friends'), 200);
+    await tester.tap(find.text('Invite friends'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(DraggableScrollableSheet);
+    expect(sheet, findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('friend14'),
+      200,
+      scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)),
+    );
+    // Right to the end: nothing below it is cut off.
+    await tester.drag(find.text('friend14'), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.widgetWithText(ListTile, 'friend14'), matching: find.text('Invite')));
+    await tester.pump();
+    expect(find.text('Invited friend14'), findsOneWidget);
   });
 }

@@ -150,6 +150,9 @@ class LobbyView extends ConsumerWidget {
                 label: const Text('Invite friends'),
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
+                  // Any number of friends: it scrolls, and drags up to most of the screen.
+                  isScrollControlled: true,
+                  useSafeArea: true,
                   backgroundColor: Palette.soot,
                   builder: (_) =>
                       _InviteSheet(code: lobby.code, mode: lobby.mode, inRoom: {for (final p in lobby.players) p.id}),
@@ -661,11 +664,14 @@ class _InviteSheet extends ConsumerWidget {
     // Online friends first; offline ones can still get a notification.
     final friends = account.friends.friends.where((f) => !inRoom.contains(f.id)).toList()
       ..sort((a, b) => (isOnline(a.id) ? 0 : 1).compareTo(isOnline(b.id) ? 0 : 1));
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.95,
+      builder: (context, scroll) => ListView(
+        controller: scroll,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
           Text('Invite friends', style: displayStyle(20)),
           const SizedBox(height: 8),
@@ -679,9 +685,7 @@ class _InviteSheet extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               leading: AvatarBadge(avatar: f.avatar, size: 40, presence: account.presence[f.id]),
               title: Text(names.of(f.id, f.username)),
-              subtitle: Text(
-                isOnline(f.id) ? presenceLabel(account.presence[f.id]) : 'Offline · gets a notification if it can',
-              ),
+              subtitle: Text(isOnline(f.id) ? presenceLabel(account.presence[f.id]) : 'Offline · gets a notification'),
               trailing: TextButton(
                 onPressed: () {
                   ref.read(accountProvider.notifier).invite(f.id, code, mode);
