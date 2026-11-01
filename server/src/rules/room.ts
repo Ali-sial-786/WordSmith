@@ -34,25 +34,44 @@ export function normalizeRoomCode(raw: string): string | null {
 // Modes and timings
 // ---------------------------------------------------------------------------
 
-/** `team` is Team Versus: Versus with two teams (rules/teams.ts). */
-export type RoomMode = "coop" | "vs" | "team";
-export const ROOM_MODES: readonly RoomMode[] = ["coop", "vs", "team"];
-/** `standings` (the time between Versus rounds) is Versus only. */
+/**
+ * `team` is Team Versus: Versus with two teams (rules/teams.ts). `rune` and
+ * `runeteam` are Rune Grid and Team Rune Grid (rules/rune.ts), played on a
+ * letter grid instead of molds.
+ */
+export type RoomMode = "coop" | "vs" | "team" | "rune" | "runeteam";
+export const ROOM_MODES: readonly RoomMode[] = ["coop", "vs", "team", "rune", "runeteam"];
+/** `standings` (the time between rounds of a series) is every mode but co-op. */
 export type RoomPhase = "lobby" | "countdown" | "round" | "standings" | "results";
 
 export function isRoomMode(value: unknown): value is RoomMode {
   return (ROOM_MODES as readonly unknown[]).includes(value);
 }
 
-/** Whether rooms of this mode play Versus series: Versus and Team Versus. */
+/** Whether rooms of this mode play Versus series on molds: Versus and Team Versus. */
 export function isVersus(mode: RoomMode): boolean {
+  return mode === "vs" || mode === "team";
+}
+
+/** Whether rooms of this mode play Rune Grid: Rune Grid and Team Rune Grid. */
+export function isRune(mode: RoomMode): boolean {
+  return mode === "rune" || mode === "runeteam";
+}
+
+/** Whether rooms of this mode play as two teams: Team Versus and Team Rune Grid. */
+export function isTeamMode(mode: RoomMode): boolean {
+  return mode === "team" || mode === "runeteam";
+}
+
+/** Whether rooms of this mode play a series of rounds, with standings between and XP at the end: every mode but co-op. */
+export function isSeriesMode(mode: RoomMode): boolean {
   return mode !== "coop";
 }
 
-/** Players a room holds, by mode: Team Versus, two teams of three. */
-export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4, vs: 5, team: 6 };
-/** Connected players needed to START, by mode. Solo co-op is allowed (for testing); Team Versus also needs even teams. */
-export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1, vs: 2, team: 2 };
+/** Players a room holds, by mode: the team modes, two teams of three. */
+export const MAX_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 4, vs: 5, team: 6, rune: 6, runeteam: 6 };
+/** Connected players needed to START, by mode. Solo co-op is allowed (for testing); the team modes also need even teams. */
+export const MIN_PLAYERS: Readonly<Record<RoomMode, number>> = { coop: 1, vs: 2, team: 2, rune: 2, runeteam: 2 };
 
 /** Whether newcomers may take a seat in this phase (anyone already seated may always come back). */
 export function isJoinablePhase(phase: RoomPhase): boolean {
@@ -87,7 +106,7 @@ export const PUZZLE_REPEAT_WINDOW_MS = 60 * 24 * 3600_000;
 /** Player colours: copper, gold, verdigris, cobalt. */
 export const PLAYER_COLORS = 4;
 /** Colours by mode: Versus adds titanium (4) for its fifth player, Team Versus rose gold (5) for its sixth. */
-export const COLORS: Readonly<Record<RoomMode, number>> = { coop: PLAYER_COLORS, vs: 5, team: 6 };
+export const COLORS: Readonly<Record<RoomMode, number>> = { coop: PLAYER_COLORS, vs: 5, team: 6, rune: 6, runeteam: 6 };
 
 /** The lowest colour nobody in `taken` has, or `null` if all are used. */
 export function freeColor(taken: readonly number[], colors = PLAYER_COLORS): number | null {

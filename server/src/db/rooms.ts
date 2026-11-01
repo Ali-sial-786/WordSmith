@@ -17,6 +17,7 @@ import { parseMpPuzzle, type MpPuzzle } from "../rules/mold";
 import { HINT_KINDS, levelFromTotalXp, noHints, type HintCounts, type HintKind } from "../rules/progression";
 import type { PlayFacts } from "../rules/orders";
 import { choosePuzzle, type PuzzleCandidate, type RoomMode } from "../rules/room";
+import type { RuneRounds, RuneSettings } from "../rules/rune";
 import type { SeriesLength } from "../rules/vs";
 import { vsAward, wonSeries, type VsSeriesResults } from "../rules/vs-round";
 import type { TeamRule } from "../rules/teams";
@@ -359,7 +360,8 @@ export interface VsSeriesRecord {
   readonly matchId: string;
   readonly code: string;
   readonly heat: HeatTier;
-  readonly length: SeriesLength;
+  /** The series length; Rune Grid: its regular rounds (1, 3 or 5). */
+  readonly length: SeriesLength | RuneRounds;
   readonly startedAt: number;
   readonly endedAt: number;
   readonly results: VsSeriesResults;
@@ -369,8 +371,11 @@ export interface VsSeriesRecord {
   readonly variant?: "survival";
   /** Team Versus only: the rule its rounds were won by. */
   readonly rule?: TeamRule;
-  /** Total score series only. */
+  /** Total score series only (every Rune Grid game). */
   readonly scoring?: "total";
+  /** Rune Grid only, with its settings. */
+  readonly game?: "rune";
+  readonly rune?: RuneSettings;
 }
 
 /**
@@ -396,6 +401,8 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     // Total score series only: won on letters filled, then bonus words.
     ...(record.scoring === undefined ? {} : { scoring: record.scoring }),
     ...(results.tiebreak === undefined ? {} : { tiebreak: true }),
+    // Rune Grid only: its settings (score is points, wins rounds won, words words found).
+    ...(record.game === undefined ? {} : { game: record.game, rune: record.rune }),
     // Survival series only (shared/survival.md "Records").
     ...(record.variant === undefined ? {} : { variant: record.variant }),
     // Team Versus only: the rule, the winning team, and everyone's team.

@@ -63,6 +63,9 @@ describe("room parseClientMessage: Team Versus", () => {
     ['{"op":"CONFIG","scoring":"total"}', { op: "CONFIG", scoring: "total" }],
     ['{"op":"CONFIG","scoring":"rounds","series":7}', { op: "CONFIG", scoring: "rounds", series: 7 }],
     ['{"op":"CONFIG","mode":"team","rule":"first"}', { op: "CONFIG", mode: "team", rule: "first" }],
+    ['{"op":"CONFIG","mode":"rune"}', { op: "CONFIG", mode: "rune" }],
+    ['{"op":"CONFIG","rune":{"size":6,"seconds":90,"min":4,"rounds":5}}', { op: "CONFIG", rune: { size: 6, seconds: 90, min: 4, rounds: 5 } }],
+    ['{"op":"CONFIG","mode":"runeteam","rune":{"teamScoring":"sum"}}', { op: "CONFIG", mode: "runeteam", rune: { teamScoring: "sum" } }],
   ])("reads %s", (raw, message) => {
     expect(parseClientMessage(raw)).toEqual({ ok: true, message });
   });
@@ -77,6 +80,12 @@ describe("room parseClientMessage: Team Versus", () => {
     '{"op":"CONFIG","rule":null}',
     '{"op":"CONFIG","scoring":"points"}',
     '{"op":"CONFIG","mode":"solo"}',
+    '{"op":"CONFIG","rune":{}}',
+    '{"op":"CONFIG","rune":{"size":3}}',
+    '{"op":"CONFIG","rune":{"seconds":45}}',
+    '{"op":"CONFIG","rune":{"teamScoring":"best"}}',
+    '{"op":"CONFIG","rune":{"colour":"red"}}',
+    '{"op":"CONFIG","rune":4}',
   ])("refuses %j", (raw) => {
     expect(parseClientMessage(raw)).toEqual({ ok: false });
   });

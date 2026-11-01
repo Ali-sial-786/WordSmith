@@ -43,7 +43,7 @@ function codeParam(c: RequestContext): string {
 export async function postRoom(c: AuthedContext): Promise<Response> {
   const account = await requireSetUp(c);
   const body = await readJsonObject(c.request);
-  if (!isRoomMode(body.mode)) throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop" | "vs" | "team"}');
+  if (!isRoomMode(body.mode)) throw new ApiError(400, "invalid_mode", 'Expected {mode: "coop" | "vs" | "team" | "rune" | "runeteam"}');
   const mode: RoomMode = body.mode;
 
   const me = identityOf(account);

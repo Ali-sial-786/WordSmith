@@ -66,9 +66,9 @@ describe("seats", () => {
     expect(COLORS.coop).toBe(4);
   });
 
-  it("hold 4 in co-op (solo allowed), 5 in Versus and 6 in Team Versus (2 to start)", () => {
-    expect(MAX_PLAYERS).toEqual({ coop: 4, vs: 5, team: 6 });
-    expect(MIN_PLAYERS).toEqual({ coop: 1, vs: 2, team: 2 });
+  it("hold 4 in co-op (solo allowed), 5 in Versus and 6 in Team Versus and Rune Grid (2 to start)", () => {
+    expect(MAX_PLAYERS).toEqual({ coop: 4, vs: 5, team: 6, rune: 6, runeteam: 6 });
+    expect(MIN_PLAYERS).toEqual({ coop: 1, vs: 2, team: 2, rune: 2, runeteam: 2 });
   });
 
   it("only take newcomers in the lobby and results", () => {

@@ -10,8 +10,9 @@
  * the room).
  *
  * Server → client: WELCOME, LOBBY, ROUND_START, WORD_RESULT, CLAIMED, BONUS,
- * REVEAL, PROGRESS (Versus), HEATED and MELT (survival), ROUND_END,
- * SERIES_END (Versus), SNAPSHOT, EMOTE, CHAT, ERROR.
+ * REVEAL, PROGRESS (Versus), HEATED and MELT (survival), RUNE_TALLY and
+ * RUNE_WORD (Rune Grid), ROUND_END, SERIES_END (Versus and Rune Grid),
+ * SNAPSHOT, EMOTE, CHAT, ERROR.
  *
  * Survival (shared/survival.md) adds its fields only to survival rooms and
  * rounds: a message without `variant` is classic, exactly as before.
@@ -24,6 +25,7 @@ import { isRoomMode, MAX_CHAT_LENGTH, type RoomMode, type RoomPhase } from "../r
 import { isVariant, type HeatedFields, type Variant } from "../rules/survival";
 import { isTeamId, isTeamRule, type TeamId, type TeamRule } from "../rules/teams";
 import { isScoring, isSeriesLength, type Scoring, type SeriesLength } from "../rules/vs";
+import { parseRunePatch, type RuneRoundEndFields, type RuneRoundSnapshot, type RuneRoundStartFields, type RuneSeriesEndFields, type RuneSettings, type RuneSettingsPatch } from "../rules/rune";
 import type { VsRoundEndFields, VsRoundSnapshot, VsRoundStartFields, VsRoundSummary } from "../rules/vs-round";
 
 export { PING, PONG } from "../hub/protocol";
@@ -43,8 +45,9 @@ export type ClientMessage =
   /**
    * The host's choices: the variant and the heat (lobby or results), the
    * Versus series length (lobby), and the Team Versus rule and the
-   * Versus scoring (lobby or results), and the room's mode (lobby or
-   * results; it goes back to the lobby). At least one.
+   * Versus scoring (lobby or results), the Rune Grid settings (lobby or
+   * results), and the room's mode (lobby or results; it goes back to the
+   * lobby). At least one.
    */
   | {
       readonly op: "CONFIG";
@@ -54,6 +57,7 @@ export type ClientMessage =
       readonly heat?: HeatChoice;
       readonly rule?: TeamRule;
       readonly scoring?: Scoring;
+      readonly rune?: RuneSettingsPatch;
     }
   /** Team Versus, in the lobby or results: moves the sender, or (host only) the player `id`, to `team`. */
   | { readonly op: "TEAM"; readonly team: TeamId; readonly id?: string }
@@ -86,7 +90,7 @@ export type RoomErrorCode =
   | "chat_limit"
   /** Team Versus: START or AGAIN with teams of different sizes (or one empty). */
   | "uneven_teams"
-  /** Team Versus: TEAM to a team that already has three. */
+  /** Team Versus and Team Rune Grid: TEAM to a team that already has three. */
   | "team_full"
   /** TEAM for someone who isn't in the room. */
   | "not_in_room"
@@ -134,7 +138,15 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
     case "READY":
       return typeof m.ready === "boolean" ? { ok: true, message: { op: "READY", ready: m.ready } } : BAD;
     case "CONFIG": {
-      if (m.mode === undefined && m.variant === undefined && m.series === undefined && m.heat === undefined && m.rule === undefined && m.scoring === undefined)
+      if (
+        m.mode === undefined &&
+        m.variant === undefined &&
+        m.series === undefined &&
+        m.heat === undefined &&
+        m.rule === undefined &&
+        m.scoring === undefined &&
+        m.rune === undefined
+      )
         return BAD;
       if (m.mode !== undefined && !isRoomMode(m.mode)) return BAD;
       if (m.variant !== undefined && !isVariant(m.variant)) return BAD;
@@ -142,6 +154,8 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
       if (m.heat !== undefined && !isHeatChoice(m.heat)) return BAD;
       if (m.rule !== undefined && !isTeamRule(m.rule)) return BAD;
       if (m.scoring !== undefined && !isScoring(m.scoring)) return BAD;
+      const rune = m.rune === undefined ? undefined : parseRunePatch(m.rune);
+      if (rune === null) return BAD;
       const message: ClientMessage = {
         op: "CONFIG",
         ...(m.mode === undefined ? {} : { mode: m.mode }),
@@ -150,6 +164,7 @@ export function parseClientMessage(raw: string | ArrayBuffer): ParseResult {
         ...(m.heat === undefined ? {} : { heat: m.heat }),
         ...(m.rule === undefined ? {} : { rule: m.rule }),
         ...(m.scoring === undefined ? {} : { scoring: m.scoring }),
+        ...(rune === undefined ? {} : { rune }),
       };
       return { ok: true, message };
     }
@@ -196,7 +211,7 @@ export interface LobbyPlayer {
   readonly color: number;
   readonly ready: boolean;
   readonly connected: boolean;
-  /** Team Versus only: 0 Copper, 1 Cobalt. */
+  /** Team Versus and Team Rune Grid only: 0 Copper, 1 Cobalt. */
   readonly team?: TeamId;
 }
 
@@ -224,6 +239,8 @@ export interface LobbyFields {
   readonly rule?: TeamRule;
   /** Versus only: how the series is won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
   readonly scoring?: Scoring;
+  /** Rune Grid and Team Rune Grid only: the settings (CONFIG `rune`), from the next START or AGAIN; during a game, the game's own. */
+  readonly rune?: RuneSettings;
   /**
    * Co-op, after the host's AGAIN: when the next round's countdown starts
    * (server ms), unless everyone is ready (NEXT) sooner. Players' `ready`
@@ -264,7 +281,8 @@ export interface ResultsFields extends Omit<CoopResults, "players"> {
   readonly xp: Readonly<Record<string, XpBody>>;
 }
 
-export type WordResultKind = "claimed" | "bonus" | "already" | "invalid" | "rate_limited" | "too_late";
+/** `found`: Rune Grid, a new word. */
+export type WordResultKind = "claimed" | "bonus" | "already" | "invalid" | "rate_limited" | "too_late" | "found";
 
 /** Versus XP: the co-op shape plus the embers collected during the series. */
 export interface VsXpBody extends XpBody {
@@ -285,8 +303,11 @@ export interface PodiumEntry {
   readonly bonus?: number;
 }
 
-/** `SERIES_END` (Versus). */
+/** `SERIES_END` (Versus and Rune Grid). */
 export interface SeriesEndFields {
+  /** Rune Grid only: `"rune"`, with `rune` (the podium's `score` is points, `wins` rounds won, and `history` is empty). */
+  readonly game?: "rune";
+  readonly rune?: RuneSeriesEndFields;
   /** Team Versus: `null` (see `team`). */
   readonly winner: string | null;
   /** Team Versus only: the winning team (`null`: none), the rule, and the teams' round wins as `[copper, cobalt]`. */
@@ -323,15 +344,15 @@ export interface ChatLine {
 export type ServerMessage =
   | { readonly op: "WELCOME"; readonly you: string; readonly protocol: number; readonly serverNow: number }
   | ({ readonly op: "LOBBY" } & LobbyFields)
-  | ({ readonly op: "ROUND_START" } & (RoundStartFields | VsRoundStartFields))
+  | ({ readonly op: "ROUND_START" } & (RoundStartFields | VsRoundStartFields | RuneRoundStartFields))
   | {
       readonly op: "WORD_RESULT";
       readonly seq: number;
       readonly word: string;
       readonly result: WordResultKind;
-      /** Co-op `already`: who has it (`null` if it filled in by itself). */
+      /** Co-op `already`: who has it (`null` if it filled in by itself). Rune Grid `already`: who found it (the sender, or a pooled teammate). */
       readonly by?: string | null;
-      /** Co-op `claimed` and `bonus`. */
+      /** Co-op `claimed` and `bonus`; Rune Grid `found` (before any doubling). */
       readonly points?: number;
       /** Versus `claimed`: the slot, and the crossing slots it completed on the sender's mold. */
       readonly slot?: number;
@@ -357,7 +378,11 @@ export type ServerMessage =
   | ({ readonly op: "HEATED" } & HeatedFields)
   /** Survival: a heated slot melted (Versus: on `id`'s mold). Straight before ROUND_END. */
   | { readonly op: "MELT"; readonly slot: number; readonly id?: string }
-  | ({ readonly op: "ROUND_END" } & (ResultsFields | VsRoundEndFields))
+  /** Rune Grid: how many words `id` has found so far, to everyone. */
+  | { readonly op: "RUNE_TALLY"; readonly id: string; readonly words: number }
+  /** Team Rune Grid, pooled: a teammate found a word, to the rest of their team. */
+  | { readonly op: "RUNE_WORD"; readonly word: string; readonly by: string; readonly points: number }
+  | ({ readonly op: "ROUND_END" } & (ResultsFields | VsRoundEndFields | RuneRoundEndFields))
   | ({ readonly op: "SERIES_END" } & SeriesEndFields)
   | {
       readonly op: "SNAPSHOT";
@@ -376,6 +401,16 @@ export type ServerMessage =
       /** Versus, during standings and results: the last ROUND_END. */
       readonly standings?: VsRoundEndFields;
       /** Versus, during results: the SERIES_END. */
+      readonly results?: SeriesEndFields;
+      readonly chat?: readonly ChatLine[];
+    }
+  | {
+      readonly op: "SNAPSHOT";
+      readonly lobby: LobbyFields;
+      /** Rune Grid, during countdown and play: the round, the receiver's words (pooled teams: their team's) and everyone's tally. */
+      readonly round?: RuneRoundSnapshot;
+      /** Rune Grid, during standings and results: the last ROUND_END. */
+      readonly standings?: RuneRoundEndFields;
       readonly results?: SeriesEndFields;
       readonly chat?: readonly ChatLine[];
     }

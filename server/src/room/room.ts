@@ -32,6 +32,8 @@
  * - **Versus:** `lobby → countdown → round → standings → countdown → … →
  *   results`, a series of rounds on everyone's own copy of the mold. XP
  *   is written once, at the end of the series.
+ * - **Rune Grid** (shared/rune-grid.md): a series as in Versus, on a
+ *   letter grid made in the room (no puzzle from D1), won on points.
  * - **Survival** (shared/survival.md), a variant of either, chosen with
  *   CONFIG: one heated word at a time per mold (the team's, or each
  *   racer's), with a countdown kept in the round. HEATED follows whatever
@@ -87,6 +89,9 @@ import {
   IDLE_CLOSE_MS,
   isJoinablePhase,
   isPlayingPhase,
+  isRune,
+  isSeriesMode,
+  isTeamMode,
   isVersus,
   MAX_PLAYERS,
   MIN_PLAYERS,
@@ -102,6 +107,30 @@ import {
   type RoomPhase,
   type Seat,
 } from "../rules/room";
+import {
+  applyRunePatch,
+  applyRuneSubmit,
+  canRuneRace,
+  DEFAULT_RUNE,
+  endRuneRound,
+  markRuneOut,
+  newRuneRound,
+  newRuneSeries,
+  runeDecision,
+  runeRoundSnapshot,
+  runeRoundStartFields,
+  runeSeriesEndFields,
+  runeSeriesResults,
+  stopRuneSeries,
+  tallyOf as runeTallyOf,
+  teammatesOf,
+  type RuneNextRound,
+  type RuneRound,
+  type RuneRoundEndFields,
+  type RuneSeries,
+  type RuneSeriesEndFields,
+  type RuneSettings,
+} from "../rules/rune";
 import { heatedFields, pauseClock, resumeClock, type HeatClock, type Variant } from "../rules/survival";
 import { DEFAULT_TEAM_RULE, MAX_TEAM_SIZE, teamForNewcomer, teamSizes, teamsEven, type TeamId, type TeamRule } from "../rules/teams";
 import { DEFAULT_SCORING, type Scoring, type SeriesLength } from "../rules/vs";
@@ -114,6 +143,7 @@ import {
   canRace,
   DEFAULT_SERIES,
   endVsRound,
+  STANDINGS_MS,
   markOut,
   newVsRound,
   newVsSeries,
@@ -235,6 +265,8 @@ interface Room {
   scoring?: Scoring;
   /** Co-op, after the host's AGAIN: when the next round's countdown starts, unless everyone is ready sooner. */
   nextAt?: number;
+  /** Rune Grid: the next game's settings (CONFIG `rune`). */
+  rune?: RuneSettings;
 }
 
 /** Where a round's clock stands, whatever the mode. */
@@ -266,6 +298,8 @@ interface VsPendingAward extends AwardProgress {
   readonly usernames: Readonly<Record<string, string>>;
   /** The series' rounds, for SERIES_END (D1 doesn't keep them). Absent in awards stored before it. */
   readonly history?: readonly VsRoundSummary[];
+  /** Rune Grid only: its rounds and totals, for SERIES_END. */
+  readonly rune?: RuneSeriesEndFields;
 }
 
 type PendingAward = CoopPendingAward | VsPendingAward;
@@ -372,6 +406,16 @@ export class RoomDO extends DurableObject<Env> {
     return this.read<VsSeries>(SERIES);
   }
 
+  /** The Rune Grid round: only in a Rune Grid room. */
+  private runeRound(): RuneRound | null {
+    return this.read<RuneRound>(ROUND);
+  }
+
+  /** The Rune Grid game: only in a Rune Grid room. */
+  private runeSeries(): RuneSeries | null {
+    return this.read<RuneSeries>(SERIES);
+  }
+
   // -------------------------------------------------------------------------
   // Called by the Worker (RPC)
   // -------------------------------------------------------------------------
@@ -411,7 +455,8 @@ export class RoomDO extends DurableObject<Env> {
       emptySince: now,
       listed: null,
       ...(isVersus(mode) ? { series: DEFAULT_SERIES } : {}),
-      ...(mode === "team" ? { teams: { [creator.id]: 0 as TeamId } } : {}),
+      ...(isRune(mode) ? { rune: DEFAULT_RUNE } : {}),
+      ...(isTeamMode(mode) ? { teams: { [creator.id]: 0 as TeamId } } : {}),
     };
     this.write(ROOM, room);
     await this.settle();
@@ -505,7 +550,7 @@ export class RoomDO extends DurableObject<Env> {
         left: false,
       };
       room.players.push(player);
-      if (room.mode === "team") {
+      if (isTeamMode(room.mode)) {
         const team = teamForNewcomer(room.teams ?? {}, seated(room).filter((p) => p.id !== me.id).map((p) => p.id));
         // Two full teams are six players, which MAX_PLAYERS already turned away.
         (room.teams ??= {})[me.id] = team ?? 0;
@@ -637,6 +682,10 @@ export class RoomDO extends DurableObject<Env> {
         if (message.rule !== undefined && mode !== "team") return this.error(ws, "bad_message");
         if (message.scoring !== undefined && mode !== "vs") return this.error(ws, "bad_message");
         if (message.variant === "survival" && mode === "team") return this.error(ws, "bad_message");
+        // Rune Grid has its own settings, and no variant or heat (its XP heat is Auto's).
+        if (message.rune !== undefined && !isRune(mode)) return this.error(ws, "bad_message");
+        if (message.rune?.teamScoring !== undefined && mode !== "runeteam") return this.error(ws, "bad_message");
+        if ((message.variant !== undefined || message.heat !== undefined) && isRune(mode)) return this.error(ws, "bad_message");
         // The series is chosen in the lobby (switching mode goes back to it); the rest in the lobby or results, for the next START or AGAIN.
         if (!isJoinablePhase(room.phase) || (message.series !== undefined && room.phase !== "lobby" && !switching)) return this.error(ws, "wrong_phase");
         // A new mode waits until everyone has the results.
@@ -670,6 +719,11 @@ export class RoomDO extends DurableObject<Env> {
           room.scoring = message.scoring;
           changed = true;
         }
+        if (message.rune !== undefined) {
+          const next = applyRunePatch(room.rune ?? DEFAULT_RUNE, message.rune);
+          room.rune = next.settings;
+          changed ||= next.changed;
+        }
         if (changed) {
           this.write(ROOM, room);
           this.broadcast(this.lobbyMessage(room));
@@ -689,8 +743,9 @@ export class RoomDO extends DurableObject<Env> {
         if (room.phase !== from || (from === "results" && award !== null && !award.announced)) return this.error(ws, "wrong_phase");
         if (room.hostId !== player.id) return this.error(ws, "not_host");
         if (this.connectedPlayers(room).length < MIN_PLAYERS[room.mode]) return this.error(ws, "not_enough_players");
-        if (room.mode === "team" && !this.teamsEven(room)) return this.error(ws, "uneven_teams");
+        if (isTeamMode(room.mode) && !this.teamsEven(room)) return this.error(ws, "uneven_teams");
         if (isVersus(room.mode)) return this.startSeries(ws, from);
+        if (isRune(room.mode)) return this.startRuneSeries(from);
         // Co-op's next round waits a little, so nobody is pulled away from the results.
         return from === "results" ? this.waitForNext(room, player, now) : this.startRound(ws, from);
       }
@@ -703,10 +758,11 @@ export class RoomDO extends DurableObject<Env> {
 
       case "SUBMIT":
         if (isVersus(room.mode)) return this.vsSubmit(ws, room, player, message.word, message.seq, now);
+        if (isRune(room.mode)) return this.runeSubmit(ws, room, player, message.word, message.seq, now);
         return this.submit(ws, room, player, message.word, message.seq, now);
 
       case "HINT":
-        if (isVersus(room.mode)) return this.error(ws, "no_hints");
+        if (isSeriesMode(room.mode)) return this.error(ws, "no_hints");
         return this.hint(ws, room, player, message.hint, now);
 
       case "LEAVE":
@@ -728,12 +784,13 @@ export class RoomDO extends DurableObject<Env> {
   /**
    * CONFIG `mode`: the room plays `mode` from now on, back in the lobby,
    * nobody ready. Players keep their colour where the new mode has it and
-   * nobody before them does; Team Versus deals players onto the two teams
-   * in join order; Versus gets the default series length unless it had one.
+   * nobody before them does; the team modes deal players onto the two
+   * teams in join order; Versus gets the default series length unless it
+   * had one, and Rune Grid the default settings.
    */
   private switchMode(room: Room, mode: RoomMode): void {
     // The same mode again (back from the results): the teams stay as they were.
-    const same = room.mode === mode && room.teams !== undefined;
+    const same = (room.mode === mode || (isTeamMode(room.mode) && isTeamMode(mode))) && room.teams !== undefined;
     room.mode = mode;
     room.phase = "lobby";
     delete room.nextAt;
@@ -745,20 +802,22 @@ export class RoomDO extends DurableObject<Env> {
       taken.push(p.color);
     }
     if (isVersus(mode)) room.series ??= DEFAULT_SERIES;
-    if (mode === "team") {
+    if (isRune(mode)) room.rune ??= DEFAULT_RUNE;
+    if (isTeamMode(mode)) {
       if (!same) room.teams = Object.fromEntries(players.map((p, i) => [p.id, (i % 2) as TeamId]));
-      if (room.variant === "survival") delete room.variant;
     } else {
       delete room.teams;
     }
+    // Survival is for co-op and Versus.
+    if (mode === "team" || isRune(mode)) delete room.variant;
   }
 
   /**
-   * TEAM (Team Versus), in the lobby or results: moves `target` (the
+   * TEAM (the team modes), in the lobby or results: moves `target` (the
    * sender, or anyone if the sender is host) to `team`, unless it's full.
    */
   private moveToTeam(ws: WebSocket, room: Room, player: Player, team: TeamId, target: string): void {
-    if (room.mode !== "team") return this.error(ws, "bad_message");
+    if (!isTeamMode(room.mode)) return this.error(ws, "bad_message");
     if (!isJoinablePhase(room.phase)) return this.error(ws, "wrong_phase");
     if (target !== player.id && room.hostId !== player.id) return this.error(ws, "not_host");
     if (!seated(room).some((p) => p.id === target)) return this.error(ws, "not_in_room");
@@ -807,7 +866,12 @@ export class RoomDO extends DurableObject<Env> {
   private async startIfAllReady(room: Room, now: number): Promise<void> {
     if (this.starting) return;
     let players: Player[];
-    if (room.phase === "standings") {
+    if (room.phase === "standings" && isRune(room.mode)) {
+      const series = this.runeSeries();
+      const decision = series === null ? null : runeDecision(series);
+      if (series === null || decision === null || decision.over) return;
+      players = room.players.filter((p) => decision.next.players.includes(p.id));
+    } else if (room.phase === "standings") {
       const series = this.series();
       const decision = series === null ? null : seriesDecision(series);
       if (series === null || decision === null || decision.over) return;
@@ -819,11 +883,11 @@ export class RoomDO extends DurableObject<Env> {
     }
     const here = players.filter((p) => !p.left && this.socketsOf(p.id).length > 0);
     if (here.length === 0 || !here.every((p) => p.ready)) return;
-    if (room.phase === "standings") await this.nextVsRound(now);
+    if (room.phase === "standings") await (isRune(room.mode) ? this.nextRuneRound(now) : this.nextVsRound(now));
     else await this.startRound(null, "results");
   }
 
-  /** Team Versus: whether everyone seated is on a team, and both teams are the same size. */
+  /** The team modes: whether everyone seated is on a team, and both teams are the same size. */
   private teamsEven(room: Room): boolean {
     return teamsEven(room.teams ?? {}, seated(room).map((p) => p.id));
   }
@@ -870,6 +934,7 @@ export class RoomDO extends DurableObject<Env> {
     this.syncHeat(room, now);
     this.broadcast(this.lobbyMessage(room));
     if (isVersus(room.mode) && midGame) this.racerOut(room, player.id, now);
+    if (isRune(room.mode) && midGame) this.runeRacerOut(room, player.id, now);
   }
 
   // -------------------------------------------------------------------------
@@ -1354,6 +1419,196 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   // -------------------------------------------------------------------------
+  // Rune Grid (shared/rune-grid.md)
+  // -------------------------------------------------------------------------
+
+  /**
+   * START from the lobby, or AGAIN from results: a new game with the room's
+   * settings, and round 1's countdown. Nothing to wait for: the grid is made
+   * here, with every word on it.
+   */
+  private async startRuneSeries(from: RoomPhase): Promise<void> {
+    const room = this.room()!;
+    if (room.phase !== from) return;
+    const now = Date.now();
+    const racers = seated(room).map((p) => p.id);
+    const series = newRuneSeries({
+      matchId: crypto.randomUUID(),
+      settings: room.rune ?? DEFAULT_RUNE,
+      // No heat to pick: XP is at Auto's, from the players' levels.
+      heat: this.autoHeat(room),
+      racerIds: racers,
+      startedAt: now + COUNTDOWN_MS,
+      ...(room.mode === "runeteam" ? { teams: { ...room.teams } } : {}),
+    });
+    this.write(STANDINGS, null);
+    this.write(RESULTS, null);
+    this.beginRuneRound(room, series, { round: 1, tiebreak: false, players: racers }, now);
+    await this.schedule();
+  }
+
+  /** A Rune Grid round's countdown: everyone gets ROUND_START, with the same grid. */
+  private beginRuneRound(room: Room, series: RuneSeries, next: RuneNextRound, now: number): void {
+    const round = newRuneRound({
+      round: next.round,
+      tiebreak: next.tiebreak,
+      heat: series.heat,
+      settings: series.settings,
+      playerIds: next.players,
+      startsAt: now + COUNTDOWN_MS,
+      rand: Math.random,
+    });
+    series.standingsEndsAt = null;
+    room.phase = "countdown";
+    // Ready (NEXT) was for this round.
+    for (const p of room.players) p.ready = false;
+    this.write(ROUND, round);
+    this.write(SERIES, series);
+    this.write(ROOM, room);
+    this.broadcast({ op: "ROUND_START", ...runeRoundStartFields(round, series, Date.now()) });
+    this.broadcast(this.lobbyMessage(room));
+  }
+
+  /** The standings are over (or everyone is ready): the next round's countdown, or the results. */
+  private async nextRuneRound(now: number): Promise<void> {
+    const room = this.room();
+    const series = this.runeSeries();
+    if (room === null || series === null || room.phase !== "standings") return;
+    const decision = runeDecision(series);
+    if (decision.over) {
+      // Players leaving already ends a game at once, so this is only a safety net.
+      this.endRuneSeries(room, series, decision, now);
+      await this.announceResults();
+      return;
+    }
+    this.beginRuneRound(room, series, decision.next, now);
+    await this.schedule();
+  }
+
+  /**
+   * SUBMIT in Rune Grid: a word on the board, new for the sender (and, in
+   * pooled teams, their team), is theirs. The sender gets WORD_RESULT,
+   * pooled teammates RUNE_WORD, and everyone the sender's RUNE_TALLY.
+   */
+  private async runeSubmit(ws: WebSocket, room: Room, player: Player, raw: string, seq: number, now: number): Promise<void> {
+    const shown = normalizeWord(raw) ?? raw.trim().toUpperCase().slice(0, 16);
+    const reply = (result: WordResultKind, extra: { word?: string; by?: string; points?: number } = {}) =>
+      send(ws, { op: "WORD_RESULT", seq, word: shown, result, ...extra });
+
+    const limiter = this.submitLimiter(player.id, now);
+    if (!limiter.take(now)) return reply("rate_limited");
+    if (room.phase === "standings" || room.phase === "results") return reply("too_late");
+    const round = this.runeRound();
+    const series = this.runeSeries();
+    if (room.phase !== "round" || round === null || series === null) return this.error(ws, "wrong_phase");
+    if (!round.playerIds.includes(player.id) || !canRuneRace(series, player.id)) return this.error(ws, "not_playing");
+
+    const team = teammatesOf(series, player.id);
+    const outcome = applyRuneSubmit(round, player.id, raw, team);
+    switch (outcome.result) {
+      case "invalid":
+        limiter.recordInvalid(now);
+        return reply("invalid");
+      case "already":
+        return reply("already", { word: outcome.word, by: outcome.by });
+      case "found":
+        this.write(ROUND, round);
+        reply("found", { word: outcome.word, points: outcome.points });
+        for (const id of team) for (const s of this.socketsOf(id)) send(s, { op: "RUNE_WORD", word: outcome.word, by: player.id, points: outcome.points });
+        this.broadcast({ op: "RUNE_TALLY", id: player.id, words: runeTallyOf(round)[player.id] ?? 0 });
+        return;
+    }
+  }
+
+  /**
+   * Ends the Rune Grid round now and sends ROUND_END: then the standings,
+   * or the results if the game is over (or `stop`: the room is closing).
+   * {@link announceResults} then writes the game and sends SERIES_END.
+   */
+  private finishRuneRound(now: number, stop = false): void {
+    const room = this.room();
+    const round = this.runeRound();
+    const series = this.runeSeries();
+    if (room === null || round === null || series === null || room.phase !== "round") return;
+    const end = endRuneRound(series, round, now, STANDINGS_MS, stop);
+    this.write(STANDINGS, end.fields);
+    this.broadcast({ op: "ROUND_END", ...end.fields });
+    if (end.outcome !== null) return this.endRuneSeries(room, series, end.outcome, now);
+    room.phase = "standings";
+    series.standingsEndsAt = end.fields.standingsEndsAt;
+    this.write(SERIES, series);
+    this.write(ROOM, room);
+    this.broadcast(this.lobbyMessage(room));
+  }
+
+  /**
+   * A racer left mid-game: they're out, their points kept. If that decides
+   * it (one racer, or one team, left), it ends now: a round in play is
+   * scored first; a countdown's round never started, so it doesn't count.
+   */
+  private runeRacerOut(room: Room, id: string, now: number): void {
+    const series = this.runeSeries();
+    if (series === null || !markRuneOut(series, id)) return;
+    this.write(SERIES, series);
+    const decision = runeDecision(series);
+    if (!decision.over) return;
+    if (room.phase === "round") return this.finishRuneRound(now, true);
+    this.endRuneSeries(room, series, decision, now);
+  }
+
+  /** The room is closing mid-game: it ends here, decided or not. */
+  private stopRuneNow(room: Room, now: number): void {
+    if (room.phase === "round") return this.finishRuneRound(now, true);
+    const series = this.runeSeries();
+    if (series !== null && isPlayingPhase(room.phase)) this.endRuneSeries(room, series, stopRuneSeries(series), now);
+  }
+
+  /**
+   * The game is over: results phase, as a Versus series ends, and the
+   * results are queued for D1 (written as a Versus series: XP, stats, the
+   * match). {@link announceResults} writes them and sends SERIES_END.
+   */
+  private endRuneSeries(room: Room, series: RuneSeries, outcome: VsSeriesOutcome, now: number): void {
+    const results = runeSeriesResults(series, outcome);
+    const usernames = Object.fromEntries(room.players.map((p) => [p.id, p.username]));
+    series.standingsEndsAt = null;
+    room.phase = "results";
+    room.players = room.players.filter((p) => !p.left);
+    for (const p of room.players) p.ready = false;
+    if (room.teams !== undefined) {
+      room.teams = Object.fromEntries(Object.entries(room.teams).filter(([id]) => room.players.some((p) => p.id === id)));
+    }
+    room.hostId = pickHost(room.hostId, this.seats(room));
+    const award: VsPendingAward = {
+      kind: "vs",
+      record: {
+        matchId: series.matchId,
+        code: room.code,
+        heat: series.heat,
+        length: series.settings.rounds,
+        startedAt: series.startedAt,
+        endedAt: now,
+        results,
+        forged: {},
+        scoring: "total",
+        game: "rune",
+        rune: series.settings,
+      },
+      usernames,
+      history: [],
+      rune: runeSeriesEndFields(series),
+      attempts: 0,
+      // Written straight away by announceResults(); this is only for a write cut off by a restart.
+      retryAt: now + AWARD_RETRY_MS,
+      announced: false,
+    };
+    this.write(AWARD, award);
+    this.write(RESULTS, this.seriesEndFields(award, {}));
+    this.write(SERIES, series);
+    this.write(ROOM, room);
+  }
+
+  // -------------------------------------------------------------------------
   // Deadlines
   // -------------------------------------------------------------------------
 
@@ -1384,6 +1639,9 @@ export class RoomDO extends DurableObject<Env> {
         if (isVersus(room.mode)) {
           this.finishVsRound("timeout", now);
           if (await this.announceQueued()) wroteAward = true;
+        } else if (isRune(room.mode)) {
+          this.finishRuneRound(now);
+          if (await this.announceQueued()) wroteAward = true;
         } else {
           this.finishRound("timeout", now);
           await this.announceResults();
@@ -1393,7 +1651,7 @@ export class RoomDO extends DurableObject<Env> {
       }
       const standingsEnd = room.phase === "standings" ? this.series()?.standingsEndsAt : null;
       if (standingsEnd != null && now >= standingsEnd && !this.starting) {
-        await this.nextVsRound(now);
+        await (isRune(room.mode) ? this.nextRuneRound(now) : this.nextVsRound(now));
         continue;
       }
       // Co-op: the wait after AGAIN is over.
@@ -1493,7 +1751,7 @@ export class RoomDO extends DurableObject<Env> {
    * that resumed, for {@link sendHeated}.
    */
   private syncHeat(room: Room, now: number, except?: WebSocket): (string | null)[] {
-    if (room.phase !== "countdown" && room.phase !== "round") return [];
+    if ((room.phase !== "countdown" && room.phase !== "round") || isRune(room.mode)) return [];
     const resumed: (string | null)[] = [];
     let changed = false;
     const sync = (clock: HeatClock, whose: string | null, here: boolean) => {
@@ -1543,6 +1801,7 @@ export class RoomDO extends DurableObject<Env> {
 
   /** The round's next melt (deadline plus grace), and on whose mold (`null`: the co-op team's). `null` if none is coming. */
   private nextMelt(room: Room): { readonly at: number; readonly id: string | null } | null {
+    if (isRune(room.mode)) return null;
     if (isVersus(room.mode)) {
       const round = this.vsRound();
       const series = this.series();
@@ -1559,6 +1818,7 @@ export class RoomDO extends DurableObject<Env> {
    * results are written; Versus: ROUND_END now). False if nothing melted.
    */
   private melt(room: Room, id: string | null, now: number): boolean {
+    if (isRune(room.mode)) return false;
     if (isVersus(room.mode)) {
       const round = this.vsRound();
       if (round === null || id === null || !applyVsMelt(round, id)) return false;
@@ -1665,6 +1925,7 @@ export class RoomDO extends DurableObject<Env> {
     const room = this.room();
     if (room === null) return;
     if (isVersus(room.mode)) this.stopSeriesNow(room, now);
+    else if (isRune(room.mode)) this.stopRuneNow(room, now);
     else this.finishRound("timeout", now);
     if (this.read<PendingAward>(AWARD) !== null) await this.announceResults();
     for (const ws of this.ctx.getWebSockets()) closeSocket(ws, CLOSE_ROOM_CLOSED, "room_closed");
@@ -1720,9 +1981,9 @@ export class RoomDO extends DurableObject<Env> {
   // Messages
   // -------------------------------------------------------------------------
 
-  /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus, the median level of the seated players. */
+  /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus and Rune Grid, the median level of the seated players. */
   private autoHeat(room: Room): HeatTier {
-    if (isVersus(room.mode)) {
+    if (isSeriesMode(room.mode)) {
       const levels = seated(room).map((p) => p.level);
       return levels.length === 0 ? heatForLevel(1) : vsHeat(levels);
     }
@@ -1735,8 +1996,12 @@ export class RoomDO extends DurableObject<Env> {
     return chosenHeat(room.heat ?? "auto", this.autoHeat(room));
   }
 
-  /** The co-op round's heat or the Versus series' while one is on, else {@link nextHeat}. */
+  /** The co-op round's heat or the series' (Versus, Rune Grid) while one is on, else {@link nextHeat}. */
   private heatOf(room: Room): HeatTier {
+    if (isRune(room.mode)) {
+      const series = this.runeSeries();
+      return series !== null && isPlayingPhase(room.phase) ? series.heat : this.autoHeat(room);
+    }
     if (isVersus(room.mode)) {
       const series = this.series();
       if (series !== null && isPlayingPhase(room.phase)) return series.heat;
@@ -1767,12 +2032,13 @@ export class RoomDO extends DurableObject<Env> {
           color: p.color,
           ready: p.ready,
           connected: this.socketsOf(p.id, except).length > 0,
-          ...(room.mode === "team" ? { team: room.teams?.[p.id] ?? 0 } : {}),
+          ...(isTeamMode(room.mode) ? { team: room.teams?.[p.id] ?? 0 } : {}),
         })),
       ...(isVersus(room.mode) ? { series: room.series ?? DEFAULT_SERIES } : {}),
-      ...(room.variant === "survival" && room.mode !== "team" ? { variant: room.variant } : {}),
+      ...(room.variant === "survival" && room.mode !== "team" && !isRune(room.mode) ? { variant: room.variant } : {}),
       ...(room.mode === "team" ? { rule: this.ruleOf(room) } : {}),
       ...(room.mode === "vs" ? { scoring: this.scoringOf(room) } : {}),
+      ...(isRune(room.mode) ? { rune: this.runeSettingsOf(room) } : {}),
       ...(room.nextAt === undefined ? {} : { nextAt: room.nextAt }),
     };
   }
@@ -1791,6 +2057,13 @@ export class RoomDO extends DurableObject<Env> {
     return room.scoring ?? DEFAULT_SCORING;
   }
 
+  /** Rune Grid: the game's settings while one is on, else what the next one plays. */
+  private runeSettingsOf(room: Room): RuneSettings {
+    const series = this.runeSeries();
+    if (series !== null && isPlayingPhase(room.phase)) return series.settings;
+    return room.rune ?? DEFAULT_RUNE;
+  }
+
   private lobbyMessage(room: Room, except?: WebSocket): ServerMessage {
     return { op: "LOBBY", ...this.lobbyFields(room, except) };
   }
@@ -1798,6 +2071,7 @@ export class RoomDO extends DurableObject<Env> {
   /** SNAPSHOT for `receiver` (Versus shows them their own mold). */
   private snapshot(room: Room, now: number, receiver: string): ServerMessage {
     if (isVersus(room.mode)) return this.vsSnapshot(room, now, receiver);
+    if (isRune(room.mode)) return this.runeSnapshot(room, now, receiver);
     const round = this.coopRound();
     const results = this.read<ResultsFields>(RESULTS);
     return {
@@ -1837,6 +2111,29 @@ export class RoomDO extends DurableObject<Env> {
     };
   }
 
+  /**
+   * Rune Grid SNAPSHOT: `round` (with the receiver's words and everyone's
+   * tally) during a countdown or round, `standings` (the last ROUND_END)
+   * during the standings and results, and `results` (the SERIES_END) during
+   * results.
+   */
+  private runeSnapshot(room: Room, now: number, receiver: string): ServerMessage {
+    const round = this.runeRound();
+    const series = this.runeSeries();
+    const standings = this.read<RuneRoundEndFields>(STANDINGS);
+    const results = this.read<SeriesEndFields>(RESULTS);
+    const live = room.phase === "countdown" || room.phase === "round";
+    const after = room.phase === "standings" || room.phase === "results";
+    return {
+      op: "SNAPSHOT",
+      lobby: this.lobbyFields(room),
+      ...(live && round !== null && series !== null ? { round: runeRoundSnapshot(round, series, receiver, now) } : {}),
+      ...(after && standings !== null ? { standings } : {}),
+      ...(room.phase === "results" && results !== null ? { results } : {}),
+      ...this.chatFields(),
+    };
+  }
+
   private resultsFields(award: CoopPendingAward, xp: Readonly<Record<string, XpBody>>): ResultsFields {
     const { players, ...rest } = award.record.results;
     return {
@@ -1870,9 +2167,10 @@ export class RoomDO extends DurableObject<Env> {
       })),
       history: award.history ?? [],
       xp,
-      ...(team === undefined ? {} : { team, rule: award.record.rule ?? DEFAULT_TEAM_RULE, teamTally: teamTally ?? [0, 0] }),
+      ...(team === undefined ? {} : { team, ...(award.rune === undefined ? { rule: award.record.rule ?? DEFAULT_TEAM_RULE } : {}), teamTally: teamTally ?? [0, 0] }),
       ...(scoring === undefined ? {} : { scoring }),
       ...(tiebreak === undefined ? {} : { tiebreak }),
+      ...(award.rune === undefined ? {} : { game: "rune" as const, rune: award.rune }),
     };
   }
 
