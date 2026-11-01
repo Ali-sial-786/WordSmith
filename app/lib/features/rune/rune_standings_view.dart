@@ -41,6 +41,10 @@ class RuneStandingsView extends ConsumerStatefulWidget {
 class _RuneStandingsViewState extends ConsumerState<RuneStandingsView> {
   late final Timer _tick;
 
+  /// The final round's clock, now and as last built.
+  (bool, int) get _clock => (_s.finalRoundUntil != null, clockSeconds(_s.finalRoundLeft));
+  (bool, int)? _face;
+
   /// The round being counted, and how many of each racer's words have been.
   int? _countingRound;
   int _counted = 0;
@@ -55,8 +59,9 @@ class _RuneStandingsViewState extends ConsumerState<RuneStandingsView> {
   @override
   void initState() {
     super.initState();
+    // The final round's clock counts whole seconds: rebuild only then.
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (mounted) setState(() {});
+      if (mounted && _clock != _face) setState(() {});
     });
   }
 
@@ -112,6 +117,7 @@ class _RuneStandingsViewState extends ConsumerState<RuneStandingsView> {
   @override
   Widget build(BuildContext context) {
     final s = _s;
+    _face = _clock;
     final end = s.standings;
     final text = Theme.of(context).textTheme;
     if (end == null) return Center(child: CircularProgressIndicator(color: Palette.molten));

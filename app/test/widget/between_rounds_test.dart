@@ -149,6 +149,10 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
+/// What the room screen does whenever the session changes: builds the view
+/// again. (The views themselves only tick for their clocks.)
+void _rebuild(WidgetTester tester, Type view) => tester.element(find.byType(view)).markNeedsBuild();
+
 PlateButton _readyButton(WidgetTester tester) => tester.widget<PlateButton>(find.byKey(const ValueKey('ready-next')));
 
 /// The bar counts down on the real clock, which a slow machine moves on
@@ -179,6 +183,7 @@ void main() {
 
     // The server says I'm ready: the button waits on the others.
     s.lobby = _lobby('vs', 'standings', ready: {'u1', 'u2'});
+    _rebuild(tester, VsStandingsView);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('2 of 3 ready'), findsOneWidget);
     expect(_readyButton(tester).label, 'Ready!');

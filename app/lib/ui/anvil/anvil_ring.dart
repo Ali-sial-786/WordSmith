@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
 import '../theme/theme.dart';
-import '../widgets/forge_frame.dart';
+import '../widgets/filtered_image.dart';
 
 /// The letter ring on the anvil face. Swipe across tiles to build a word;
 /// swipe back onto the previous tile to drop the last letter; lift to submit.
@@ -251,15 +251,14 @@ class LetterTile extends StatelessWidget {
                   ),
                 ),
               // The hot tile glows fire-orange in every scheme.
-              SchemeIron(
-                enabled: !hot,
-                child: Image.asset(
-                  hot ? 'assets/images/tile_hot.png' : 'assets/images/tile_cold.png',
-                  width: d,
-                  height: d,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, _, _) => _PaintedTile(hot: hot),
-                ),
+              FilteredImage(
+                hot ? 'assets/images/tile_hot.png' : 'assets/images/tile_cold.png',
+                matrix: hot ? null : SchemeFilters.iron(),
+                width: d,
+                height: d,
+                fit: BoxFit.scaleDown,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, _, _) => _PaintedTile(hot: hot),
               ),
               Text(
                 letter,
@@ -315,19 +314,19 @@ class _AnvilFace extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      SchemeIron(
-        child: Image.asset(
-          'assets/images/anvil_face.webp',
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [Color(0xFF2E2A28), Color(0xFF221D1A), Color(0xFF151110)],
-                stops: [0, 0.8, 1],
-              ),
-              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 24)],
+      FilteredImage(
+        'assets/images/anvil_face.webp',
+        matrix: SchemeFilters.iron(),
+        filterQuality: FilterQuality.medium,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => const DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [Color(0xFF2E2A28), Color(0xFF221D1A), Color(0xFF151110)],
+              stops: [0, 0.8, 1],
             ),
+            boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 24)],
           ),
         ),
       ),

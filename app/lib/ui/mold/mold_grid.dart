@@ -8,7 +8,7 @@ import '../../engine/puzzle.dart';
 import '../effects/sparks.dart';
 import '../theme/palette.dart';
 import '../theme/theme.dart';
-import '../widgets/forge_frame.dart';
+import '../widgets/filtered_image.dart';
 import 'hammer_strike.dart';
 import 'mold_model.dart';
 import 'survival_overlay.dart';
@@ -335,24 +335,23 @@ class _MoldCellState extends State<MoldCell> with TickerProviderStateMixin {
     final layers = <Widget>[];
     if (!filled || t < 1) {
       layers.add(
-        SchemeIron(
-          child: Image.asset(
-            'assets/images/cell_empty.png',
-            width: s,
-            height: s,
-            fit: BoxFit.fill,
-            errorBuilder: (_, _, _) => DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF14100D), Color(0xFF2A221C)],
-                ),
-                border: Border.all(color: const Color(0xFF3E322A), width: 1),
+        FilteredImage(
+          'assets/images/cell_empty.png',
+          matrix: SchemeFilters.iron(),
+          width: s,
+          height: s,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (_, _, _) => DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF14100D), Color(0xFF2A221C)],
               ),
-              child: SizedBox.square(dimension: s),
+              border: Border.all(color: const Color(0xFF3E322A), width: 1),
             ),
+            child: SizedBox.square(dimension: s),
           ),
         ),
       );

@@ -114,55 +114,57 @@ class MeaningView extends ConsumerWidget {
     };
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(word.toUpperCase(), style: displayStyle(28, color: Palette.molten)),
-              ),
-              IconButton(
-                tooltip: 'Hear it',
-                onPressed: () => ref.read(speakerProvider).say(word),
-                icon: GameIcon('speaker', size: 26, color: Palette.whiteHeat),
-              ),
-            ],
-          ),
-          switch (online ?? offline) {
-            AsyncData(:final value?) => _Senses(meaning: value),
-            AsyncData() || AsyncError() => Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                "This one isn't in the forge's lexicon, but it's a real word.",
-                style: text.bodyMedium?.copyWith(color: Palette.steel),
-              ),
+      child: RepaintBoundary(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(word.toUpperCase(), style: displayStyle(28, color: Palette.molten)),
+                ),
+                IconButton(
+                  tooltip: 'Hear it',
+                  onPressed: () => ref.read(speakerProvider).say(word),
+                  icon: GameIcon('speaker', size: 26, color: Palette.whiteHeat),
+                ),
+              ],
             ),
-            _ when online != null => Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.molten),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Not in the forge's lexicon. Looking further afield…",
-                      style: text.bodyMedium?.copyWith(color: Palette.steel),
+            switch (online ?? offline) {
+              AsyncData(:final value?) => _Senses(meaning: value),
+              AsyncData() || AsyncError() => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  "This one isn't in the forge's lexicon, but it's a real word.",
+                  style: text.bodyMedium?.copyWith(color: Palette.steel),
+                ),
+              ),
+              _ when online != null => Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.molten),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Not in the forge's lexicon. Looking further afield…",
+                        style: text.bodyMedium?.copyWith(color: Palette.steel),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            _ => Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(color: Palette.molten)),
-            ),
-          },
-        ],
+              _ => Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator(color: Palette.molten)),
+              ),
+            },
+          ],
+        ),
       ),
     );
   }

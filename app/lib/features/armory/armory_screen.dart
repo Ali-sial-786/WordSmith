@@ -157,35 +157,37 @@ class _Tile extends StatelessWidget {
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: state == _State.building ? blueprintPaper : Palette.forgeBlack,
-                  borderRadius: BorderRadius.circular(18),
+          child: RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: state == _State.building ? blueprintPaper : Palette.forgeBlack,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: MasterworkArt(spec: info.spec, collected: collected, size: 160),
                 ),
-                child: MasterworkArt(spec: info.spec, collected: collected, size: 160),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                info.name,
-                textAlign: TextAlign.center,
-                style: displayStyle(24, color: state == _State.done ? Palette.gold : Palette.whiteHeat),
-              ),
-              const SizedBox(height: 6),
-              if (info.blurb.isNotEmpty) Text(info.blurb, textAlign: TextAlign.center, style: text.bodyMedium),
-              const SizedBox(height: 10),
-              Text(
-                state == _State.done
-                    ? 'Forged.'
-                    : '$collected of ${info.spec.pieces} blueprint pieces. Finishing it gives '
-                          '$masterworkXp XP, a Chisel and a Spark Shower.',
-                textAlign: TextAlign.center,
-                style: text.bodySmall?.copyWith(color: Palette.steel),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Text(
+                  info.name,
+                  textAlign: TextAlign.center,
+                  style: displayStyle(24, color: state == _State.done ? Palette.gold : Palette.whiteHeat),
+                ),
+                const SizedBox(height: 6),
+                if (info.blurb.isNotEmpty) Text(info.blurb, textAlign: TextAlign.center, style: text.bodyMedium),
+                const SizedBox(height: 10),
+                Text(
+                  state == _State.done
+                      ? 'Forged.'
+                      : '$collected of ${info.spec.pieces} blueprint pieces. Finishing it gives '
+                            '$masterworkXp XP, a Chisel and a Spark Shower.',
+                  textAlign: TextAlign.center,
+                  style: text.bodySmall?.copyWith(color: Palette.steel),
+                ),
+              ],
+            ),
           ),
         ),
       ),

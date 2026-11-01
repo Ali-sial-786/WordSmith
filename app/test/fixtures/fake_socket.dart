@@ -12,6 +12,9 @@ class FakeSocketChannel implements WebSocketChannel {
   /// The server sends [message].
   void receive(Map<String, Object?> message) => _incoming.add(jsonEncode(message));
 
+  /// The connection drops (no close code: the network went, say).
+  Future<void> drop() => _incoming.close();
+
   @override
   Future<void> get ready => Future.value();
 

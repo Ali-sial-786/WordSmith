@@ -10,6 +10,10 @@ import '../ui/theme/palette.dart';
 
 enum RoomConnection { connecting, live, reconnecting, closed }
 
+/// [d] in whole seconds, rounded up: this changes exactly when a clock on
+/// screen counting [d] down does (and at zero, when it runs out).
+int clockSeconds(Duration d) => (d.inMicroseconds / 1e6).ceil();
+
 /// One line in the round's live feed.
 class FeedLine {
   const FeedLine(this.text, this.color);
@@ -66,6 +70,11 @@ abstract class RoomSession extends ChangeNotifier {
 
   Duration get countdownLeft =>
       roundStartsAt == null ? Duration.zero : Duration(milliseconds: (roundStartsAt! - serverNow).clamp(0, 1 << 31));
+
+  /// What the round's clocks show: the countdown's and the round's seconds.
+  /// A view that checks the time more often than once a second rebuilds
+  /// only when this changes.
+  (int, int) get clockFace => (clockSeconds(countdownLeft), clockSeconds(timeLeft));
 
   // ---- Teams (Team Versus, Team Rune Rush) ----
 

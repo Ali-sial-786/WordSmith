@@ -434,6 +434,9 @@ class AccountController extends Notifier<AccountState> {
 
   // ---- Solo progress ----
 
+  /// The app is back in front: friends' presence and invites come back now.
+  void wake() => _hub?.wake();
+
   /// Sends finished solo puzzles to the server and takes its profile as the
   /// truth. Safe to call any time; it does nothing unless ready.
   Future<void> sync() async {

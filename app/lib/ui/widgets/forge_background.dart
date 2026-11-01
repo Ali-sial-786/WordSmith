@@ -8,12 +8,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../game/providers.dart';
 import '../effects/forge_fire.dart';
 import '../effects/sparks.dart';
+import '../effects/step_clock.dart';
 import '../theme/palette.dart';
 
 /// A dimmed scene image (blurred if asked) behind a screen, with an animated
 /// forge fire along the bottom and drifting embers. Falls back to a warm
 /// gradient while art is missing.
-class ForgeBackground extends ConsumerWidget {
+///
+/// The fire and the embers step together on one [StepClock], so they redraw
+/// the screen about 30 times a second between them, and both hold still
+/// while anything on the screen scrolls: scrolling redraws the screen on
+/// every frame, and that's when frames need to be cheapest.
+class ForgeBackground extends ConsumerStatefulWidget {
   const ForgeBackground({
     super.key,
     required this.image,
@@ -42,7 +48,41 @@ class ForgeBackground extends ConsumerWidget {
   final double warmth;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ForgeBackground> createState() => _ForgeBackgroundState();
+}
+
+class _ForgeBackgroundState extends ConsumerState<ForgeBackground> with SingleTickerProviderStateMixin {
+  /// How long the flames hold still after the screen last scrolled.
+  static const _scrollHold = Duration(milliseconds: 300);
+
+  late final _clock = StepClock(this, start: 7.3);
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(
+      settingsProvider.select((s) => s.reducedMotion),
+      (_, reduced) => reduced ? _clock.stop() : _clock.start(),
+      fireImmediately: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  bool _scrolled(ScrollNotification n) {
+    if (n is ScrollStartNotification || n is ScrollUpdateNotification || n is OverscrollNotification) {
+      _clock.hold(_scrollHold);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ForgeBackground(:image, :child, :dim, :blur, :fire, :fireHeight, :warmth) = widget;
     final reducedMotion = ref.watch(settingsProvider.select((s) => s.reducedMotion));
     final light = Palette.isLight;
     // Dark text needs a pale scene: a light scheme washes the picture out
@@ -98,11 +138,12 @@ class ForgeBackground extends ConsumerWidget {
                 intensity: light ? fire * 0.5 : fire,
                 animate: !reducedMotion,
                 colorFilter: fireTint == null ? null : ColorFilter.matrix(fireTint),
+                clock: _clock,
               ),
             ),
           ),
-        if (!reducedMotion) const EmberDrift(count: 22),
-        child,
+        if (!reducedMotion) EmberDrift(count: 22, clock: _clock),
+        NotificationListener<ScrollNotification>(onNotification: _scrolled, child: child),
       ],
     );
   }

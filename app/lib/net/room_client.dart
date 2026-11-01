@@ -1359,6 +1359,21 @@ class RoomClient {
 
   Future<void> start() => _socket.start();
 
+  /// The app went to the background: while it's there the rejoin window
+  /// doesn't run out (see [ReconnectingSocket.sleep]).
+  void sleep() => _socket.sleep();
+
+  /// The app is back: reconnects now if down, or checks the connection is
+  /// still alive.
+  void wake() => _socket.wake();
+
+  /// The room is gone (its summary says so): stops trying, as if it had
+  /// closed the connection itself (4000).
+  Future<void> gone() async {
+    await _socket.stop();
+    if (!_closed.isCompleted) _closed.complete(4000);
+  }
+
   void _onMessage(String data) {
     try {
       final event = RoomEvent.parse(jsonDecode(data) as Map<String, dynamic>);

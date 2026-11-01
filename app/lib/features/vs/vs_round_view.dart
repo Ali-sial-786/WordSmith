@@ -55,6 +55,9 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
   late final StreamSubscription<RoomEvent> _sub;
   late final Timer _tick;
 
+  /// The clocks as last built.
+  (int, int)? _face;
+
   /// Rivals already sounded as nearly done, per round.
   final Set<String> _warned = {};
   int _warnedRound = -1;
@@ -66,8 +69,9 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
   void initState() {
     super.initState();
     _sub = _s.effects.listen(_onEffect);
+    // The clocks count whole seconds: rebuild only when they turn over.
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (mounted) setState(() {});
+      if (mounted && _s.clockFace != _face) setState(() {});
     });
   }
 
@@ -177,6 +181,7 @@ class _VsRoundViewState extends ConsumerState<VsRoundView> {
       _orderRound = round.round;
       _order = List.generate(round.letters.length, (i) => i);
     }
+    _face = _s.clockFace;
     final counting = _s.countdownLeft > Duration.zero;
     final left = _s.timeLeft;
     final over = _s.roundOver;

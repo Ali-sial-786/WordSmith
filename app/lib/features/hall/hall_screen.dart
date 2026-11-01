@@ -60,198 +60,203 @@ class HallScreen extends ConsumerWidget {
               child: LayoutBuilder(
                 builder: (context, c) => SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: c.maxHeight - 48),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Align(alignment: Alignment.centerRight, child: HelpButton()),
-                        Text(
-                          'WORDSMITH',
-                          textAlign: TextAlign.center,
-                          style: displayStyle(
-                            40,
-                            color: Palette.molten,
-                          ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 28)]),
-                        ),
-                        Text(
-                          'Forge words. Level up.',
-                          textAlign: TextAlign.center,
-                          style: text.titleSmall?.copyWith(color: Palette.steel),
-                        ),
-                        const SizedBox(height: 22),
-                        const CrashNotice(),
-                        const _UpdateBanner(),
-                        if (online && !account.isReady) ...[_AccountBanner(state: account), const SizedBox(height: 14)],
-                        for (final invite in account.invites) ...[
-                          _InviteBanner(invite: invite),
-                          const SizedBox(height: 10),
-                        ],
-                        _ProfileCard(
-                          name: account.server?.username,
-                          avatar: account.server?.avatar,
-                          level: progress.level,
-                          rank: profile.rank.title,
-                          fraction: progress.fraction,
-                          xpLabel: '${progress.xpIntoLevel} / ${progress.xpForNext} XP',
-                          hints: {for (final k in HintKind.values) k: profile.hintCount(k)},
-                          onTap: () => context.push('/profile'),
-                        ),
-                        const SizedBox(height: 20),
-                        PlateButton(
-                          label: finished ? 'Campaign complete' : 'Forge (Solo play)',
-                          sublabel: finished
-                              ? 'Every puzzle forged ten times over!'
-                              : campaign.isMaster(stage)
-                              ? '${chapter.name} · Puzzle ${stage - chapter.first + 1}'
-                              : '${chapter.name} · Puzzle ${stage - chapter.first + 1} of ${chapter.count}',
-                          icon: 'anvil',
-                          primary: true,
-                          height: 72,
-                          onPressed: finished ? null : () => context.push('/play/$stage'),
-                        ),
-                        if (account.isReady) ...[
-                          const SizedBox(height: 12),
-                          const _DailyButton(),
-                          const SizedBox(height: 12),
-                          const _BoardButton(),
-                        ],
-                        const SizedBox(height: 12),
-                        PlateButton(
-                          label: 'The Crucible',
-                          sublabel: _crucibleLine(
-                            account.server?.survivalBest ??
-                                switch (ref.read(storeProvider).loadSurvivalBest()) {
-                                  final b? => SurvivalBest.fromJson(b),
-                                  null => null,
-                                },
+                  child: RepaintBoundary(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: c.maxHeight - 48),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Align(alignment: Alignment.centerRight, child: HelpButton()),
+                          Text(
+                            'WORDSMITH',
+                            textAlign: TextAlign.center,
+                            style: displayStyle(
+                              40,
+                              color: Palette.molten,
+                            ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 28)]),
                           ),
-                          icon: 'ember',
-                          onPressed: () => context.push('/crucible'),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: PlateButton(
-                                label: 'Chapters',
-                                sublabel: '9 metals',
-                                icon: 'map',
-                                onPressed: () => context.push('/chapters'),
-                              ),
+                          Text(
+                            'Forge words. Level up.',
+                            textAlign: TextAlign.center,
+                            style: text.titleSmall?.copyWith(color: Palette.steel),
+                          ),
+                          const SizedBox(height: 22),
+                          const CrashNotice(),
+                          const _UpdateBanner(),
+                          if (online && !account.isReady) ...[
+                            _AccountBanner(state: account),
+                            const SizedBox(height: 14),
+                          ],
+                          for (final invite in account.invites) ...[
+                            _InviteBanner(invite: invite),
+                            const SizedBox(height: 10),
+                          ],
+                          _ProfileCard(
+                            name: account.server?.username,
+                            avatar: account.server?.avatar,
+                            level: progress.level,
+                            rank: profile.rank.title,
+                            fraction: progress.fraction,
+                            xpLabel: '${progress.xpIntoLevel} / ${progress.xpForNext} XP',
+                            hints: {for (final k in HintKind.values) k: profile.hintCount(k)},
+                            onTap: () => context.push('/profile'),
+                          ),
+                          const SizedBox(height: 20),
+                          PlateButton(
+                            label: finished ? 'Campaign complete' : 'Forge (Solo play)',
+                            sublabel: finished
+                                ? 'Every puzzle forged ten times over!'
+                                : campaign.isMaster(stage)
+                                ? '${chapter.name} · Puzzle ${stage - chapter.first + 1}'
+                                : '${chapter.name} · Puzzle ${stage - chapter.first + 1} of ${chapter.count}',
+                            icon: 'anvil',
+                            primary: true,
+                            height: 72,
+                            onPressed: finished ? null : () => context.push('/play/$stage'),
+                          ),
+                          if (account.isReady) ...[
+                            const SizedBox(height: 12),
+                            const _DailyButton(),
+                            const SizedBox(height: 12),
+                            const _BoardButton(),
+                          ],
+                          const SizedBox(height: 12),
+                          PlateButton(
+                            label: 'The Crucible',
+                            sublabel: _crucibleLine(
+                              account.server?.survivalBest ??
+                                  switch (ref.read(storeProvider).loadSurvivalBest()) {
+                                    final b? => SurvivalBest.fromJson(b),
+                                    null => null,
+                                  },
                             ),
-                            if (online) ...[
+                            icon: 'ember',
+                            onPressed: () => context.push('/crucible'),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PlateButton(
+                                  label: 'Chapters',
+                                  sublabel: '9 metals',
+                                  icon: 'map',
+                                  onPressed: () => context.push('/chapters'),
+                                ),
+                              ),
+                              if (online) ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: PlateButton(
+                                    label: 'Friends',
+                                    sublabel: account.isReady ? '${account.friendsOnline} online' : 'Sign in first',
+                                    icon: 'friends',
+                                    onPressed: account.isReady ? () => context.push('/friends') : null,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PlateButton(
+                                  label: 'Co-op',
+                                  sublabel: account.isReady
+                                      ? 'Up to 4 smiths'
+                                      : online
+                                      ? 'Sign in first'
+                                      : 'Coming soon',
+                                  icon: 'tongs',
+                                  onPressed: account.isReady ? () => showCoopEntry(context) : null,
+                                ),
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: PlateButton(
-                                  label: 'Friends',
-                                  sublabel: account.isReady ? '${account.friendsOnline} online' : 'Sign in first',
-                                  icon: 'friends',
-                                  onPressed: account.isReady ? () => context.push('/friends') : null,
+                                  label: 'Versus',
+                                  sublabel: account.isReady
+                                      ? 'Up to 5 smiths'
+                                      : online
+                                      ? 'Sign in first'
+                                      : 'Coming soon',
+                                  icon: 'trophy',
+                                  onPressed: account.isReady ? () => showRoomEntry(context, 'vs') : null,
                                 ),
                               ),
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: PlateButton(
-                                label: 'Co-op',
-                                sublabel: account.isReady
-                                    ? 'Up to 4 smiths'
-                                    : online
-                                    ? 'Sign in first'
-                                    : 'Coming soon',
-                                icon: 'tongs',
-                                onPressed: account.isReady ? () => showCoopEntry(context) : null,
+                          ),
+                          const SizedBox(height: 12),
+                          PlateButton(
+                            key: const ValueKey('hall-team'),
+                            label: 'Team Versus',
+                            sublabel: account.isReady
+                                ? 'Two teams, up to 3 smiths each'
+                                : online
+                                ? 'Sign in first'
+                                : 'Coming soon',
+                            icon: 'friends',
+                            onPressed: account.isReady ? () => showRoomEntry(context, 'team') : null,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PlateButton(
+                                  key: const ValueKey('hall-rune'),
+                                  label: 'Rune Rush',
+                                  sublabel: account.isReady
+                                      ? 'Letter dice, up to 6'
+                                      : online
+                                      ? 'Sign in first'
+                                      : 'Coming soon',
+                                  icon: 'blueprint',
+                                  onPressed: account.isReady ? () => showRoomEntry(context, 'rune') : null,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: PlateButton(
-                                label: 'Versus',
-                                sublabel: account.isReady
-                                    ? 'Up to 5 smiths'
-                                    : online
-                                    ? 'Sign in first'
-                                    : 'Coming soon',
-                                icon: 'trophy',
-                                onPressed: account.isReady ? () => showRoomEntry(context, 'vs') : null,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: PlateButton(
+                                  key: const ValueKey('hall-runeteam'),
+                                  label: 'Team Rune Rush',
+                                  sublabel: account.isReady
+                                      ? 'Two teams on one grid'
+                                      : online
+                                      ? 'Sign in first'
+                                      : 'Coming soon',
+                                  icon: 'friends',
+                                  onPressed: account.isReady ? () => showRoomEntry(context, 'runeteam') : null,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        PlateButton(
-                          key: const ValueKey('hall-team'),
-                          label: 'Team Versus',
-                          sublabel: account.isReady
-                              ? 'Two teams, up to 3 smiths each'
-                              : online
-                              ? 'Sign in first'
-                              : 'Coming soon',
-                          icon: 'friends',
-                          onPressed: account.isReady ? () => showRoomEntry(context, 'team') : null,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: PlateButton(
-                                key: const ValueKey('hall-rune'),
-                                label: 'Rune Rush',
-                                sublabel: account.isReady
-                                    ? 'Letter dice, up to 6'
-                                    : online
-                                    ? 'Sign in first'
-                                    : 'Coming soon',
-                                icon: 'blueprint',
-                                onPressed: account.isReady ? () => showRoomEntry(context, 'rune') : null,
+                            ],
+                          ),
+                          if (account.isReady) ...[const SizedBox(height: 12), const HallLeaderboard()],
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PlateButton(
+                                  label: 'Profile',
+                                  icon: 'user',
+                                  height: 50,
+                                  onPressed: () => context.push('/profile'),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: PlateButton(
-                                key: const ValueKey('hall-runeteam'),
-                                label: 'Team Rune Rush',
-                                sublabel: account.isReady
-                                    ? 'Two teams on one grid'
-                                    : online
-                                    ? 'Sign in first'
-                                    : 'Coming soon',
-                                icon: 'friends',
-                                onPressed: account.isReady ? () => showRoomEntry(context, 'runeteam') : null,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: PlateButton(
+                                  label: 'Settings',
+                                  icon: 'settings',
+                                  height: 50,
+                                  onPressed: () => context.push('/settings'),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (account.isReady) ...[const SizedBox(height: 12), const HallLeaderboard()],
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: PlateButton(
-                                label: 'Profile',
-                                icon: 'user',
-                                height: 50,
-                                onPressed: () => context.push('/profile'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: PlateButton(
-                                label: 'Settings',
-                                icon: 'settings',
-                                height: 50,
-                                onPressed: () => context.push('/settings'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

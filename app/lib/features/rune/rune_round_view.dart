@@ -39,6 +39,9 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
   final _toast = GlobalKey<ToastLineState>();
   late final StreamSubscription<RoomEvent> _sub;
   late final Timer _tick;
+
+  /// The clock as last built.
+  (int, int)? _face;
   String _word = '';
 
   /// How the grid is turned, in quarter turns (the letters stay upright).
@@ -64,7 +67,8 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
         _ticked = secs;
         _sfx.play(SfxId.tick, volume: 0.6);
       }
-      setState(() {});
+      // The clock counts whole seconds: rebuild only when it turns over.
+      if (_s.clockFace != _face) setState(() {});
     });
   }
 
@@ -166,6 +170,7 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
   Widget build(BuildContext context) {
     final grid = _s.grid!;
     final text = Theme.of(context).textTheme;
+    _face = _s.clockFace;
     final counting = _s.countdownLeft > Duration.zero;
     final words = _s.mine.reversed.toList();
     return Stack(
@@ -250,18 +255,20 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
                     )
                   : SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
-                      child: Wrap(
-                        spacing: 5,
-                        runSpacing: 5,
-                        children: [
-                          for (final w in words)
-                            RuneWordChip(
-                              word: w.word,
-                              points: w.points,
-                              color: w.by == _s.me ? null : _s.colorOf(w.by),
-                              onTap: () => showMeanings(context, [w.word]),
-                            ),
-                        ],
+                      child: RepaintBoundary(
+                        child: Wrap(
+                          spacing: 5,
+                          runSpacing: 5,
+                          children: [
+                            for (final w in words)
+                              RuneWordChip(
+                                word: w.word,
+                                points: w.points,
+                                color: w.by == _s.me ? null : _s.colorOf(w.by),
+                                onTap: () => showMeanings(context, [w.word]),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
             ),

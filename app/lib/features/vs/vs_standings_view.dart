@@ -36,6 +36,10 @@ class VsStandingsView extends StatefulWidget {
 class _VsStandingsViewState extends State<VsStandingsView> {
   late final Timer _tick;
 
+  /// The final round's clock, now and as last built.
+  (bool, int) get _clock => (widget.session.finalRoundUntil != null, clockSeconds(widget.session.finalRoundLeft));
+  (bool, int)? _face;
+
   /// The banner the round's card settles into.
   final _banner = GlobalKey();
 
@@ -47,8 +51,9 @@ class _VsStandingsViewState extends State<VsStandingsView> {
   @override
   void initState() {
     super.initState();
+    // The final round's clock counts whole seconds: rebuild only then.
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (mounted) setState(() {});
+      if (mounted && _clock != _face) setState(() {});
     });
   }
 
@@ -61,6 +66,7 @@ class _VsStandingsViewState extends State<VsStandingsView> {
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
+    _face = _clock;
     final end = s.standings;
     final text = Theme.of(context).textTheme;
     if (end == null) return Center(child: CircularProgressIndicator(color: Palette.molten));

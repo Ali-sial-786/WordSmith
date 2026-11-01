@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppLifecycleState;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,6 +151,38 @@ class Party extends ChangeNotifier {
         break;
     }
     _effects.add(e);
+  }
+
+  /// The app went to the background or came back. Away, the room's
+  /// connection doesn't give up (the phone may be holding its network back);
+  /// back, it reconnects at once, or makes sure the connection still answers.
+  void lifecycle(AppLifecycleState state) {
+    final client = session?.client;
+    if (client == null) return;
+    switch (state) {
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        client.sleep();
+      case AppLifecycleState.resumed:
+        final down = !client.connected;
+        client.wake();
+        if (down) unawaited(_stillThere(client));
+      case AppLifecycleState.inactive || AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  /// Back with the connection down: a room that went while the app was away
+  /// says so now, not once the reconnecting has run out of time. Anything
+  /// short of that is the connection's to sort out (a racer who dropped
+  /// mid-series may always come back, whatever the summary says).
+  Future<void> _stillThere(RoomClient client) async {
+    try {
+      await _account.checkRoom(client.code);
+    } on ApiException catch (e) {
+      if (e.code == 'room_not_found' && session?.client == client) await client.gone();
+    } on Object catch (e) {
+      debugPrint('room check on resume: $e');
+    }
   }
 
   /// Leaves the room for good: the seat, the voice chat, all of it.

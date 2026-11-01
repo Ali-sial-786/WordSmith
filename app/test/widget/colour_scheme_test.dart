@@ -13,6 +13,7 @@ import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/ui/theme/appearance.dart';
 import 'package:wordsmith/ui/theme/palette.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
+import 'package:wordsmith/ui/widgets/filtered_image.dart';
 import 'package:wordsmith/ui/widgets/forge_frame.dart';
 
 import '../fixtures/puzzles.dart';
@@ -64,6 +65,9 @@ Future<void> _settle(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 200));
   }
 }
+
+/// Pictures drawn recoloured for the scheme.
+final _recoloured = find.byWidgetPredicate((w) => w is FilteredImage && w.matrix != null);
 
 void main() {
   tearDown(() => Palette.scheme = PaletteScheme.forge);
@@ -216,7 +220,7 @@ void main() {
     addTearDown(container.dispose);
     await _pumpApp(tester, container, '/');
     // The forge draws its frames as rendered; other schemes recolour each one.
-    final before = find.byType(ColorFiltered).evaluate().length;
+    final before = _recoloured.evaluate().length;
     GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/settings');
     await _settle(tester);
     await tester.scrollUntilVisible(find.byType(SchemePicker), 200);
@@ -226,7 +230,7 @@ void main() {
     await _settle(tester);
     expect(tester.takeException(), isNull);
     expect(find.byType(SchemePicker), findsNothing);
-    expect(find.byType(ColorFiltered).evaluate().length, greaterThan(before + 5));
+    expect(_recoloured.evaluate().length, greaterThan(before + 5));
   });
 
   for (final s in PaletteScheme.all) {
@@ -261,8 +265,10 @@ void main() {
       );
       await tester.pump();
       expect(tester.takeException(), isNull, reason: s.id);
-      // Recoloured schemes draw each kit piece's face over its frame.
-      expect(find.byType(ColorFiltered), s.asRendered ? findsNothing : findsWidgets);
+      // Recoloured schemes draw each kit piece's face over its frame,
+      // recoloured as it's painted rather than through a layer.
+      expect(_recoloured, s.asRendered ? findsNothing : findsWidgets);
+      expect(find.byType(ColorFiltered), findsNothing);
     }
   });
 }

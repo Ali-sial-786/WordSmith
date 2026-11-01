@@ -27,11 +27,16 @@ class NextRoundBar extends StatefulWidget {
 class _NextRoundBarState extends State<NextRoundBar> {
   late final Timer _tick;
 
+  /// The seconds left, now and as last built.
+  int get _secs => ((widget.endsAt - widget.session.serverNow) / 1000).ceil().clamp(0, 99);
+  int? _shown;
+
   @override
   void initState() {
     super.initState();
+    // It counts whole seconds: rebuild only when they turn over.
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (mounted) setState(() {});
+      if (mounted && _secs != _shown) setState(() {});
     });
   }
 
@@ -46,7 +51,7 @@ class _NextRoundBarState extends State<NextRoundBar> {
     final s = widget.session;
     final text = Theme.of(context).textTheme;
     final lobby = s.lobby;
-    final secs = ((widget.endsAt - s.serverNow) / 1000).ceil().clamp(0, 99);
+    final secs = _shown = _secs;
     final here = [
       for (final id in widget.players)
         if (lobby?.player(id) case final p? when p.connected) p,

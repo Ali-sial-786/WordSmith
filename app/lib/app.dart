@@ -27,6 +27,7 @@ import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'features/survival/crucible_screen.dart';
 import 'game/account.dart';
+import 'game/party.dart';
 import 'game/providers.dart';
 import 'game/daily_game.dart';
 import 'net/push.dart';
@@ -157,9 +158,13 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
     // Off screen, sounds keep going or pause as the player chose; closing
     // stops them (MainActivity makes sure of that natively).
     ref.read(sfxProvider).lifecycle(state);
+    // The room holds on while the app is away, and picks up on the way back.
+    ref.read(partyProvider).lifecycle(state);
     if (state != AppLifecycleState.resumed) return;
     // Catch up on anything finished offline when the player comes back.
-    ref.read(accountProvider.notifier).sync();
+    ref.read(accountProvider.notifier)
+      ..wake()
+      ..sync();
     // A new UTC day means a new Daily Commission.
     final daily = ref.read(dailyProvider).value;
     if (daily != null && daily.date != todayUtc()) ref.invalidate(dailyProvider);

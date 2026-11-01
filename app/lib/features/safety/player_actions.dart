@@ -214,64 +214,66 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Report ${widget.name}', style: displayStyle(20, color: Palette.molten)),
-            const SizedBox(height: 4),
-            Text('What happened?', style: text.titleSmall),
-            RadioGroup<ReportReason>(
-              groupValue: _reason,
-              onChanged: (r) => setState(() => _reason = r),
-              child: Column(
-                children: [
-                  for (final r in ReportReason.values)
-                    RadioListTile<ReportReason>(
-                      value: r,
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(r.label),
-                    ),
-                ],
+        child: RepaintBoundary(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Report ${widget.name}', style: displayStyle(20, color: Palette.molten)),
+              const SizedBox(height: 4),
+              Text('What happened?', style: text.titleSmall),
+              RadioGroup<ReportReason>(
+                groupValue: _reason,
+                onChanged: (r) => setState(() => _reason = r),
+                child: Column(
+                  children: [
+                    for (final r in ReportReason.values)
+                      RadioListTile<ReportReason>(
+                        value: r,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(r.label),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            TextField(
-              controller: _details,
-              maxLength: 500,
-              maxLines: 3,
-              minLines: 2,
-              style: fieldText(),
-              decoration: const InputDecoration(
-                labelText: 'Details (optional)',
-                hintText: 'Anything else we should know?',
+              TextField(
+                controller: _details,
+                maxLength: 500,
+                maxLines: 3,
+                minLines: 2,
+                style: fieldText(),
+                decoration: const InputDecoration(
+                  labelText: 'Details (optional)',
+                  hintText: 'Anything else we should know?',
+                ),
               ),
-            ),
-            if (widget.lines.isNotEmpty)
+              if (widget.lines.isNotEmpty)
+                Text(
+                  'Their ${widget.lines.length == 1 ? 'message' : '${widget.lines.length} messages'} in this room '
+                  'will be sent with your report.',
+                  style: text.bodySmall,
+                ),
+              const SizedBox(height: 4),
               Text(
-                'Their ${widget.lines.length == 1 ? 'message' : '${widget.lines.length} messages'} in this room '
-                'will be sent with your report.',
+                "${widget.name} won't know who reported them. To stop seeing them, block them too.",
                 style: text.bodySmall,
               ),
-            const SizedBox(height: 4),
-            Text(
-              "${widget.name} won't know who reported them. To stop seeing them, block them too.",
-              style: text.bodySmall,
-            ),
-            TextButton(
-              style: TextButton.styleFrom(alignment: Alignment.centerLeft, padding: EdgeInsets.zero),
-              onPressed: () => openWebPage(context, WebPage.terms),
-              child: const Text('Read the chat rules'),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(_error!, style: TextStyle(color: Palette.quenchRed)),
+              TextButton(
+                style: TextButton.styleFrom(alignment: Alignment.centerLeft, padding: EdgeInsets.zero),
+                onPressed: () => openWebPage(context, WebPage.terms),
+                child: const Text('Read the chat rules'),
               ),
-            FilledButton(
-              onPressed: _reason == null || _busy ? null : _send,
-              child: Text(_busy ? 'Sending…' : 'Send report'),
-            ),
-          ],
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(_error!, style: TextStyle(color: Palette.quenchRed)),
+                ),
+              FilledButton(
+                onPressed: _reason == null || _busy ? null : _send,
+                child: Text(_busy ? 'Sending…' : 'Send report'),
+              ),
+            ],
+          ),
         ),
       ),
     );

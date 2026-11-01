@@ -106,6 +106,10 @@ class HubClient {
 
   Future<void> start() => _socket.start();
 
+  /// The app is back in front: reconnects now if down (rather than at the
+  /// end of a long backoff), or checks the connection still answers.
+  void wake() => _socket.wake();
+
   void _onMessage(String data) {
     try {
       final event = HubEvent.parse(jsonDecode(data) as Map<String, dynamic>);

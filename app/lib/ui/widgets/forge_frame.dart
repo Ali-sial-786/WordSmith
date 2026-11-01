@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/providers.dart';
 import '../theme/palette.dart';
+import 'filtered_image.dart';
 
 /// The rendered metal frames of the UI kit (art/blender/ui_kit.py), drawn as
 /// nine-slice images at 3×. Each falls back to a painted look if its image
@@ -92,25 +93,6 @@ enum ForgeFrameKind {
   }
 }
 
-/// A rendered hero object (the anvil, a letter tile, a mold cell) in the
-/// scheme's iron ([SchemeFilters.iron]).
-class SchemeIron extends StatelessWidget {
-  const SchemeIron({super.key, required this.child, this.enabled = true});
-
-  final Widget child;
-
-  /// Off leaves [child] as rendered, without changing the widget tree (a
-  /// letter tile heating up keeps its image).
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final matrix = SchemeFilters.iron();
-    if (matrix == null) return child;
-    return ColorFiltered(colorFilter: ColorFilter.matrix(enabled ? matrix : SchemeFilters.identity), child: child);
-  }
-}
-
 /// A piece of the rendered UI kit (`assets/ui/<name>.png`), in the colour
 /// scheme's metals: as rendered for the forge; otherwise the frame and the
 /// face (`<name>_face.png`, cut out by art/blender/post.py) are recoloured
@@ -154,17 +136,20 @@ class KitImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (Palette.scheme.asRendered) return _image(asset);
+    // Recoloured as they're drawn: a ColorFiltered layer apiece would cost
+    // two offscreen passes per plate on every frame.
+    FilteredImage tinted(String path, List<double> matrix) => FilteredImage(
+      path,
+      matrix: matrix,
+      centerSlice: centerSlice,
+      scale: centerSlice == null ? 1 : 3,
+      errorBuilder: errorBuilder,
+    );
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColorFiltered(
-          colorFilter: ColorFilter.matrix(SchemeFilters.rim(gold: gold)),
-          child: _image(asset),
-        ),
-        ColorFiltered(
-          colorFilter: ColorFilter.matrix(SchemeFilters.face(hot: hot, warm: warm)),
-          child: _image(asset.replaceFirst('.png', '_face.png')),
-        ),
+        tinted(asset, SchemeFilters.rim(gold: gold)),
+        tinted(asset.replaceFirst('.png', '_face.png'), SchemeFilters.face(hot: hot, warm: warm)),
       ],
     );
   }

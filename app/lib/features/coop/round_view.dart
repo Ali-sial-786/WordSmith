@@ -55,6 +55,9 @@ class _RoundViewState extends ConsumerState<RoundView> {
   late final StreamSubscription<RoomEvent> _sub;
   late final Timer _tick;
 
+  /// The clocks as last built.
+  (int, int)? _face;
+
   CoopSession get _s => widget.session;
   Sfx get _sfx => ref.read(sfxProvider);
 
@@ -65,8 +68,9 @@ class _RoundViewState extends ConsumerState<RoundView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) HammerStrike.precache(context);
     });
+    // The clocks count whole seconds: rebuild only when they turn over.
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (mounted) setState(() {});
+      if (mounted && _s.clockFace != _face) setState(() {});
     });
   }
 
@@ -205,6 +209,7 @@ class _RoundViewState extends ConsumerState<RoundView> {
       _order = List.generate(round.letters.length, (i) => i);
     }
     final profile = ref.watch(profileProvider);
+    _face = _s.clockFace;
     final counting = _s.countdownLeft > Duration.zero;
     final left = _s.timeLeft;
     final playing = !counting && left > Duration.zero && _s.phase == 'round' && _s.melt == null;

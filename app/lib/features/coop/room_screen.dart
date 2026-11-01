@@ -110,6 +110,41 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     _party.join(widget.code, mode);
   }
 
+  /// The connection gave up (the app was away a long while, or the network
+  /// was): back in with a fresh connection if the room is still there and
+  /// will have us (a seat held, or a lobby with room), otherwise home, saying
+  /// why. No dead end to tap out of.
+  Future<void> _recover(RoomSession s) async {
+    if (s.closeCode == 4000) return _gone('This forge has closed.');
+    if (_lost) setState(() => _lost = false);
+    try {
+      final mode = await _account.checkRoom(widget.code);
+      if (!mounted || _session != s) return;
+      _party
+        ..clear()
+        ..join(widget.code, mode);
+    } on ApiException catch (e) {
+      if (!mounted || _session != s) return;
+      if (e.offline) {
+        setState(() => _lost = true);
+        return;
+      }
+      _gone(e.code == 'room_not_found' ? 'This forge has closed.' : e.friendly);
+    } on Object catch (e) {
+      // Signed out meanwhile, say: let the player try again or go.
+      debugPrint('room recovery: $e');
+      if (mounted && _session == s) setState(() => _lost = true);
+    }
+  }
+
+  /// The room is gone for us: back to the Hall, with [why] there.
+  void _gone(String why) {
+    if (!mounted) return;
+    if (_party.code == widget.code && !_party.active) _party.clear();
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(why)));
+    context.go('/');
+  }
+
   /// Waits (briefly) for the account, e.g. when a notification opened the
   /// app and sign-in is still being restored. False if signed out.
   Future<bool> _accountReady() async {
@@ -129,8 +164,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     return state.isReady;
   }
 
+  /// The closed session being dealt with, and whether that found us offline.
+  RoomSession? _recovering;
+  bool _lost = false;
+
   void _changed() {
     if (!mounted || _session == null) return;
+    final s = _session!;
+    if (s.connection == RoomConnection.closed && s.closeCode != 4001 && !_left && _recovering != s) {
+      _recovering = s;
+      // Not while the session is notifying (going home disposes it).
+      scheduleMicrotask(() => _recover(s));
+    }
     // No music in rooms: friends talk over voice chat, and the forge's
     // ambience and sounds carry the game. The hall music is back on leaving.
     _sfx.music(null);
@@ -341,9 +386,12 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   Widget _body(RoomSession s) {
     if (_left) return _message('Leaving the forge…', busy: true);
     if (s.connection == RoomConnection.closed) {
+      if (s.closeCode == 4001) return _message('Your account was deleted.', action: 'Back to the Forge Hall');
+      if (!_lost) return _message('Finding forge ${widget.code} again…', busy: true);
       return _message(
-        s.closeCode == 4001 ? 'Your account was deleted.' : 'This forge has closed.',
+        "Can't reach forge ${widget.code}. Check your connection.",
         action: 'Back to the Forge Hall',
+        onRetry: () => _recover(s),
       );
     }
     if (s.lobby == null) return _message('Joining forge ${widget.code}…', busy: true);
@@ -441,7 +489,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     );
   }
 
-  Widget _message(String text, {bool busy = false, String? action}) => Center(
+  Widget _message(String text, {bool busy = false, String? action, VoidCallback? onRetry}) => Center(
     child: Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -450,6 +498,10 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           if (busy) CircularProgressIndicator(color: Palette.molten),
           const SizedBox(height: 16),
           Text(text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+          if (onRetry != null) ...[
+            const SizedBox(height: 16),
+            FilledButton(key: const ValueKey('room-retry'), onPressed: onRetry, child: const Text('Try again')),
+          ],
           if (action != null) ...[
             const SizedBox(height: 16),
             TextButton(

@@ -1,9 +1,12 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../theme/palette.dart';
+import 'step_clock.dart';
 
 class _Spark {
   _Spark(this.pos, this.vel, this.life, this.size, this.color, this.gravity);
@@ -137,11 +140,15 @@ class _SparkPainter extends CustomPainter {
   bool shouldRepaint(_SparkPainter old) => false;
 }
 
-/// Slow embers drifting up from the bottom of a background.
+/// Slow embers drifting up from the bottom of a background, stepped by
+/// [clock] (their own when there's none; see [StepClock]).
 class EmberDrift extends StatefulWidget {
-  const EmberDrift({super.key, this.count = 14});
+  const EmberDrift({super.key, this.count = 14, this.clock});
 
   final int count;
+
+  /// Seconds to drift by; a [ForgeBackground] shares its fire's.
+  final ValueListenable<double>? clock;
 
   @override
   State<EmberDrift> createState() => _EmberDriftState();
@@ -158,9 +165,30 @@ class _EmberDriftState extends State<EmberDrift> with SingleTickerProviderStateM
     _respawn(e, initial: true);
     return e;
   });
-  final _repaint = ValueNotifier<int>(0);
-  late final Ticker _ticker = createTicker(_tick)..start();
-  Duration _last = Duration.zero;
+  StepClock? _own;
+  late ValueListenable<double> _clock;
+  late double _at;
+
+  @override
+  void initState() {
+    super.initState();
+    _listen();
+  }
+
+  void _listen() {
+    _clock = widget.clock ?? (_own ??= StepClock(this)..start());
+    _at = _clock.value;
+    _clock.addListener(_tick);
+  }
+
+  @override
+  void didUpdateWidget(EmberDrift oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.clock != widget.clock) {
+      _clock.removeListener(_tick);
+      _listen();
+    }
+  }
 
   void _respawn(_Ember e, {bool initial = false}) {
     e
@@ -173,55 +201,105 @@ class _EmberDriftState extends State<EmberDrift> with SingleTickerProviderStateM
       ..life = 0;
   }
 
-  void _tick(Duration elapsed) {
-    final dt = _last == Duration.zero ? 1 / 60 : (elapsed - _last).inMicroseconds / 1e6;
-    _last = elapsed;
+  void _tick() {
+    final now = _clock.value;
+    final dt = (now - _at).clamp(0.0, 0.1);
+    _at = now;
     for (final e in _embers) {
       e.life += dt;
       e.y -= e.speed * dt;
       if (e.y < -0.05) _respawn(e);
     }
-    _repaint.value++;
   }
 
   @override
   void dispose() {
-    _ticker.dispose();
-    _repaint.dispose();
+    _clock.removeListener(_tick);
+    _own?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
     child: RepaintBoundary(
-      child: CustomPaint(size: Size.infinite, painter: _EmberPainter(_embers, _repaint)),
+      child: CustomPaint(size: Size.infinite, painter: _EmberPainter(_embers, _clock)),
     ),
   );
 }
 
+/// A soft white dot, faded out to its edge like a blurred disc: each ember's
+/// glow is this, tinted. A blurred circle per ember per frame cost more.
+final ui.Image _glow = () {
+  const r = _EmberPainter.glowRadius;
+  final recorder = ui.PictureRecorder();
+  const rect = Rect.fromLTWH(0, 0, r * 2, r * 2);
+  Canvas(recorder).drawCircle(
+    rect.center,
+    r,
+    Paint()
+      ..shader = const RadialGradient(
+        colors: [Color(0xFFFFFFFF), Color(0xC0FFFFFF), Color(0x66FFFFFF), Color(0x1FFFFFFF), Color(0x00FFFFFF)],
+        stops: [0, 0.3, 0.55, 0.78, 1],
+      ).createShader(rect),
+  );
+  final picture = recorder.endRecording();
+  final image = picture.toImageSync((r * 2).toInt(), (r * 2).toInt());
+  picture.dispose();
+  return image;
+}();
+
 class _EmberPainter extends CustomPainter {
-  _EmberPainter(this.embers, Listenable repaint) : super(repaint: repaint);
+  _EmberPainter(this.embers, this.time) : super(repaint: time);
 
   final List<_Ember> embers;
+  final Listenable time;
+
+  /// The glow sprite's radius, in its own pixels.
+  static const glowRadius = 32.0;
+
+  /// How far the glow's blur reaches past its circle.
+  static const _blur = 6.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final glow = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3)
-      ..blendMode = BlendMode.plus;
     final core = Paint()..blendMode = BlendMode.plus;
+    final transforms = <RSTransform>[];
+    final colors = <Color>[];
     for (final e in embers) {
       final flicker = 0.55 + 0.45 * sin(e.life * 5 + e.phase);
       final fadeTop = (e.y * 3).clamp(0.0, 1.0);
       final a = flicker * fadeTop;
       final p = Offset((e.x + sin(e.life * 1.3 + e.phase) * e.sway) * size.width, e.y * size.height);
-      glow.color = Palette.ember.withValues(alpha: 0.5 * a);
+      // A circle of radius g blurred (sigma 3): it reaches about 6 further,
+      // and the small ones never get to full strength in the middle.
+      final g = e.size * 2.2;
+      transforms.add(
+        RSTransform.fromComponents(
+          rotation: 0,
+          scale: (g + _blur) / glowRadius,
+          anchorX: glowRadius,
+          anchorY: glowRadius,
+          translateX: p.dx,
+          translateY: p.dy,
+        ),
+      );
+      colors.add(Palette.ember.withValues(alpha: 0.5 * a * (1 - exp(-g * g / 18))));
       core.color = Palette.molten.withValues(alpha: 0.9 * a);
-      canvas.drawCircle(p, e.size * 2.2, glow);
       canvas.drawCircle(p, e.size * 0.7, core);
     }
+    canvas.drawAtlas(
+      _glow,
+      transforms,
+      List.filled(transforms.length, const Rect.fromLTWH(0, 0, glowRadius * 2, glowRadius * 2)),
+      colors,
+      BlendMode.modulate,
+      null,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..filterQuality = FilterQuality.low,
+    );
   }
 
   @override
-  bool shouldRepaint(_EmberPainter old) => false;
+  bool shouldRepaint(_EmberPainter old) => old.time != time || old.embers != embers;
 }

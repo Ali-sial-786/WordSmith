@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,10 +26,15 @@ import '../fixtures/puzzles.dart';
 
 const _me = AuthUser(uid: 'uid-ali', email: 'ali@example.com');
 
+/// The app in the K7Q2AB room. After [room], reconnecting gets each of
+/// [later] in turn (null: no network), the last one from then on.
 Future<(GoRouter, ProviderContainer)> _pumpApp(
   WidgetTester tester,
   FakeSocketChannel room, {
   bool textChat = true,
+  List<FakeSocketChannel?> later = const [],
+  Duration rejoinWindow = const Duration(seconds: 28),
+  FakeServer? server,
 }) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false, 'roomChat': false, 'textChat': textChat}),
@@ -36,7 +42,8 @@ Future<(GoRouter, ProviderContainer)> _pumpApp(
   });
   final store = await Store.open();
   final auth = FakeAuth(signedIn: _me);
-  final server = FakeServer()..username = 'Ali';
+  server ??= FakeServer();
+  server.username = 'Ali';
   // More friends than fit on a phone.
   for (var i = 1; i <= 14; i++) {
     server.friends.add({
@@ -55,6 +62,8 @@ Future<(GoRouter, ProviderContainer)> _pumpApp(
     'maxPlayers': 4,
     'seated': true,
   };
+  final channels = [room, ...later];
+  var connects = 0;
   final container = ProviderContainer(
     overrides: [
       storeProvider.overrideWithValue(store),
@@ -70,7 +79,17 @@ Future<(GoRouter, ProviderContainer)> _pumpApp(
       authServiceProvider.overrideWithValue(auth),
       apiClientProvider.overrideWithValue(server.client(auth)),
       roomClientFactoryProvider.overrideWithValue(
-        (code) => RoomClient(baseUrl: 'http://forge.test', code: code, token: auth.idToken, connect: (_, _) => room),
+        (code) => RoomClient(
+          baseUrl: 'http://forge.test',
+          code: code,
+          token: auth.idToken,
+          rejoinWindow: rejoinWindow,
+          connect: (_, _) {
+            final next = channels[min(connects++, channels.length - 1)];
+            if (next == null) throw StateError('no network');
+            return next;
+          },
+        ),
       ),
     ],
   );
@@ -334,5 +353,62 @@ void main() {
     await tester.tap(find.descendant(of: find.widgetWithText(ListTile, 'friend14'), matching: find.text('Invite')));
     await tester.pump();
     expect(find.text('Invited friend14'), findsOneWidget);
+  });
+
+  testWidgets("the connection gave up while I was away: straight back into the room, no dead end", (tester) async {
+    final room = FakeSocketChannel();
+    final again = FakeSocketChannel();
+    final (_, container) = await _pumpApp(tester, room, later: [null, again], rejoinWindow: Duration.zero);
+    _join(room);
+    await _pumpRoom(tester);
+    expect(find.text('The Guild Forge'), findsOneWidget);
+    final first = container.read(partyProvider).session!;
+
+    // Dropped, and the retry finds no network: it gives up.
+    await room.drop();
+    await tester.pump(const Duration(milliseconds: 1100));
+    await _pumpRoom(tester);
+    expect(first.connection, RoomConnection.closed);
+
+    // The room is still there and holds my seat: a fresh connection.
+    final second = container.read(partyProvider).session!;
+    expect(second, isNot(same(first)));
+    expect(find.text('This forge has closed.'), findsNothing);
+    _join(again);
+    await _pumpRoom(tester);
+    expect(find.text('The Guild Forge'), findsOneWidget);
+    expect(second.connection, RoomConnection.live);
+  });
+
+  testWidgets('the room went while I was away: home, saying so', (tester) async {
+    final room = FakeSocketChannel();
+    final server = FakeServer();
+    final (router, container) = await _pumpApp(tester, room, later: [null], server: server);
+    _join(room);
+    await _pumpRoom(tester);
+    final session = container.read(partyProvider).session!;
+
+    // Away: the connection drops and can't get back, but doesn't give up.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    server.rooms.remove('K7Q2AB');
+    await room.drop();
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(seconds: 2));
+    }
+    expect(session.connection, RoomConnection.reconnecting, reason: 'still trying after its 28 s');
+
+    // Back: the room is gone, so straight home, with a word about it.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await _pumpRoom(tester);
+    expect(session.connection, RoomConnection.closed);
+    expect(find.byType(HallScreen), findsOneWidget);
+    expect(find.text('This forge has closed.'), findsOneWidget);
+    expect(find.text('Back to the Forge Hall'), findsNothing);
+    expect(container.read(partyProvider).session, isNull);
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/');
   });
 }

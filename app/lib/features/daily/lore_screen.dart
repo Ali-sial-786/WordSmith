@@ -21,7 +21,10 @@ class LoreScreen extends ConsumerWidget {
     final unlocked = total.clamp(0, pages.length);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: Text("Smith's Lore", style: displayStyle(22))),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: Text("Smith's Lore", style: displayStyle(22)),
+      ),
       extendBodyBehindAppBar: true,
       body: ForgeBackground(
         image: 'assets/images/bg_hall.webp',
@@ -107,15 +110,17 @@ class LorePageView extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 4, 28, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Page $number · ${page.topicLabel}', style: text.labelMedium?.copyWith(color: Palette.molten)),
-          const SizedBox(height: 6),
-          Text(page.title, style: displayStyle(24)),
-          const SizedBox(height: 12),
-          Text(page.text, style: text.bodyLarge?.copyWith(height: 1.45)),
-        ],
+      child: RepaintBoundary(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Page $number · ${page.topicLabel}', style: text.labelMedium?.copyWith(color: Palette.molten)),
+            const SizedBox(height: 6),
+            Text(page.title, style: displayStyle(24)),
+            const SizedBox(height: 12),
+            Text(page.text, style: text.bodyLarge?.copyWith(height: 1.45)),
+          ],
+        ),
       ),
     );
   }

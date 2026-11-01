@@ -181,6 +181,10 @@ Future<void> _pump(WidgetTester tester, VsSession s, {bool calm = false}) async 
   await tester.pump();
 }
 
+/// What the room screen does whenever the session changes: builds the view
+/// again. (The views themselves only tick for their clocks.)
+void _rebuild(WidgetTester tester, Type view) => tester.element(find.byType(view)).markNeedsBuild();
+
 Finder _inCard(Finder f) => find.descendant(of: find.byType(RoundFlash), matching: f);
 Finder _inBanner(Finder f) => find.descendant(of: find.byType(RoundBanner), matching: f);
 
@@ -505,6 +509,7 @@ void main() {
     expect(_inCard(find.text('YOU WIN THE SERIES!')), findsNothing, reason: 'not before SERIES_END');
 
     s.seriesEnd = _seriesEnd('u1');
+    _rebuild(tester, VsStandingsView);
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
@@ -519,6 +524,7 @@ void main() {
 
     // Someone else's series.
     s.seriesEnd = _seriesEnd('u3');
+    _rebuild(tester, VsStandingsView);
     await tester.pump(const Duration(milliseconds: 300));
     expect(_inBanner(find.text('Kit wins the series')), findsOneWidget);
   });
