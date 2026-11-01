@@ -16,7 +16,7 @@ bool runeTilesTouch(int a, int b, int size) {
 /// The word a path of tiles spells.
 String runeWordOf(List<String> tiles, List<int> path) => [for (final i in path) tiles[i]].join();
 
-/// A Rune Grid of letter dice to find words on (shared/rune-grid.md). Swipe
+/// A Rune Rush grid of letter dice to find words on (shared/rune-rush.md). Swipe
 /// through touching tiles and let go to send the word; or tap tiles one by
 /// one and tap the last again to send it. Going back over the tile before
 /// takes the last one off. [quarterTurns] turns the grid (the letters stay

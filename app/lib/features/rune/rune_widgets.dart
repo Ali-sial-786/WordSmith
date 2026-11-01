@@ -9,13 +9,13 @@ import '../../video/video_call.dart';
 import '../vs/team_widgets.dart' show teamName;
 
 /// What a word of [letters] letters scores before any doubling: its length
-/// less two, at least 1 (shared/rune-grid.md).
+/// less two, at least 1 (shared/rune-rush.md).
 int runeWordPoints(int letters) => letters <= 3 ? 1 : letters - 2;
 
 /// "1:30" for [seconds].
 String runeClock(int seconds) => '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
 
-/// One line on how Team Rune Grid teams score.
+/// One line on how Team Rune Rush teams score.
 String teamScoringBlurb(String scoring) => scoring == 'sum'
     ? 'Everyone finds their own words; a team scores its smiths\' points added up'
     : 'A team shares one list of words; a word the other team missed scores double';
@@ -45,7 +45,7 @@ String runeRoundHeadline(RuneSession s, RuneRoundEnd end) {
   return winner == s.me ? 'You take the round with $points!' : '${s.nameOf(winner)} takes the round with $points';
 }
 
-/// The host's settings for the next Rune Grid game, which everyone sees:
+/// The host's settings for the next Rune Rush game, which everyone sees:
 /// the grid, the timer, the shortest word, the rounds, and in Team Rune
 /// Grid how teams score.
 class RuneSettingsPicker extends StatelessWidget {
@@ -278,7 +278,7 @@ class _RivalTile extends StatelessWidget {
   }
 }
 
-/// Team Rune Grid, under the timer: each team's points over the game and
+/// Team Rune Rush, under the timer: each team's points over the game and
 /// words found this round. My team is marked.
 class RuneTeamBar extends StatelessWidget {
   const RuneTeamBar({super.key, required this.session});

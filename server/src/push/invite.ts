@@ -19,7 +19,7 @@ export interface InviteNotice {
 }
 
 /** How each mode is named in a notification. */
-const MODE_NAMES: Readonly<Record<RoomMode, string>> = { coop: "Co-op", vs: "Versus", team: "Team Versus", rune: "Rune Grid", runeteam: "Team Rune Grid" };
+const MODE_NAMES: Readonly<Record<RoomMode, string>> = { coop: "Co-op", vs: "Versus", team: "Team Versus", rune: "Rune Rush", runeteam: "Team Rune Rush" };
 
 /** How long FCM keeps trying to deliver an invite; after that the room has likely moved on. */
 export const INVITE_TTL = "300s";

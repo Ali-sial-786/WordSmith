@@ -67,7 +67,7 @@ abstract class RoomSession extends ChangeNotifier {
   Duration get countdownLeft =>
       roundStartsAt == null ? Duration.zero : Duration(milliseconds: (roundStartsAt! - serverNow).clamp(0, 1 << 31));
 
-  // ---- Teams (Team Versus, Team Rune Grid) ----
+  // ---- Teams (Team Versus, Team Rune Rush) ----
 
   /// [id]'s team, 0 Copper or 1 Cobalt: the game's while one is on, else the lobby's.
   int? teamOf(String id) => lobby?.player(id)?.team;

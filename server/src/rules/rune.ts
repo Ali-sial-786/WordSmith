@@ -1,15 +1,15 @@
 /**
- * Rune Grid (shared/rune-grid.md): the letter-grid race. Everyone gets the
+ * Rune Rush (shared/rune-rush.md): the letter-grid race. Everyone gets the
  * same grid of letter dice and finds words by joining touching letters
  * (diagonals too, each die once per word) until the timer runs out. A word
  * scores its length less two (at least 1), double if nobody else found it.
  * A game is a few rounds, each on a fresh grid, won on the total.
  *
- * - **Rune Grid** (`rune`): everyone for themselves.
- * - **Team Rune Grid** (`runeteam`): two teams, scored one of two ways:
+ * - **Rune Rush** (`rune`): everyone for themselves.
+ * - **Team Rune Rush** (`runeteam`): two teams, scored one of two ways:
  *   `pooled` (a team shares one list of words, each counted once; a word
  *   the other team didn't find is unique) or `sum` (everyone scores as in
- *   Rune Grid, and a team's score is its players' added up).
+ *   Rune Rush, and a team's score is its players' added up).
  *
  * The words are the game's accepted list (rune-words.gen.ts), so a board's
  * every word is known when it's made: a SUBMIT is checked against that.
@@ -44,7 +44,7 @@ export interface RuneSettings {
   readonly seconds: RuneSeconds;
   readonly min: RuneMin;
   readonly rounds: RuneRounds;
-  /** Team Rune Grid only. */
+  /** Team Rune Rush only. */
   readonly teamScoring: RuneTeamScoring;
 }
 
@@ -422,7 +422,7 @@ export interface NewRuneSeriesInput {
   readonly heat: HeatTier;
   readonly racerIds: readonly string[];
   readonly startedAt: number;
-  /** Team Rune Grid: everyone's team. */
+  /** Team Rune Rush: everyone's team. */
   readonly teams?: Readonly<Record<string, TeamId>>;
 }
 
@@ -500,7 +500,7 @@ const ahead = (a: { points: number; words: number }, b: { points: number; words:
 /**
  * Where the game stands: every regular round played, the leader on points
  * (then words) wins; tied leaders play a tiebreaker round, only they in
- * Rune Grid, everyone in teams. One racer (or one team) left is a forfeit.
+ * Rune Rush, everyone in teams. One racer (or one team) left is a forfeit.
  */
 export function runeDecision(s: RuneSeries): RuneDecision {
   const active = activeRuneRacers(s);
@@ -536,7 +536,7 @@ export function totalsOf(s: RuneSeries): Record<string, number> {
   return Object.fromEntries(s.racers.map((r) => [r.id, r.points]));
 }
 
-/** `ROUND_START` for Rune Grid (and the round in a SNAPSHOT). */
+/** `ROUND_START` for Rune Rush (and the round in a SNAPSHOT). */
 export interface RuneRoundStartFields {
   readonly game: "rune";
   readonly round: number;
@@ -601,7 +601,7 @@ export function runeRoundSnapshot(r: RuneRound, s: RuneSeries, receiver: string,
   };
 }
 
-/** `ROUND_END` for Rune Grid (and the standings in a SNAPSHOT). */
+/** `ROUND_END` for Rune Rush (and the standings in a SNAPSHOT). */
 export interface RuneRoundEndFields extends RuneRoundSummary {
   readonly game: "rune";
   readonly totals: Readonly<Record<string, number>>;
@@ -728,7 +728,7 @@ export function runeSeriesResults(s: RuneSeries, outcome: VsSeriesOutcome): VsSe
   };
 }
 
-/** `SERIES_END.rune`: what a Rune Grid game adds to the Versus shape. */
+/** `SERIES_END.rune`: what a Rune Rush game adds to the Versus shape. */
 export interface RuneSeriesEndFields {
   readonly settings: RuneSettings;
   /** Every round, in order. */

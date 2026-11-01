@@ -14,7 +14,7 @@ import '../vs/team_widgets.dart';
 import 'rune_review.dart';
 import 'rune_widgets.dart';
 
-/// The end of a Rune Grid game: the places on points, my XP, the game round
+/// The end of a Rune Rush game: the places on points, my XP, the game round
 /// by round (each opens for its words and grid), and a rematch.
 class RuneResultsView extends StatelessWidget {
   const RuneResultsView({super.key, required this.session, required this.onLeave});
@@ -166,7 +166,7 @@ class RuneResultsView extends StatelessWidget {
   );
 }
 
-/// One place in a Rune Grid game: the medal, the smith, points, words and rounds won.
+/// One place in a Rune Rush game: the medal, the smith, points, words and rounds won.
 class _PlaceRow extends StatelessWidget {
   const _PlaceRow({required this.session, required this.place, required this.words});
 
@@ -231,7 +231,7 @@ class _PlaceRow extends StatelessWidget {
   }
 }
 
-/// Team Rune Grid: each team's points over the game (the winners ringed), and who scored what.
+/// Team Rune Rush: each team's points over the game (the winners ringed), and who scored what.
 class _TeamTotals extends StatelessWidget {
   const _TeamTotals({required this.session, required this.series, required this.game});
 

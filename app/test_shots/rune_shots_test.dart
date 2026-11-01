@@ -1,4 +1,4 @@
-// Renders Rune Grid's lobby, a round mid-swipe, the standings and the
+// Renders Rune Rush's lobby, a round mid-swipe, the standings and the
 // results to PNGs with the real fonts, for eyeballing.
 // Not part of the suite: flutter test test_shots/rune_shots_test.dart --update-goldens
 import 'dart:convert';
@@ -33,7 +33,7 @@ Future<void> _wait(WidgetTester tester) async {
 
 Future<void> _shot(String name) => expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/$name.png'));
 
-Future<void> _view(WidgetTester tester, Widget child) async {
+Future<void> _view(WidgetTester tester, Widget child, {bool settle = true}) async {
   SharedPreferences.setMockInitialValues({
     'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
   });
@@ -58,7 +58,15 @@ Future<void> _view(WidgetTester tester, Widget child) async {
       ),
     ),
   );
-  await _wait(tester);
+  if (settle) {
+    await _wait(tester);
+  } else {
+    // Fonts and images load in real time; the count runs on the test clock.
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await tester.pump();
+    }
+  }
 }
 
 RoomLobby _lobby(String phase, {String mode = 'rune'}) => RoomLobby.fromJson({
@@ -185,6 +193,31 @@ void main() {
       ..totals = end.totals;
     await _view(tester, RuneStandingsView(session: s, onLeave: () {}));
     await _shot('rune_standings');
+  });
+
+  testWidgets('counting the words', (tester) async {
+    // Plenty of words, so the count is still going when the shot is taken.
+    final json = _endJson();
+    const extra = ['TRADE', 'CRATE', 'DEAR', 'TEAR', 'RATED', 'ACRE', 'CARE', 'RACE', 'DARE', 'READ', 'TARE', 'TREAD'];
+    final found = json['found']! as Map<String, Object?>;
+    for (final (i, id) in _ids.indexed) {
+      found[id] = <Object>[
+        ...(found[id]! as List),
+        for (final (j, w) in extra.indexed)
+          if ((i + j) % (i + 2) != 0) {'word': w, 'points': w.length - 2, 'unique': (i + j) % 5 == 0},
+      ];
+    }
+    final end = RuneRoundEnd.fromJson(json);
+    final s = _session(_lobby('standings'))
+      ..standings = end
+      ..totals = end.totals
+      ..countRound = 2;
+    await _view(tester, RuneStandingsView(session: s, onLeave: () {}), settle: false);
+    await tester.pump(const Duration(milliseconds: 900));
+    await _shot('rune_count');
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   });
 
   testWidgets('results', (tester) async {

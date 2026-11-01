@@ -1,5 +1,5 @@
 /**
- * Rune Grid and Team Rune Grid (shared/rune-grid.md): the letter-grid race,
+ * Rune Rush and Team Rune Rush (shared/rune-rush.md): the letter-grid race,
  * through real sockets, D1 and alarms.
  */
 
@@ -74,7 +74,7 @@ async function nextRound(code: string, sockets: Socket[]): Promise<Message> {
   return first!;
 }
 
-describe("Rune Grid", () => {
+describe("Rune Rush", () => {
   it(
     "sets up in the lobby, plays its rounds on fresh grids, scores unique words double, and ends on the total with XP",
     async () => {
@@ -90,7 +90,7 @@ describe("Rune Grid", () => {
       expect(first).not.toHaveProperty("series");
       expect(first).not.toHaveProperty("scoring");
 
-      // Only the host sets it up, with known settings; team scoring is Team Rune Grid's.
+      // Only the host sets it up, with known settings; team scoring is Team Rune Rush's.
       sb.send({ op: "CONFIG", rune: { size: 5 } });
       expect(await sb.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "not_host" });
       sa.send({ op: "CONFIG", rune: { size: 7 } });
@@ -121,7 +121,7 @@ describe("Rune Grid", () => {
       expect(await find(sa, "QQQQ", 3)).toMatchObject({ result: "invalid" });
       expect(await find(sa, short, 4)).toMatchObject({ result: "found" });
       expect(await find(sb, short, 5)).toMatchObject({ result: "found" });
-      // No hints in Rune Grid.
+      // No hints in Rune Rush.
       sa.send({ op: "HINT", kind: "hammer" });
       expect(await sa.next({ op: "ERROR" })).toEqual({ op: "ERROR", code: "no_hints" });
 
@@ -214,14 +214,14 @@ describe("Rune Grid", () => {
       expect(again.results).toMatchObject({ game: "rune", winner });
       expect(again.standings).toMatchObject({ game: "rune", round: 3 });
 
-      // The match is in D1, marked as Rune Grid.
+      // The match is in D1, marked as Rune Rush.
       const match = await env.DB.prepare("SELECT mode, summary FROM matches WHERE id = ?1")
         .bind((await seriesOf(code)).matchId)
         .first<{ mode: string; summary: string }>();
       expect(match!.mode).toBe("vs");
       expect(JSON.parse(match!.summary)).toMatchObject({ game: "rune", scoring: "total", rune: { size: 5 } });
 
-      // The host can switch it to Team Rune Grid, which deals out teams.
+      // The host can switch it to Team Rune Rush, which deals out teams.
       sa.send({ op: "CONFIG", mode: "runeteam", rune: { teamScoring: "sum" } });
       const team = await lobbyWith(sb2, (l) => l.mode === "runeteam");
       expect(team).toMatchObject({ phase: "lobby", rune: { size: 5, teamScoring: "sum" } });
@@ -269,7 +269,7 @@ describe("Rune Grid", () => {
   });
 });
 
-describe("Team Rune Grid", () => {
+describe("Team Rune Rush", () => {
   it("pooled: teammates share one list and see each other's words; the team's total wins", async () => {
     const [a, b, c, d] = await Promise.all([setUpClient(), setUpClient(), setUpClient(), setUpClient()]);
     const code = await createRoom(a, "runeteam");

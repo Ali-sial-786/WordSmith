@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wordsmith/game/rune_session.dart';
 import 'package:wordsmith/net/room_client.dart';
 
-/// A local stand-in for a Rune Grid room that records what the client sends.
+/// A local stand-in for a Rune Rush room that records what the client sends.
 class _LocalRoom {
   late HttpServer server;
   final received = <Map<String, dynamic>>[];
@@ -199,6 +199,7 @@ void main() {
       ..send(_lobby('standings'));
     await until(() => session.phase == 'standings');
     expect(session.standings!.winner, 'u1');
+    expect(session.countRound, 1, reason: 'ended while I was here: counted on screen');
     expect(session.standings!.found['u1']!.first.unique, isTrue);
     expect(session.standings!.foundWords, {'QUILT', 'CAT'});
     expect(session.roundOver, isTrue);
@@ -297,6 +298,7 @@ void main() {
     room.send({'op': 'SNAPSHOT', 'lobby': _lobby('standings'), 'standings': _end(next: null), 'chat': []});
     await until(() => session.standings != null);
     expect(session.standings!.points['u1'], 7);
+    expect(session.countRound, isNull, reason: 'ended before I came back: not counted again');
     expect(session.totals['u1'], 11);
   });
 }

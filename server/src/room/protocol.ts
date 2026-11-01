@@ -11,7 +11,7 @@
  *
  * Server → client: WELCOME, LOBBY, ROUND_START, WORD_RESULT, CLAIMED, BONUS,
  * REVEAL, PROGRESS (Versus), HEATED and MELT (survival), RUNE_TALLY and
- * RUNE_WORD (Rune Grid), ROUND_END, SERIES_END (Versus and Rune Grid),
+ * RUNE_WORD (Rune Rush), ROUND_END, SERIES_END (Versus and Rune Rush),
  * SNAPSHOT, EMOTE, CHAT, ERROR.
  *
  * Survival (shared/survival.md) adds its fields only to survival rooms and
@@ -45,7 +45,7 @@ export type ClientMessage =
   /**
    * The host's choices: the variant and the heat (lobby or results), the
    * Versus series length (lobby), and the Team Versus rule and the
-   * Versus scoring (lobby or results), the Rune Grid settings (lobby or
+   * Versus scoring (lobby or results), the Rune Rush settings (lobby or
    * results), and the room's mode (lobby or results; it goes back to the
    * lobby). At least one.
    */
@@ -90,7 +90,7 @@ export type RoomErrorCode =
   | "chat_limit"
   /** Team Versus: START or AGAIN with teams of different sizes (or one empty). */
   | "uneven_teams"
-  /** Team Versus and Team Rune Grid: TEAM to a team that already has three. */
+  /** Team Versus and Team Rune Rush: TEAM to a team that already has three. */
   | "team_full"
   /** TEAM for someone who isn't in the room. */
   | "not_in_room"
@@ -211,7 +211,7 @@ export interface LobbyPlayer {
   readonly color: number;
   readonly ready: boolean;
   readonly connected: boolean;
-  /** Team Versus and Team Rune Grid only: 0 Copper, 1 Cobalt. */
+  /** Team Versus and Team Rune Rush only: 0 Copper, 1 Cobalt. */
   readonly team?: TeamId;
 }
 
@@ -239,7 +239,7 @@ export interface LobbyFields {
   readonly rule?: TeamRule;
   /** Versus only: how the series is won (CONFIG), from the next START or AGAIN; during a series, the series' own. */
   readonly scoring?: Scoring;
-  /** Rune Grid and Team Rune Grid only: the settings (CONFIG `rune`), from the next START or AGAIN; during a game, the game's own. */
+  /** Rune Rush and Team Rune Rush only: the settings (CONFIG `rune`), from the next START or AGAIN; during a game, the game's own. */
   readonly rune?: RuneSettings;
   /**
    * Co-op, after the host's AGAIN: when the next round's countdown starts
@@ -281,7 +281,7 @@ export interface ResultsFields extends Omit<CoopResults, "players"> {
   readonly xp: Readonly<Record<string, XpBody>>;
 }
 
-/** `found`: Rune Grid, a new word. */
+/** `found`: Rune Rush, a new word. */
 export type WordResultKind = "claimed" | "bonus" | "already" | "invalid" | "rate_limited" | "too_late" | "found";
 
 /** Versus XP: the co-op shape plus the embers collected during the series. */
@@ -303,9 +303,9 @@ export interface PodiumEntry {
   readonly bonus?: number;
 }
 
-/** `SERIES_END` (Versus and Rune Grid). */
+/** `SERIES_END` (Versus and Rune Rush). */
 export interface SeriesEndFields {
-  /** Rune Grid only: `"rune"`, with `rune` (the podium's `score` is points, `wins` rounds won, and `history` is empty). */
+  /** Rune Rush only: `"rune"`, with `rune` (the podium's `score` is points, `wins` rounds won, and `history` is empty). */
   readonly game?: "rune";
   readonly rune?: RuneSeriesEndFields;
   /** Team Versus: `null` (see `team`). */
@@ -350,9 +350,9 @@ export type ServerMessage =
       readonly seq: number;
       readonly word: string;
       readonly result: WordResultKind;
-      /** Co-op `already`: who has it (`null` if it filled in by itself). Rune Grid `already`: who found it (the sender, or a pooled teammate). */
+      /** Co-op `already`: who has it (`null` if it filled in by itself). Rune Rush `already`: who found it (the sender, or a pooled teammate). */
       readonly by?: string | null;
-      /** Co-op `claimed` and `bonus`; Rune Grid `found` (before any doubling). */
+      /** Co-op `claimed` and `bonus`; Rune Rush `found` (before any doubling). */
       readonly points?: number;
       /** Versus `claimed`: the slot, and the crossing slots it completed on the sender's mold. */
       readonly slot?: number;
@@ -378,9 +378,9 @@ export type ServerMessage =
   | ({ readonly op: "HEATED" } & HeatedFields)
   /** Survival: a heated slot melted (Versus: on `id`'s mold). Straight before ROUND_END. */
   | { readonly op: "MELT"; readonly slot: number; readonly id?: string }
-  /** Rune Grid: how many words `id` has found so far, to everyone. */
+  /** Rune Rush: how many words `id` has found so far, to everyone. */
   | { readonly op: "RUNE_TALLY"; readonly id: string; readonly words: number }
-  /** Team Rune Grid, pooled: a teammate found a word, to the rest of their team. */
+  /** Team Rune Rush, pooled: a teammate found a word, to the rest of their team. */
   | { readonly op: "RUNE_WORD"; readonly word: string; readonly by: string; readonly points: number }
   | ({ readonly op: "ROUND_END" } & (ResultsFields | VsRoundEndFields | RuneRoundEndFields))
   | ({ readonly op: "SERIES_END" } & SeriesEndFields)
@@ -407,9 +407,9 @@ export type ServerMessage =
   | {
       readonly op: "SNAPSHOT";
       readonly lobby: LobbyFields;
-      /** Rune Grid, during countdown and play: the round, the receiver's words (pooled teams: their team's) and everyone's tally. */
+      /** Rune Rush, during countdown and play: the round, the receiver's words (pooled teams: their team's) and everyone's tally. */
       readonly round?: RuneRoundSnapshot;
-      /** Rune Grid, during standings and results: the last ROUND_END. */
+      /** Rune Rush, during standings and results: the last ROUND_END. */
       readonly standings?: RuneRoundEndFields;
       readonly results?: SeriesEndFields;
       readonly chat?: readonly ChatLine[];

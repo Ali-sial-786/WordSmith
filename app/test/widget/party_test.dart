@@ -268,7 +268,7 @@ void main() {
     expect(find.text('Start the series'), findsOneWidget);
   });
 
-  testWidgets('the host takes the room to Rune Grid: its lobby, then a round on the grid', (tester) async {
+  testWidgets('the host takes the room to Rune Rush: its lobby, then a round on the grid', (tester) async {
     final room = FakeSocketChannel();
     final (_, container) = await _pumpApp(tester, room);
     _join(room);
@@ -285,7 +285,7 @@ void main() {
     });
     await _pumpRoom(tester);
     expect(container.read(partyProvider).session, isA<RuneSession>());
-    expect(find.text('Rune Grid'), findsWidgets);
+    expect(find.text('Rune Rush'), findsWidgets);
     expect(find.byKey(const ValueKey('rune-size-5')), findsOneWidget);
 
     final now = DateTime.now().millisecondsSinceEpoch;

@@ -17,12 +17,12 @@ const roomCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /// Start or join a co-op room.
 Future<void> showCoopEntry(BuildContext context) => showRoomEntry(context, 'coop');
 
-/// What a room mode is called: Co-op, Versus, Team Versus, Rune Grid or Team Rune Grid.
+/// What a room mode is called: Co-op, Versus, Team Versus, Rune Rush or Team Rune Rush.
 String modeName(String mode) => switch (mode) {
   'vs' => 'Versus',
   'team' => 'Team Versus',
-  'rune' => 'Rune Grid',
-  'runeteam' => 'Team Rune Grid',
+  'rune' => 'Rune Rush',
+  'runeteam' => 'Team Rune Rush',
   _ => 'Co-op',
 };
 
@@ -30,8 +30,8 @@ String modeName(String mode) => switch (mode) {
 String roomTitle(String mode) => switch (mode) {
   'vs' => 'Anvil Clash',
   'team' => 'Team Clash',
-  'rune' => 'Rune Grid',
-  'runeteam' => 'Team Rune Grid',
+  'rune' => 'Rune Rush',
+  'runeteam' => 'Team Rune Rush',
   _ => 'The Guild Forge',
 };
 

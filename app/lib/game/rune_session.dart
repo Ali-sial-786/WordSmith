@@ -5,7 +5,7 @@ import 'room_session.dart';
 
 export 'room_session.dart';
 
-/// One Rune Grid room (shared/rune-grid.md): everyone on the same grid of
+/// One Rune Rush room (shared/rune-rush.md): everyone on the same grid of
 /// letter dice, finding words before the timer runs out. Rivals' word counts
 /// show as they go, never their words; points are worked out when the round
 /// ends, a word only one smith (or team) found scoring double.
@@ -15,7 +15,7 @@ class RuneSession extends RoomSession {
   /// The round on now (or just over).
   RuneRoundStart? grid;
 
-  /// My words this round, in the order found; in pooled Team Rune Grid, my
+  /// My words this round, in the order found; in pooled Team Rune Rush, my
   /// team's.
   final List<RuneWord> mine = [];
 
@@ -26,16 +26,20 @@ class RuneSession extends RoomSession {
   /// it's over.
   Map<String, int> totals = {};
 
-  /// Team Rune Grid: each team's points, as for [totals].
+  /// Team Rune Rush: each team's points, as for [totals].
   List<int> teamTotals = const [0, 0];
 
   /// The last round's end, shown between rounds.
   RuneRoundEnd? standings;
+
+  /// A round that ended while I was here, its words still to be counted on
+  /// screen (one that ended before I came back isn't counted again).
+  int? countRound;
   SeriesEnd? seriesEnd;
 
   /// How long the round that decided the game stays up before the podium.
   /// "See the results" moves on sooner.
-  static const finalRoundHold = Duration(seconds: 12);
+  static const finalRoundHold = Duration(seconds: 16);
 
   /// Until when the round that decided the game shows by itself (this
   /// phone's clock); null once that's over or the player moved on.
@@ -50,10 +54,10 @@ class RuneSession extends RoomSession {
   /// The next game's settings, or during one, its own.
   RuneSettings get settings => lobby?.rune ?? const RuneSettings();
 
-  /// Team Rune Grid.
+  /// Team Rune Rush.
   bool get isTeam => grid?.isTeam ?? lobby?.mode == 'runeteam';
 
-  /// Team Rune Grid where a team shares one list of words.
+  /// Team Rune Rush where a team shares one list of words.
   bool get pooled => isTeam && (grid?.pooled ?? settings.pooled);
 
   /// The game's rounds (a tiebreaker comes after).
@@ -113,6 +117,7 @@ class RuneSession extends RoomSession {
   void _begin(RuneRoundStart start) {
     grid = start;
     standings = null;
+    countRound = null;
     seriesEnd = null;
     _endFinalRound();
     mine.clear();
@@ -159,6 +164,7 @@ class RuneSession extends RoomSession {
         tally[id] = words;
       case RuneRoundEnd(:final next):
         _ended(e);
+        countRound = e.round;
         if (next == null) _holdFinalRound();
       case SeriesEnd():
         seriesEnd = e;

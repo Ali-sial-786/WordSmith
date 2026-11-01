@@ -278,12 +278,12 @@ void main() {
     });
   });
 
-  testWidgets('the Rune Grid lobby: the host\'s settings, Auto heat and the start', (tester) async {
+  testWidgets('the Rune Rush lobby: the host\'s settings, Auto heat and the start', (tester) async {
     await _pump(tester, LobbyView(session: _session(_lobby('lobby')), onLeave: () {}));
     expect(tester.takeException(), isNull);
-    expect(find.text('Rune Grid'), findsWidgets);
+    expect(find.text('Rune Rush'), findsWidgets);
     expect(find.text('Smiths 6/6'), findsOneWidget);
-    expect(find.byKey(const ValueKey('heat-banner')), findsOneWidget, reason: 'Rune Grid heat is always Auto');
+    expect(find.byKey(const ValueKey('heat-banner')), findsOneWidget, reason: 'Rune Rush heat is always Auto');
     expect(find.byKey(const ValueKey('heat-auto')), findsNothing);
     expect(find.text('Survival'), findsNothing);
     for (final key in ['rune-size-5', 'rune-seconds-120', 'rune-min-4', 'rune-rounds-5']) {
@@ -301,7 +301,7 @@ void main() {
     );
   });
 
-  testWidgets('the Team Rune Grid lobby: teams, team scoring, and a guest can only look', (tester) async {
+  testWidgets('the Team Rune Rush lobby: teams, team scoring, and a guest can only look', (tester) async {
     await _pump(
       tester,
       LobbyView(
@@ -310,7 +310,7 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
-    expect(find.text('Team Rune Grid'), findsOneWidget);
+    expect(find.text('Team Rune Rush'), findsOneWidget);
     expect(find.text('The host picks'), findsOneWidget);
     expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('rune-team-scoring-sum'))).selected, isTrue);
     expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('rune-size-5'))).onSelected, isNull);
@@ -374,6 +374,62 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rune-all-words')));
     await tester.pump();
     expect(find.byKey(const ValueKey('rune-all-words')), findsNothing, reason: 'all shown');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the words are counted first, fast, while the list scrolls; then who took it', (tester) async {
+    final end = _end();
+    final s = _session(_lobby('standings'))
+      ..grid = _start()
+      ..standings = end
+      ..totals = end.totals
+      ..countRound = 2;
+    await _pump(tester, RuneStandingsView(session: s, onLeave: () {}));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('rune-count')), findsOneWidget);
+    expect(find.text("Time's up! Counting the words…"), findsOneWidget);
+    expect(find.byKey(const ValueKey('rune-headline')), findsNothing, reason: 'no spoilers while counting');
+    await tester.pump(const Duration(milliseconds: 400));
+    final early = tester.widget<Text>(find.byKey(const ValueKey('rune-count-points-u2'))).data!;
+    expect(int.parse(early), lessThan(end.points['u2']!));
+    // The list scrolls while the count goes on.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('rune-found-u6')),
+      300,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('rune-standings-list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.byKey(const ValueKey('rune-count')), findsOneWidget, reason: 'still counting, pinned above');
+    for (var i = 0; i < 50; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('rune-count')), findsNothing);
+    expect(s.countRound, isNull);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('rune-headline')),
+      -300,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('rune-standings-list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.text('You take the round with 15!'), findsOneWidget);
+  });
+
+  testWidgets('Skip jumps to the end of the count', (tester) async {
+    final s = _session(_lobby('standings', mode: 'runeteam'))
+      ..grid = _start(team: true)
+      ..standings = _end(team: true)
+      ..countRound = 2;
+    await _pump(tester, RuneStandingsView(session: s, onLeave: () {}));
+    expect(find.byKey(const ValueKey('rune-count-team-0')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rune-skip-count')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('rune-count')), findsNothing);
+    expect(find.text('Your team takes the round, 29–21'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

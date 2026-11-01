@@ -202,7 +202,7 @@ class HallScreen extends ConsumerWidget {
                             Expanded(
                               child: PlateButton(
                                 key: const ValueKey('hall-rune'),
-                                label: 'Rune Grid',
+                                label: 'Rune Rush',
                                 sublabel: account.isReady
                                     ? 'Letter dice, up to 6'
                                     : online
@@ -216,7 +216,7 @@ class HallScreen extends ConsumerWidget {
                             Expanded(
                               child: PlateButton(
                                 key: const ValueKey('hall-runeteam'),
-                                label: 'Team Rune Grid',
+                                label: 'Team Rune Rush',
                                 sublabel: account.isReady
                                     ? 'Two teams on one grid'
                                     : online

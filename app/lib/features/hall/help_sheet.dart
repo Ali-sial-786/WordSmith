@@ -174,7 +174,7 @@ List<_Section> _sections() => [
     'Play with friends',
     signIn: true,
     intro:
-        'Tap **Co-op**, **Versus**, **Team Versus**, **Rune Grid** or **Team Rune Grid** and light a forge to host: you get a 6-letter room code to share, or '
+        'Tap **Co-op**, **Versus**, **Team Versus**, **Rune Rush** or **Team Rune Rush** and light a forge to host: you get a 6-letter room code to share, or '
         "invite friends straight in. To join, type a friend's code or tap their open room. In a room you "
         'can write in the chat, send quick emotes and talk over voice chat, and turn your camera on there '
         "for video. Hold someone's message, or tap the menu next to their name, to mute, block or report them.",
@@ -220,7 +220,7 @@ List<_Section> _sections() => [
       ),
       _Entry(
         'blueprint',
-        'Rune Grid and Team Rune Grid',
+        'Rune Rush and Team Rune Rush',
         'Up to 6 smiths get the same grid of letter dice: 4×4, 5×5 or 6×6. Find words by swiping through '
             'touching letters (across, up and down or diagonally, each letter once), or tap them one by one '
             'and tap the last again. Words need 3 letters or more (the host can ask for 4 or 5); **Qu** is one '
@@ -230,7 +230,7 @@ List<_Section> _sections() => [
             'The host picks the grid, the timer (30 seconds to 3 minutes) and 1, 3 or 5 rounds; the most points '
             'over the game wins, and a tie at the top plays a tiebreaker round. Between rounds you see everyone\'s '
             'words and every word that was on the grid.\n\n'
-            '**Team Rune Grid:** Copper against Cobalt. With **pooled words** a team shares one list and sees '
+            '**Team Rune Rush:** Copper against Cobalt. With **pooled words** a team shares one list and sees '
             "each other's words as they come; with **points added up** everyone finds their own and the team's "
             'points are summed.',
       ),

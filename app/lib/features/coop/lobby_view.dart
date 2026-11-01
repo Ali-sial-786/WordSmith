@@ -42,7 +42,7 @@ class LobbyView extends ConsumerWidget {
     final me = session.myPlayer;
     final vs = lobby.isVs && session is VsSession;
     final rune = lobby.isRune && session is RuneSession;
-    // Two to start: Versus, Team Versus and both Rune Grids.
+    // Two to start: Versus, Team Versus and both Rune Rush modes.
     final series = vs || rune;
     final team = lobby.isTeam && series;
     final max = lobby.maxPlayers;
@@ -80,7 +80,7 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),
         const SizedBox(height: 12),
-        // Rune Grid's heat is always Auto, from the middle level.
+        // Rune Rush's heat is always Auto, from the middle level.
         if (session.isHost && !rune)
           HeatPicker(session: session)
         else

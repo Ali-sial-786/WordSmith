@@ -36,7 +36,7 @@ export function normalizeRoomCode(raw: string): string | null {
 
 /**
  * `team` is Team Versus: Versus with two teams (rules/teams.ts). `rune` and
- * `runeteam` are Rune Grid and Team Rune Grid (rules/rune.ts), played on a
+ * `runeteam` are Rune Rush and Team Rune Rush (rules/rune.ts), played on a
  * letter grid instead of molds.
  */
 export type RoomMode = "coop" | "vs" | "team" | "rune" | "runeteam";
@@ -53,12 +53,12 @@ export function isVersus(mode: RoomMode): boolean {
   return mode === "vs" || mode === "team";
 }
 
-/** Whether rooms of this mode play Rune Grid: Rune Grid and Team Rune Grid. */
+/** Whether rooms of this mode play Rune Rush: Rune Rush and Team Rune Rush. */
 export function isRune(mode: RoomMode): boolean {
   return mode === "rune" || mode === "runeteam";
 }
 
-/** Whether rooms of this mode play as two teams: Team Versus and Team Rune Grid. */
+/** Whether rooms of this mode play as two teams: Team Versus and Team Rune Rush. */
 export function isTeamMode(mode: RoomMode): boolean {
   return mode === "team" || mode === "runeteam";
 }

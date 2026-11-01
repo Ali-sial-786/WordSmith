@@ -2,7 +2,7 @@
 /**
  * Writes src/rules/rune-words.gen.ts: every accepted word (the same list as
  * the puzzles' bonus words, tools/puzzlegen/data/accepted.txt: 3-8 letters,
- * no names or blocked words), for refereeing Rune Grid (shared/rune-grid.md).
+ * no names or blocked words), for refereeing Rune Rush (shared/rune-rush.md).
  *
  *   node scripts/build-rune-words.mjs
  *

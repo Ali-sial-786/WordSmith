@@ -32,7 +32,7 @@
  * - **Versus:** `lobby → countdown → round → standings → countdown → … →
  *   results`, a series of rounds on everyone's own copy of the mold. XP
  *   is written once, at the end of the series.
- * - **Rune Grid** (shared/rune-grid.md): a series as in Versus, on a
+ * - **Rune Rush** (shared/rune-rush.md): a series as in Versus, on a
  *   letter grid made in the room (no puzzle from D1), won on points.
  * - **Survival** (shared/survival.md), a variant of either, chosen with
  *   CONFIG: one heated word at a time per mold (the team's, or each
@@ -265,7 +265,7 @@ interface Room {
   scoring?: Scoring;
   /** Co-op, after the host's AGAIN: when the next round's countdown starts, unless everyone is ready sooner. */
   nextAt?: number;
-  /** Rune Grid: the next game's settings (CONFIG `rune`). */
+  /** Rune Rush: the next game's settings (CONFIG `rune`). */
   rune?: RuneSettings;
 }
 
@@ -298,7 +298,7 @@ interface VsPendingAward extends AwardProgress {
   readonly usernames: Readonly<Record<string, string>>;
   /** The series' rounds, for SERIES_END (D1 doesn't keep them). Absent in awards stored before it. */
   readonly history?: readonly VsRoundSummary[];
-  /** Rune Grid only: its rounds and totals, for SERIES_END. */
+  /** Rune Rush only: its rounds and totals, for SERIES_END. */
   readonly rune?: RuneSeriesEndFields;
 }
 
@@ -406,12 +406,12 @@ export class RoomDO extends DurableObject<Env> {
     return this.read<VsSeries>(SERIES);
   }
 
-  /** The Rune Grid round: only in a Rune Grid room. */
+  /** The Rune Rush round: only in a Rune Rush room. */
   private runeRound(): RuneRound | null {
     return this.read<RuneRound>(ROUND);
   }
 
-  /** The Rune Grid game: only in a Rune Grid room. */
+  /** The Rune Rush game: only in a Rune Rush room. */
   private runeSeries(): RuneSeries | null {
     return this.read<RuneSeries>(SERIES);
   }
@@ -682,7 +682,7 @@ export class RoomDO extends DurableObject<Env> {
         if (message.rule !== undefined && mode !== "team") return this.error(ws, "bad_message");
         if (message.scoring !== undefined && mode !== "vs") return this.error(ws, "bad_message");
         if (message.variant === "survival" && mode === "team") return this.error(ws, "bad_message");
-        // Rune Grid has its own settings, and no variant or heat (its XP heat is Auto's).
+        // Rune Rush has its own settings, and no variant or heat (its XP heat is Auto's).
         if (message.rune !== undefined && !isRune(mode)) return this.error(ws, "bad_message");
         if (message.rune?.teamScoring !== undefined && mode !== "runeteam") return this.error(ws, "bad_message");
         if ((message.variant !== undefined || message.heat !== undefined) && isRune(mode)) return this.error(ws, "bad_message");
@@ -786,7 +786,7 @@ export class RoomDO extends DurableObject<Env> {
    * nobody ready. Players keep their colour where the new mode has it and
    * nobody before them does; the team modes deal players onto the two
    * teams in join order; Versus gets the default series length unless it
-   * had one, and Rune Grid the default settings.
+   * had one, and Rune Rush the default settings.
    */
   private switchMode(room: Room, mode: RoomMode): void {
     // The same mode again (back from the results): the teams stay as they were.
@@ -1419,7 +1419,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   // -------------------------------------------------------------------------
-  // Rune Grid (shared/rune-grid.md)
+  // Rune Rush (shared/rune-rush.md)
   // -------------------------------------------------------------------------
 
   /**
@@ -1447,7 +1447,7 @@ export class RoomDO extends DurableObject<Env> {
     await this.schedule();
   }
 
-  /** A Rune Grid round's countdown: everyone gets ROUND_START, with the same grid. */
+  /** A Rune Rush round's countdown: everyone gets ROUND_START, with the same grid. */
   private beginRuneRound(room: Room, series: RuneSeries, next: RuneNextRound, now: number): void {
     const round = newRuneRound({
       round: next.round,
@@ -1486,7 +1486,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
-   * SUBMIT in Rune Grid: a word on the board, new for the sender (and, in
+   * SUBMIT in Rune Rush: a word on the board, new for the sender (and, in
    * pooled teams, their team), is theirs. The sender gets WORD_RESULT,
    * pooled teammates RUNE_WORD, and everyone the sender's RUNE_TALLY.
    */
@@ -1521,7 +1521,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
-   * Ends the Rune Grid round now and sends ROUND_END: then the standings,
+   * Ends the Rune Rush round now and sends ROUND_END: then the standings,
    * or the results if the game is over (or `stop`: the room is closing).
    * {@link announceResults} then writes the game and sends SERIES_END.
    */
@@ -1981,7 +1981,7 @@ export class RoomDO extends DurableObject<Env> {
   // Messages
   // -------------------------------------------------------------------------
 
-  /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus and Rune Grid, the median level of the seated players. */
+  /** What a heat of `"auto"` gives with the room as it is: co-op, the host's level; Versus and Rune Rush, the median level of the seated players. */
   private autoHeat(room: Room): HeatTier {
     if (isSeriesMode(room.mode)) {
       const levels = seated(room).map((p) => p.level);
@@ -1996,7 +1996,7 @@ export class RoomDO extends DurableObject<Env> {
     return chosenHeat(room.heat ?? "auto", this.autoHeat(room));
   }
 
-  /** The co-op round's heat or the series' (Versus, Rune Grid) while one is on, else {@link nextHeat}. */
+  /** The co-op round's heat or the series' (Versus, Rune Rush) while one is on, else {@link nextHeat}. */
   private heatOf(room: Room): HeatTier {
     if (isRune(room.mode)) {
       const series = this.runeSeries();
@@ -2057,7 +2057,7 @@ export class RoomDO extends DurableObject<Env> {
     return room.scoring ?? DEFAULT_SCORING;
   }
 
-  /** Rune Grid: the game's settings while one is on, else what the next one plays. */
+  /** Rune Rush: the game's settings while one is on, else what the next one plays. */
   private runeSettingsOf(room: Room): RuneSettings {
     const series = this.runeSeries();
     if (series !== null && isPlayingPhase(room.phase)) return series.settings;
@@ -2112,7 +2112,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
-   * Rune Grid SNAPSHOT: `round` (with the receiver's words and everyone's
+   * Rune Rush SNAPSHOT: `round` (with the receiver's words and everyone's
    * tally) during a countdown or round, `standings` (the last ROUND_END)
    * during the standings and results, and `results` (the SERIES_END) during
    * results.

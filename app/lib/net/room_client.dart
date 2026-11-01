@@ -8,7 +8,7 @@ import 'hub_client.dart' show wsUri;
 import 'socket.dart';
 
 /// The modes a room plays: co-op, Versus and Team Versus on molds, and Rune
-/// Grid and Team Rune Grid on letter grids (shared/rune-grid.md).
+/// Grid and Team Rune Rush on letter grids (shared/rune-rush.md).
 const roomModes = {'coop', 'vs', 'team', 'rune', 'runeteam'};
 
 /// Messages from a room (shared/room-protocol.md).
@@ -18,7 +18,7 @@ sealed class RoomEvent {
   static RoomEvent? parse(Map<String, dynamic> m) => switch (m['op']) {
     'WELCOME' => RoomWelcome(m['you'] as String, (m['serverNow'] as num).toInt()),
     'LOBBY' => RoomLobby.fromJson(m),
-    // Rune Grid rounds say so (shared/rune-grid.md).
+    // Rune Rush rounds say so (shared/rune-rush.md).
     'ROUND_START' => m['game'] == 'rune' ? RuneRoundStart.fromJson(m) : RoundStart.fromJson(m),
     'WORD_RESULT' => WordResult(
       seq: m['seq'] as int,
@@ -201,16 +201,16 @@ class RoomLobby extends RoomEvent {
   /// unless everyone is ready sooner.
   final int? nextAt;
 
-  /// Rune Grid: the next game's settings (during one, its own).
+  /// Rune Rush: the next game's settings (during one, its own).
   final RuneSettings rune;
 
   /// Versus series (on molds) are played in Versus and Team Versus rooms.
   bool get isVs => mode == 'vs' || mode == 'team';
 
-  /// Rune Grid and Team Rune Grid (shared/rune-grid.md).
+  /// Rune Rush and Team Rune Rush (shared/rune-rush.md).
   bool get isRune => mode == 'rune' || mode == 'runeteam';
 
-  /// Two teams, Copper and Cobalt: Team Versus and Team Rune Grid.
+  /// Two teams, Copper and Cobalt: Team Versus and Team Rune Rush.
   bool get isTeam => mode == 'team' || mode == 'runeteam';
   bool get survival => variant == 'survival';
   bool get totalScore => mode == 'vs' && scoring == 'total';
@@ -735,7 +735,7 @@ class SeriesEnd extends RoomEvent {
   /// tiebreaker round.
   final bool tiebreak;
 
-  /// A Rune Grid game: its settings, rounds and words. [PodiumPlace.score]
+  /// A Rune Rush game: its settings, rounds and words. [PodiumPlace.score]
   /// is then points, [PodiumPlace.wins] rounds won.
   final RuneGame? rune;
 
@@ -934,7 +934,7 @@ class RoomSnapshot extends RoomEvent {
   factory RoomSnapshot.fromJson(Map<String, dynamic> j) {
     var round = j['round'] as Map<String, dynamic>?;
     var standings = j['standings'] as Map<String, dynamic>?;
-    // Rune Grid's round and standings are its own.
+    // Rune Rush's round and standings are its own.
     final runeRound = round?['game'] == 'rune' ? round : null;
     final runeStandings = standings?['game'] == 'rune' ? standings : null;
     if (runeRound != null) round = null;
@@ -1002,7 +1002,7 @@ class RoomSnapshot extends RoomEvent {
   /// The room's latest chat lines, oldest first.
   final List<ChatLine> chat;
 
-  /// Rune Grid: the round on now, my words in it (pooled teams: my team's),
+  /// Rune Rush: the round on now, my words in it (pooled teams: my team's),
   /// everyone's word count, and the last round's standings.
   final RuneRoundStart? runeRound;
   final List<RuneWord> runeMine;
@@ -1010,10 +1010,10 @@ class RoomSnapshot extends RoomEvent {
   final RuneRoundEnd? runeStandings;
 }
 
-// ---- Rune Grid (shared/rune-grid.md) ----
+// ---- Rune Rush (shared/rune-rush.md) ----
 
-/// A Rune Grid game's settings: the grid's size (4, 5 or 6 a side), the
-/// round's seconds, the shortest word, how many rounds, and (Team Rune Grid)
+/// A Rune Rush game's settings: the grid's size (4, 5 or 6 a side), the
+/// round's seconds, the shortest word, how many rounds, and (Team Rune Rush)
 /// how a team scores: `pooled` (one list) or `sum` (its players' points).
 class RuneSettings {
   const RuneSettings({this.size = 4, this.seconds = 180, this.min = 3, this.rounds = 3, this.teamScoring = 'pooled'});
@@ -1050,7 +1050,7 @@ class RuneWord {
   final int points;
 }
 
-/// Rune Grid: a round's grid and who races it.
+/// Rune Rush: a round's grid and who races it.
 class RuneRoundStart extends RoomEvent {
   const RuneRoundStart({
     required this.round,
@@ -1106,7 +1106,7 @@ class RuneRoundStart extends RoomEvent {
   final int endsAt;
   final int serverNow;
 
-  /// A tiebreaker round: only [players] (the tied leaders, in Rune Grid) race.
+  /// A tiebreaker round: only [players] (the tied leaders, in Rune Rush) race.
   final bool tiebreak;
   final List<String> players;
   final int heat;
@@ -1114,7 +1114,7 @@ class RuneRoundStart extends RoomEvent {
   /// Everyone's points before this round.
   final Map<String, int> totals;
 
-  /// Team Rune Grid: everyone's team, how teams score and their points so far.
+  /// Team Rune Rush: everyone's team, how teams score and their points so far.
   final Map<String, int> teams;
   final String? teamScoring;
   final List<int>? teamTotals;
@@ -1123,7 +1123,7 @@ class RuneRoundStart extends RoomEvent {
   bool get pooled => teamScoring != 'sum';
 }
 
-/// Rune Grid: how many words [id] has found this round (never the words).
+/// Rune Rush: how many words [id] has found this round (never the words).
 class RuneTally extends RoomEvent {
   const RuneTally(this.id, this.words);
 
@@ -1131,7 +1131,7 @@ class RuneTally extends RoomEvent {
   final int words;
 }
 
-/// Pooled Team Rune Grid: a teammate found a word for the team.
+/// Pooled Team Rune Rush: a teammate found a word for the team.
 class RuneWordFound extends RoomEvent {
   const RuneWordFound(this.word);
 
@@ -1148,7 +1148,7 @@ class RuneFoundWord {
   final bool unique;
 }
 
-/// Rune Grid: a round's end (the standings in a SNAPSHOT, and each round of
+/// Rune Rush: a round's end (the standings in a SNAPSHOT, and each round of
 /// a finished game's history, without [totals] and [next]).
 class RuneRoundEnd extends RoomEvent {
   const RuneRoundEnd({
@@ -1218,7 +1218,7 @@ class RuneRoundEnd extends RoomEvent {
   /// Who scored the most (null: a tie, nobody scoring, or a team game).
   final String? winner;
 
-  /// Team Rune Grid: the team that took the round (null: a tie), and each
+  /// Team Rune Rush: the team that took the round (null: a tie), and each
   /// team's points this round.
   final int? team;
   final List<int>? teamPoints;
@@ -1241,7 +1241,7 @@ class RuneRoundEnd extends RoomEvent {
   };
 }
 
-/// What `SERIES_END` adds for a Rune Grid game.
+/// What `SERIES_END` adds for a Rune Rush game.
 class RuneGame {
   const RuneGame({required this.settings, required this.history, required this.words, this.teamTotals, this.teamWords});
 
@@ -1263,7 +1263,7 @@ class RuneGame {
   /// Each racer's words over the game.
   final Map<String, int> words;
 
-  /// Team Rune Grid: each team's points and words over the game.
+  /// Team Rune Rush: each team's points and words over the game.
   final List<int>? teamTotals;
   final List<int>? teamWords;
 }
@@ -1375,7 +1375,7 @@ class RoomClient {
   /// Host only: best of [series] rounds (Versus), the variant (`classic` or
   /// `survival`), the [heat]: a tier 1–6, or `'auto'`, the room's [mode]
   /// (`coop`, `vs`, `team`, `rune` or `runeteam`: everyone goes back to the
-  /// lobby), and Rune Grid's settings ([rune]: `size`, `seconds`, `min`,
+  /// lobby), and Rune Rush's settings ([rune]: `size`, `seconds`, `min`,
   /// `rounds`, `teamScoring`).
   void config({
     int? series,

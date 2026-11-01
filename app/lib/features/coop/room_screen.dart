@@ -225,10 +225,6 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
         }
-      case RuneRoundEnd(:final winner, :final team):
-        final s = _session;
-        final won = e.isTeam ? team != null && team == s?.myTeam : winner == s?.me;
-        won ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
       case VsRoundEnd(:final winner, :final melted):
         final s = _session;
         // Team Versus: my team won it.

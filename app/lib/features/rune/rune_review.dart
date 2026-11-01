@@ -33,10 +33,17 @@ List<int>? runePathOf(List<String> tiles, int size, String word) {
 /// the ones nobody found dimmed. Tap a word to see it on the grid; hold it
 /// for its meaning.
 class RuneRoundReview extends StatefulWidget {
-  const RuneRoundReview({super.key, required this.session, required this.end});
+  const RuneRoundReview({super.key, required this.session, required this.end, this.counted, this.focus});
 
   final RuneSession session;
   final RuneRoundEnd end;
+
+  /// While the words are being counted: how many of each racer's words have
+  /// been so far. The rest wait dimmed, and nothing gives the winner away.
+  final int? counted;
+
+  /// The word being counted, lit on the grid (unless one is tapped).
+  final String? focus;
 
   @override
   State<RuneRoundReview> createState() => _RuneRoundReviewState();
@@ -56,15 +63,23 @@ class _RuneRoundReviewState extends State<RuneRoundReview> {
     final s = widget.session;
     final end = widget.end;
     final text = Theme.of(context).textTheme;
-    final path = _shown == null ? null : runePathOf(end.tiles, end.size, _shown!);
+    final counted = widget.counted;
+    final counting = counted != null;
+    final lit = _shown ?? (counting ? widget.focus : null);
+    final path = lit == null ? null : runePathOf(end.tiles, end.size, lit);
+    // Counting: in the room's order, so the order doesn't give the winner away.
+    final seats = [...?s.lobby?.players.map((p) => p.id)];
+    int seat(String id) => seats.contains(id) ? seats.indexOf(id) : seats.length;
     final racers = end.found.keys.toList()
       ..sort((a, b) {
         if (end.isTeam) {
           final byTeam = (s.teamOf(a) ?? 0).compareTo(s.teamOf(b) ?? 0);
           if (byTeam != 0) return byTeam;
         }
-        return (end.points[b] ?? 0).compareTo(end.points[a] ?? 0);
+        return counting ? seat(a).compareTo(seat(b)) : (end.points[b] ?? 0).compareTo(end.points[a] ?? 0);
       });
+    int pointsOf(String id) =>
+        counting ? end.found[id]!.take(counted).fold(0, (sum, w) => sum + w.points) : end.points[id] ?? 0;
     final found = end.foundWords;
     final all = _all ? end.words : end.words.take(_firstWords).toList();
     Widget chip(String word, {int? points, bool unique = false, bool missed = false, Color? color}) => GestureDetector(
@@ -91,13 +106,13 @@ class _RuneRoundReviewState extends State<RuneRoundReview> {
         SizedBox(
           height: 20,
           child: Text(
-            _shown == null ? 'Tap a word to see it on the grid' : _shown!,
+            lit ?? 'Tap a word to see it on the grid',
             textAlign: TextAlign.center,
-            style: text.labelMedium?.copyWith(color: _shown == null ? Palette.steel : Palette.molten),
+            style: text.labelMedium?.copyWith(color: lit == null ? Palette.steel : Palette.molten),
           ),
         ),
         const SizedBox(height: 6),
-        if (end.isTeam && end.teamPoints != null)
+        if (end.isTeam && end.teamPoints != null && !counting)
           Row(
             children: [
               for (final team in const [0, 1]) ...[
@@ -150,8 +165,12 @@ class _RuneRoundReviewState extends State<RuneRoundReview> {
                     ),
                     Text(
                       '${end.found[id]!.length} ${end.found[id]!.length == 1 ? 'word' : 'words'} · '
-                      '${end.points[id] ?? 0} pts',
-                      style: displayStyle(14, color: id == end.winner ? Palette.molten : Palette.whiteHeat),
+                      '${pointsOf(id)} pts',
+                      key: ValueKey('rune-found-points-$id'),
+                      style: displayStyle(
+                        14,
+                        color: id == end.winner && !counting ? Palette.molten : Palette.whiteHeat,
+                      ),
                     ),
                   ],
                 ),
@@ -162,7 +181,19 @@ class _RuneRoundReviewState extends State<RuneRoundReview> {
                   Wrap(
                     spacing: 5,
                     runSpacing: 5,
-                    children: [for (final w in end.found[id]!) chip(w.word, points: w.points, unique: w.unique)],
+                    children: [
+                      for (final (i, w) in end.found[id]!.indexed)
+                        if (!counting || i < counted)
+                          chip(
+                            w.word,
+                            points: w.points,
+                            unique: w.unique,
+                            color: counting && i == counted - 1 ? Palette.molten : null,
+                          )
+                        // Not counted yet: there, but dim and unscored.
+                        else
+                          chip(w.word, missed: true),
+                    ],
                   ),
               ],
             ),

@@ -1,4 +1,4 @@
-# Rune Grid
+# Rune Rush
 
 The letter-grid race: everyone gets the same grid of letter dice and finds
 as many words as they can before the timer runs out. Two room modes, on
@@ -6,10 +6,10 @@ the room protocol (`shared/room-protocol.md`) like the others:
 
 | Mode | Name | Players |
 |---|---|---|
-| `rune` | Rune Grid | 2–6, everyone for themselves |
-| `runeteam` | Team Rune Grid | 2–6, two teams of 1–3 (Copper and Cobalt), the same size to start |
+| `rune` | Rune Rush | 2–6, everyone for themselves |
+| `runeteam` | Team Rune Rush | 2–6, two teams of 1–3 (Copper and Cobalt), the same size to start |
 
-There is no co-op Rune Grid. The rules live in `server/src/rules/rune.ts`;
+There is no co-op Rune Rush. The rules live in `server/src/rules/rune.ts`;
 the room wires them up in `server/src/room/room.ts`.
 
 ## The rules
@@ -29,7 +29,7 @@ the room wires them up in `server/src/room/room.ts`.
 - **A game** is 1, 3 or 5 rounds, each on a fresh grid, won on the total
   points. Tied on points, more words found wins. Still tied after the last
   round, the leaders play a **tiebreaker round** (only they race in Rune
-  Grid; everyone in Team Rune Grid), which adds to the totals; after 3
+  Grid; everyone in Team Rune Rush), which adds to the totals; after 3
   tiebreakers the leaders share first place.
 - **Between rounds** the standings show for 30 s (as in Versus); everyone
   ready (`NEXT`) starts the next round sooner.
@@ -39,7 +39,7 @@ the room wires them up in `server/src/room/room.ts`.
   level), written as a Versus match: 5 per round played, 10 per round won,
   30 for winning the game. No hints, embers or Scrap Bin.
 
-### Team Rune Grid
+### Team Rune Rush
 
 The host picks how a team scores (`teamScoring`):
 
@@ -48,7 +48,7 @@ The host picks how a team scores (`teamScoring`):
   with `by` the teammate, and teammates see each other's words as they
   come (`RUNE_WORD`). Unique means the other team didn't find it. The team
   scores its list.
-- **`sum`**: everyone scores as in Rune Grid (unique means nobody else at
+- **`sum`**: everyone scores as in Rune Rush (unique means nobody else at
   all found it, teammates included), and a team scores its players' points
   added up.
 
@@ -57,7 +57,7 @@ the game; a tie on points goes to more words.
 
 ## Messages
 
-Only what Rune Grid adds or changes. Everything else (READY, TEAM, START,
+Only what Rune Rush adds or changes. Everything else (READY, TEAM, START,
 AGAIN, NEXT, LEAVE, EMOTE, CHAT, mode switching) is as in the room
 protocol. HINT is refused (`no_hints`).
 
@@ -68,16 +68,16 @@ protocol. HINT is refused (`no_hints`).
 ```
 
 Any of: `size` 4 · 5 · 6, `seconds` 30 · 60 · 90 · 120 · 180, `min`
-3 · 4 · 5, `rounds` 1 · 3 · 5, and (Team Rune Grid only) `teamScoring`
+3 · 4 · 5, `rounds` 1 · 3 · 5, and (Team Rune Rush only) `teamScoring`
 `"pooled"` · `"sum"`. At least one; anything else is `bad_message`, as are
-`series`, `variant`, `heat`, `rule` and `scoring` in a Rune Grid room.
+`series`, `variant`, `heat`, `rule` and `scoring` in a Rune Rush room.
 Defaults: 4×4, 180 s, 3 letters, 3 rounds, pooled. They apply from the
 next START or AGAIN and are kept through mode switches.
 
 ### LOBBY
 
 Adds `rune: {size, seconds, min, rounds, teamScoring}`: the next game's, or
-during a game the game's own. Team Rune Grid players carry `team`. No
+during a game the game's own. Team Rune Rush players carry `team`. No
 `series`, `variant`, `rule` or `scoring`.
 
 ### ROUND_START
@@ -91,7 +91,7 @@ during a game the game's own. Team Rune Grid players carry `team`. No
 
 `tiles` are row by row. `players` race this round (a tiebreaker: only the
 tied; anyone else watches). The words on the grid are never sent before
-the round ends. The last three fields are Team Rune Grid only.
+the round ends. The last three fields are Team Rune Rush only.
 
 ### SUBMIT and WORD_RESULT
 

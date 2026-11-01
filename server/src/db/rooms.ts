@@ -360,7 +360,7 @@ export interface VsSeriesRecord {
   readonly matchId: string;
   readonly code: string;
   readonly heat: HeatTier;
-  /** The series length; Rune Grid: its regular rounds (1, 3 or 5). */
+  /** The series length; Rune Rush: its regular rounds (1, 3 or 5). */
   readonly length: SeriesLength | RuneRounds;
   readonly startedAt: number;
   readonly endedAt: number;
@@ -371,9 +371,9 @@ export interface VsSeriesRecord {
   readonly variant?: "survival";
   /** Team Versus only: the rule its rounds were won by. */
   readonly rule?: TeamRule;
-  /** Total score series only (every Rune Grid game). */
+  /** Total score series only (every Rune Rush game). */
   readonly scoring?: "total";
-  /** Rune Grid only, with its settings. */
+  /** Rune Rush only, with its settings. */
   readonly game?: "rune";
   readonly rune?: RuneSettings;
 }
@@ -401,7 +401,7 @@ export async function writeVsSeries(db: D1Database, record: VsSeriesRecord, now:
     // Total score series only: won on letters filled, then bonus words.
     ...(record.scoring === undefined ? {} : { scoring: record.scoring }),
     ...(results.tiebreak === undefined ? {} : { tiebreak: true }),
-    // Rune Grid only: its settings (score is points, wins rounds won, words words found).
+    // Rune Rush only: its settings (score is points, wins rounds won, words words found).
     ...(record.game === undefined ? {} : { game: record.game, rune: record.rune }),
     // Survival series only (shared/survival.md "Records").
     ...(record.variant === undefined ? {} : { variant: record.variant }),

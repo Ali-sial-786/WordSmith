@@ -20,7 +20,7 @@ import '../coop/room_video.dart';
 import 'rune_board.dart';
 import 'rune_widgets.dart';
 
-/// A Rune Grid round: the grid of letter dice to swipe words on, the timer,
+/// A Rune Rush round: the grid of letter dice to swipe words on, the timer,
 /// rivals' word counts, and my words so far.
 class RuneRoundView extends ConsumerStatefulWidget {
   const RuneRoundView({super.key, required this.session, required this.onLeave, this.video = RoomVideo.none});
@@ -268,6 +268,25 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
           ],
         ),
         if (counting) Positioned.fill(child: RuneCountdown(session: _s)),
+        // The clock ran out: a moment until the server's count comes.
+        if (!counting && _s.timeLeft == Duration.zero && grid.endsAt > 0)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ColoredBox(
+                color: Palette.forgeBlack.withValues(alpha: 0.55),
+                child: Center(
+                  child: Text(
+                    "Time's up!",
+                    key: const ValueKey('rune-times-up'),
+                    style: displayStyle(
+                      44,
+                      color: Palette.molten,
+                    ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 30)]),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
