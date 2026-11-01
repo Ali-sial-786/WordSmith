@@ -84,9 +84,8 @@ class VsSession extends RoomSession {
   bool get isTeam => lobby?.isTeam ?? false;
 
   /// [id]'s team: the series' while one is on, else the lobby's.
+  @override
   int? teamOf(String id) => round?.teams[id] ?? standings?.teams[id] ?? lobby?.player(id)?.team;
-
-  int? get myTeam => teamOf(me);
 
   /// How Team Versus rounds are won: `combined` (letters added up) or
   /// `first` (first to fill their mold).
@@ -276,12 +275,6 @@ class VsSession extends RoomSession {
   /// Versus, host only, in the lobby or results: how the next series is won
   /// (`rounds` or `total`).
   void setScoring(String scoring) => client.config(scoring: scoring);
-
-  /// Team Versus, in the lobby or results: joins [team].
-  void joinTeam(int team) => client.team(team);
-
-  /// Team Versus, host only: moves [id] to [team].
-  void moveToTeam(String id, int team) => client.team(team, id: id);
 
   /// Sends a word; the result arrives as a [WordResult] effect.
   void submit(String word) => client.submit(word);

@@ -174,7 +174,7 @@ List<_Section> _sections() => [
     'Play with friends',
     signIn: true,
     intro:
-        'Tap **Co-op**, **Versus** or **Team Versus** and light a forge to host: you get a 6-letter room code to share, or '
+        'Tap **Co-op**, **Versus**, **Team Versus**, **Rune Grid** or **Team Rune Grid** and light a forge to host: you get a 6-letter room code to share, or '
         "invite friends straight in. To join, type a friend's code or tap their open room. In a room you "
         'can write in the chat, send quick emotes and talk over voice chat, and turn your camera on there '
         "for video. Hold someone's message, or tap the menu next to their name, to mute, block or report them.",
@@ -217,6 +217,22 @@ List<_Section> _sections() => [
             '**First to finish:** the first smith to fill their mold wins the round for their team.\n\n'
             'Tap **Join** to switch teams in the lobby; the host can move anyone. If your team wins the series, '
             "everyone on it gets the winner's XP.",
+      ),
+      _Entry(
+        'blueprint',
+        'Rune Grid and Team Rune Grid',
+        'Up to 6 smiths get the same grid of letter dice: 4×4, 5×5 or 6×6. Find words by swiping through '
+            'touching letters (across, up and down or diagonally, each letter once), or tap them one by one '
+            'and tap the last again. Words need 3 letters or more (the host can ask for 4 or 5); **Qu** is one '
+            'tile.\n\n'
+            '**Points:** 3 letters 1, 4 letters 2, 5 letters 3, and 1 more for each letter after that. A word '
+            'nobody else found scores **double**. Points are added up when the round ends.\n\n'
+            'The host picks the grid, the timer (30 seconds to 3 minutes) and 1, 3 or 5 rounds; the most points '
+            'over the game wins, and a tie at the top plays a tiebreaker round. Between rounds you see everyone\'s '
+            'words and every word that was on the grid.\n\n'
+            '**Team Rune Grid:** Copper against Cobalt. With **pooled words** a team shares one list and sees '
+            "each other's words as they come; with **points added up** everyone finds their own and the team's "
+            'points are summed.',
       ),
       _Entry(
         'friends',

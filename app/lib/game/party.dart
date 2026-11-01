@@ -10,6 +10,7 @@ import 'account.dart';
 import 'coop_session.dart';
 import 'history_records.dart';
 import 'providers.dart';
+import 'rune_session.dart';
 import 'vs_session.dart';
 
 /// The room this phone is in, kept while the player looks around the rest of
@@ -72,7 +73,12 @@ class Party extends ChangeNotifier {
 
   RoomSession _make(String mode, RoomClient client, String me) {
     _mode = mode;
-    return (mode == 'coop' ? CoopSession(client: client, me: me) : VsSession(client: client, me: me))
+    final RoomSession session = switch (mode) {
+      'coop' => CoopSession(client: client, me: me),
+      'rune' || 'runeteam' => RuneSession(client: client, me: me),
+      _ => VsSession(client: client, me: me),
+    };
+    return session
       ..nicknameOf = _account.nicknameOf
       ..isBlocked = _account.isBlocked;
   }

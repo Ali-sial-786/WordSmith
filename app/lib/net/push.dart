@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import 'room_client.dart' show roomModes;
+
 /// Phone notifications for room invites (shared/push.md), behind an
 /// interface so tests and builds without Firebase can swap it out.
 abstract class PushService {
@@ -104,5 +106,5 @@ class FirebasePushService implements PushService {
   final code = (data['code'] as String? ?? '').toUpperCase();
   if (!RegExp(r'^[A-HJ-NP-Z2-9]{6}$').hasMatch(code)) return null;
   final mode = data['mode'];
-  return (code: code, mode: mode == 'vs' || mode == 'team' ? mode as String : 'coop');
+  return (code: code, mode: mode is String && roomModes.contains(mode) ? mode : 'coop');
 }

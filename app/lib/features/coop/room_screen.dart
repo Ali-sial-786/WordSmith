@@ -9,6 +9,7 @@ import '../../audio/sfx.dart';
 import '../../game/account.dart';
 import '../../game/coop_session.dart';
 import '../../game/party.dart';
+import '../../game/rune_session.dart';
 import '../../game/vs_session.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
@@ -17,6 +18,9 @@ import '../../ui/effects/sparks.dart';
 import '../../ui/mold/mold_grid.dart';
 import '../../ui/theme/palette.dart';
 import '../../ui/widgets/forge_background.dart';
+import '../rune/rune_results_view.dart';
+import '../rune/rune_round_view.dart';
+import '../rune/rune_standings_view.dart';
 import '../vs/vs_results_view.dart';
 import '../vs/vs_round_view.dart';
 import '../vs/victory_popup.dart';
@@ -155,11 +159,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
   void _podiumSounds() {
     final e = _podium;
     final s = _session;
-    if (e == null || (s is VsSession && s.showingFinalRound)) return;
+    if (e == null || (s is VsSession && s.showingFinalRound) || (s is RuneSession && s.showingFinalRound)) return;
     _podium = null;
     final sfx = _sfx;
     // Team Versus: my team won it.
-    final won = e.isTeam ? e.team != null && s is VsSession && e.team == s.myTeam : e.winner == s?.me;
+    final won = e.isTeam ? e.team != null && e.team == s?.myTeam : e.winner == s?.me;
     won ? sfx.play(SfxId.seriesWin) : sfx.play(SfxId.roundLose, volume: 0.8);
     if ((e.xp[s?.me]?.levelUps ?? 0) > 0) {
       Future.delayed(const Duration(milliseconds: 1600), () => sfx.play(SfxId.levelUp));
@@ -170,7 +174,19 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       final tally = e.totalScore
           ? [for (final p in top) top.length == 2 && top[0].score == top[1].score ? p.bonus ?? 0 : p.score ?? 0]
           : e.teamTally ?? [for (final p in top) p.wins];
-      final score = e.tiebreak
+      final game = e.rune;
+      final points = game == null
+          ? null
+          : e.isTeam
+          ? game.teamTotals ?? const [0, 0]
+          : [for (final p in top) p.score ?? 0];
+      final score = points != null
+          ? e.tiebreak
+                ? 'Won in a tiebreaker round'
+                : points.length == 2 && points[0] != points[1]
+                ? 'Won ${max(points[0], points[1])}–${min(points[0], points[1])} on points'
+                : 'Won on words found'
+          : e.tiebreak
           ? 'Won the series in a tiebreaker round'
           : tally.length == 2 && tally[0] != tally[1]
           ? 'Won the series ${max(tally[0], tally[1])}–${min(tally[0], tally[1])}'
@@ -209,10 +225,14 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         if ((xp[_session?.me]?.levelUps ?? 0) > 0) {
           Future.delayed(const Duration(milliseconds: 900), () => sfx.play(SfxId.levelUp));
         }
+      case RuneRoundEnd(:final winner, :final team):
+        final s = _session;
+        final won = e.isTeam ? team != null && team == s?.myTeam : winner == s?.me;
+        won ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
       case VsRoundEnd(:final winner, :final melted):
         final s = _session;
         // Team Versus: my team won it.
-        final won = e.isTeam ? e.team != null && s is VsSession && e.team == s.myTeam : winner == s?.me;
+        final won = e.isTeam ? e.team != null && e.team == s?.myTeam : winner == s?.me;
         // After the melt, if there was one.
         Future.delayed(melted == null ? Duration.zero : meltDuration, () {
           won ? sfx.play(SfxId.roundWin) : sfx.play(SfxId.roundLose, volume: 0.8);
@@ -261,11 +281,12 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
     final s = _session;
     if (s == null) return false;
     if (s is VsSession && (s.showingFinalRound || s.seriesEnd != null)) return false;
+    if (s is RuneSession && (s.showingFinalRound || s.seriesEnd != null)) return false;
     return const {'countdown', 'round', 'standings'}.contains(s.phase);
   }
 
   Future<void> _leave() async {
-    final ok = await showLeaveRoomDialog(context, midSeries: _session is VsSession && _midGame);
+    final ok = await showLeaveRoomDialog(context, midSeries: _session is! CoopSession && _midGame);
     if (!ok || !mounted) return;
     setState(() => _left = true);
     await _party.leave();
@@ -359,6 +380,15 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         'standings' || 'results' when s.standings != null => VsStandingsView(session: s, cues: _cues, onLeave: _leave),
         'countdown' ||
         'round' when s.round != null => VsRoundView(session: s, cues: _cues, onLeave: _leave, video: _roomVideo),
+        _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
+      },
+      RuneSession() => switch (s.phase) {
+        // The round that decided the game gets its standings too, before the podium.
+        _ when s.showingFinalRound => RuneStandingsView(session: s, onLeave: _leave),
+        // SERIES_END comes just before the LOBBY that says so.
+        _ when s.seriesEnd != null => RuneResultsView(session: s, onLeave: _leave),
+        'standings' || 'results' when s.standings != null => RuneStandingsView(session: s, onLeave: _leave),
+        'countdown' || 'round' when s.grid != null => RuneRoundView(session: s, onLeave: _leave, video: _roomVideo),
         _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),
       },
       _ => LobbyView(session: s, onLeave: _leave, video: _roomVideo),

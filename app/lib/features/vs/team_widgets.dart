@@ -216,13 +216,14 @@ class TeamTally extends StatelessWidget {
   }
 }
 
-/// Team Versus, in the lobby or results: both teams with who's on each,
+/// Team Versus and Team Rune Grid, in the lobby or results: both teams with who's on each,
 /// a button to join the other one while it has room, and for the host a
 /// button on each player to move them across. [row] draws one player.
 class TeamPicker extends StatelessWidget {
   const TeamPicker({super.key, required this.session, required this.row});
 
-  final VsSession session;
+  /// Team Versus or Team Rune Grid.
+  final RoomSession session;
   final Widget Function(RoomPlayer player) row;
 
   /// Players a team holds.

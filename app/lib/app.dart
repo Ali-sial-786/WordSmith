@@ -30,6 +30,7 @@ import 'game/account.dart';
 import 'game/providers.dart';
 import 'game/daily_game.dart';
 import 'net/push.dart';
+import 'net/room_client.dart' show roomModes;
 import 'ui/theme/appearance.dart';
 import 'ui/theme/palette.dart';
 import 'ui/theme/theme.dart';
@@ -85,8 +86,7 @@ final GoRouter appRouter = GoRouter(
         key: ValueKey(state.pathParameters['code']),
         code: state.pathParameters['code']!.toUpperCase(),
         mode: switch (state.uri.queryParameters['mode']) {
-          'vs' => 'vs',
-          'team' => 'team',
+          final m? when roomModes.contains(m) => m,
           _ => 'coop',
         },
       ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../engine/heat.dart';
 import '../../game/account.dart';
 import '../../game/names.dart';
+import '../../game/rune_session.dart';
 import '../../game/vs_session.dart';
 import '../../net/room_client.dart';
 import '../../ui/theme/palette.dart';
@@ -15,6 +16,7 @@ import '../../ui/widgets/video_bubble.dart';
 import '../../video/video_call.dart';
 import '../safety/player_actions.dart';
 import '../vs/team_widgets.dart';
+import '../rune/rune_widgets.dart';
 import '../vs/vs_widgets.dart';
 import 'coop_entry.dart';
 import 'room_chat.dart';
@@ -38,11 +40,14 @@ class LobbyView extends ConsumerWidget {
     final host = lobby.player(lobby.hostId);
     final hostName = host == null ? null : session.nameOf(host.id);
     final me = session.myPlayer;
-    final vs = lobby.isVs;
-    final team = lobby.isTeam && session is VsSession;
+    final vs = lobby.isVs && session is VsSession;
+    final rune = lobby.isRune && session is RuneSession;
+    // Two to start: Versus, Team Versus and both Rune Grids.
+    final series = vs || rune;
+    final team = lobby.isTeam && series;
     final max = lobby.maxPlayers;
     final connected = lobby.players.where((p) => p.connected).length;
-    final canStart = !vs || (connected >= 2 && (!team || lobby.teamsEven));
+    final canStart = !series || (connected >= 2 && (!team || lobby.teamsEven));
     Widget row(RoomPlayer p) => _PlayerRow(
       player: p,
       name: session.nameOf(p.id),
@@ -67,11 +72,7 @@ class LobbyView extends ConsumerWidget {
         ChatTitle(
           session: session,
           child: Text(
-            team
-                ? 'Team Clash'
-                : vs
-                ? 'Anvil Clash'
-                : 'The Guild Forge',
+            roomTitle(lobby.mode),
             textAlign: TextAlign.center,
             style: displayStyle(24, color: Palette.molten),
           ),
@@ -79,13 +80,16 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 14),
         _CodeCard(code: lobby.code),
         const SizedBox(height: 12),
-        if (session.isHost)
+        // Rune Grid's heat is always Auto, from the middle level.
+        if (session.isHost && !rune)
           HeatPicker(session: session)
         else
           HeatBanner(lobby: lobby, me: me, hostName: session.nameOf(lobby.hostId)),
         const SizedBox(height: 12),
+        if (rune)
+          RuneSettingsPicker(session: session as RuneSession)
         // Teams race classic rounds only.
-        if (team)
+        else if (team)
           RulePicker(session: session as VsSession)
         else
           _VariantPicker(session: session, survival: lobby.survival, vs: vs),
@@ -102,7 +106,7 @@ class LobbyView extends ConsumerWidget {
         Text('Smiths ${lobby.players.length}/$max', style: text.titleMedium),
         const SizedBox(height: 6),
         if (team)
-          TeamPicker(session: session as VsSession, row: row)
+          TeamPicker(session: session, row: row)
         else ...[
           for (final p in lobby.players) row(p),
           for (var i = lobby.players.length; i < max; i++)
@@ -123,15 +127,19 @@ class LobbyView extends ConsumerWidget {
         const SizedBox(height: 10),
         if (session.isHost)
           PlateButton(
-            label: vs ? 'Start the series' : 'Start the round',
+            label: rune
+                ? 'Start the game'
+                : vs
+                ? 'Start the series'
+                : 'Start the round',
             sublabel: !canStart
                 ? connected < 2
-                      ? '${team ? 'Team Versus' : 'Versus'} needs at least 2 smiths'
+                      ? '${modeName(lobby.mode)} needs at least 2 smiths'
                       : 'Teams must be the same size'
                 : lobby.players.every((p) => p.ready || p.id == session.me)
                 ? 'Everyone is ready'
                 : 'Not everyone is ready yet',
-            icon: vs ? 'trophy' : 'anvil',
+            icon: series ? 'trophy' : 'anvil',
             primary: true,
             onPressed: canStart ? session.startRound : null,
           )
@@ -195,7 +203,7 @@ String _heatCaption(RoomLobby lobby, RoomPlayer? me, {bool named = false, String
             : host == null
             ? 'the host'
             : 'host $name'}'
-      : lobby.isVs
+      : lobby.isVs || lobby.isRune
       ? 'Auto · from the middle level in the room'
       : "Auto · from ${mine
             ? 'your'
@@ -367,7 +375,6 @@ class _HeatTile extends StatelessWidget {
   }
 }
 
-/// Classic or Survival (shared/survival.md). The host picks; everyone sees it.
 /// The host's pick of the room's mode: everyone stays, back in the lobby.
 class _ModePicker extends StatelessWidget {
   const _ModePicker({required this.session, required this.mode});
@@ -380,7 +387,7 @@ class _ModePicker extends StatelessWidget {
     alignment: WrapAlignment.center,
     spacing: 8,
     children: [
-      for (final id in const ['coop', 'vs', 'team'])
+      for (final id in const ['coop', 'vs', 'team', 'rune', 'runeteam'])
         ChoiceChip(
           key: ValueKey('mode-$id'),
           label: Text(modeName(id)),
@@ -395,6 +402,7 @@ class _ModePicker extends StatelessWidget {
   );
 }
 
+/// Classic or Survival (shared/survival.md). The host picks; everyone sees it.
 class _VariantPicker extends StatelessWidget {
   const _VariantPicker({required this.session, required this.survival, required this.vs});
 

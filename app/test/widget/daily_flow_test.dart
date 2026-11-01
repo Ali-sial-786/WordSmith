@@ -130,10 +130,10 @@ void main() {
 
     router.push('/daily/calendar');
     await tester.pumpAndSettle();
-    if (now.day <= 2) {
-      // The missed day is last month.
-      await tester.tap(find.byType(ButtonSegment<bool>).first, warnIfMissed: false);
-      await tester.tap(find.textContaining(RegExp('January|February|March|April|May|June|July|August|September|October|November|December')).first);
+    if (yesterday.substring(0, 7) != todayUtc(now).substring(0, 7)) {
+      // The missed day is last month: its tab comes first.
+      final months = RegExp('January|February|March|April|May|June|July|August|September|October|November|December');
+      await tester.tap(find.textContaining(months).first);
       await tester.pumpAndSettle();
     }
     expect(find.text('Trophy case'), findsOneWidget);

@@ -13,6 +13,7 @@ import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/features/coop/coop_entry.dart';
 import 'package:wordsmith/features/hall/hall_screen.dart';
 import 'package:wordsmith/game/party.dart';
+import 'package:wordsmith/game/rune_session.dart';
 import 'package:wordsmith/game/vs_session.dart';
 import 'package:wordsmith/game/account.dart';
 import 'package:wordsmith/game/providers.dart';
@@ -265,6 +266,51 @@ void main() {
     expect(find.text('Anvil Clash'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Start the series'), 200);
     expect(find.text('Start the series'), findsOneWidget);
+  });
+
+  testWidgets('the host takes the room to Rune Grid: its lobby, then a round on the grid', (tester) async {
+    final room = FakeSocketChannel();
+    final (_, container) = await _pumpApp(tester, room);
+    _join(room);
+    await _pumpRoom(tester);
+    await tester.tap(find.byKey(const ValueKey('room-home')));
+    await _pumpRoom(tester);
+    showRoomEntry(tester.element(find.byType(HallScreen)), 'rune');
+    await _pumpRoom(tester);
+    expect(room.sent, contains(jsonEncode({'op': 'CONFIG', 'mode': 'rune'})));
+    room.receive({
+      'op': 'LOBBY',
+      ..._lobby(mode: 'rune'),
+      'rune': {'size': 5, 'seconds': 60, 'min': 3, 'rounds': 1, 'teamScoring': 'pooled'},
+    });
+    await _pumpRoom(tester);
+    expect(container.read(partyProvider).session, isA<RuneSession>());
+    expect(find.text('Rune Grid'), findsWidgets);
+    expect(find.byKey(const ValueKey('rune-size-5')), findsOneWidget);
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    room
+      ..receive({
+        'op': 'ROUND_START',
+        'game': 'rune',
+        'round': 1,
+        'rounds': 1,
+        'tiebreak': false,
+        'players': ['uid-ali', 'uid-sam'],
+        'size': 5,
+        'tiles': [for (var i = 0; i < 25; i++) 'ABCDEFGHIJKLMNOPRSTUVWXYZ'[i]],
+        'min': 3,
+        'seconds': 60,
+        'startsAt': now - 100,
+        'endsAt': now + 60000,
+        'serverNow': now,
+        'heat': 1,
+        'totals': {'uid-ali': 0, 'uid-sam': 0},
+      })
+      ..receive({'op': 'LOBBY', ..._lobby(mode: 'rune'), 'phase': 'round'});
+    await _pumpRoom(tester);
+    expect(find.byKey(const ValueKey('rune-board')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rune-tile-24')), findsOneWidget);
   });
 
   testWidgets('a long friend list scrolls in the invite sheet, down to the last friend', (tester) async {

@@ -7,6 +7,10 @@ import '../engine/puzzle.dart';
 import 'hub_client.dart' show wsUri;
 import 'socket.dart';
 
+/// The modes a room plays: co-op, Versus and Team Versus on molds, and Rune
+/// Grid and Team Rune Grid on letter grids (shared/rune-grid.md).
+const roomModes = {'coop', 'vs', 'team', 'rune', 'runeteam'};
+
 /// Messages from a room (shared/room-protocol.md).
 sealed class RoomEvent {
   const RoomEvent();
@@ -14,7 +18,8 @@ sealed class RoomEvent {
   static RoomEvent? parse(Map<String, dynamic> m) => switch (m['op']) {
     'WELCOME' => RoomWelcome(m['you'] as String, (m['serverNow'] as num).toInt()),
     'LOBBY' => RoomLobby.fromJson(m),
-    'ROUND_START' => RoundStart.fromJson(m),
+    // Rune Grid rounds say so (shared/rune-grid.md).
+    'ROUND_START' => m['game'] == 'rune' ? RuneRoundStart.fromJson(m) : RoundStart.fromJson(m),
     'WORD_RESULT' => WordResult(
       seq: m['seq'] as int,
       word: m['word'] as String? ?? '',
@@ -47,7 +52,16 @@ sealed class RoomEvent {
       auto: _slotWords(m['auto']),
     ),
     // Versus round ends say how the round was won; co-op ones don't.
-    'ROUND_END' => m.containsKey('how') ? VsRoundEnd.fromJson(m) : RoundEnd.fromJson(m),
+    'ROUND_END' =>
+      m['game'] == 'rune'
+          ? RuneRoundEnd.fromJson(m)
+          : m.containsKey('how')
+          ? VsRoundEnd.fromJson(m)
+          : RoundEnd.fromJson(m),
+    'RUNE_TALLY' => RuneTally(m['id'] as String, (m['words'] as num?)?.toInt() ?? 0),
+    'RUNE_WORD' => RuneWordFound(
+      RuneWord(m['word'] as String, m['by'] as String? ?? '', (m['points'] as num?)?.toInt() ?? 0),
+    ),
     'PROGRESS' => RacerProgress.fromJson(m),
     'HEATED' => HeatedSlot.fromJson(m),
     'MELT' => Melted((m['slot'] as num).toInt(), m['id'] as String?),
@@ -132,6 +146,7 @@ class RoomLobby extends RoomEvent {
     this.rule = 'combined',
     this.scoring = 'rounds',
     this.nextAt,
+    this.rune = const RuneSettings(),
   }) : autoHeat = autoHeat ?? heat;
 
   factory RoomLobby.fromJson(Map<String, dynamic> j) => RoomLobby(
@@ -151,6 +166,7 @@ class RoomLobby extends RoomEvent {
     rule: j['rule'] as String? ?? 'combined',
     scoring: j['scoring'] as String? ?? 'rounds',
     nextAt: (j['nextAt'] as num?)?.toInt(),
+    rune: RuneSettings.fromJson(j['rune']),
   );
 
   final String code;
@@ -185,14 +201,22 @@ class RoomLobby extends RoomEvent {
   /// unless everyone is ready sooner.
   final int? nextAt;
 
-  /// Versus series are played in Versus and Team Versus rooms.
+  /// Rune Grid: the next game's settings (during one, its own).
+  final RuneSettings rune;
+
+  /// Versus series (on molds) are played in Versus and Team Versus rooms.
   bool get isVs => mode == 'vs' || mode == 'team';
-  bool get isTeam => mode == 'team';
+
+  /// Rune Grid and Team Rune Grid (shared/rune-grid.md).
+  bool get isRune => mode == 'rune' || mode == 'runeteam';
+
+  /// Two teams, Copper and Cobalt: Team Versus and Team Rune Grid.
+  bool get isTeam => mode == 'team' || mode == 'runeteam';
   bool get survival => variant == 'survival';
   bool get totalScore => mode == 'vs' && scoring == 'total';
   bool get autoHeatOn => chosenHeat == null;
   int get maxPlayers => switch (mode) {
-    'team' => 6,
+    'team' || 'rune' || 'runeteam' => 6,
     'vs' => 5,
     _ => 4,
   };
@@ -651,6 +675,7 @@ class SeriesEnd extends RoomEvent {
     this.rule,
     this.totalScore = false,
     this.tiebreak = false,
+    this.rune,
   });
 
   factory SeriesEnd.fromJson(Map<String, dynamic> j) => SeriesEnd(
@@ -680,6 +705,7 @@ class SeriesEnd extends RoomEvent {
     rule: j['rule'] as String?,
     totalScore: j['scoring'] == 'total',
     tiebreak: j['tiebreak'] == true,
+    rune: j['game'] == 'rune' && j['rune'] is Map ? RuneGame.fromJson((j['rune'] as Map).cast()) : null,
   );
 
   final String? winner;
@@ -709,7 +735,12 @@ class SeriesEnd extends RoomEvent {
   /// tiebreaker round.
   final bool tiebreak;
 
+  /// A Rune Grid game: its settings, rounds and words. [PodiumPlace.score]
+  /// is then points, [PodiumPlace.wins] rounds won.
+  final RuneGame? rune;
+
   bool get isTeam => teamTally != null;
+  bool get isRune => rune != null;
 
   /// Letters each racer filled over the rounds they raced.
   Map<String, int> get letters {
@@ -894,16 +925,31 @@ class RoomSnapshot extends RoomEvent {
     this.heated,
     this.saved = 0,
     this.chat = const [],
+    this.runeRound,
+    this.runeMine = const [],
+    this.runeTally = const {},
+    this.runeStandings,
   });
 
   factory RoomSnapshot.fromJson(Map<String, dynamic> j) {
-    final round = j['round'] as Map<String, dynamic>?;
+    var round = j['round'] as Map<String, dynamic>?;
+    var standings = j['standings'] as Map<String, dynamic>?;
+    // Rune Grid's round and standings are its own.
+    final runeRound = round?['game'] == 'rune' ? round : null;
+    final runeStandings = standings?['game'] == 'rune' ? standings : null;
+    if (runeRound != null) round = null;
+    if (runeStandings != null) standings = null;
     final mine = round?['mine'] as Map<String, dynamic>?;
     final results = j['results'] as Map<String, dynamic>?;
-    final standings = j['standings'] as Map<String, dynamic>?;
     final vsResults = results != null && results.containsKey('podium');
     return RoomSnapshot(
       lobby: RoomLobby.fromJson(j['lobby'] as Map<String, dynamic>),
+      runeRound: runeRound == null ? null : RuneRoundStart.fromJson(runeRound),
+      runeMine: [
+        for (final w in ((runeRound?['mine'] as List?) ?? const []).cast<Map<String, dynamic>>()) RuneWord.fromJson(w),
+      ],
+      runeTally: _scores(runeRound?['tally']),
+      runeStandings: runeStandings == null ? null : RuneRoundEnd.fromJson(runeStandings),
       round: round == null ? null : RoundStart.fromJson(round),
       claims: [
         for (final c in ((round?['claims'] as List?) ?? const []).cast<Map<String, dynamic>>())
@@ -955,6 +1001,271 @@ class RoomSnapshot extends RoomEvent {
 
   /// The room's latest chat lines, oldest first.
   final List<ChatLine> chat;
+
+  /// Rune Grid: the round on now, my words in it (pooled teams: my team's),
+  /// everyone's word count, and the last round's standings.
+  final RuneRoundStart? runeRound;
+  final List<RuneWord> runeMine;
+  final Map<String, int> runeTally;
+  final RuneRoundEnd? runeStandings;
+}
+
+// ---- Rune Grid (shared/rune-grid.md) ----
+
+/// A Rune Grid game's settings: the grid's size (4, 5 or 6 a side), the
+/// round's seconds, the shortest word, how many rounds, and (Team Rune Grid)
+/// how a team scores: `pooled` (one list) or `sum` (its players' points).
+class RuneSettings {
+  const RuneSettings({this.size = 4, this.seconds = 180, this.min = 3, this.rounds = 3, this.teamScoring = 'pooled'});
+
+  factory RuneSettings.fromJson(Object? j) {
+    if (j is! Map) return const RuneSettings();
+    return RuneSettings(
+      size: (j['size'] as num?)?.toInt() ?? 4,
+      seconds: (j['seconds'] as num?)?.toInt() ?? 180,
+      min: (j['min'] as num?)?.toInt() ?? 3,
+      rounds: (j['rounds'] as num?)?.toInt() ?? 3,
+      teamScoring: j['teamScoring'] as String? ?? 'pooled',
+    );
+  }
+
+  final int size;
+  final int seconds;
+  final int min;
+  final int rounds;
+  final String teamScoring;
+
+  bool get pooled => teamScoring != 'sum';
+}
+
+/// A word found this round: who found it and its points before any doubling.
+class RuneWord {
+  const RuneWord(this.word, this.by, this.points);
+
+  factory RuneWord.fromJson(Map<String, dynamic> j) =>
+      RuneWord(j['word'] as String, j['by'] as String? ?? '', (j['points'] as num?)?.toInt() ?? 0);
+
+  final String word;
+  final String by;
+  final int points;
+}
+
+/// Rune Grid: a round's grid and who races it.
+class RuneRoundStart extends RoomEvent {
+  const RuneRoundStart({
+    required this.round,
+    required this.rounds,
+    required this.size,
+    required this.tiles,
+    required this.min,
+    required this.seconds,
+    required this.startsAt,
+    required this.endsAt,
+    this.serverNow = 0,
+    this.tiebreak = false,
+    this.players = const [],
+    this.heat = 1,
+    this.totals = const {},
+    this.teams = const {},
+    this.teamScoring,
+    this.teamTotals,
+  });
+
+  factory RuneRoundStart.fromJson(Map<String, dynamic> j) => RuneRoundStart(
+    round: (j['round'] as num?)?.toInt() ?? 1,
+    rounds: (j['rounds'] as num?)?.toInt() ?? 1,
+    size: (j['size'] as num?)?.toInt() ?? 4,
+    tiles: [for (final t in (j['tiles'] as List?) ?? const []) t as String],
+    min: (j['min'] as num?)?.toInt() ?? 3,
+    seconds: (j['seconds'] as num?)?.toInt() ?? 180,
+    startsAt: (j['startsAt'] as num).toInt(),
+    endsAt: (j['endsAt'] as num).toInt(),
+    serverNow: (j['serverNow'] as num?)?.toInt() ?? 0,
+    tiebreak: j['tiebreak'] == true,
+    players: [for (final id in (j['players'] as List?) ?? const []) id as String],
+    heat: (j['heat'] as num?)?.toInt() ?? 1,
+    totals: _scores(j['totals']),
+    teams: _scores(j['teams']),
+    teamScoring: j['teamScoring'] as String?,
+    teamTotals: _teamPair(j['teamTotals']),
+  );
+
+  final int round;
+
+  /// The game's rounds (a tiebreaker comes after them).
+  final int rounds;
+  final int size;
+
+  /// Row by row; a tile is a letter, or `QU`.
+  final List<String> tiles;
+
+  /// The shortest word, in letters (`QU` is two).
+  final int min;
+  final int seconds;
+  final int startsAt;
+  final int endsAt;
+  final int serverNow;
+
+  /// A tiebreaker round: only [players] (the tied leaders, in Rune Grid) race.
+  final bool tiebreak;
+  final List<String> players;
+  final int heat;
+
+  /// Everyone's points before this round.
+  final Map<String, int> totals;
+
+  /// Team Rune Grid: everyone's team, how teams score and their points so far.
+  final Map<String, int> teams;
+  final String? teamScoring;
+  final List<int>? teamTotals;
+
+  bool get isTeam => teamTotals != null;
+  bool get pooled => teamScoring != 'sum';
+}
+
+/// Rune Grid: how many words [id] has found this round (never the words).
+class RuneTally extends RoomEvent {
+  const RuneTally(this.id, this.words);
+
+  final String id;
+  final int words;
+}
+
+/// Pooled Team Rune Grid: a teammate found a word for the team.
+class RuneWordFound extends RoomEvent {
+  const RuneWordFound(this.word);
+
+  final RuneWord word;
+}
+
+/// A word on a finished round's list: what it scored (doubled when
+/// [unique]: nobody else, or no other team, found it).
+class RuneFoundWord {
+  const RuneFoundWord(this.word, this.points, this.unique);
+
+  final String word;
+  final int points;
+  final bool unique;
+}
+
+/// Rune Grid: a round's end (the standings in a SNAPSHOT, and each round of
+/// a finished game's history, without [totals] and [next]).
+class RuneRoundEnd extends RoomEvent {
+  const RuneRoundEnd({
+    required this.round,
+    required this.size,
+    required this.tiles,
+    required this.found,
+    required this.points,
+    required this.words,
+    required this.total,
+    this.tiebreak = false,
+    this.winner,
+    this.team,
+    this.teamPoints,
+    this.totals = const {},
+    this.teamTotals,
+    this.next,
+    this.standingsEndsAt,
+  });
+
+  factory RuneRoundEnd.fromJson(Map<String, dynamic> j) {
+    final next = j['next'] as Map<String, dynamic>?;
+    return RuneRoundEnd(
+      round: (j['round'] as num?)?.toInt() ?? 0,
+      tiebreak: j['tiebreak'] == true,
+      size: (j['size'] as num?)?.toInt() ?? 4,
+      tiles: [for (final t in (j['tiles'] as List?) ?? const []) t as String],
+      found: {
+        for (final e in ((j['found'] as Map?) ?? const {}).entries)
+          e.key as String: [
+            for (final w in ((e.value as List?) ?? const []).cast<Map<String, dynamic>>())
+              RuneFoundWord(w['word'] as String, (w['points'] as num?)?.toInt() ?? 0, w['unique'] == true),
+          ],
+      },
+      points: _scores(j['points']),
+      words: [for (final w in (j['words'] as List?) ?? const []) w as String],
+      total: (j['total'] as num?)?.toInt() ?? 0,
+      winner: j['winner'] as String?,
+      team: (j['team'] as num?)?.toInt(),
+      teamPoints: _teamPair(j['teamPoints']),
+      totals: _scores(j['totals']),
+      teamTotals: _teamPair(j['teamTotals']),
+      next: next == null
+          ? null
+          : NextRound((next['round'] as num?)?.toInt() ?? 0, next['tiebreak'] == true, [
+              for (final id in (next['players'] as List?) ?? const []) id as String,
+            ]),
+      standingsEndsAt: (j['standingsEndsAt'] as num?)?.toInt(),
+    );
+  }
+
+  final int round;
+  final bool tiebreak;
+  final int size;
+  final List<String> tiles;
+
+  /// Each racer's words in the order found, with what each scored.
+  final Map<String, List<RuneFoundWord>> found;
+
+  /// This round's points, by racer.
+  final Map<String, int> points;
+
+  /// Every word on the grid, longest first (at most 300 of [total]).
+  final List<String> words;
+  final int total;
+
+  /// Who scored the most (null: a tie, nobody scoring, or a team game).
+  final String? winner;
+
+  /// Team Rune Grid: the team that took the round (null: a tie), and each
+  /// team's points this round.
+  final int? team;
+  final List<int>? teamPoints;
+
+  /// The game so far, after this round.
+  final Map<String, int> totals;
+  final List<int>? teamTotals;
+
+  /// The round after the standings (null: the game is over). Its
+  /// `suddenDeath` is a tiebreaker round.
+  final NextRound? next;
+  final int? standingsEndsAt;
+
+  bool get isTeam => teamPoints != null;
+
+  /// Every word someone found this round.
+  Set<String> get foundWords => {
+    for (final list in found.values)
+      for (final w in list) w.word,
+  };
+}
+
+/// What `SERIES_END` adds for a Rune Grid game.
+class RuneGame {
+  const RuneGame({required this.settings, required this.history, required this.words, this.teamTotals, this.teamWords});
+
+  factory RuneGame.fromJson(Map<String, dynamic> j) => RuneGame(
+    settings: RuneSettings.fromJson(j['settings']),
+    history: [
+      for (final r in ((j['history'] as List?) ?? const []).cast<Map<String, dynamic>>()) RuneRoundEnd.fromJson(r),
+    ],
+    words: _scores(j['words']),
+    teamTotals: _teamPair(j['teamTotals']),
+    teamWords: _teamPair(j['teamWords']),
+  );
+
+  final RuneSettings settings;
+
+  /// Every round, in order.
+  final List<RuneRoundEnd> history;
+
+  /// Each racer's words over the game.
+  final Map<String, int> words;
+
+  /// Team Rune Grid: each team's points and words over the game.
+  final List<int>? teamTotals;
+  final List<int>? teamWords;
 }
 
 class RoomEmote extends RoomEvent {
@@ -1062,9 +1373,19 @@ class RoomClient {
   void ready(bool ready) => _send({'op': 'READY', 'ready': ready});
 
   /// Host only: best of [series] rounds (Versus), the variant (`classic` or
-  /// `survival`), the [heat]: a tier 1–6, or `'auto'`, and the room's [mode]
-  /// (`coop`, `vs` or `team`: everyone goes back to the lobby).
-  void config({int? series, String? variant, Object? heat, String? rule, String? scoring, String? mode}) => _send({
+  /// `survival`), the [heat]: a tier 1–6, or `'auto'`, the room's [mode]
+  /// (`coop`, `vs`, `team`, `rune` or `runeteam`: everyone goes back to the
+  /// lobby), and Rune Grid's settings ([rune]: `size`, `seconds`, `min`,
+  /// `rounds`, `teamScoring`).
+  void config({
+    int? series,
+    String? variant,
+    Object? heat,
+    String? rule,
+    String? scoring,
+    String? mode,
+    Map<String, Object>? rune,
+  }) => _send({
     'op': 'CONFIG',
     'mode': ?mode,
     'series': ?series,
@@ -1072,6 +1393,7 @@ class RoomClient {
     'heat': ?heat,
     'rule': ?rule,
     'scoring': ?scoring,
+    'rune': ?rune,
   });
 
   /// Team Versus, in the lobby or results: joins [team], or (host only) moves [id] there.

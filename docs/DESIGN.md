@@ -20,6 +20,7 @@ On top of that solo game, Wordsmith adds:
 - **Co-op (2–4 players):** one shared, timed puzzle. Whoever enters a word first gets the points, and the host sets the difficulty (by default, from their level).
 - **Versus (2–5 players):** everyone gets the same puzzle and races on their own copy. The first to finish wins the round, and matches are best-of-3/5/7/10 series.
 - **Team Versus (2–6 players, two even teams):** Versus in two teams, Copper and Cobalt. A round goes to a team: on letters added up, or to whoever finishes first (§9.5).
+- **Rune Grid and Team Rune Grid (2–6 players):** everyone gets the same grid of letter dice (4×4, 5×5 or 6×6) and swipes as many words as they can before the timer runs out; a word nobody else found scores double. 1, 3 or 5 rounds, most points wins; Team Rune Grid pools a team's words or adds up its players' points (shared/rune-grid.md).
 
 The theme is blacksmithing. You **forge** words on the **anvil**, and they're
 **cast** into the **mold**.
@@ -271,7 +272,7 @@ room codes.
 - **Rooms:**
   - The creator is the **host** and gets a **6-character room code**. Codes skip look-alike characters such as 0/O and 1/I.
   - Friends join with the code, through an **invite**, or from the open rooms list.
-  - Co-op rooms hold 2–4 players, Versus rooms 2–5 and Team Versus rooms 2–6. A Co-op room with just the host is allowed for testing.
+  - Co-op rooms hold 2–4 players, Versus rooms 2–5, and Team Versus and both Rune Grid rooms 2–6. A Co-op room with just the host is allowed for testing.
 - **Invites:** in-app while the app is open. Push notifications for invites come later (Firebase Cloud Messaging is free).
 - **Emotes:** preset reactions in rooms ("Nice strike!", "So close!", a fire emoji, a hammer emoji).
 - **Chat:** text chat for everyone in a Co-op or Versus room, in the lobby, during rounds and at results. New lines pop up over the game for a moment, and the chat button counts the ones not yet read. Quick phrases send in one tap. Holding down someone's line mutes them for the rest of the room, and Settings can turn chat off (shared/room-protocol.md, "Chat").

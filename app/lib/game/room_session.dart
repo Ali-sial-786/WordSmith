@@ -54,11 +54,31 @@ abstract class RoomSession extends ChangeNotifier {
 
   int get serverNow => DateTime.now().millisecondsSinceEpoch + clockOffsetMs;
 
+  /// When this round's countdown ends and the round does (server ms); null
+  /// with no round. Modes with their own kind of round say.
+  @protected
+  int? get roundStartsAt => round?.startsAt;
+  @protected
+  int? get roundEndsAt => round?.endsAt;
+
   Duration get timeLeft =>
-      round == null ? Duration.zero : Duration(milliseconds: (round!.endsAt - serverNow).clamp(0, 1 << 31));
+      roundEndsAt == null ? Duration.zero : Duration(milliseconds: (roundEndsAt! - serverNow).clamp(0, 1 << 31));
 
   Duration get countdownLeft =>
-      round == null ? Duration.zero : Duration(milliseconds: (round!.startsAt - serverNow).clamp(0, 1 << 31));
+      roundStartsAt == null ? Duration.zero : Duration(milliseconds: (roundStartsAt! - serverNow).clamp(0, 1 << 31));
+
+  // ---- Teams (Team Versus, Team Rune Grid) ----
+
+  /// [id]'s team, 0 Copper or 1 Cobalt: the game's while one is on, else the lobby's.
+  int? teamOf(String id) => lobby?.player(id)?.team;
+
+  int? get myTeam => teamOf(me);
+
+  /// In the lobby or results: joins [team].
+  void joinTeam(int team) => client.team(team);
+
+  /// Host only: moves [id] to [team].
+  void moveToTeam(String id, int team) => client.team(team, id: id);
 
   // ---- Survival (shared/survival.md) ----
 
@@ -290,7 +310,7 @@ abstract class RoomSession extends ChangeNotifier {
       case RoomLobby():
         lobby = e;
         _phaseAhead = null;
-      case RoundStart():
+      case RoundStart() || RuneRoundStart():
         if (lobby?.phase != 'countdown' && lobby?.phase != 'round') _phaseAhead = 'countdown';
         handle(e);
       case RoomSnapshot(:final chat):
@@ -323,8 +343,9 @@ abstract class RoomSession extends ChangeNotifier {
   /// Host only, in the lobby or results: a heat tier 1–6, or null for Auto.
   void setHeat(int? tier) => client.config(heat: tier ?? 'auto');
 
-  /// Host only, in the lobby or results: `coop`, `vs` or `team`. Everyone
-  /// goes back to the lobby in that mode, the room and its chat kept.
+  /// Host only, in the lobby or results: `coop`, `vs`, `team`, `rune` or
+  /// `runeteam`. Everyone goes back to the lobby in that mode, the room and
+  /// its chat kept.
   void setMode(String mode) => client.config(mode: mode);
   void startRound() => client.startRound();
   void again() => client.again();

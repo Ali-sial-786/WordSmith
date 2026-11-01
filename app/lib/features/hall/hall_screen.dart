@@ -196,6 +196,38 @@ class HallScreen extends ConsumerWidget {
                           icon: 'friends',
                           onPressed: account.isReady ? () => showRoomEntry(context, 'team') : null,
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PlateButton(
+                                key: const ValueKey('hall-rune'),
+                                label: 'Rune Grid',
+                                sublabel: account.isReady
+                                    ? 'Letter dice, up to 6'
+                                    : online
+                                    ? 'Sign in first'
+                                    : 'Coming soon',
+                                icon: 'blueprint',
+                                onPressed: account.isReady ? () => showRoomEntry(context, 'rune') : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: PlateButton(
+                                key: const ValueKey('hall-runeteam'),
+                                label: 'Team Rune Grid',
+                                sublabel: account.isReady
+                                    ? 'Two teams on one grid'
+                                    : online
+                                    ? 'Sign in first'
+                                    : 'Coming soon',
+                                icon: 'friends',
+                                onPressed: account.isReady ? () => showRoomEntry(context, 'runeteam') : null,
+                              ),
+                            ),
+                          ],
+                        ),
                         if (account.isReady) ...[const SizedBox(height: 12), const HallLeaderboard()],
                         const SizedBox(height: 12),
                         Row(

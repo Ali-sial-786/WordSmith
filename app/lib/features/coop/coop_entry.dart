@@ -17,14 +17,25 @@ const roomCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /// Start or join a co-op room.
 Future<void> showCoopEntry(BuildContext context) => showRoomEntry(context, 'coop');
 
-/// What a room mode is called: Co-op, Versus or Team Versus.
+/// What a room mode is called: Co-op, Versus, Team Versus, Rune Grid or Team Rune Grid.
 String modeName(String mode) => switch (mode) {
   'vs' => 'Versus',
   'team' => 'Team Versus',
+  'rune' => 'Rune Grid',
+  'runeteam' => 'Team Rune Grid',
   _ => 'Co-op',
 };
 
-/// Start or join a room: `coop`, `vs` or `team`. Already in one: back to
+/// The title a room's lobby and entry sheet carry.
+String roomTitle(String mode) => switch (mode) {
+  'vs' => 'Anvil Clash',
+  'team' => 'Team Clash',
+  'rune' => 'Rune Grid',
+  'runeteam' => 'Team Rune Grid',
+  _ => 'The Guild Forge',
+};
+
+/// Start or join a room: `coop`, `vs`, `team`, `rune` or `runeteam`. Already in one: back to
 /// it, the host switching it to [mode] (shared/room-protocol.md).
 Future<void> showRoomEntry(BuildContext context, String mode) async {
   final party = ProviderScope.containerOf(context, listen: false).read(partyProvider);
@@ -79,6 +90,7 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
 
   bool get _vs => widget.mode != 'coop';
   bool get _team => widget.mode == 'team';
+  bool get _rune => widget.mode == 'rune' || widget.mode == 'runeteam';
 
   /// [getRoom] returns the room's code and mode.
   Future<void> _run(Future<(String, String)> Function() getRoom) async {
@@ -116,17 +128,19 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            _team
-                ? 'Team Clash'
-                : _vs
-                ? 'Anvil Clash'
-                : 'The Guild Forge',
+            roomTitle(widget.mode),
             textAlign: TextAlign.center,
             style: displayStyle(24, color: Palette.molten),
           ),
           const SizedBox(height: 4),
           Text(
-            _team
+            widget.mode == 'runeteam'
+                ? 'Two teams of 1 to 3 smiths on the same grid of letter dice. Find words by joining touching '
+                      'letters; a word the other team missed scores double. 1, 3 or 5 rounds.'
+                : _rune
+                ? 'Up to 6 smiths on the same grid of letter dice. Find words by joining touching letters; a word '
+                      'nobody else found scores double. 1, 3 or 5 rounds, most points wins.'
+                : _team
                 ? 'Two teams of 1 to 3 smiths, each on their own mold. Win rounds on letters added up, or by '
                       'being first to finish; best of 3, 5, 7 or 10.'
                 : _vs
@@ -139,7 +153,9 @@ class _RoomEntrySheetState extends ConsumerState<_RoomEntrySheet> {
           const SizedBox(height: 18),
           PlateButton(
             label: _vs ? 'Call a clash' : 'Light a forge',
-            sublabel: _team
+            sublabel: _rune
+                ? 'You host; pick the grid, timer and rounds'
+                : _team
                 ? 'You host; pick how rounds are won'
                 : _vs
                 ? 'You host and pick the series length'
