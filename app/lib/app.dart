@@ -26,6 +26,7 @@ import 'features/safety/blocked_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/solo/puzzle_screen.dart';
 import 'features/survival/crucible_screen.dart';
+import 'data/frame_stats.dart';
 import 'game/account.dart';
 import 'game/party.dart';
 import 'game/providers.dart';
@@ -117,6 +118,10 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Frame times by screen, for the performance report in Settings.
+    FrameStats.instance
+      ..screenOf = _screenName
+      ..start();
     // A tapped invite notification opens that room.
     final push = ref.read(pushServiceProvider);
     push.initialOpen().then(_openInvite);
@@ -146,8 +151,21 @@ class _WordsmithAppState extends ConsumerState<WordsmithApp> with WidgetsBinding
     path.startsWith('/room/') ? _router.go(location) : _router.push(location);
   }
 
+  /// The screen showing, for [FrameStats]: the route (numbers left out), or
+  /// in a room its mode and phase.
+  String _screenName() {
+    if (!mounted || _router.routerDelegate.currentConfiguration.isEmpty) return '?';
+    final path = _router.state.uri.path;
+    if (path.startsWith('/room/')) {
+      final s = ref.read(partyProvider).session;
+      return ['room', ?s?.lobby?.mode, ?s?.phase].join(' ');
+    }
+    return path.replaceAll(RegExp(r'/\d+'), '/n');
+  }
+
   @override
   void dispose() {
+    FrameStats.instance.screenOf = () => '?';
     _opened?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

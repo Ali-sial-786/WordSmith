@@ -41,6 +41,12 @@ class MainActivity : FlutterActivity() {
     override fun getFlutterShellArgs(): FlutterShellArgs {
         val args = super.getFlutterShellArgs()
         noteCrashes()
+        // Compatibility graphics a crash turned on: each new version tries
+        // Vulkan again (it's faster, and what crashed may be fixed); another
+        // native crash on it turns them back on. Ones the player chose stay.
+        if (prefs.getBoolean(COMPAT_AUTO, false) && prefs.getString(COMPAT_VERSION, null) != versionName()) {
+            prefs.edit().putBoolean(COMPAT, false).putBoolean(COMPAT_AUTO, false).apply()
+        }
         backend = if (prefs.getBoolean(COMPAT, false)) "opengles" else "vulkan"
         if (backend == "opengles") args.add("--impeller-backend=opengles")
         prefs.edit().putString(BACKEND, backend).apply()
@@ -183,11 +189,13 @@ class MainActivity : FlutterActivity() {
         if (crash != null) {
             val lastBackend = prefs.getString(BACKEND, "vulkan")
             edit.putString(LAST_CRASH, report(crash, lastBackend).toString())
+            // Only a crash in this version: one in the version before may be fixed.
             if (crash.reason == ApplicationExitInfo.REASON_CRASH_NATIVE &&
                 lastBackend == "vulkan" &&
-                !prefs.getBoolean(COMPAT, false)
+                !prefs.getBoolean(COMPAT, false) &&
+                crash.timestamp >= installedAt()
             ) {
-                edit.putBoolean(COMPAT, true).putBoolean(COMPAT_AUTO, true)
+                edit.putBoolean(COMPAT, true).putBoolean(COMPAT_AUTO, true).putString(COMPAT_VERSION, versionName())
             }
         }
         edit.apply()
@@ -238,7 +246,9 @@ class MainActivity : FlutterActivity() {
                 if (info.reason == ApplicationExitInfo.REASON_ANR) {
                     String(bytes, Charsets.UTF_8).take(MAX_TRACE)
                 } else {
-                    printable(bytes)
+                    // The thread that crashed first: the readable runs alone
+                    // put it wherever the tombstone happened to.
+                    ((crashedThread(bytes)?.plus("\n") ?: "") + printable(bytes)).take(MAX_TRACE)
                 }
             }
         } catch (e: Exception) {
@@ -253,11 +263,7 @@ class MainActivity : FlutterActivity() {
             null
         }
         // When this version was installed: a crash before it was in the version before.
-        val updatedAt = try {
-            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-        } catch (e: Exception) {
-            0L
-        }
+        val updatedAt = installedAt()
         return JSONObject()
             .put("kind", kindOf(info))
             .put("at", info.timestamp)
@@ -268,6 +274,86 @@ class MainActivity : FlutterActivity() {
             .put("backend", lastBackend ?: "vulkan")
             .put("trace", jvm ?: trace ?: "")
             .put("updatedAt", updatedAt)
+    }
+
+    private fun versionName(): String? = try {
+        packageManager.getPackageInfo(packageName, 0).versionName
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun installedAt(): Long = try {
+        packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+    } catch (e: Exception) {
+        0L
+    }
+
+    /**
+     * The crashed thread's name and backtrace from a native tombstone
+     * (Android's tombstone.proto: `tid` is field 6, `threads` field 16, a
+     * thread's name field 2 and its frames field 4); null if it can't be read.
+     */
+    private fun crashedThread(bytes: ByteArray): String? = try {
+        val top = protoFields(bytes)
+        val tid = top.firstOrNull { it.first == 6 }?.second as? Long
+        val thread = top.filter { it.first == 16 }.firstNotNullOfOrNull { (_, entry) ->
+            val kv = protoFields(entry as ByteArray)
+            if (kv.firstOrNull { it.first == 1 }?.second == tid) kv.firstOrNull { it.first == 2 }?.second as? ByteArray else null
+        }
+        if (tid == null || thread == null) {
+            null
+        } else {
+            val t = protoFields(thread)
+            val name = (t.firstOrNull { it.first == 2 }?.second as? ByteArray)?.let { String(it) } ?: "?"
+            val out = StringBuilder("Crashed thread $tid \"$name\":\n")
+            t.filter { it.first == 4 }.forEachIndexed { n, (_, frame) ->
+                val f = protoFields(frame as ByteArray)
+                fun num(k: Int) = f.firstOrNull { it.first == k }?.second as? Long ?: 0L
+                fun str(k: Int) = (f.firstOrNull { it.first == k }?.second as? ByteArray)?.let { String(it) } ?: ""
+                out.append("#%02d pc %08x %s".format(n, num(1), str(6)))
+                if (str(4).isNotEmpty()) out.append(" (").append(str(4)).append('+').append(num(5)).append(')')
+                if (str(8).isNotEmpty()) out.append(" BuildId: ").append(str(8))
+                out.append('\n')
+            }
+            out.toString()
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** A protobuf message's fields in order: varints as Long, length-delimited ones as bytes. */
+    private fun protoFields(bytes: ByteArray): List<Pair<Int, Any>> {
+        val out = ArrayList<Pair<Int, Any>>()
+        var i = 0
+        fun varint(): Long {
+            var shift = 0
+            var result = 0L
+            while (i < bytes.size) {
+                val b = bytes[i++].toInt() and 0xff
+                result = result or ((b and 0x7f).toLong() shl shift)
+                if (b and 0x80 == 0) return result
+                shift += 7
+                require(shift < 64) { "bad varint" }
+            }
+            throw IllegalArgumentException("truncated")
+        }
+        while (i < bytes.size) {
+            val key = varint()
+            val field = (key ushr 3).toInt()
+            when ((key and 7).toInt()) {
+                0 -> out.add(field to varint())
+                1 -> i += 8
+                2 -> {
+                    val n = varint().toInt()
+                    require(n >= 0 && i + n <= bytes.size) { "bad length" }
+                    out.add(field to bytes.copyOfRange(i, i + n))
+                    i += n
+                }
+                5 -> i += 4
+                else -> throw IllegalArgumentException("wire type")
+            }
+        }
+        return out
     }
 
     /** The runs of 6 or more printable characters in [bytes], one per line. */
@@ -297,6 +383,9 @@ class MainActivity : FlutterActivity() {
 
         const val COMPAT = "compatGraphics"
         const val COMPAT_AUTO = "compatGraphicsAuto"
+
+        /** The version compatibility graphics were turned on in by a crash. */
+        const val COMPAT_VERSION = "compatGraphicsVersion"
         const val BACKEND = "backend"
         const val SEEN_EXIT_AT = "seenExitAt"
         const val LAST_CRASH = "lastCrash"

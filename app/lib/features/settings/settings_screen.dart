@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_info.dart';
 import '../../auth/auth_service.dart';
 import '../../data/diagnostics.dart';
+import '../../data/frame_stats.dart';
 import '../../game/account.dart';
 import '../../game/providers.dart';
 import '../../net/api_client.dart';
@@ -140,8 +142,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Compatibility graphics and the last crash report, when there's something
-/// to show (Android only).
+/// Compatibility graphics and the last crash report (Android only), and a
+/// performance report to copy.
 class _Troubleshooting extends ConsumerWidget {
   const _Troubleshooting();
 
@@ -149,7 +151,6 @@ class _Troubleshooting extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final graphics = ref.watch(graphicsProvider).value;
     final crash = ref.watch(lastCrashProvider).value;
-    if (graphics == null && crash == null) return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -187,6 +188,25 @@ class _Troubleshooting extends ConsumerWidget {
               }
             },
           ),
+        ListTile(
+          key: const ValueKey('copy-performance'),
+          title: const Text('Copy performance report'),
+          subtitle: const Text('How fast each screen draws on this phone, to send if the game feels slow'),
+          trailing: const Icon(Icons.speed),
+          onTap: () async {
+            final refreshRate = View.of(context).display.refreshRate;
+            final device = await ref.read(diagnosticsProvider).device();
+            final report = FrameStats.instance.report(
+              device: device,
+              graphics: graphics?.active ?? (kIsWeb ? 'web' : 'unknown'),
+              refreshRate: refreshRate,
+            );
+            await Clipboard.setData(ClipboardData(text: report));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Performance report copied.')));
+            }
+          },
+        ),
       ],
     );
   }

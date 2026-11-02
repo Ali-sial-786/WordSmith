@@ -112,6 +112,7 @@ class RuneBoardState extends State<RuneBoard> {
   }
 
   void _set(List<int> path) {
+    if (!mounted) return;
     setState(() => _path = path);
     widget.onChanged?.call(runeWordOf(widget.tiles, path));
   }
@@ -174,7 +175,8 @@ class RuneBoardState extends State<RuneBoard> {
   }
 
   void _onMove(PointerMoveEvent e, double side) {
-    if (e.pointer != _pointer || !widget.enabled) return;
+    // A finger still moving as the round ends and the board goes.
+    if (!mounted || e.pointer != _pointer || !widget.enabled) return;
     final t = _hit(e.localPosition, side, strict: true);
     if (t == null || t == _down && !_moved) return;
     if (!_moved) {
@@ -194,7 +196,7 @@ class RuneBoardState extends State<RuneBoard> {
   }
 
   void _onUp(PointerEvent e) {
-    if (e.pointer != _pointer) return;
+    if (!mounted || e.pointer != _pointer) return;
     _pointer = null;
     final down = _down;
     _down = null;

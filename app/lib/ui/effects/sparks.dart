@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -227,77 +226,28 @@ class _EmberDriftState extends State<EmberDrift> with SingleTickerProviderStateM
   );
 }
 
-/// A soft white dot, faded out to its edge like a blurred disc: each ember's
-/// glow is this, tinted. A blurred circle per ember per frame cost more.
-final ui.Image _glow = () {
-  const r = _EmberPainter.glowRadius;
-  final recorder = ui.PictureRecorder();
-  const rect = Rect.fromLTWH(0, 0, r * 2, r * 2);
-  Canvas(recorder).drawCircle(
-    rect.center,
-    r,
-    Paint()
-      ..shader = const RadialGradient(
-        colors: [Color(0xFFFFFFFF), Color(0xC0FFFFFF), Color(0x66FFFFFF), Color(0x1FFFFFFF), Color(0x00FFFFFF)],
-        stops: [0, 0.3, 0.55, 0.78, 1],
-      ).createShader(rect),
-  );
-  final picture = recorder.endRecording();
-  final image = picture.toImageSync((r * 2).toInt(), (r * 2).toInt());
-  picture.dispose();
-  return image;
-}();
-
 class _EmberPainter extends CustomPainter {
   _EmberPainter(this.embers, this.time) : super(repaint: time);
 
   final List<_Ember> embers;
   final Listenable time;
 
-  /// The glow sprite's radius, in its own pixels.
-  static const glowRadius = 32.0;
-
-  /// How far the glow's blur reaches past its circle.
-  static const _blur = 6.0;
-
   @override
   void paint(Canvas canvas, Size size) {
+    final glow = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3)
+      ..blendMode = BlendMode.plus;
     final core = Paint()..blendMode = BlendMode.plus;
-    final transforms = <RSTransform>[];
-    final colors = <Color>[];
     for (final e in embers) {
       final flicker = 0.55 + 0.45 * sin(e.life * 5 + e.phase);
       final fadeTop = (e.y * 3).clamp(0.0, 1.0);
       final a = flicker * fadeTop;
       final p = Offset((e.x + sin(e.life * 1.3 + e.phase) * e.sway) * size.width, e.y * size.height);
-      // A circle of radius g blurred (sigma 3): it reaches about 6 further,
-      // and the small ones never get to full strength in the middle.
-      final g = e.size * 2.2;
-      transforms.add(
-        RSTransform.fromComponents(
-          rotation: 0,
-          scale: (g + _blur) / glowRadius,
-          anchorX: glowRadius,
-          anchorY: glowRadius,
-          translateX: p.dx,
-          translateY: p.dy,
-        ),
-      );
-      colors.add(Palette.ember.withValues(alpha: 0.5 * a * (1 - exp(-g * g / 18))));
+      glow.color = Palette.ember.withValues(alpha: 0.5 * a);
       core.color = Palette.molten.withValues(alpha: 0.9 * a);
+      canvas.drawCircle(p, e.size * 2.2, glow);
       canvas.drawCircle(p, e.size * 0.7, core);
     }
-    canvas.drawAtlas(
-      _glow,
-      transforms,
-      List.filled(transforms.length, const Rect.fromLTWH(0, 0, glowRadius * 2, glowRadius * 2)),
-      colors,
-      BlendMode.modulate,
-      null,
-      Paint()
-        ..blendMode = BlendMode.plus
-        ..filterQuality = FilterQuality.low,
-    );
   }
 
   @override
