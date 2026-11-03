@@ -226,14 +226,65 @@ void main() {
 
     testWidgets("tiles that don't touch, or are used, are passed over", (tester) async {
       final r = await board(tester);
-      final g = await tester.startGesture(r.topLeft + _at(8, r.width));
-      // QU → I → L → T, then jumping back to QU (used) and to C (not touching).
-      for (final i in [9, 10, 11, 8, 0]) {
+      var g = await tester.startGesture(r.topLeft + _at(8, r.width));
+      // QU → I → L → T, then a knight's move to T at the top (not touching),
+      // which cuts between tiles without crossing the middle of any.
+      for (final i in [9, 10, 11, 2]) {
         await g.moveTo(r.topLeft + _at(i, r.width));
         await tester.pump();
       }
       await g.up();
       expect(sent, ['QUILT']);
+      // C → A → R → O, then back up to C (used, and not the tile before).
+      g = await tester.startGesture(r.topLeft + _at(0, r.width));
+      for (final i in [1, 5, 4, 0]) {
+        await g.moveTo(r.topLeft + _at(i, r.width));
+        await tester.pump();
+      }
+      await g.up();
+      expect(sent, ['QUILT', 'CARO']);
+    });
+
+    testWidgets('a fast swipe takes every tile it crosses, even with few samples', (tester) async {
+      final r = await board(tester);
+      // Corner to corner in one jump: C, R, L, H down the diagonal.
+      final g = await tester.startGesture(r.topLeft + _at(0, r.width));
+      await g.moveTo(r.topLeft + _at(15, r.width));
+      await tester.pump();
+      await g.up();
+      await tester.pump();
+      expect(sent, ['CRLH']);
+    });
+
+    testWidgets('a diagonal that cuts past a corner leaves the tile beside it', (tester) async {
+      final r = await board(tester);
+      final cell = r.width / 4;
+      Offset cells(double x, double y) => r.topLeft + Offset(x * cell, y * cell);
+      // From C to R (down and right), bowing out towards A: a third of a cell
+      // from A's middle at the closest, which a round hit area would take.
+      final g = await tester.startGesture(cells(0.5, 0.5));
+      await g.moveTo(cells(1.255, 0.745));
+      await tester.pump();
+      await g.moveTo(cells(1.5, 1.5));
+      await tester.pump();
+      await g.up();
+      await tester.pump();
+      expect(traced, isNot(contains('CA')));
+      expect(sent, ['CR']);
+    });
+
+    testWidgets('a swipe along a row may wander off the middle and still take each tile', (tester) async {
+      final r = await board(tester);
+      final cell = r.width / 4;
+      Offset cells(double x, double y) => r.topLeft + Offset(x * cell, y * cell);
+      final g = await tester.startGesture(cells(0.5, 0.5));
+      for (final (x, y) in const [(1.5, 0.94), (2.5, 0.9), (3.5, 0.6)]) {
+        await g.moveTo(cells(x, y));
+        await tester.pump();
+      }
+      await g.up();
+      await tester.pump();
+      expect(sent, ['CATS']);
     });
 
     testWidgets('tapping tiles builds a word; tapping the last again sends it', (tester) async {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -98,13 +99,13 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
         switch (result) {
           case 'found':
             _preview.currentState?.react(word, PreviewResult.good);
-            _board.currentState?.flash(path, Palette.verdigris);
+            _board.currentState?.flash(path, Palette.verdigris, kind: RuneFlash.good, label: '+$points');
             _sfx.play(SfxId.clang);
             _haptic(HapticFeedback.mediumImpact);
             _toast.currentState?.show('$word  +$points', color: Palette.verdigris);
           case 'already':
             _preview.currentState?.react(word, PreviewResult.repeat);
-            _board.currentState?.flash(path, Palette.gold);
+            _board.currentState?.flash(path, Palette.gold, kind: RuneFlash.repeat);
             _sfx.play(SfxId.already);
             _toast.currentState?.show(
               by == null || by == _s.me ? 'You have that one' : '${_s.nameOf(by)} found that one',
@@ -116,7 +117,7 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
             _preview.currentState?.react(word, PreviewResult.bad);
           default:
             _preview.currentState?.react(word, PreviewResult.bad);
-            _board.currentState?.flash(path, Palette.quenchRed);
+            _board.currentState?.flash(path, Palette.quenchRed, kind: RuneFlash.bad);
             _sfx.play(SfxId.invalid);
         }
       case RuneWordFound():
@@ -141,14 +142,14 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
     if (path.length == 1) return;
     if (word.length < _s.minLength) {
       _preview.currentState?.react(word, PreviewResult.bad);
-      _board.currentState?.flash(path, Palette.quenchRed);
+      _board.currentState?.flash(path, Palette.quenchRed, kind: RuneFlash.bad);
       _toast.currentState?.show('Words need ${_s.minLength} letters or more', color: Palette.steel);
       return;
     }
     if (_s.has(word)) {
       final by = _s.mine.firstWhere((w) => w.word == word).by;
       _preview.currentState?.react(word, PreviewResult.repeat);
-      _board.currentState?.flash(path, Palette.gold);
+      _board.currentState?.flash(path, Palette.gold, kind: RuneFlash.repeat);
       _sfx.play(SfxId.already);
       _toast.currentState?.show(by == _s.me ? 'You have that one' : '${_s.nameOf(by)} found that one');
       return;
@@ -173,51 +174,82 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
     _face = _s.clockFace;
     final counting = _s.countdownLeft > Duration.zero;
     final words = _s.mine.reversed.toList();
+    final still = ref.watch(settingsProvider.select((s) => s.reducedMotion));
+    final word = _playing ? _word : '';
+    final long = word.length >= _s.minLength;
     return Stack(
       children: [
         Column(
           children: [
-            _TopStrip(session: _s, onLeave: widget.onLeave, video: widget.video),
+            _TopStrip(session: _s, onLeave: widget.onLeave, video: widget.video, still: still),
+            _TimeBar(session: _s),
             RuneRivalStrip(session: _s, call: widget.video.call),
             if (_s.isTeam) RuneTeamBar(session: _s),
-            SizedBox(
-              height: 20,
-              child: _s.feed.isEmpty
-                  ? null
-                  : Text(_s.feed.first.text, style: text.labelMedium?.copyWith(color: _s.feed.first.color)),
-            ),
-            WordPreview(key: _preview, word: _playing ? _word : ''),
-            ToastLine(key: _toast),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: RuneBoard(
-                        key: _board,
-                        // Blank until the round starts: everyone sees the letters at once.
-                        tiles: counting ? _blank(grid.tiles.length) : grid.tiles,
-                        size: grid.size,
-                        enabled: _playing,
-                        quarterTurns: _turns,
-                        onChanged: _onChanged,
-                        onSubmit: _onSubmit,
+              // The word being traced and how it went sit right over the grid,
+              // the space left over going above and below them.
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  const above = 20 + 48 + 26;
+                  final side = max(0.0, min(c.maxWidth - 36, c.maxHeight - above - 16));
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        child: _s.feed.isEmpty
+                            ? null
+                            : Text(_s.feed.first.text, style: text.labelMedium?.copyWith(color: _s.feed.first.color)),
                       ),
-                    ),
-                    if (!_s.racing && !counting)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Text(
-                          "Tiebreaker: ${grid.players.map(_s.nameOf).join(' vs ')}. You're watching this one.",
-                          textAlign: TextAlign.center,
-                          style: text.bodyMedium?.copyWith(color: Palette.molten),
+                      WordPreview(
+                        key: _preview,
+                        word: word,
+                        // What it would score, once it's long enough to count.
+                        badge: long ? '+${runeWordPoints(word.length)}' : null,
+                        color: long ? Palette.ember : Palette.steel,
+                      ),
+                      ToastLine(key: _toast),
+                      SizedBox(
+                        width: side,
+                        height: side + 16,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned.fill(
+                                child: RepaintBoundary(
+                                  child: RuneBoard(
+                                    key: _board,
+                                    // Blank until the round starts: everyone sees the letters at once.
+                                    tiles: counting ? _blank(grid.tiles.length) : grid.tiles,
+                                    size: grid.size,
+                                    enabled: _playing,
+                                    quarterTurns: _turns,
+                                    onChanged: _onChanged,
+                                    onSubmit: _onSubmit,
+                                    reducedMotion: still,
+                                  ),
+                                ),
+                              ),
+                              if (!_s.racing && !counting)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Text(
+                                    "Tiebreaker: ${grid.players.map(_s.nameOf).join(' vs ')}. You're watching this one.",
+                                    textAlign: TextAlign.center,
+                                    style: text.bodyMedium?.copyWith(color: Palette.molten),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                  ],
-                ),
+                    ],
+                  );
+                },
               ),
             ),
             Padding(
@@ -231,13 +263,31 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
                     icon: Icon(Icons.rotate_90_degrees_cw_outlined, color: Palette.steel),
                   ),
                   Expanded(
-                    child: Text(
-                      _s.pooled
-                          ? 'Your team: ${_s.mine.length} words · ${_s.myPoints} pts'
-                          : '${_s.mine.length} ${_s.mine.length == 1 ? 'word' : 'words'} · ${_s.myPoints} pts',
-                      key: const ValueKey('rune-mine'),
-                      textAlign: TextAlign.center,
-                      style: displayStyle(16, color: _s.colorOf(_s.me)),
+                    child: Center(
+                      child: _Bump(
+                        value: _s.myPoints,
+                        still: still,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Palette.forgeBlack.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _s.colorOf(_s.me).withValues(alpha: 0.7)),
+                          ),
+                          child: Text(
+                            _s.pooled
+                                ? 'Your team: ${_s.mine.length} words · ${_s.myPoints} pts'
+                                : '${_s.mine.length} ${_s.mine.length == 1 ? 'word' : 'words'} · ${_s.myPoints} pts',
+                            key: const ValueKey('rune-mine'),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: displayStyle(16, color: _s.colorOf(_s.me)).copyWith(
+                              shadows: [Shadow(color: _s.colorOf(_s.me).withValues(alpha: 0.6), blurRadius: 10)],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   Text('${grid.min}+ letters', style: text.labelMedium?.copyWith(color: Palette.steel)),
@@ -254,18 +304,23 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
                       ),
                     )
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
                       child: RepaintBoundary(
                         child: Wrap(
                           spacing: 5,
                           runSpacing: 5,
                           children: [
-                            for (final w in words)
-                              RuneWordChip(
-                                word: w.word,
-                                points: w.points,
-                                color: w.by == _s.me ? null : _s.colorOf(w.by),
-                                onTap: () => showMeanings(context, [w.word]),
+                            for (final (i, w) in words.indexed)
+                              _Arrive(
+                                key: ValueKey('rune-mine-${w.word}'),
+                                // The newest word drops in; the rest are already there.
+                                still: still || i > 0,
+                                child: RuneWordChip(
+                                  word: w.word,
+                                  points: w.points,
+                                  color: w.by == _s.me ? null : _s.colorOf(w.by),
+                                  onTap: () => showMeanings(context, [w.word]),
+                                ),
                               ),
                           ],
                         ),
@@ -274,7 +329,10 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
             ),
           ],
         ),
-        if (counting) Positioned.fill(child: RuneCountdown(session: _s)),
+        if (counting)
+          Positioned.fill(
+            child: RuneCountdown(session: _s, still: still),
+          ),
         // The clock ran out: a moment until the server's count comes.
         if (!counting && _s.timeLeft == Duration.zero && grid.endsAt > 0)
           Positioned.fill(
@@ -282,13 +340,17 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
               child: ColoredBox(
                 color: Palette.forgeBlack.withValues(alpha: 0.55),
                 child: Center(
-                  child: Text(
-                    "Time's up!",
-                    key: const ValueKey('rune-times-up'),
-                    style: displayStyle(
-                      44,
-                      color: Palette.molten,
-                    ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 30)]),
+                  child: _Arrive(
+                    still: still,
+                    from: 0.4,
+                    child: Text(
+                      "Time's up!",
+                      key: const ValueKey('rune-times-up'),
+                      style: displayStyle(
+                        44,
+                        color: Palette.molten,
+                      ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 30)]),
+                    ),
                   ),
                 ),
               ),
@@ -299,17 +361,76 @@ class _RuneRoundViewState extends ConsumerState<RuneRoundView> {
   }
 }
 
+/// [child] growing in from [from] of its size, once, as it first shows.
+class _Arrive extends StatelessWidget {
+  const _Arrive({super.key, required this.child, this.still = false, this.from = 0.5});
+
+  final Widget child;
+  final bool still;
+  final double from;
+
+  @override
+  Widget build(BuildContext context) {
+    if (still) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: from, end: 1),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+    );
+  }
+}
+
+/// [child] swelling for a moment whenever [value] goes up.
+class _Bump extends StatefulWidget {
+  const _Bump({required this.value, required this.child, this.still = false});
+
+  final int value;
+  final Widget child;
+  final bool still;
+
+  @override
+  State<_Bump> createState() => _BumpState();
+}
+
+class _BumpState extends State<_Bump> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+
+  @override
+  void didUpdateWidget(_Bump old) {
+    super.didUpdateWidget(old);
+    if (widget.value > old.value && !widget.still) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _c,
+    child: widget.child,
+    builder: (context, child) {
+      if (!_c.isAnimating) return child!;
+      return Transform.scale(scale: 1 + 0.2 * sin(pi * _c.value), child: child);
+    },
+  );
+}
+
 class _TopStrip extends StatelessWidget {
-  const _TopStrip({required this.session, required this.onLeave, required this.video});
+  const _TopStrip({required this.session, required this.onLeave, required this.video, required this.still});
 
   final RuneSession session;
   final VoidCallback onLeave;
   final RoomVideo video;
+  final bool still;
 
   @override
   Widget build(BuildContext context) {
-    final secs = session.timeLeft.inSeconds + (session.timeLeft.inMilliseconds % 1000 > 0 ? 1 : 0);
-    final urgent = secs <= 10 && secs > 0;
+    final secs = clockSeconds(session.timeLeft);
     final g = session.grid;
     return SizedBox(
       height: 48,
@@ -333,21 +454,124 @@ class _TopStrip extends StatelessWidget {
             VideoToggles(call: video.call!, onCamera: video.onCamera, onMic: video.onMic, size: 20),
           ChatButton(session: session, size: 20),
           EmoteButton(onEmote: session.emote, size: 20),
-          Container(
-            key: const ValueKey('rune-timer'),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: urgent ? Palette.quenchRed.withValues(alpha: 0.25) : Palette.soot,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: urgent ? Palette.quenchRed : Palette.ash),
-            ),
-            child: Text(
-              runeClock(session.countdownLeft > Duration.zero ? g?.seconds ?? 0 : secs),
-              style: letterStyle(18, color: urgent ? Palette.quenchRed : Palette.whiteHeat),
-            ),
+          _RuneClock(
+            seconds: session.countdownLeft > Duration.zero ? g?.seconds ?? 0 : secs,
+            urgent: session.countdownLeft == Duration.zero && secs <= 10 && secs > 0,
+            still: still,
           ),
           const SizedBox(width: 10),
         ],
+      ),
+    );
+  }
+}
+
+/// The round's clock: red, and beating every second, for the last ten.
+class _RuneClock extends StatefulWidget {
+  const _RuneClock({required this.seconds, required this.urgent, required this.still});
+
+  final int seconds;
+  final bool urgent;
+  final bool still;
+
+  @override
+  State<_RuneClock> createState() => _RuneClockState();
+}
+
+class _RuneClockState extends State<_RuneClock> with SingleTickerProviderStateMixin {
+  late final _beat = AnimationController(vsync: this, duration: const Duration(milliseconds: 360));
+
+  @override
+  void didUpdateWidget(_RuneClock old) {
+    super.didUpdateWidget(old);
+    if (widget.urgent && widget.seconds != old.seconds && !widget.still) _beat.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _beat.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final urgent = widget.urgent;
+    final pill = Container(
+      key: const ValueKey('rune-timer'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: urgent
+              ? [Color.lerp(Palette.quenchRed, Colors.white, 0.2)!, Palette.quenchRed]
+              : [Color.lerp(Palette.soot, Palette.ash, 0.5)!, Palette.soot],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: urgent ? Colors.white.withValues(alpha: 0.8) : Palette.molten.withValues(alpha: 0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: (urgent ? Palette.quenchRed : Palette.ember).withValues(alpha: urgent ? 0.7 : 0.3),
+            blurRadius: urgent ? 14 : 8,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.hourglass_bottom_rounded, size: 16, color: urgent ? Colors.white : Palette.molten),
+          const SizedBox(width: 4),
+          Text(runeClock(widget.seconds), style: letterStyle(18, color: urgent ? Colors.white : Palette.whiteHeat)),
+        ],
+      ),
+    );
+    return AnimatedBuilder(
+      animation: _beat,
+      child: pill,
+      builder: (context, child) {
+        if (!_beat.isAnimating) return child!;
+        return Transform.scale(scale: 1 + 0.16 * sin(pi * _beat.value), child: child);
+      },
+    );
+  }
+}
+
+/// How much of the round is left, as a bar under the top strip: it
+/// burns down a step a second, turning red for the last ten.
+class _TimeBar extends StatelessWidget {
+  const _TimeBar({required this.session});
+
+  final RuneSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = session.grid?.seconds ?? 0;
+    final secs = clockSeconds(session.timeLeft);
+    final counting = session.countdownLeft > Duration.zero;
+    final left = total <= 0 ? 0.0 : (counting ? 1.0 : (secs / total).clamp(0.0, 1.0));
+    final urgent = !counting && secs <= 10;
+    final color = urgent ? Palette.quenchRed : Palette.ember;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+      child: Container(
+        height: 5,
+        decoration: BoxDecoration(
+          color: Palette.forgeBlack.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          key: const ValueKey('rune-time-bar'),
+          widthFactor: left,
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(3),
+              gradient: LinearGradient(colors: [Color.lerp(color, Colors.white, 0.35)!, color]),
+              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 6)],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -359,15 +359,31 @@ class RuneWordChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ink = missed ? Palette.steel : (color ?? Palette.whiteHeat);
+    final big = (points ?? 0) >= 3;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: unique ? Palette.gold.withValues(alpha: 0.16) : Palette.soot.withValues(alpha: missed ? 0.4 : 0.85),
+          color: missed ? Palette.soot.withValues(alpha: 0.4) : null,
+          gradient: missed
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: unique
+                      ? [Palette.gold.withValues(alpha: 0.32), Palette.gold.withValues(alpha: 0.12)]
+                      : [
+                          Color.lerp(Palette.soot, Palette.ash, 0.55)!.withValues(alpha: 0.92),
+                          Palette.soot.withValues(alpha: 0.92),
+                        ],
+                ),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: unique ? Palette.gold : Palette.ash),
+          border: Border.all(
+            color: unique ? Palette.gold : (missed ? Palette.ash : Color.lerp(Palette.ash, Palette.rim, 0.45)!),
+          ),
+          boxShadow: unique ? [BoxShadow(color: Palette.gold.withValues(alpha: 0.3), blurRadius: 6)] : null,
         ),
         child: Text.rich(
           TextSpan(
@@ -381,7 +397,7 @@ class RuneWordChip extends StatelessWidget {
                   text: ' ${points!}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: unique ? Palette.gold : Palette.steel,
+                    color: unique ? Palette.gold : (big ? Palette.molten : Palette.steel),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -405,9 +421,12 @@ String runeNextLabel(RuneSession s, NextRound next) =>
 
 /// Shown big before a round: which round, the countdown and the grid's rules.
 class RuneCountdown extends StatelessWidget {
-  const RuneCountdown({super.key, required this.session});
+  const RuneCountdown({super.key, required this.session, this.still = false});
 
   final RuneSession session;
+
+  /// The numbers just change, rather than landing.
+  final bool still;
 
   @override
   Widget build(BuildContext context) {
@@ -423,12 +442,16 @@ class RuneCountdown extends StatelessWidget {
               runeRoundLabel(session),
               style: displayStyle(26, color: g?.tiebreak ?? false ? Palette.quenchRed : Palette.steel),
             ),
-            Text(
-              '${session.countdownLeft.inSeconds + 1}',
-              style: displayStyle(
-                110,
-                color: Palette.molten,
-              ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 40)]),
+            _Landing(
+              key: ValueKey(session.countdownLeft.inSeconds),
+              still: still,
+              child: Text(
+                '${session.countdownLeft.inSeconds + 1}',
+                style: displayStyle(
+                  110,
+                  color: Palette.molten,
+                ).copyWith(shadows: [Shadow(color: Palette.ember, blurRadius: 40)]),
+              ),
             ),
             if (g != null)
               Text(
@@ -443,6 +466,26 @@ class RuneCountdown extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// [child] dropping in from big, once, as it first shows.
+class _Landing extends StatelessWidget {
+  const _Landing({super.key, required this.child, this.still = false});
+
+  final Widget child;
+  final bool still;
+
+  @override
+  Widget build(BuildContext context) {
+    if (still) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1.7, end: 1),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
     );
   }
 }

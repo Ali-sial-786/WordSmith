@@ -10,20 +10,22 @@ enum PreviewResult { good, bonus, repeat, bad }
 /// The word being swiped, shown above the anvil. After a submit it plays a
 /// short reaction (glow, shake…) and fades.
 class WordPreview extends StatefulWidget {
-  const WordPreview({super.key, required this.word});
+  const WordPreview({super.key, required this.word, this.badge, this.color});
 
   final String word;
+
+  /// Shown beside the word while it's being traced (what it would score).
+  final String? badge;
+
+  /// The rim while tracing; the accent when null.
+  final Color? color;
 
   @override
   State<WordPreview> createState() => WordPreviewState();
 }
 
-class WordPreviewState extends State<WordPreview>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _react = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 520),
-  );
+class WordPreviewState extends State<WordPreview> with SingleTickerProviderStateMixin {
+  late final AnimationController _react = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
   String _shown = '';
   PreviewResult? _result;
 
@@ -69,8 +71,9 @@ class WordPreviewState extends State<WordPreview>
             PreviewResult.bonus => Palette.verdigris,
             PreviewResult.repeat => Palette.steel,
             PreviewResult.bad => Palette.quenchRed,
-            null => Palette.ember,
+            null => widget.color ?? Palette.ember,
           };
+          final badge = reacting ? null : widget.badge;
           var dx = 0.0;
           var dy = 0.0;
           var opacity = 1.0;
@@ -104,15 +107,20 @@ class WordPreviewState extends State<WordPreview>
                       color: Palette.forgeBlack.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: color, width: 2),
-                      boxShadow: [
-                        BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 16),
-                      ],
+                      boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 16)],
                     ),
-                    child: Text(
-                      _shown,
-                      style: letterStyle(26, color: Palette.whiteHeat).copyWith(
-                        letterSpacing: 4,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_shown, style: letterStyle(26, color: Palette.whiteHeat).copyWith(letterSpacing: 4)),
+                        if (badge != null)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(color: Palette.gold, borderRadius: BorderRadius.circular(10)),
+                            child: Text(badge, style: displayStyle(14, color: Palette.darkLetter)),
+                          ),
+                      ],
                     ),
                   ),
                 ),

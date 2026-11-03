@@ -97,10 +97,14 @@ class _RuneRoundReviewState extends State<RuneRoundReview> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(
-          child: SizedBox(
-            width: 210,
-            height: 210,
-            child: RuneBoard(tiles: end.tiles, size: end.size, enabled: false, highlight: path ?? const []),
+          child: Padding(
+            // Room for the tray's rim round the grid.
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+            child: SizedBox(
+              width: 210,
+              height: 210,
+              child: RuneBoard(tiles: end.tiles, size: end.size, enabled: false, highlight: path ?? const []),
+            ),
           ),
         ),
         SizedBox(

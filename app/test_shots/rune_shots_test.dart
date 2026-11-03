@@ -9,12 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordsmith/data/store.dart';
 import 'package:wordsmith/features/coop/lobby_view.dart';
+import 'package:wordsmith/features/rune/rune_board.dart';
 import 'package:wordsmith/features/rune/rune_results_view.dart';
 import 'package:wordsmith/features/rune/rune_round_view.dart';
 import 'package:wordsmith/features/rune/rune_standings_view.dart';
 import 'package:wordsmith/game/providers.dart';
 import 'package:wordsmith/game/rune_session.dart';
 import 'package:wordsmith/net/room_client.dart';
+import 'package:wordsmith/ui/theme/palette.dart';
 import 'package:wordsmith/ui/theme/theme.dart';
 import 'package:wordsmith/ui/widgets/forge_background.dart';
 
@@ -33,9 +35,9 @@ Future<void> _wait(WidgetTester tester) async {
 
 Future<void> _shot(String name) => expectLater(find.byType(MaterialApp), matchesGoldenFile('shots/$name.png'));
 
-Future<void> _view(WidgetTester tester, Widget child, {bool settle = true}) async {
+Future<void> _view(WidgetTester tester, Widget child, {bool settle = true, bool motion = false}) async {
   SharedPreferences.setMockInitialValues({
-    'settings.v1': jsonEncode({'reducedMotion': true, 'haptics': false}),
+    'settings.v1': jsonEncode({'reducedMotion': !motion, 'haptics': false}),
   });
   final store = await Store.open();
   await tester.binding.setSurfaceSize(const Size(412, 892));
@@ -131,8 +133,76 @@ Map<String, Object?> _endJson({bool last = false}) => {
   'standingsEndsAt': last ? null : DateTime.now().millisecondsSinceEpoch + 22000,
 };
 
+RuneSession _round({int endsIn = 84000}) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final s = _session(_lobby('round'))
+    ..grid = RuneRoundStart.fromJson({
+      'game': 'rune',
+      'round': 2,
+      'rounds': 3,
+      'players': _ids,
+      'size': 4,
+      'tiles': _tiles,
+      'min': 3,
+      'seconds': 120,
+      'startsAt': now - (120000 - endsIn),
+      'endsAt': now + endsIn,
+      'serverNow': now,
+      'heat': 2,
+      'totals': {'u1': 12, 'u2': 11, 'u3': 7, 'u4': 3},
+    })
+    ..tally = {'u1': 5, 'u2': 7, 'u3': 2, 'u4': 1}
+    ..totals = {'u1': 12, 'u2': 11, 'u3': 7, 'u4': 3};
+  s.mine.addAll(const [
+    RuneWord('QUILT', 'u1', 3),
+    RuneWord('CAT', 'u1', 1),
+    RuneWord('RATE', 'u1', 2),
+    RuneWord('ORE', 'u1', 1),
+    RuneWord('TEAR', 'u1', 2),
+  ]);
+  return s;
+}
+
+/// Swipes C → R → A → T → E on the 4×4 grid and holds there.
+Future<TestGesture> _swipe(WidgetTester tester) async {
+  final board = tester.getRect(find.byKey(const ValueKey('rune-board')));
+  Offset at(int i) => board.topLeft + Offset((i % 4 + 0.5) * board.width / 4, (i ~/ 4 + 0.5) * board.width / 4);
+  final g = await tester.startGesture(at(0));
+  for (final i in [5, 1, 2, 6]) {
+    await g.moveTo(at(i));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  await tester.pump(const Duration(milliseconds: 200));
+  return g;
+}
+
 void main() {
   setUpAll(loadShotFonts);
+  tearDown(() => Palette.scheme = PaletteScheme.forge);
+
+  testWidgets('round, a word found in the last seconds', (tester) async {
+    await _view(tester, RuneRoundView(session: _round(endsIn: 7400), onLeave: () {}), motion: true);
+    tester
+        .state<RuneBoardState>(find.byType(RuneBoard))
+        .flash(const [8, 9, 10, 11], Palette.verdigris, kind: RuneFlash.good, label: '+3');
+    // Frame by frame, as on a phone: the animations start on the first.
+    for (var i = 0; i < 15; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await _shot('rune_round_found');
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  for (final scheme in [PaletteScheme.gilded, PaletteScheme.steelBlue]) {
+    testWidgets('round in ${scheme.name}', (tester) async {
+      Palette.scheme = scheme;
+      await _view(tester, RuneRoundView(session: _round(), onLeave: () {}));
+      final g = await _swipe(tester);
+      await _shot('rune_round_${scheme.id}');
+      await g.up();
+      await tester.pump(const Duration(seconds: 1));
+    });
+  }
 
   testWidgets('lobby', (tester) async {
     await _view(
