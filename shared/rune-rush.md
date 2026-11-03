@@ -16,12 +16,18 @@ the room wires them up in `server/src/room/room.ts`.
 
 - **The grid:** 4×4, 5×5 or 6×6 letter dice, rolled fresh for every round
   (16 dice for 4×4, 25 for 5×5, those 25 and 11 more for 6×6). A Q face is
-  the tile `QU`. A grid is rolled again (a few times at most) until it
-  holds plenty of words.
+  the tile `QU`. A grid is rolled again (a few dozen times at most) until
+  it's good to play: plenty of words (4×4: 55 of 3 letters or more, 5×5:
+  130, 6×6: 200), a few long ones (4×4: two of 6 letters or more; 5×5:
+  three of 7; 6×6: six of 7), 30–50% vowels, no letter on too many tiles
+  and at most one awkward tile (J, K, QU, V, X, Z) on 4×4 (two on 5×5,
+  three on 6×6). Failing that, the best of the rolls.
 - **Words:** join touching tiles, across, up and down or diagonally, using
   each tile once in a word. At least the shortest length (3, 4 or 5
-  letters; `QU` counts as two). The words are the game's accepted list, the
-  same as the puzzles' bonus words (3–8 letters, no names or rude words).
+  letters; `QU` counts as two). The words are the everyday part of the
+  puzzles' accepted words (3–8 letters, no names or rude words): words
+  most players know, without rare, old or dialect words (`aalii`, `och`,
+  `nowt`) or odd forms (`tireder`). See `server/scripts/build-rune-words.mjs`.
 - **Points:** a word scores its length less two, at least 1: 3 letters 1,
   4 letters 2, 5 letters 3, and 1 more for each letter after that. A
   **unique** word, one nobody else found, scores **double**. Points are

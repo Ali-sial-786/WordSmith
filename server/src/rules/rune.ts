@@ -11,8 +11,10 @@
  *   the other team didn't find is unique) or `sum` (everyone scores as in
  *   Rune Rush, and a team's score is its players' added up).
  *
- * The words are the game's accepted list (rune-words.gen.ts), so a board's
- * every word is known when it's made: a SUBMIT is checked against that.
+ * The words are the everyday part of the game's accepted list
+ * (rune-words.gen.ts, from scripts/build-rune-words.mjs: no rare or
+ * dialect words), so a board's every word is known when it's made: a SUBMIT
+ * is checked against that.
  * Pure, so it's unit-tested in Node.
  */
 
@@ -188,10 +190,31 @@ export function solveGrid(tiles: readonly string[], size: number, min: number): 
   return [...found].sort(byLength);
 }
 
-/** Words a good board has at least, by size, at a shortest word of 3 (fewer at 4 and 5). */
-const TARGET_WORDS: Readonly<Record<RuneSize, number>> = { 4: 60, 5: 150, 6: 250 };
-const TARGET_SHARE: Readonly<Record<RuneMin, number>> = { 3: 1, 4: 0.7, 5: 0.4 };
-const BOARD_TRIES = 30;
+/** What makes a good board, by size: what {@link newBoard} rolls for. */
+interface BoardGoal {
+  /** Words of 3 letters or more it holds at least. */
+  readonly words: number;
+  /** A word at least this long, the big one to hunt for. */
+  readonly long: number;
+  /** Words that long it holds at least. */
+  readonly longs: number;
+  /** The share of tiles that are vowels (A E I O U), from and to. */
+  readonly vowels: readonly [number, number];
+  /** The most tiles one consonant may have, and one vowel. */
+  readonly sameConsonant: number;
+  readonly sameVowel: number;
+  /** The most awkward tiles (J K QU V X Z) it may have. */
+  readonly awkward: number;
+}
+
+const GOALS: Readonly<Record<RuneSize, BoardGoal>> = {
+  4: { words: 55, long: 6, longs: 2, vowels: [0.3, 0.5], sameConsonant: 2, sameVowel: 3, awkward: 1 },
+  5: { words: 130, long: 7, longs: 3, vowels: [0.3, 0.48], sameConsonant: 3, sameVowel: 4, awkward: 2 },
+  6: { words: 200, long: 7, longs: 6, vowels: [0.3, 0.46], sameConsonant: 4, sameVowel: 6, awkward: 3 },
+};
+const BOARD_TRIES = 60;
+const VOWELS = new Set(["A", "E", "I", "O", "U"]);
+const AWKWARD = new Set(["J", "K", "QU", "V", "X", "Z"]);
 
 export interface RuneBoard {
   readonly tiles: readonly string[];
@@ -199,17 +222,56 @@ export interface RuneBoard {
   readonly words: readonly string[];
 }
 
-/** A fresh board: rolled until it holds enough words (or the most found in a few tries). */
+/**
+ * How good a board is to play, and whether it's good enough. It must have
+ * enough words, a few long ones, a fair share of vowels, no letter on too
+ * many tiles and few awkward ones; past that, more words and more long ones
+ * are better.
+ */
+export function rateBoard(tiles: readonly string[], size: RuneSize, all: readonly string[]): { readonly good: boolean; readonly score: number } {
+  const goal = GOALS[size];
+  const counts = new Map<string, number>();
+  let vowels = 0;
+  let awkward = 0;
+  for (const t of tiles) {
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+    if (VOWELS.has(t)) vowels++;
+    if (AWKWARD.has(t)) awkward++;
+  }
+  const share = vowels / tiles.length;
+  const crowded = Math.max(
+    0,
+    ...[...counts].map(([t, n]) => n - (VOWELS.has(t) ? goal.sameVowel : goal.sameConsonant)),
+  );
+  const longs = all.filter((w) => w.length >= goal.long).length;
+  const offVowels = share < goal.vowels[0] ? goal.vowels[0] - share : share > goal.vowels[1] ? share - goal.vowels[1] : 0;
+  const good =
+    all.length >= goal.words && longs >= goal.longs && offVowels === 0 && crowded === 0 && awkward <= goal.awkward;
+  const score =
+    Math.min(all.length, goal.words * 2) +
+    4 * Math.min(longs, goal.longs * 3) -
+    goal.words * (offVowels * 4 + crowded * 0.3 + Math.max(0, awkward - goal.awkward) * 0.3);
+  return { good, score };
+}
+
+/**
+ * A fresh board: dice rolled until a board is good to play ({@link rateBoard}),
+ * or the best of a few dozen rolls. Boards are rated on their words of 3
+ * letters or more, whatever the round's shortest word.
+ */
 export function newBoard(size: RuneSize, min: RuneMin, rand: Rand): RuneBoard {
-  const target = Math.round(TARGET_WORDS[size] * TARGET_SHARE[min]);
-  let best: RuneBoard | null = null;
+  let best: { tiles: string[]; all: string[]; score: number } | null = null;
   for (let i = 0; i < BOARD_TRIES; i++) {
     const tiles = rollGrid(size, rand);
-    const board = { tiles, words: solveGrid(tiles, size, min) };
-    if (best === null || board.words.length > best.words.length) best = board;
-    if (board.words.length >= target) break;
+    const all = solveGrid(tiles, size, 3);
+    const { good, score } = rateBoard(tiles, size, all);
+    if (best === null || score > best.score) best = { tiles, all, score };
+    if (good) {
+      best = { tiles, all, score };
+      break;
+    }
   }
-  return best!;
+  return { tiles: best!.tiles, words: best!.all.filter((w) => w.length >= min) };
 }
 
 /** A word's points: its length less two, at least 1 (3 letters 1, 4 letters 2, 5 letters 3, …). Double when unique. */

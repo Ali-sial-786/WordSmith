@@ -74,6 +74,7 @@ against the value recorded in `puzzlegen/fetch.py`, and writes:
 | `data/blocklist.txt` | LDNOOBW single English words + `blocklist_extra.txt`, with simple inflections, plus every word containing a `*stem*` entry. |
 | `data/freq.tsv` | `word<TAB>zipf`: how common each accepted word is in real use (wordfreq 3.1.1 `zipf_frequency(word, "en")`, 2 decimals; words it doesn't know are absent and count as 0). The main input to answer quality. |
 | `data/name_senses.txt` | Accepted words SCOWL also lists capitalised (`mike`, `harry`, `amazon`): their frequency counts the name too, so quality caps it. |
+| `data/rune_allow.txt`, `data/rune_block.txt` | Hand-written, not touched by `fetch`: everyday words Rune Rush takes though SCOWL ranks them rare (`meetup`), and accepted words it turns down (`och`). Read by `server/scripts/build-rune-words.mjs`, which picks Rune Rush's words from `accepted.txt` by SCOWL level and frequency. |
 | `data/LICENSES.md` | Sources, licences and the verbatim SCOWL copyright notice. |
 
 Sources: ENABLE (public domain), SCOWL 2020.12.07 (`final/english-words.*`

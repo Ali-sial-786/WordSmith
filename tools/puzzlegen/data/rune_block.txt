@@ -1,0 +1,18 @@
+# Accepted words that Rune Rush still turns down: SCOWL lists them as common
+# enough, but players don't take them for real words (Scots and dialect
+# words, abbreviations, odd inflections). One lowercase word per line or
+# several per line; '#' starts a comment. Read by
+# server/scripts/build-rune-words.mjs; re-run it after editing.
+alb bap cis dob ecu ell ems fer haj hep hes hie hob hod hos mam mas mes mys
+nae nob och pis pol pom sou til tog tun wen wot yer
+bani berk bola bole boll brae buts calk choc cine dosh doss drys fain fess
+fogy geed gees hims hows kens lade lath lech lilo nark nays noes nowt pica
+quin rime rood rota ruck scad scud sics swot tare tarn tine wale weer wist
+wive wold yest
+anons anted apter balds caber calks cants cotes coxed coxes curer diked
+direr flied fores fulls golfs haled haler halon hared hided huger lades
+laths liker loges meres metes miked morns niter piked piker riced rimed
+roved roves sames sangs sicks sizer slier sower thees thous tided tiler
+trued trues unsay waked whens wised wises wolfs yeses
+silenter solemner uniquest tireder humaner unfairer chiefer goldener
+sugarier likest spreed sades flooder

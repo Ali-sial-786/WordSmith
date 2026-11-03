@@ -1,0 +1,13 @@
+# Everyday words Rune Rush takes although SCOWL ranks them rare (or ENABLE
+# lacks them): mostly newer words. Their plural and verb forms count too
+# when they're accepted words. One lowercase word per line or several per
+# line; '#' starts a comment. Read by server/scripts/build-rune-words.mjs;
+# re-run it after editing.
+app apps wifi offline ebook ebooks vlog vlogs
+apnea aurora backseat biotech blocker celiac changer chemo congrats dataset
+dopamine emitter gamer gamers gothic hellfire hijab hottie issuer jacuzzi
+layup locator logout matchup meetup metadata newfound nitrous onboard
+onscreen onsite orbiter paleo playbook pregame quinoa raiser ramen redacted
+reliever reverb router runtime scalable seatbelt seawater shifter signage
+slasher stinky synth tabletop tagline teleport timeout trove undead unfriend
+webpage wildcard

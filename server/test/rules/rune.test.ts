@@ -12,6 +12,7 @@ import {
   newRuneRound,
   newRuneSeries,
   parseRunePatch,
+  rateBoard,
   rollGrid,
   runeDecision,
   runeSeriesResults,
@@ -110,6 +111,45 @@ describe("the board", () => {
       expect(board.words.length).toBeGreaterThan(20);
     }
     expect(Date.now() - started).toBeLessThan(5000);
+  });
+
+  it("makes boards that are good to play: lots of words, long ones, vowels, few awkward letters", () => {
+    const goals = { 4: [55, 6], 5: [130, 7], 6: [200, 7] } as const;
+    for (const size of [4, 5, 6] as const) {
+      for (let seed = 0; seed < 8; seed++) {
+        const board = newBoard(size, 3, seeded(1000 * size + seed));
+        expect(rateBoard(board.tiles, size, board.words).good).toBe(true);
+        const [words, long] = goals[size];
+        expect(board.words.length).toBeGreaterThanOrEqual(words);
+        expect(board.words[0]!.length).toBeGreaterThanOrEqual(long);
+        const vowels = board.tiles.filter((t) => "AEIOU".includes(t)).length / board.tiles.length;
+        expect(vowels).toBeGreaterThanOrEqual(0.3);
+        expect(vowels).toBeLessThanOrEqual(0.5);
+      }
+    }
+  });
+
+  it("rates a board down for crowded or awkward letters", () => {
+    // Plenty of words is not enough: four Ss, and J, X and Z together.
+    const crowded = ["S", "A", "S", "E", "T", "S", "R", "S", "E", "A", "T", "E", "R", "I", "N", "O"];
+    expect(rateBoard(crowded, 4, solveGrid(crowded, 4, 3)).good).toBe(false);
+    const awkward = ["J", "A", "X", "E", "T", "S", "R", "Z", "E", "A", "T", "E", "R", "I", "N", "O"];
+    expect(rateBoard(awkward, 4, solveGrid(awkward, 4, 3)).good).toBe(false);
+  });
+
+  it("keeps the round's shortest word, though boards are rated on every word", () => {
+    const board = newBoard(4, 5, seeded(42));
+    expect(board.words.length).toBeGreaterThan(0);
+    expect(board.words.every((w) => w.length >= 5)).toBe(true);
+  });
+
+  it("takes everyday words and turns down rare, dialect and odd ones", () => {
+    for (const w of ["cat", "dog", "quilt", "queen", "stopped", "yuckiest", "apps", "meetups", "timeout", "offline"]) {
+      expect(isRuneWord(w), w).toBe(true);
+    }
+    for (const w of ["aalii", "zikurat", "qat", "och", "nowt", "tireder", "uniquest", "aba", "xu", "boston"]) {
+      expect(isRuneWord(w), w).toBe(false);
+    }
   });
 
   it("scores a word its length less two, at least 1", () => {

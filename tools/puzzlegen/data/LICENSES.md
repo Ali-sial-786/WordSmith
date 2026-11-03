@@ -13,7 +13,7 @@ committed). Only 3-8 letter, lowercase a-z words are kept.
 | SCOWL | 2020.12.07, https://downloads.sourceforge.net/wordlist/scowl-2020.12.07.tar.gz | SCOWL copyright notice (below): permissive, keep the notice | Commonness levels for answers, and accepted words: `final/english-words.*` and `final/american-words.*`, levels 10-70. Names: the English and American `proper-names.*` and `upper.*` lists (levels <= 60) against every spelling region's `*-words.*` (levels <= 60) |
 | wordfreq 3.1.1 | https://github.com/rspeer/wordfreq (Python package; `zipf_frequency(word, "en")`) | Data: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), by Robyn Speer and the wordfreq contributors; code: Apache 2.0 | Word frequencies for answer quality (`freq.tsv`) |
 | LDNOOBW English list | https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (file `en`) | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), by the LDNOOBW contributors (Shutterstock) | Blocklist (single words only; phrases skipped) |
-| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt`, `not_inflections.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list; words that only look like inflections |
+| `blocklist_extra.txt`, `answer_exclude.txt`, `names_keep.txt`, `names_extra.txt`, `not_inflections.txt`, `rune_allow.txt`, `rune_block.txt` | written for Wordsmith | same as this repo | Extra blocked words; words kept out of grids; real words kept and extra names dropped by the names list; words that only look like inflections; Rune Rush's extra and refused words |
 
 Derived files:
 

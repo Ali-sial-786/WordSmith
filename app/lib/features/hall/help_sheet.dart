@@ -224,7 +224,7 @@ List<_Section> _sections() => [
         'Up to 6 smiths get the same grid of letter dice: 4×4, 5×5 or 6×6. Find words by swiping through '
             'touching letters (across, up and down or diagonally, each letter once), or tap them one by one '
             'and tap the last again. Words need 3 letters or more (the host can ask for 4 or 5); **Qu** is one '
-            'tile.\n\n'
+            'tile. Everyday words count: no names, and no rare, old or dialect words.\n\n'
             '**Points:** 3 letters 1, 4 letters 2, 5 letters 3, and 1 more for each letter after that. A word '
             'nobody else found scores **double**. Points are added up when the round ends.\n\n'
             'The host picks the grid, the timer (30 seconds to 3 minutes) and 1, 3 or 5 rounds; the most points '
