@@ -39,7 +39,8 @@ class CrashReport {
   final DateTime at;
   final String description;
 
-  /// The renderer it crashed with: `vulkan` or `opengles`.
+  /// The renderer it crashed with: `vulkan`, or `skia` (compatibility
+  /// graphics). `opengles` in reports from before 0.9.9 was Vulkan in fact.
   final String backend;
   final String trace;
   final int pssKb;
@@ -87,8 +88,8 @@ class CrashReport {
   }
 }
 
-/// The renderer setting. [compat] switches from Vulkan to OpenGL ES at the
-/// next launch; [auto] says the game turned it on itself after a crash.
+/// The renderer setting. [compat] switches from Impeller on Vulkan to Skia on
+/// OpenGL ES at the next launch; [auto] says the game turned it on itself after a crash.
 typedef GraphicsInfo = ({bool compat, bool auto, String active});
 
 /// Talks to MainActivity's `wordsmith/diagnostics` channel. Everything

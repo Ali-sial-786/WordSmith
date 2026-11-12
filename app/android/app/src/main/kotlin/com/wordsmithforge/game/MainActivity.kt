@@ -19,7 +19,7 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private val prefs by lazy { getSharedPreferences("wordsmith_native", Context.MODE_PRIVATE) }
 
-    /** The renderer this launch uses: "vulkan" (Impeller's default) or "opengles". */
+    /** The renderer this launch uses: "vulkan" (Impeller's default) or "skia" (OpenGL ES). */
     private var backend = "vulkan"
 
     /** On screen (started, not yet stopped). */
@@ -41,14 +41,13 @@ class MainActivity : FlutterActivity() {
     override fun getFlutterShellArgs(): FlutterShellArgs {
         val args = super.getFlutterShellArgs()
         noteCrashes()
-        // Compatibility graphics a crash turned on: each new version tries
-        // Vulkan again (it's faster, and what crashed may be fixed); another
-        // native crash on it turns them back on. Ones the player chose stay.
-        if (prefs.getBoolean(COMPAT_AUTO, false) && prefs.getString(COMPAT_VERSION, null) != versionName()) {
-            prefs.edit().putBoolean(COMPAT, false).putBoolean(COMPAT_AUTO, false).apply()
-        }
-        backend = if (prefs.getBoolean(COMPAT, false)) "opengles" else "vulkan"
-        if (backend == "opengles") args.add("--impeller-backend=opengles")
+        // Compatibility graphics: the engine's older Skia renderer on OpenGL ES,
+        // which never loads the Vulkan driver. (Release engines ignore
+        // --impeller-backend, so Impeller can't be told to use OpenGL ES.)
+        // Once a crash has turned them on they stay on across versions: the
+        // driver that crashed is the phone's, and an update doesn't change it.
+        backend = if (prefs.getBoolean(COMPAT, false)) "skia" else "vulkan"
+        if (backend == "skia") args.add("--enable-impeller=false")
         prefs.edit().putString(BACKEND, backend).apply()
         return args
     }
@@ -170,8 +169,9 @@ class MainActivity : FlutterActivity() {
     /**
      * Looks at how the app stopped since the last launch (Android 11+). A
      * crash is kept as the "last crash" report, and a native crash on Vulkan
-     * turns on compatibility graphics (OpenGL ES), since that is most often
-     * the GPU driver.
+     * turns on compatibility graphics, since that is most often the GPU
+     * driver. Before 0.9.9 those asked Impeller for OpenGL ES, which release
+     * engines ignore, so a "opengles" launch really ran on Vulkan too.
      */
     private fun noteCrashes() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
@@ -190,12 +190,13 @@ class MainActivity : FlutterActivity() {
             val lastBackend = prefs.getString(BACKEND, "vulkan")
             edit.putString(LAST_CRASH, report(crash, lastBackend).toString())
             // Only a crash in this version: one in the version before may be fixed.
+            // ("opengles" was Vulkan in fact; see above.)
             if (crash.reason == ApplicationExitInfo.REASON_CRASH_NATIVE &&
-                lastBackend == "vulkan" &&
+                lastBackend != "skia" &&
                 !prefs.getBoolean(COMPAT, false) &&
                 crash.timestamp >= installedAt()
             ) {
-                edit.putBoolean(COMPAT, true).putBoolean(COMPAT_AUTO, true).putString(COMPAT_VERSION, versionName())
+                edit.putBoolean(COMPAT, true).putBoolean(COMPAT_AUTO, true)
             }
         }
         edit.apply()
@@ -383,9 +384,6 @@ class MainActivity : FlutterActivity() {
 
         const val COMPAT = "compatGraphics"
         const val COMPAT_AUTO = "compatGraphicsAuto"
-
-        /** The version compatibility graphics were turned on in by a crash. */
-        const val COMPAT_VERSION = "compatGraphicsVersion"
         const val BACKEND = "backend"
         const val SEEN_EXIT_AT = "seenExitAt"
         const val LAST_CRASH = "lastCrash"

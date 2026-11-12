@@ -167,7 +167,7 @@ class _Troubleshooting extends ConsumerWidget {
               [
                 'Try this if the game crashes or flickers.',
                 if (graphics.auto) 'Turned on after a crash.',
-                if (graphics.compat != (graphics.active == 'opengles')) 'Takes effect next time you open the game.',
+                if (graphics.compat != (graphics.active != 'vulkan')) 'Takes effect next time you open the game.',
               ].join(' '),
             ),
             value: graphics.compat,
